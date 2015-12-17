@@ -123,7 +123,7 @@
 			pinctrl-names = "mcu_gpio_init";
 			pinctrl-0 = <&mcu_init>;
 			touch_enable = <1>;
-			vibrate_ms = <25>;
+			vibrate_ms = <35>;
 		};
 
 		htc_mcu_flash@39 {
