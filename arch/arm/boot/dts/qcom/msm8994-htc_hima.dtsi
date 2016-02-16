@@ -65,6 +65,13 @@
 	htc,lcm_n5v-gpio         = <&msm_gpio 2 0>;
 	htc,lcm_bl_en-gpio       = <&msm_gpio 3 0>;
 	htc,lcm_rst-gpio         = <&msm_gpio 78 0>;
+
+	qcom,platform-lane-config = [
+		02 00 00 00 20 00 00 01 88
+		02 00 00 00 40 00 00 01 88
+		02 00 00 40 20 00 00 01 88
+		02 00 00 40 00 00 00 01 88
+		00 00 00 80 00 00 00 01 88];
 };
 
 &pm8994_l14 {
@@ -163,6 +170,7 @@
 	htc,mdss_dsi_pwrctrl {
 		compatible = "htc,mdss-dsi-pwrctrl";
 		status  = "okay";
+		htc,pwrctrl_proj = <1>;
 	};
 
 	qcom,ion {
@@ -211,6 +219,12 @@
                 qcom,pwm_coefficient = <35>;
             };
 
+        };
+
+        qcom,leds@d800 {
+            qcom,fs-curr-ua = <20000>;    /*Fulfill hTC design 20mA*/
+            qcom,led-strings-list = [00 01];
+            qcom,en-cabc;
         };
     };
 };
