@@ -397,7 +397,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 		tmploadadjfreq = (unsigned int)cputime_speedadj * 100;
 		pcpu->loadadjfreq = tmploadadjfreq;
 		trace_cpufreq_interactive_cpuload(i, tmploadadjfreq /
-						  ppol->policy->cur);
+						  ppol->target_freq);
 
 		if (tmploadadjfreq > loadadjfreq) {
 			loadadjfreq = tmploadadjfreq;
@@ -416,11 +416,11 @@ static void cpufreq_interactive_timer(unsigned long data)
 	}
 
 	spin_lock_irqsave(&ppol->target_freq_lock, flags);
-	cpu_load = loadadjfreq / ppol->policy->cur;
+	cpu_load = loadadjfreq / ppol->target_freq;
 	tunables->boosted = tunables->boost_val || now < tunables->boostpulse_endtime;
 
 	if (cpu_load >= tunables->go_hispeed_load || tunables->boosted) {
-		if (ppol->policy->cur < tunables->hispeed_freq &&
+		if (ppol->target_freq < tunables->hispeed_freq &&
 		    cpu_load <= MAX_LOCAL_LOAD) {
 			new_freq = tunables->hispeed_freq;
 		} else {
@@ -434,13 +434,13 @@ static void cpufreq_interactive_timer(unsigned long data)
 	}
 
 	if (cpu_load <= MAX_LOCAL_LOAD &&
-	    ppol->policy->cur >= tunables->hispeed_freq &&
-	    new_freq > ppol->policy->cur &&
+	    ppol->target_freq >= tunables->hispeed_freq &&
+	    new_freq > ppol->target_freq &&
 	    now - ppol->hispeed_validate_time <
-	    freq_to_above_hispeed_delay(tunables, ppol->policy->cur)) {
+	    freq_to_above_hispeed_delay(tunables, ppol->target_freq)) {
 		trace_cpufreq_interactive_notyet(
 			max_cpu, cpu_load, ppol->target_freq,
-			ppol->policy->cur, new_freq);
+			ppol->target_freq, new_freq);
 		spin_unlock_irqrestore(&ppol->target_freq_lock, flags);
 		goto rearm;
 	}
