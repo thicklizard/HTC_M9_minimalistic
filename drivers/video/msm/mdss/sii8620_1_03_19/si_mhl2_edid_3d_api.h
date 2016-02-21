@@ -13,6 +13,8 @@
  * http://www.gnu.org/licenses/gpl-2.0.html.
  */
 
+#pragma GCC diagnostic ignored "-Wswitch"
+
 #ifndef _SI_MHL2_EDID_3D_API_H_
 #define _SI_MHL2_EDID_3D_API_H_
 
