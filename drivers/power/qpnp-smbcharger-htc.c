@@ -266,7 +266,7 @@ static DEFINE_SPINLOCK(set_current_lock);
 #define PMI8994_CHG_I_MIN_MA_L1       2000
 #define PMI8994_CHG_I_MIN_MA_L2       300
 #define EOC_CHECK_PERIOD_MS           20000
-#define CONSECUTIVE_COUNT             3
+#define CONSECUTIVE_COUNT             10
 #define CLEAR_FULL_STATE_BY_LEVEL_THR 97
 #define DT_ROOT_VALUE 0
 #define OCP_RELEASE_TIME_UPPER_BOUND_MS	180000
