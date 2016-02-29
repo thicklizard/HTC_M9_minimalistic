@@ -25,10 +25,7 @@
 			linux,reserve-contiguous-region;
 			linux,reserve-region;
 			linux,remove-completely;
-			/* Hardboot: reserve 1MB of space
-			 * before ramoops address of 0x1fe00000
-			 */
-			reg = <0 0xD900000 0 0x00300000>;
+			reg = <0 0x0da00000 0 0x1a00000>;
 			label = "lpass_mem";
 		};
 
@@ -36,7 +33,10 @@
 			linux,reserve-contiguous-region;
 			linux,reserve-region;
 			linux,remove-completely;
-			reg = <0 0x05800000 0 0x00200000>; /* 2 MB */
+			/* Hardboot: reserve 1MB of space
+			 * before ramoops address of 0x5700000
+			 */
+			reg = <0 0x5700000 0 0x00300000>;
 			label = "ramoops_mem";
 		};
 

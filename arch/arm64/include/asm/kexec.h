@@ -31,7 +31,7 @@
 #ifdef CONFIG_KEXEC_HARDBOOT
 #define KEXEC_HB_PAGE_MAGIC 0x4a5db007
 // Hardboot: for HIMA. Address reserved in device tree.
-#define KEXEC_HB_PAGE_ADDR UL(0xD900000)
+#define KEXEC_HB_PAGE_ADDR UL(0x5700000)
 #endif
 
 #if !defined(__ASSEMBLY__)
