@@ -33,6 +33,10 @@
 #include <soc/qcom/restart.h>
 #include <soc/qcom/watchdog.h>
 
+#ifdef CONFIG_KEXEC_HARDBOOT
+#include <asm/kexec.h>
+#endif
+
 #include "htc_restart_handler.h"
 #include <linux/qpnp/power-on.h>
 #include <linux/qpnp/qpnp-smbcharger.h>
@@ -567,8 +571,18 @@ static struct platform_driver msm_restart_driver = {
 	},
 };
 
+#ifdef CONFIG_KEXEC_HARDBOOT
+static void msm_kexec_hardboot_hook(void)
+{
+	qpnp_pon_system_pwr_off(PON_POWER_OFF_WARM_RESET);
+}
+#endif
+
 static int __init msm_restart_init(void)
 {
+#ifdef CONFIG_KEXEC_HARDBOOT
+	kexec_hardboot_hook = msm_kexec_hardboot_hook;
+#endif
 	return platform_driver_register(&msm_restart_driver);
 }
 device_initcall(msm_restart_init);
