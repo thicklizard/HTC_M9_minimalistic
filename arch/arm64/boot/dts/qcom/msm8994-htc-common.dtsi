@@ -44,7 +44,7 @@
 			linux,reserve-contiguous-region;
 			linux,reserve-region;
 			linux,remove-completely;
-			reg = <0 0x05a00000 0 0x00900000>; /* 9 MB */
+			reg = <0 0x05a00000 0 0x8B3333>; /* 9 MB */
 			label = "htc_reserve";
 
 			#address-cells = <2>;
