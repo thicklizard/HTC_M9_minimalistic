@@ -1875,7 +1875,7 @@ static int __init cpufreq_impulse_init(void)
 }
 
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_IMPULSE
-fs_initcall(cpufreq_impulse_init);
+arch_initcall(cpufreq_impulse_init);
 #else
 module_init(cpufreq_impulse_init);
 #endif
