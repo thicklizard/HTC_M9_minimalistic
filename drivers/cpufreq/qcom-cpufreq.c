@@ -72,6 +72,40 @@ static int __init cpufreq_read_cpu_max_a57(char *cpu_max_a57)
 }
 __setup("cpu_max_a57=", cpufreq_read_cpu_max_a57);
 
+static unsigned long arg_cpu_min_a53 = 302400;
+
+static int __init cpufreq_read_cpu_min_a53(char *cpu_min_a53)
+{
+	unsigned long ui_khz;
+	int ret;
+
+	ret = kstrtoul(cpu_min_a53, 0, &ui_khz);
+	if (ret)
+		return -EINVAL;
+
+	arg_cpu_min_a53 = ui_khz;
+	printk("cpu_min_a53=%lu\n", arg_cpu_min_a53);
+	return ret;
+}
+__setup("cpu_min_a53=", cpufreq_read_cpu_min_a53);
+
+static unsigned long arg_cpu_min_a57 = 302400;
+
+static int __init cpufreq_read_cpu_min_a57(char *cpu_min_a57)
+{
+	unsigned long ui_khz;
+	int ret;
+
+	ret = kstrtoul(cpu_min_a57, 0, &ui_khz);
+	if (ret)
+		return -EINVAL;
+
+	arg_cpu_min_a57 = ui_khz;
+	printk("cpu_min_a57=%lu\n", arg_cpu_min_a57);
+	return ret;
+}
+__setup("cpu_min_a57=", cpufreq_read_cpu_min_a57);
+
 static struct clk *cpu_clk[NR_CPUS];
 static struct clk *l2_clk;
 static DEFINE_PER_CPU(struct cpufreq_frequency_table *, freq_table);
