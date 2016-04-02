@@ -432,7 +432,6 @@ static void cpufreq_interactive_timer(unsigned long data)
 	unsigned long max_cpu;
 	int i, fcpu;
 	struct cpufreq_govinfo govinfo;
-	bool mdss_screen_on;
 
 	if (!down_read_trylock(&ppol->enable_sem))
 		return;
