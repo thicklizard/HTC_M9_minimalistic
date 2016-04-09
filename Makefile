@@ -347,9 +347,9 @@ CC		= $(srctree)/scripts/gcc-wrapper.py $(REAL_CC)
 
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
-GRAPHITE	= -mtune=cortex-a57.cortex-a53 -mcpu=cortex-a57
+GRAPHITE	= -mtune=cortex-a57.cortex-a53 -mcpu=cortex-a57 -fno-pic
 
-CFLAGS_MODULE   = $(GRAPHITE)
+CFLAGS_MODULE   = $(GRAPHITE) -fno-pic
 AFLAGS_MODULE   = $(GRAPHITE) 
 LDFLAGS_MODULE  = --strip-debug
 CFLAGS_KERNEL	= $(GRAPHITE)
