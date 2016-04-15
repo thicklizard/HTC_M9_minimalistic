@@ -33,7 +33,10 @@
 			linux,reserve-contiguous-region;
 			linux,reserve-region;
 			linux,remove-completely;
-			reg = <0 0x05800000 0 0x00200000>; /* 2 MB */
+			/* Hardboot: reserve 1MB of space
+			 * before ramoops address of 0x5700000
+			 */
+			reg = <0 0x5700000 0 0x00300000>;
 			label = "ramoops_mem";
 		};
 
@@ -41,7 +44,7 @@
 			linux,reserve-contiguous-region;
 			linux,reserve-region;
 			linux,remove-completely;
-			reg = <0 0x05a00000 0 0x00900000>; /* 9 MB */
+			reg = <0 0x5700000 0 0x6000000>; /* 9 MB */
 			label = "htc_reserve";
 
 			#address-cells = <2>;
