@@ -384,7 +384,7 @@ static int smb349_get_prop_charge_type(struct smb349_dual_charger *chip)
 		if (rc) {
 			dev_err(chip->dev, "Couldn't read STAT_C rc = %d\n",
 									rc);
-			return POWER_SUPPLY_CHARGE_TYPE_UNKNOWN;
+			return POWER_SUPPLY_CHARGE_TYPE_FAST;
 		}
 
 		dev_dbg(chip->dev, "%s: STATUS_C_REG=%x\n", __func__, reg);

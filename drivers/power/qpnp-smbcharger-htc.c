@@ -4391,7 +4391,7 @@ int pmi8994_set_pwrsrc_and_charger_enable(enum htc_power_source_type src,
 	case HTC_PWR_SOURCE_TYPE_UNKNOWN_USB:
 	case HTC_PWR_SOURCE_TYPE_USB:
 		if (the_chip->ftm_src == HTC_FTM_PWR_SOURCE_TYPE_USB) {
-			mA = USB_MA_500;
+			mA = USB_MA_900;
 		} else if (!is_device_XA_or_XB) {
 			if (usb_supply_type == POWER_SUPPLY_TYPE_USB_CDP) {
 				mA = USB_MA_1000;
