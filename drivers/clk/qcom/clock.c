@@ -1102,8 +1102,8 @@ EXPORT_SYMBOL(of_msm_clock_register);
 int __init msm_clock_init(struct clock_init_data *data)
 {
 #ifdef CONFIG_HTC_POWER_DEBUG
-	struct clk_lookup *clock_tbl;
-	size_t num_clocks;
+	struct clk_lookup *clock_tbl =NULL;
+	size_t num_clocks = 0;
 #endif
 	if (!data)
 		return -EINVAL;

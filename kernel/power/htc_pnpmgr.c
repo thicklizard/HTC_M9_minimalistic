@@ -1521,7 +1521,7 @@ fail:
 static void init_cluster_info(void)
 {
 	const struct device_node *top = NULL;
-	int ret;
+	int ret = 0;
 
 	top = of_find_compatible_node(NULL, NULL,
 					 "htc,perf_table_v2");
@@ -1560,7 +1560,7 @@ static void init_cluster_info(void)
 
 static int __init pnpmgr_init(void)
 {
-	int ret, i, j;
+	int ret = 0, i, j;
 	char *name[MAX_TYPE] = {"big", "little"};
 	char buf[10];
 

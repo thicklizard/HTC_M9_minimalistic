@@ -105,7 +105,7 @@ static void disable_reset_func(struct work_struct *work)
 {
 	struct keycombo_state *state;
 	struct keycombo_platform_data *pdata;
-	unsigned long flags;
+	unsigned long flags = 0;
 	int key, *keyp;
 
 	list_for_each_entry(state, &keycombo_list, list) {
@@ -188,7 +188,7 @@ static ssize_t disable_reset_store(struct device *dev,
 	unsigned int value;
 	struct keycombo_state *state;
 	struct keycombo_platform_data *pdata;
-	unsigned long flags;
+	unsigned long flags = 0;
 	int key, *keyp;
 
 	if (kstrtouint(buf, 10, &value) < 0) {
@@ -483,7 +483,7 @@ static void do_key_up(struct work_struct *work)
 static void keycombo_event(struct input_handle *handle, unsigned int type,
 		unsigned int code, int value)
 {
-	unsigned long flags;
+	unsigned long flags = 0;
 	struct keycombo_state *state = handle->private;
 
 	if (type != EV_KEY)

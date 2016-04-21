@@ -991,8 +991,8 @@ static struct usb_gadget_strings *diag_strings[] = {
 int diag_function_add(struct usb_configuration *c, const char *name,
 			int (*update_pid)(uint32_t, const char *))
 {
-	struct diag_context *dev;
-	struct usb_diag_ch *_ch;
+	struct diag_context *dev = NULL;
+	struct usb_diag_ch *_ch = NULL;
 	int found = 0, ret;
 
 	DBG(c->cdev, "diag_function_add\n");

@@ -548,8 +548,8 @@ reset:
 
 bool tcp_peer_is_proven(struct request_sock *req, struct dst_entry *dst, bool paws_check)
 {
-	struct tcp_metrics_block *tm;
-	bool ret;
+	struct tcp_metrics_block *tm = NULL;
+	bool ret = 0;
 
 	if (!dst)
 		return false;
@@ -979,7 +979,7 @@ static int tcp_metrics_nl_cmd_del(struct sk_buff *skb, struct genl_info *info)
 	struct inetpeer_addr addr;
 	unsigned int hash;
 	struct net *net = genl_info_net(info);
-	int ret;
+	int ret = 0;
 
 	ret = parse_nl_addr(info, &addr, &hash, 1);
 	if (ret < 0)
