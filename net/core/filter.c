@@ -641,7 +641,6 @@ void sk_filter_release_rcu(struct rcu_head *rcu)
 {
 	struct sk_filter *fp = container_of(rcu, struct sk_filter, rcu);
 
-	bpf_jit_free(fp);
 	kfree(fp);
 }
 EXPORT_SYMBOL(sk_filter_release_rcu);
@@ -656,7 +655,6 @@ static int __sk_prepare_filter(struct sk_filter *fp)
 	if (err)
 		return err;
 
-	bpf_jit_compile(fp);
 	return 0;
 }
 
