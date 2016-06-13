@@ -29,10 +29,14 @@
 #include <linux/mempolicy.h>
 #include <linux/migrate.h>
 #include <linux/task_work.h>
+#include <linux/module.h>
 
 #include <trace/events/sched.h>
 
 #include "sched.h"
+
+static int min_budget = 60;
+module_param(min_budget, int, 0755);
 
 unsigned int sysctl_sched_latency = 6000000ULL;
 unsigned int normalized_sysctl_sched_latency = 6000000ULL;
@@ -1150,7 +1154,10 @@ int sched_set_cpu_budget(int cpu, int budget)
 {
 	struct rq *rq = cpu_rq(cpu);
 
-	rq->budget = budget;
+	if (cpu < 6)
+		rq->budget = max(budget, min_budget);
+	else
+		rq->budget = b
 
 	return 0;
 }
