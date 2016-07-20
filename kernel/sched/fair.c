@@ -1157,7 +1157,7 @@ int sched_set_cpu_budget(int cpu, int budget)
 	if (cpu < 6)
 		rq->budget = max(budget, min_budget);
 	else
-		rq->budget = b
+		rq->budget = budget;
 
 	return 0;
 }

@@ -64,7 +64,7 @@ static struct kmem_cache *cfq_pool;
 #define cfq_class_idle(cfqq)	((cfqq)->ioprio_class == IOPRIO_CLASS_IDLE)
 #define cfq_class_rt(cfqq)	((cfqq)->ioprio_class == IOPRIO_CLASS_RT)
 
-#define sample_valid(samples)	((samples) > 80)f
+#define sample_valid(samples)	((samples) > 80)
 #define rb_entry_cfqg(node)	rb_entry((node), struct cfq_group, rb_node)
 
 struct cfq_ttime {
