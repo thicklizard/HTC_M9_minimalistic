@@ -36,13 +36,24 @@ enum {
 	ADM_RTAC_APR_CAL,
 	ADM_DTS_EAGLE,
 	ADM_SRS_TRUMEDIA,
+	ADM_RTAC_AUDVOL_CAL,
 	ADM_MAX_CAL_TYPES
+};
+
+enum {
+	ADM_MEM_MAP_INDEX_SOURCE_TRACKING = ADM_MAX_CAL_TYPES,
+	ADM_MEM_MAP_INDEX_MAX
+};
+
+enum {
+	ADM_CLIENT_ID_DEFAULT = 0,
+	ADM_CLIENT_ID_SOURCE_TRACKING,
+	ADM_CLIENT_ID_MAX,
 };
 
 #define MAX_COPPS_PER_PORT 0x8
 #define ADM_MAX_CHANNELS 8
 
-/* multiple copp per stream. */
 struct route_payload {
 	unsigned int copp_idx[MAX_COPPS_PER_PORT];
 	unsigned int port_id[MAX_COPPS_PER_PORT];
@@ -53,11 +64,8 @@ struct route_payload {
 	unsigned int session_id;
 };
 
-struct msm_pcm_channel_mux {
-	int out_channel;
-	int input_channel;
-	u16 channel_config[16][16];
-};
+#define HTC_ONEDOTONE_DOLBY_ADM_COPP_TOPOLOGY_ID     0x10000001
+#define HTC_ADAPTIVE_DOLBY_ADM_COPP_TOPOLOGY_ID      0x10000004
 
 int srs_trumedia_open(int port_id, int copp_idx, __s32 srs_tech_id,
 		      void *srs_params);
@@ -68,8 +76,13 @@ int adm_dts_eagle_set(int port_id, int copp_idx, int param_id,
 int adm_dts_eagle_get(int port_id, int copp_idx, int param_id,
 		      void *data, uint32_t size);
 
+void adm_copp_mfc_cfg(int port_id, int copp_idx, int dst_sample_rate);
+
 int adm_get_params(int port_id, int copp_idx, uint32_t module_id,
 		   uint32_t param_id, uint32_t params_length, char *params);
+
+int adm_send_params_v5(int port_id, int copp_idx, char *params,
+			      uint32_t params_length);
 
 int adm_dolby_dap_send_params(int port_id, int copp_idx, char *params,
 			      uint32_t params_length);
@@ -133,17 +146,15 @@ int adm_wait_timeout(int port_id, int copp_idx, int wait_time);
 int adm_store_cal_data(int port_id, int copp_idx, int path, int perf_mode,
 		       int cal_type, char *params, int *size);
 
-//htc audio ++
-int q6adm_enable_effect(u16 port_id, int copp_idx, uint32_t copp_id, uint32_t param_id,
-		uint32_t payload_size, void *payload);
-//htc audio --
 int adm_send_compressed_device_mute(int port_id, int copp_idx, bool mute_on);
 
 int adm_send_compressed_device_latency(int port_id, int copp_idx, int latency);
+int adm_set_sound_focus(int port_id, int copp_idx,
+			struct sound_focus_param soundFocusData);
+int adm_get_sound_focus(int port_id, int copp_idx,
+			struct sound_focus_param *soundFocusData);
+int adm_get_source_tracking(int port_id, int copp_idx,
+			    struct source_tracking_param *sourceTrackingData);
+int q6adm_enable_effect(u16 port_id, int copp_idx, uint32_t payload_size, void *payload);
 
-int programable_channel_mixer(int port_id, int copp_idx, int session_id,
-		int session_type, struct msm_pcm_channel_mux *ch_mux,
-		int num_ch);
-
-
-#endif /* __Q6_ADM_V2_H__ */
+#endif 

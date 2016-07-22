@@ -19,7 +19,6 @@
 #define AUDIO_POST_CALIBRATION		_IOWR(CAL_IOCTL_MAGIC, \
 							205, void *)
 
-/* For Real-Time Audio Calibration */
 #define AUDIO_GET_RTAC_ADM_INFO		_IOR(CAL_IOCTL_MAGIC, \
 							207, void *)
 #define AUDIO_GET_RTAC_VOICE_INFO	_IOR(CAL_IOCTL_MAGIC, \
@@ -44,6 +43,9 @@
 							217, void *)
 #define AUDIO_SET_RTAC_AFE_CAL		_IOWR(CAL_IOCTL_MAGIC, \
 							218, void *)
+
+#define MAX_SIDETONE_IIR_DATA_SIZE   220
+#define MAX_NO_IIR_FILTER_STAGE      10
 enum {
 	CVP_VOC_RX_TOPOLOGY_CAL_TYPE = 0,
 	CVP_VOC_TX_TOPOLOGY_CAL_TYPE,
@@ -71,7 +73,12 @@ enum {
 	AFE_FB_SPKR_PROT_CAL_TYPE,
 	AFE_HW_DELAY_CAL_TYPE,
 	AFE_SIDETONE_CAL_TYPE,
+	AFE_SIDETONE_IIR_CAL_TYPE,
+	AFE_TOPOLOGY_CAL_TYPE,
+	AFE_CUST_TOPOLOGY_CAL_TYPE,
 
+	LSM_CUST_TOPOLOGY_CAL_TYPE,
+	LSM_TOPOLOGY_CAL_TYPE,
 	LSM_CAL_TYPE,
 
 	ADM_RTAC_INFO_CAL_TYPE,
@@ -88,6 +95,10 @@ enum {
 	AUDIO_CORE_METAINFO_CAL_TYPE,
 	SRS_TRUMEDIA_CAL_TYPE,
 
+	CORE_CUSTOM_TOPOLOGIES_CAL_TYPE,
+	ADM_RTAC_AUDVOL_CAL_TYPE,
+
+	ULP_LSM_TOPOLOGY_ID_CAL_TYPE,
 	MAX_CAL_TYPES,
 };
 
@@ -101,7 +112,6 @@ enum {
 
 #define MAX_IOCTL_CMD_SIZE	512
 
-/* common structures */
 
 struct audio_cal_header {
 	int32_t		data_size;
@@ -116,15 +126,14 @@ struct audio_cal_type_header {
 };
 
 struct audio_cal_data {
-	/* Size of cal data at mem_handle allocation or at vaddr */
+	
 	int32_t		cal_size;
-	/* If mem_handle if shared memory is used*/
+	
 	int32_t		mem_handle;
-	/* size of virtual memory if shared memory not used */
+	
 };
 
 
-/* AUDIO_ALLOCATE_CALIBRATION */
 struct audio_cal_type_alloc {
 	struct audio_cal_type_header	cal_hdr;
 	struct audio_cal_data		cal_data;
@@ -136,7 +145,6 @@ struct audio_cal_alloc {
 };
 
 
-/* AUDIO_DEALLOCATE_CALIBRATION */
 struct audio_cal_type_dealloc {
 	struct audio_cal_type_header	cal_hdr;
 	struct audio_cal_data		cal_data;
@@ -148,7 +156,6 @@ struct audio_cal_dealloc {
 };
 
 
-/* AUDIO_PREPARE_CALIBRATION */
 struct audio_cal_type_prepare {
 	struct audio_cal_type_header	cal_hdr;
 	struct audio_cal_data		cal_data;
@@ -160,7 +167,6 @@ struct audio_cal_prepare {
 };
 
 
-/* AUDIO_POST_CALIBRATION */
 struct audio_cal_type_post {
 	struct audio_cal_type_header	cal_hdr;
 	struct audio_cal_data		cal_data;
@@ -171,13 +177,11 @@ struct audio_cal_post {
 	struct audio_cal_type_post	cal_type;
 };
 
-/*AUDIO_CORE_META_INFO */
 
 struct audio_cal_info_metainfo {
 	uint32_t nKey;
 };
 
-/* Cal info types */
 enum {
 	RX_DEVICE,
 	TX_DEVICE,
@@ -187,7 +191,7 @@ enum {
 struct audio_cal_info_adm_top {
 	int32_t		topology;
 	int32_t		acdb_id;
-	/* RX_DEVICE or TX_DEVICE */
+	
 	int32_t		path;
 	int32_t		app_type;
 	int32_t		sample_rate;
@@ -195,7 +199,7 @@ struct audio_cal_info_adm_top {
 
 struct audio_cal_info_audproc {
 	int32_t		acdb_id;
-	/* RX_DEVICE or TX_DEVICE */
+	
 	int32_t		path;
 	int32_t		app_type;
 	int32_t		sample_rate;
@@ -203,7 +207,7 @@ struct audio_cal_info_audproc {
 
 struct audio_cal_info_audvol {
 	int32_t		acdb_id;
-	/* RX_DEVICE or TX_DEVICE */
+	
 	int32_t		path;
 	int32_t		app_type;
 	int32_t		vol_index;
@@ -211,7 +215,15 @@ struct audio_cal_info_audvol {
 
 struct audio_cal_info_afe {
 	int32_t		acdb_id;
-	/* RX_DEVICE or TX_DEVICE */
+	
+	int32_t		path;
+	int32_t		sample_rate;
+};
+
+struct audio_cal_info_afe_top {
+	int32_t		topology;
+	int32_t		acdb_id;
+	
 	int32_t		path;
 	int32_t		sample_rate;
 };
@@ -243,7 +255,7 @@ struct audio_cal_hw_delay_data {
 
 struct audio_cal_info_hw_delay {
 	int32_t					acdb_id;
-	/* RX_DEVICE or TX_DEVICE */
+	
 	int32_t					path;
 	int32_t					property_type;
 	struct audio_cal_hw_delay_data		data;
@@ -253,7 +265,8 @@ enum msm_spkr_prot_states {
 	MSM_SPKR_PROT_CALIBRATED,
 	MSM_SPKR_PROT_CALIBRATION_IN_PROGRESS,
 	MSM_SPKR_PROT_DISABLED,
-	MSM_SPKR_PROT_NOT_CALIBRATED
+	MSM_SPKR_PROT_NOT_CALIBRATED,
+	MSM_SPKR_PROT_PRE_CALIBRATED,
 };
 
 enum msm_spkr_count {
@@ -266,9 +279,7 @@ struct audio_cal_info_spk_prot_cfg {
 	int32_t		r0[SP_V2_NUM_MAX_SPKRS];
 	int32_t		t0[SP_V2_NUM_MAX_SPKRS];
 	uint32_t	quick_calib_flag;
-	uint32_t	mode; /*0 - Start spk prot
-	1 - Start calib
-	2 - Disable spk prot*/
+	uint32_t	mode; 
 };
 
 struct audio_cal_info_msm_spk_prot_status {
@@ -285,9 +296,30 @@ struct audio_cal_info_sidetone {
 	int32_t		pid;
 };
 
+struct audio_cal_info_sidetone_iir {
+	uint16_t	iir_enable;
+	uint16_t	num_biquad_stages;
+	uint16_t        pregain;
+	uint8_t         iir_config[MAX_SIDETONE_IIR_DATA_SIZE];
+	int32_t		tx_acdb_id;
+	int32_t		rx_acdb_id;
+	int32_t		mid;
+	int32_t		pid;
+};
+
+
+
+
+struct audio_cal_info_lsm_top {
+	int32_t		topology;
+	int32_t		acdb_id;
+	int32_t		app_type;
+};
+
+
 struct audio_cal_info_lsm {
 	int32_t		acdb_id;
-	/* RX_DEVICE or TX_DEVICE */
+	
 	int32_t		path;
 	int32_t		app_type;
 };
@@ -312,7 +344,7 @@ enum {
 struct audio_cal_info_vocvol {
 	int32_t		tx_acdb_id;
 	int32_t		rx_acdb_id;
-	/* DEFUALT_ or VOL_BOOST_FEATURE_SET */
+	
 	int32_t		feature_set;
 };
 
@@ -348,7 +380,6 @@ struct audio_cal_info_voc_col {
 	struct audio_cal_col_data	data;
 };
 
-/* AUDIO_SET_CALIBRATION & */
 struct audio_cal_type_basic {
 	struct audio_cal_type_header	cal_hdr;
 	struct audio_cal_data		cal_data;
@@ -436,6 +467,17 @@ struct audio_cal_afe {
 	struct audio_cal_type_afe	cal_type;
 };
 
+struct audio_cal_type_afe_top {
+	struct audio_cal_type_header	cal_hdr;
+	struct audio_cal_data		cal_data;
+	struct audio_cal_info_afe_top	cal_info;
+};
+
+struct audio_cal_afe_top {
+	struct audio_cal_header		hdr;
+	struct audio_cal_type_afe_top	cal_type;
+};
+
 struct audio_cal_type_aanc {
 	struct audio_cal_type_header	cal_hdr;
 	struct audio_cal_data		cal_data;
@@ -478,6 +520,28 @@ struct audio_cal_type_sidetone {
 struct audio_cal_sidetone {
 	struct audio_cal_header			hdr;
 	struct audio_cal_type_sidetone		cal_type;
+};
+
+struct audio_cal_type_sidetone_iir {
+	struct audio_cal_type_header		cal_hdr;
+	struct audio_cal_data			cal_data;
+	struct audio_cal_info_sidetone_iir	cal_info;
+};
+
+struct audio_cal_sidetone_iir {
+	struct audio_cal_header			hdr;
+	struct audio_cal_type_sidetone_iir	cal_type;
+};
+
+struct audio_cal_type_lsm_top {
+	struct audio_cal_type_header	cal_hdr;
+	struct audio_cal_data		cal_data;
+	struct audio_cal_info_lsm_top	cal_info;
+};
+
+struct audio_cal_lsm_top {
+	struct audio_cal_header		hdr;
+	struct audio_cal_type_lsm_top	cal_type;
 };
 
 struct audio_cal_type_lsm {
@@ -546,7 +610,6 @@ struct audio_cal_voc_col {
 	struct audio_cal_type_voc_col	cal_type;
 };
 
-/* AUDIO_GET_CALIBRATION */
 struct audio_cal_type_fb_spk_prot_status {
 	struct audio_cal_type_header			cal_hdr;
 	struct audio_cal_data				cal_data;
@@ -558,4 +621,4 @@ struct audio_cal_fb_spk_prot_status {
 	struct audio_cal_type_fb_spk_prot_status	cal_type;
 };
 
-#endif /* _UAPI_MSM_AUDIO_CALIBRATION_H */
+#endif 

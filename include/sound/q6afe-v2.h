@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -40,57 +40,140 @@
 #define VIRTUAL_ID_TO_PORTID(val) ((val & 0xF) | 0x2000)
 
 enum {
-	IDX_PRIMARY_I2S_RX = 0,
-	IDX_PRIMARY_I2S_TX = 1,
-	IDX_AFE_PORT_ID_PRIMARY_PCM_RX = 2,
-	IDX_AFE_PORT_ID_PRIMARY_PCM_TX = 3,
-	IDX_SECONDARY_I2S_RX = 4,
-	IDX_SECONDARY_I2S_TX = 5,
-	IDX_MI2S_RX = 6,
-	IDX_MI2S_TX = 7,
-	IDX_HDMI_RX = 8,
-	IDX_RSVD_2 = 9,
-	IDX_RSVD_3 = 10,
-	IDX_DIGI_MIC_TX = 11,
-	IDX_VOICE_RECORD_RX = 12,
-	IDX_VOICE_RECORD_TX = 13,
-	IDX_VOICE_PLAYBACK_TX = 14,
-	IDX_SLIMBUS_0_RX = 15,
-	IDX_SLIMBUS_0_TX = 16,
-	IDX_SLIMBUS_1_RX = 17,
-	IDX_SLIMBUS_1_TX = 18,
-	IDX_SLIMBUS_2_RX = 19,
-	IDX_SLIMBUS_2_TX = 20,
-	IDX_SLIMBUS_3_RX = 21,
-	IDX_SLIMBUS_3_TX = 22,
-	IDX_SLIMBUS_4_RX = 23,
-	IDX_SLIMBUS_4_TX = 24,
-	IDX_SLIMBUS_5_RX = 25,
-	IDX_SLIMBUS_5_TX = 26,
-	IDX_INT_BT_SCO_RX = 27,
-	IDX_INT_BT_SCO_TX = 28,
-	IDX_INT_BT_A2DP_RX = 29,
-	IDX_INT_FM_RX = 30,
-	IDX_INT_FM_TX = 31,
-	IDX_RT_PROXY_PORT_001_RX = 32,
-	IDX_RT_PROXY_PORT_001_TX = 33,
-	IDX_AFE_PORT_ID_QUATERNARY_MI2S_RX = 34,
-	IDX_AFE_PORT_ID_QUATERNARY_MI2S_TX = 35,
-	IDX_AFE_PORT_ID_SECONDARY_MI2S_RX = 36,
-	IDX_AFE_PORT_ID_SECONDARY_MI2S_TX = 37,
-	IDX_AFE_PORT_ID_TERTIARY_MI2S_RX = 38,
-	IDX_AFE_PORT_ID_TERTIARY_MI2S_TX = 39,
-	IDX_AFE_PORT_ID_PRIMARY_MI2S_RX = 40,
-	IDX_AFE_PORT_ID_PRIMARY_MI2S_TX = 41,
-	IDX_AFE_PORT_ID_SECONDARY_PCM_RX = 42,
-	IDX_AFE_PORT_ID_SECONDARY_PCM_TX = 43,
-	IDX_VOICE2_PLAYBACK_TX = 44,
-	IDX_SLIMBUS_6_RX = 45,
-	IDX_SLIMBUS_6_TX = 46,
-	IDX_SPDIF_RX = 47,
+	
+	IDX_PRIMARY_I2S_RX,
+	IDX_PRIMARY_I2S_TX,
+	IDX_AFE_PORT_ID_PRIMARY_PCM_RX,
+	IDX_AFE_PORT_ID_PRIMARY_PCM_TX,
+	IDX_SECONDARY_I2S_RX,
+	
+	IDX_SECONDARY_I2S_TX,
+	IDX_MI2S_RX,
+	IDX_MI2S_TX,
+	IDX_HDMI_RX,
+	IDX_RSVD_2,
+	
+	IDX_RSVD_3,
+	IDX_DIGI_MIC_TX,
+	IDX_VOICE_RECORD_RX,
+	IDX_VOICE_RECORD_TX,
+	IDX_VOICE_PLAYBACK_TX,
+	
+	IDX_SLIMBUS_0_RX,
+	IDX_SLIMBUS_0_TX,
+	IDX_SLIMBUS_1_RX,
+	IDX_SLIMBUS_1_TX,
+	IDX_SLIMBUS_2_RX,
+	
+	IDX_SLIMBUS_2_TX,
+	IDX_SLIMBUS_3_RX,
+	IDX_SLIMBUS_3_TX,
+	IDX_SLIMBUS_4_RX,
+	IDX_SLIMBUS_4_TX,
+	
+	IDX_SLIMBUS_5_RX,
+	IDX_SLIMBUS_5_TX,
+	IDX_INT_BT_SCO_RX,
+	IDX_INT_BT_SCO_TX,
+	IDX_INT_BT_A2DP_RX,
+	
+	IDX_INT_FM_RX,
+	IDX_INT_FM_TX,
+	IDX_RT_PROXY_PORT_001_RX,
+	IDX_RT_PROXY_PORT_001_TX,
+	IDX_AFE_PORT_ID_QUATERNARY_MI2S_RX,
+	
+	IDX_AFE_PORT_ID_QUATERNARY_MI2S_TX,
+	IDX_AFE_PORT_ID_SECONDARY_MI2S_RX,
+	IDX_AFE_PORT_ID_SECONDARY_MI2S_TX,
+	IDX_AFE_PORT_ID_TERTIARY_MI2S_RX,
+	IDX_AFE_PORT_ID_TERTIARY_MI2S_TX,
+	
+	IDX_AFE_PORT_ID_PRIMARY_MI2S_RX,
+	IDX_AFE_PORT_ID_PRIMARY_MI2S_TX,
+	IDX_AFE_PORT_ID_SECONDARY_PCM_RX,
+	IDX_AFE_PORT_ID_SECONDARY_PCM_TX,
+	IDX_AFE_PORT_ID_TERTIARY_PCM_RX,
+	IDX_AFE_PORT_ID_TERTIARY_PCM_TX,
+	IDX_AFE_PORT_ID_QUATERNARY_PCM_RX,
+	IDX_AFE_PORT_ID_QUATERNARY_PCM_TX,
+	IDX_VOICE2_PLAYBACK_TX,
+	
+	IDX_SLIMBUS_6_RX,
+	IDX_SLIMBUS_6_TX,
+	IDX_SPDIF_RX,
 	IDX_GLOBAL_CFG,
 	IDX_AUDIO_PORT_ID_I2S_RX,
+	
 	IDX_AFE_PORT_ID_SECONDARY_MI2S_RX_SD1,
+	IDX_AFE_PORT_ID_QUINARY_MI2S_RX,
+	IDX_AFE_PORT_ID_QUINARY_MI2S_TX,
+	IDX_AFE_PORT_ID_SENARY_MI2S_TX,
+	
+	IDX_AFE_PORT_ID_PRIMARY_TDM_RX_0,
+	IDX_AFE_PORT_ID_PRIMARY_TDM_TX_0,
+	IDX_AFE_PORT_ID_PRIMARY_TDM_RX_1,
+	IDX_AFE_PORT_ID_PRIMARY_TDM_TX_1,
+	IDX_AFE_PORT_ID_PRIMARY_TDM_RX_2,
+	IDX_AFE_PORT_ID_PRIMARY_TDM_TX_2,
+	IDX_AFE_PORT_ID_PRIMARY_TDM_RX_3,
+	IDX_AFE_PORT_ID_PRIMARY_TDM_TX_3,
+	IDX_AFE_PORT_ID_PRIMARY_TDM_RX_4,
+	IDX_AFE_PORT_ID_PRIMARY_TDM_TX_4,
+	IDX_AFE_PORT_ID_PRIMARY_TDM_RX_5,
+	IDX_AFE_PORT_ID_PRIMARY_TDM_TX_5,
+	IDX_AFE_PORT_ID_PRIMARY_TDM_RX_6,
+	IDX_AFE_PORT_ID_PRIMARY_TDM_TX_6,
+	IDX_AFE_PORT_ID_PRIMARY_TDM_RX_7,
+	IDX_AFE_PORT_ID_PRIMARY_TDM_TX_7,
+	IDX_AFE_PORT_ID_SECONDARY_TDM_RX_0,
+	IDX_AFE_PORT_ID_SECONDARY_TDM_TX_0,
+	IDX_AFE_PORT_ID_SECONDARY_TDM_RX_1,
+	IDX_AFE_PORT_ID_SECONDARY_TDM_TX_1,
+	IDX_AFE_PORT_ID_SECONDARY_TDM_RX_2,
+	IDX_AFE_PORT_ID_SECONDARY_TDM_TX_2,
+	IDX_AFE_PORT_ID_SECONDARY_TDM_RX_3,
+	IDX_AFE_PORT_ID_SECONDARY_TDM_TX_3,
+	IDX_AFE_PORT_ID_SECONDARY_TDM_RX_4,
+	IDX_AFE_PORT_ID_SECONDARY_TDM_TX_4,
+	IDX_AFE_PORT_ID_SECONDARY_TDM_RX_5,
+	IDX_AFE_PORT_ID_SECONDARY_TDM_TX_5,
+	IDX_AFE_PORT_ID_SECONDARY_TDM_RX_6,
+	IDX_AFE_PORT_ID_SECONDARY_TDM_TX_6,
+	IDX_AFE_PORT_ID_SECONDARY_TDM_RX_7,
+	IDX_AFE_PORT_ID_SECONDARY_TDM_TX_7,
+	IDX_AFE_PORT_ID_TERTIARY_TDM_RX_0,
+	IDX_AFE_PORT_ID_TERTIARY_TDM_TX_0,
+	IDX_AFE_PORT_ID_TERTIARY_TDM_RX_1,
+	IDX_AFE_PORT_ID_TERTIARY_TDM_TX_1,
+	IDX_AFE_PORT_ID_TERTIARY_TDM_RX_2,
+	IDX_AFE_PORT_ID_TERTIARY_TDM_TX_2,
+	IDX_AFE_PORT_ID_TERTIARY_TDM_RX_3,
+	IDX_AFE_PORT_ID_TERTIARY_TDM_TX_3,
+	IDX_AFE_PORT_ID_TERTIARY_TDM_RX_4,
+	IDX_AFE_PORT_ID_TERTIARY_TDM_TX_4,
+	IDX_AFE_PORT_ID_TERTIARY_TDM_RX_5,
+	IDX_AFE_PORT_ID_TERTIARY_TDM_TX_5,
+	IDX_AFE_PORT_ID_TERTIARY_TDM_RX_6,
+	IDX_AFE_PORT_ID_TERTIARY_TDM_TX_6,
+	IDX_AFE_PORT_ID_TERTIARY_TDM_RX_7,
+	IDX_AFE_PORT_ID_TERTIARY_TDM_TX_7,
+	IDX_AFE_PORT_ID_QUATERNARY_TDM_RX_0,
+	IDX_AFE_PORT_ID_QUATERNARY_TDM_TX_0,
+	IDX_AFE_PORT_ID_QUATERNARY_TDM_RX_1,
+	IDX_AFE_PORT_ID_QUATERNARY_TDM_TX_1,
+	IDX_AFE_PORT_ID_QUATERNARY_TDM_RX_2,
+	IDX_AFE_PORT_ID_QUATERNARY_TDM_TX_2,
+	IDX_AFE_PORT_ID_QUATERNARY_TDM_RX_3,
+	IDX_AFE_PORT_ID_QUATERNARY_TDM_TX_3,
+	IDX_AFE_PORT_ID_QUATERNARY_TDM_RX_4,
+	IDX_AFE_PORT_ID_QUATERNARY_TDM_TX_4,
+	IDX_AFE_PORT_ID_QUATERNARY_TDM_RX_5,
+	IDX_AFE_PORT_ID_QUATERNARY_TDM_TX_5,
+	IDX_AFE_PORT_ID_QUATERNARY_TDM_RX_6,
+	IDX_AFE_PORT_ID_QUATERNARY_TDM_TX_6,
+	IDX_AFE_PORT_ID_QUATERNARY_TDM_RX_7,
+	IDX_AFE_PORT_ID_QUATERNARY_TDM_TX_7,
 	AFE_MAX_PORTS
 };
 
@@ -102,12 +185,17 @@ enum afe_mad_type {
 	MAD_SW_AUDIO = 0x05,
 };
 
+enum afe_cal_mode {
+	AFE_CAL_MODE_DEFAULT = 0x00,
+	AFE_CAL_MODE_NONE,
+};
+
 struct afe_audio_buffer {
 	dma_addr_t phys;
 	void       *data;
 	uint32_t   used;
-	uint32_t   size;/* size of buffer */
-	uint32_t   actual_size; /* actual number of bytes read by DSP */
+	uint32_t   size;
+	uint32_t   actual_size; 
 	struct      ion_handle *handle;
 	struct      ion_client *client;
 };
@@ -119,19 +207,19 @@ struct afe_audio_port_data {
 	uint32_t	    cpu_buf;
 	struct list_head    mem_map_handle;
 	uint32_t	    tmp_hdl;
-	/* read or write locks */
+	
 	struct mutex	    lock;
 	spinlock_t	    dsp_lock;
 };
 
 struct afe_audio_client {
 	atomic_t	       cmd_state;
-	/* Relative or absolute TS */
+	
 	uint32_t	       time_flag;
 	void		       *priv;
 	uint64_t	       time_stamp;
 	struct mutex	       cmd_lock;
-	/* idx:1 out port, 0: in port*/
+	
 	struct afe_audio_port_data port[2];
 	wait_queue_head_t      cmd_wait;
 	uint32_t               mem_map_handle;
@@ -148,10 +236,11 @@ struct aanc_data {
 int afe_open(u16 port_id, union afe_port_config *afe_config, int rate);
 int afe_close(int port_id);
 int afe_loopback(u16 enable, u16 rx_port, u16 tx_port);
-int afe_sidetone(u16 tx_port_id, u16 rx_port_id, u16 enable, uint16_t gain);
+int afe_sidetone_enable(u16 tx_port_id, u16 rx_port_id,  bool enable);
 int afe_loopback_gain(u16 port_id, u16 volume);
 int afe_validate_port(u16 port_id);
 int afe_get_port_index(u16 port_id);
+int afe_get_topology(int port_id);
 int afe_start_pseudo_port(u16 port_id);
 int afe_stop_pseudo_port(u16 port_id);
 uint32_t afe_req_mmap_handle(struct afe_audio_client *ac);
@@ -171,8 +260,11 @@ int afe_register_get_events(u16 port_id,
 		uint32_t token, uint32_t *payload, void *priv),
 		void *private_data);
 int afe_unregister_get_events(u16 port_id);
-int afe_rt_proxy_port_write(u32 buf_addr_p, u32 mem_map_handle, int bytes);
-int afe_rt_proxy_port_read(u32 buf_addr_p, u32 mem_map_handle, int bytes);
+int afe_rt_proxy_port_write(phys_addr_t buf_addr_p,
+			u32 mem_map_handle, int bytes);
+int afe_rt_proxy_port_read(phys_addr_t buf_addr_p,
+			u32 mem_map_handle, int bytes);
+void afe_set_cal_mode(u16 port_id, enum afe_cal_mode afe_cal_mode);
 int afe_port_start(u16 port_id, union afe_port_config *afe_config,
 	u32 rate);
 int afe_spk_prot_feed_back_cfg(int src_port, int dst_port,
@@ -190,14 +282,13 @@ struct afe_audio_client *q6afe_audio_client_alloc(void *priv);
 int q6afe_audio_client_buf_free_contiguous(unsigned int dir,
 			struct afe_audio_client *ac);
 void q6afe_audio_client_free(struct afe_audio_client *ac);
-/* if port_id is virtual, convert to physical..
- * if port_id is already physical, return physical
- */
 int afe_convert_virtual_to_portid(u16 port_id);
 
 int afe_pseudo_port_start_nowait(u16 port_id);
 int afe_pseudo_port_stop_nowait(u16 port_id);
 int afe_set_lpass_clock(u16 port_id, struct afe_clk_cfg *cfg);
+int afe_set_lpass_clock_v2(u16 port_id, struct afe_clk_set *cfg);
+int afe_set_lpass_clk_cfg(int index, struct afe_clk_set *cfg);
 int afe_set_digital_codec_core_clock(u16 port_id,
 			struct afe_digital_clk_cfg *cfg);
 int afe_set_lpass_internal_digital_codec_clock(u16 port_id,
@@ -223,8 +314,18 @@ void afe_clear_config(enum afe_config_type config);
 bool afe_has_config(enum afe_config_type config);
 
 void afe_set_aanc_info(struct aanc_data *aanc_info);
-int afe_port_group_set_param(u16 *port_id, int channel_count);
-int afe_port_group_enable(u16 enable);
+int afe_port_group_set_param(u16 group_id,
+	union afe_port_group_config *afe_group_config);
+int afe_port_group_enable(u16 group_id,
+	union afe_port_group_config *afe_group_config, u16 enable);
 int afe_unmap_rtac_block(uint32_t *mem_map_handle);
 int afe_map_rtac_block(struct rtac_cal_block_data *cal_block);
-#endif /* __Q6AFE_V2_H__ */
+int afe_send_slot_mapping_cfg(
+	struct afe_param_id_slot_mapping_cfg *slot_mapping_cfg,
+	u16 port_id);
+int afe_send_custom_tdm_header_cfg(
+	struct afe_param_id_custom_tdm_header_cfg *custom_tdm_header_cfg,
+	u16 port_id);
+int afe_tdm_port_start(u16 port_id, struct afe_tdm_port_config *tdm_port,
+		u32 rate);
+#endif 
