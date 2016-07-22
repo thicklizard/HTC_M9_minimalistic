@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -22,6 +22,7 @@
 #include <linux/uaccess.h>
 #include <linux/time.h>
 #include <linux/kmemleak.h>
+#include <linux/wakelock.h>
 #include <sound/apr_audio.h>
 #include <linux/qdsp6v2/usf.h>
 #include "q6usm.h"
@@ -66,6 +67,9 @@
 #define APR_US_DETECT_RESULT_IND 0
 
 #define BITS_IN_BYTE 8
+
+/* Time to stay awake after tx read event (e.g., proximity) */
+#define STAY_AWAKE_AFTER_READ_MSECS 3000
 
 /* The driver states */
 enum usf_state_type {
@@ -171,6 +175,8 @@ static const int s_button_map[] = {
 /* The opened devices container */
 static int s_opened_devs[MAX_DEVS_NUMBER];
 
+static struct wakeup_source usf_wakeup_source;
+
 #define USF_NAME_PREFIX "usf_"
 #define USF_NAME_PREFIX_SIZE 4
 
@@ -214,6 +220,7 @@ static int prepare_tsc_input_device(uint16_t ind,
 		__func__,
 		input_info->req_buttons_bitmap,
 		max_buttons_bitmap);
+		input_free_device(in_dev);
 		return -EINVAL;
 	}
 
@@ -434,6 +441,10 @@ static void usf_tx_cb(uint32_t opcode, uint32_t token,
 
 	switch (opcode) {
 	case Q6USM_EVENT_READ_DONE:
+		pr_debug("%s: acquiring %d msec wake lock\n", __func__,
+				STAY_AWAKE_AFTER_READ_MSECS);
+		__pm_wakeup_event(&usf_wakeup_source,
+				  STAY_AWAKE_AFTER_READ_MSECS);
 		if (token == USM_WRONG_TOKEN)
 			usf_xx->usf_state = USF_ERROR_STATE;
 		usf_xx->new_region = token;
@@ -2284,6 +2295,7 @@ static int usf_open(struct inode *inode, struct file *file)
 		pr_err("%s:usf allocation failed\n", __func__);
 		return -ENOMEM;
 	}
+	wakeup_source_init(&usf_wakeup_source, "usf");
 
 	file->private_data = usf;
 	usf->dev_ind = dev_ind;
@@ -2311,6 +2323,7 @@ static int usf_release(struct inode *inode, struct file *file)
 
 	s_opened_devs[usf->dev_ind] = 0;
 
+	wakeup_source_trash(&usf_wakeup_source);
 	kfree(usf);
 	pr_debug("%s: release exit\n", __func__);
 	return 0;

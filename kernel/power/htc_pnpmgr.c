@@ -17,7 +17,9 @@
 #include <linux/cpu.h>
 #include <linux/cpufreq.h>
 #include <linux/htc_pnpmgr.h>
+#include <linux/slab.h>
 #include <linux/of.h>
+#include <linux/htc_fda.h>
 
 #include "power.h"
 
@@ -181,7 +183,7 @@ static int thermal_bcpu_notify_diff_value = 20;
 static int thermal_lcpu_notify_diff_value = 10;
 static int thermal_ktm_freq_limit_value = MAX_VALUE;
 static int thermal_bcl_freq_limit_value = MAX_VALUE;
-static int modem_throttling_enabled_value = 0;
+static int thermal_min_freq_limit_value = 0;
 static int cpu_asn_value = 0;
 
 
@@ -201,22 +203,6 @@ define_int_show(thermal_temp_cpu3, thermal_temp_cpu[3]);
 define_int_store(thermal_temp_cpu3, thermal_temp_cpu[3], null_cb);
 power_attr(thermal_temp_cpu3);
 
-define_int_show(thermal_temp_cpu4, thermal_temp_cpu[4]);
-define_int_store(thermal_temp_cpu4, thermal_temp_cpu[4], null_cb);
-power_attr(thermal_temp_cpu4);
-
-define_int_show(thermal_temp_cpu5, thermal_temp_cpu[5]);
-define_int_store(thermal_temp_cpu5, thermal_temp_cpu[5], null_cb);
-power_attr(thermal_temp_cpu5);
-
-define_int_show(thermal_temp_cpu6, thermal_temp_cpu[6]);
-define_int_store(thermal_temp_cpu6, thermal_temp_cpu[6], null_cb);
-power_attr(thermal_temp_cpu6);
-
-define_int_show(thermal_temp_cpu7, thermal_temp_cpu[7]);
-define_int_store(thermal_temp_cpu7, thermal_temp_cpu[7], null_cb);
-power_attr(thermal_temp_cpu7);
-
 define_int_show(thermal_bcpu_notify_pnp_thres, thermal_bcpu_notify_pnp_thres_value);
 define_int_store(thermal_bcpu_notify_pnp_thres, thermal_bcpu_notify_pnp_thres_value, null_cb);
 power_attr(thermal_bcpu_notify_pnp_thres);
@@ -232,6 +218,10 @@ power_attr(thermal_bcpu_notify_diff);
 define_int_show(thermal_lcpu_notify_diff, thermal_lcpu_notify_diff_value);
 define_int_store(thermal_lcpu_notify_diff, thermal_lcpu_notify_diff_value, null_cb);
 power_attr(thermal_lcpu_notify_diff);
+
+define_int_show(thermal_min_freq_limit, thermal_min_freq_limit_value);
+define_int_store(thermal_min_freq_limit, thermal_min_freq_limit_value, null_cb);
+power_attr(thermal_min_freq_limit);
 
 define_int_show(cpu_asn, cpu_asn_value);
 define_int_store(cpu_asn, cpu_asn_value, null_cb);
@@ -282,10 +272,6 @@ int pnpmgr_cpu_temp_notify(int cpu, int temp)
 define_int_show(thermal_temp_emmc, thermal_temp_emmc_value);
 define_int_store(thermal_temp_emmc, thermal_temp_emmc_value, null_cb);
 power_attr(thermal_temp_emmc);
-
-define_int_show(modem_throttling_enabled, modem_throttling_enabled_value);
-define_int_store(modem_throttling_enabled, modem_throttling_enabled_value, null_cb);
-power_attr(modem_throttling_enabled);
 
 
 define_int_show(thermal_g0, thermal_g0_value);
@@ -553,7 +539,7 @@ long_duration_touch_boost_store(struct kobject *kobj, struct kobj_attribute *att
 }
 power_attr(long_duration_touch_boost);
 
-static int launch_event_enabled = 0;
+int launch_event_enabled = 0;
 define_int_show(launch_event, launch_event_enabled);
 define_int_store(launch_event, launch_event_enabled, null_cb);
 power_attr(launch_event);
@@ -986,6 +972,7 @@ scaling_min_freq_store(struct kobject *kobj, struct kobj_attribute *attr,
 		ret = -EPERM;
 		goto failure;
 	}
+
 	new_policy.max = new_policy.user_policy.max;
 	new_policy.min = new_policy.user_policy.min;
 
@@ -1047,6 +1034,10 @@ thermal_freq_store(struct kobject *kobj, struct kobj_attribute *attr,
 	
 	if (sscanf(buf, "%d", &val) > 0) {
 		sscanf(kobj->name, "cpu%d", &cpu);
+		if (thermal_min_freq_limit_value  > 0 && val < thermal_min_freq_limit_value ){
+			pr_info("%s: set freq %d lower than min require. Set to %d\n", __func__, val, thermal_min_freq_limit_value);
+			val = thermal_min_freq_limit_value;
+		}
 		info[type].thermal_freq[cpu] = val;
 		sysfs_notify(kobj, NULL, "thermal_freq");
 		return n;
@@ -1141,10 +1132,6 @@ static struct attribute *thermal_g[] = {
 	&thermal_temp_cpu1_attr.attr,
 	&thermal_temp_cpu2_attr.attr,
 	&thermal_temp_cpu3_attr.attr,
-	&thermal_temp_cpu4_attr.attr,
-	&thermal_temp_cpu5_attr.attr,
-	&thermal_temp_cpu6_attr.attr,
-	&thermal_temp_cpu7_attr.attr,
 	&thermal_lcpu_notify_pnp_thres_attr.attr,
 	&thermal_bcpu_notify_pnp_thres_attr.attr,
 	&thermal_bcpu_notify_diff_attr.attr,
@@ -1152,7 +1139,7 @@ static struct attribute *thermal_g[] = {
 	&pause_dt_attr.attr,
 	&thermal_ktm_freq_limit_attr.attr,
 	&thermal_bcl_freq_limit_attr.attr,
-	&modem_throttling_enabled_attr.attr,
+	&thermal_min_freq_limit_attr.attr,
         &cpu_asn_attr.attr,
 	NULL,
 };
@@ -1334,59 +1321,6 @@ static int get_cpu_frequency(struct cpumask *mask, int *min, int *max)
 	return 0;
 }
 
-static void init_cluster_info_by_topology(void)
-{
-	struct cpumask *mask[2];
-	int base[2], minfreq[2], maxfreq[2];
-	int i, j, k;
-
-	for (i = 0; i < MAX_TYPE; i++)
-		memset(&info[i], 0, sizeof(struct pnp_cluster_info));
-
-	mask[0] = topology_core_cpumask(0);
-	base[0] = cpumask_first(mask[0]);
-	get_cpu_frequency(mask[0], &minfreq[0], &maxfreq[0]);
-
-	if (cpumask_weight(mask[0]) == num_possible_cpus()) {
-		cluster_num = 1;
-	} else {
-		cpumask_copy(mask[1], cpu_possible_mask);
-		cpumask_andnot(mask[1], mask[1], mask[0]);
-		base[1] = cpumask_first(mask[1]);
-		get_cpu_frequency(mask[1], &minfreq[1], &maxfreq[1]);
-
-		
-		if (maxfreq[0] < maxfreq[1]) {
-			swap_value(mask[0], mask[1]);
-			swap_value(base[0], base[1]);
-			swap_value(minfreq[0], minfreq[1]);
-			swap_value(maxfreq[0], maxfreq[1]);
-		}
-	}
-
-	for (i = 0; i < cluster_num; i++) {
-		cpumask_copy(&info[i].cpu_mask, mask[i]);
-
-		info[i].mp_cpunum_max = info[i].num_cpus = cpumask_weight(mask[i]);
-
-		info[i].max_freq_info = maxfreq[i];
-		info[i].min_freq_info = minfreq[i];
-
-		info[i].cpu_seq[0] = base[i];
-		for (j = 1; j < info[i].num_cpus; j++)
-			info[i].cpu_seq[j] = cpumask_next(info[i].cpu_seq[j-1], mask[i]);
-
-		info[i].is_sync = is_sync_cpu(mask[i], base[i]);
-
-		k = info[i].is_sync ? 1 : info[i].num_cpus;
-
-		info[i].thermal_freq = kzalloc(k * sizeof(int), GFP_KERNEL);
-
-		for (j = 0; j < k; j++)
-			info[i].thermal_freq[j] = MAX_VALUE;
-	}
-}
-
 static int init_cluster_info_by_dt(const struct device_node *node)
 {
 	int i, j, k, cluster_cnt = 0, ret = 0;
@@ -1420,7 +1354,8 @@ static int init_cluster_info_by_dt(const struct device_node *node)
 	for (i = 0; i < cluster_cnt; i++) {
 
 		first_cpu = cpumask_first(&cluster_cpus[i]);
-		get_cpu_frequency(&cluster_cpus[i], &minfreq, &maxfreq);
+		if (get_cpu_frequency(&cluster_cpus[i], &minfreq, &maxfreq))
+			return -EINVAL;
 
 		info[i].mp_cpunum_max = info[i].num_cpus = cpumask_weight(&cluster_cpus[i]);
 		info[i].max_freq_info = maxfreq;
@@ -1518,28 +1453,20 @@ fail:
 	return ret;
 }
 
-static void init_cluster_info(void)
+static int init_cluster_info(void)
 {
 	const struct device_node *top = NULL;
 	int ret = 0;
 
-	top = of_find_compatible_node(NULL, NULL,
-					 "htc,perf_table_v2");
-	if (!top)
-		top = of_find_compatible_node(NULL, NULL,
-					 "htc,perf_table");
+	top = of_find_node_by_path("/soc/htc_pnpmgr");
 
 	if(top) {
 		pr_info("%s: get cluster info from dt\n", __func__);
 		ret = init_cluster_info_by_dt(top);
 	}
 
-	if( !top || ret < 0 ){
-		pr_info("%s: cluster dt fail or not found, try to get cluster info from topology\n",
-			__func__);
-
-		init_cluster_info_by_topology();
-	}
+	if (!top || ret < 0)
+		pr_info("%s: cluster info init fail",__func__);
 
 	if(top){
 		pr_info("%s: get perf table info from dt\n", __func__);
@@ -1554,13 +1481,16 @@ static void init_cluster_info(void)
 			pr_info("%s:find perf table info in board file\n", __func__);
 			info[BC_TYPE].perf_table = pnp_perf_data->bc_perf_table;
 			info[LC_TYPE].perf_table = pnp_perf_data->lc_perf_table;
+			ret = 0;
 		}
 	}
+
+	return ret;
 }
 
 static int __init pnpmgr_init(void)
 {
-	int ret = 0, i, j;
+	int ret, i, j;
 	char *name[MAX_TYPE] = {"big", "little"};
 	char buf[10];
 
@@ -1574,7 +1504,8 @@ static int __init pnpmgr_init(void)
 
 	if (!pnpmgr_kobj) {
 		pr_err("%s: Can not allocate enough memory for pnpmgr.\n", __func__);
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto err;
 	}
 
 	mp_hotplug_kobj = kobject_create_and_add("hotplug", pnpmgr_kobj);
@@ -1587,22 +1518,26 @@ static int __init pnpmgr_init(void)
 
 	if (!mp_hotplug_kobj || !thermal_kobj || !apps_kobj || !display_kobj || !sysinfo_kobj || !battery_kobj || !cluster_root_kobj) {
 		pr_err("%s: Can not allocate enough memory.\n", __func__);
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto err;
 	}
 
-	init_cluster_info();
+	if ((ret = init_cluster_info()) < 0)
+		goto err;
 
 	for (i = 0; i < cluster_num; i++) {
 		cluster_kobj[i] = kobject_create_and_add(name[i], cluster_root_kobj);
 		if (!cluster_kobj[i]) {
 			pr_err("%s: Can not allocate enough memory for cluster%d\n", __func__, i);
-			return -ENOMEM;
+			ret = -ENOMEM;
+			goto err;
 		}
 
 		hotplug_kobj[i] = kobject_create_and_add("hotplug", cluster_kobj[i]);
 		if (!hotplug_kobj[i]) {
 			pr_err("%s: Can not allocate enough memory for cluster%d hotplug\n", __func__, i);
-			return -ENOMEM;
+			ret = -ENOMEM;
+			goto err;
 		}
 
 		if (info[i].is_sync)
@@ -1613,7 +1548,8 @@ static int __init pnpmgr_init(void)
 		cpuX_kobj[i][0] = kobject_create_and_add("cpu0", cluster_kobj[i]);
 		if (!cpuX_kobj[i][0]) {
 			pr_err("%s: Can not allocate enough memory for cluster%d cpu0\n", __func__, i);
-			return -ENOMEM;
+			ret = -ENOMEM;
+			goto err;
 		}
 
 		for (j = 1; j < info[i].num_cpus; j++) {
@@ -1623,13 +1559,15 @@ static int __init pnpmgr_init(void)
 				ret = sysfs_create_link_nowarn(cluster_kobj[i], cpuX_kobj[i][0], buf);
 				if (ret) {
 					pr_err("%s: Can not create symlink for cluster%d cpu%d\n", __func__, i, j);
-					return -ENOENT;
+					ret = -ENOENT;
+					goto err;
 				}
 			} else {
 				cpuX_kobj[i][j] = kobject_create_and_add(buf, cluster_kobj[i]);
 				if (!cpuX_kobj[i][j]) {
 					pr_err("%s: Can not allocate enough memory for cluster%d cpu%d\n", __func__, i, j);
-					return -ENOMEM;
+					ret = -ENOMEM;
+					goto err;
 				}
 			}
 		}
@@ -1655,7 +1593,8 @@ static int __init pnpmgr_init(void)
 
 	if (ret) {
 		pr_err("%s: sysfs_create_group failed\n", __func__);
-		return ret;
+		ret = -ENOMEM;
+		goto err;
 	}
 
 #ifdef CONFIG_HOTPLUG_CPU
@@ -1663,6 +1602,10 @@ static int __init pnpmgr_init(void)
 #endif
 
 	return 0;
+
+err:
+	fda_log_pnp("pnpmgr init fail\n");
+	return ret;
 }
 
 static void  __exit pnpmgr_exit(void)

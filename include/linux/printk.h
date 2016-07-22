@@ -233,6 +233,17 @@ extern void dump_stack(void) __cold;
 	no_printk(KERN_DEBUG pr_fmt(fmt), ##__VA_ARGS__)
 #endif
 
+#if defined(CONFIG_DYNAMIC_DEBUG)
+#define pr_aud_debug(fmt, ...) \
+	dynamic_pr_debug(pr_aud_fmt(fmt), ##__VA_ARGS__)
+#elif defined(DEBUG)
+#define pr_aud_debug(fmt, ...) \
+	printk(KERN_DEBUG pr_aud_fmt(fmt), ##__VA_ARGS__)
+#else
+#define pr_aud_debug(fmt, ...) \
+	no_printk(KERN_DEBUG pr_aud_fmt(fmt), ##__VA_ARGS__)
+#endif
+
 /* If you are writing a driver, please use dev_dbg instead */
 #if defined(CONFIG_DYNAMIC_DEBUG)
 /* dynamic_pr_debug() uses pr_fmt() internally so we don't need it here */

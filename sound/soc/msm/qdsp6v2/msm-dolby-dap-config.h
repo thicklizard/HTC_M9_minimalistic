@@ -17,10 +17,7 @@
 
 #ifdef CONFIG_DOLBY_DAP
 /* DOLBY DOLBY GUIDS */
-/* Dolby DAP topology */
-#define DOLBY_ADM_COPP_TOPOLOGY_ID     0x0001033B
-/* htc audio: for Dolby in speaker path, we need this for Dolby certification */
-
+#define DOLBY_ADM_COPP_TOPOLOGY_ID	0x0001033B
 #define NUM_DOLBY_ENDP_DEVICE                 23
 
 #define DOLBY_NUM_ENDP_DEPENDENT_PARAMS	  3
