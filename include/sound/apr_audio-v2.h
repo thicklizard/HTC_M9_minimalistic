@@ -2136,6 +2136,9 @@ struct asm_amrwbplus_fmt_blk_v2 {
 
 } __packed;
 
+#define ASM_MEDIA_FMT_AC3_DEC                   0x00010BF6
+#define ASM_MEDIA_FMT_EAC3_DEC                   0x00010C3C
+
 #define ASM_MEDIA_FMT_AC3			0x00010DEE
 #define ASM_MEDIA_FMT_EAC3			0x00010DEF
 #define ASM_MEDIA_FMT_DTS                    0x00010D88
@@ -3731,6 +3734,8 @@ struct asm_dts_eagle_param_get {
 #define LSM_PARAM_ID_OPERATION_MODE			(0x00012C02)
 #define LSM_PARAM_ID_GAIN				(0x00012C03)
 #define LSM_PARAM_ID_CONNECT_TO_PORT			(0x00012C04)
+#define LSM_PARAM_ID_KEYWORD_DETECT_SENSITIVITY		(0x00012C05)
+#define LSM_PARAM_ID_USER_DETECT_SENSITIVITY		(0x00012C06)
 #define LSM_PARAM_ID_FEATURE_COMPENSATION_DATA		(0x00012C07)
 #define LSM_PARAM_ID_MIN_CONFIDENCE_LEVELS		(0x00012C07)
 #define LSM_MODULE_ID_LAB				(0x00012C08)
@@ -4191,6 +4196,12 @@ struct afe_port_cmd_set_aanc_acdb_table {
 #define Q14_GAIN_ZERO_POINT_FIVE	0x2000
 #define Q14_GAIN_UNITY			0x4000
 
+struct default_chmixer_param_id_coeff {
+	uint32_t	index;
+	uint16_t	num_output_channels;
+	uint16_t	num_input_channels;
+};
+
 struct afe_svc_cmd_set_clip_bank_selection {
 	struct apr_hdr hdr;
 	struct afe_svc_cmd_set_param param;
@@ -4204,6 +4215,12 @@ struct afe_svc_cmd_set_clip_bank_selection {
 #define US_RAW_SYNC_FORMAT      0x0001272F
 #define US_GES_SYNC_FORMAT      0x00012730
 
+//htc audio ++
+
+#define AFE_MODULE_AUDIO_SPHERE         0x00020001
+#define AFE_MODULE_AUDIO_LIMITER        0x1000002A
+#define AFE_MODULE_SPEAKER_REVERSE      0x10000030
+
 #define AFE_MODULE_GROUP_DEVICE	0x00010254
 #define AFE_PARAM_ID_GROUP_DEVICE_CFG	0x00010255
 #define AFE_PARAM_ID_GROUP_DEVICE_ENABLE 0x00010256
@@ -4214,6 +4231,11 @@ struct afe_svc_cmd_set_clip_bank_selection {
 #define AFE_MODULE_ONEDOTONE_AUDIO       0x10000035
 #define AFE_MODULE_ID_MISC_EFFECT        0x10030001
 
+#define AFE_PARAM_ID_AUDIO_SPHERE_EN    0x00020002
+#define AFE_PARAM_ID_AUDIO_SPHERE_ST    0x00020003
+#define AFE_PARAM_ID_AUDIO_LIMITER_EN   0x1000002C
+#define AFE_PARAM_ID_SPEAKER_REVERSE_EN 0x10000032
+
 #define AFE_PARAM_ID_ADAPTIVE_AUDIO_M1_EN     0x10000032
 #define AFE_PARAM_ID_ADAPTIVE_AUDIO_M1_CONF_L 0x10000033
 #define AFE_PARAM_ID_ADAPTIVE_AUDIO_M1_CONF_R 0x10000034
@@ -4222,6 +4244,8 @@ struct afe_svc_cmd_set_clip_bank_selection {
 #define AFE_PARAM_ID_ONEDOTONE_AUDIO_EN       0x10000037
 #define AFE_PARAM_ID_MISC_SET_ACOUSTIC_SHOCK_RAMP 0x10030101
 #define AFE_PARAM_ID_MISC_SET_ACOUSTIC_SHOCK_MUTE 0x10030111
+
+#define AFE_COPP_ID_AUDIO_SPHERE        0x10020001
 
 
 #define AFE_COPP_ID_ONEDOTONE_AUDIO           0x10000001

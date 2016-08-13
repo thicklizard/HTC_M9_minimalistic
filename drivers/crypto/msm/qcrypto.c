@@ -49,7 +49,7 @@
 #include "qce.h"
 
 #define DEBUG_MAX_FNAME  16
-#define DEBUG_MAX_RW_BUF 2048
+#define DEBUG_MAX_RW_BUF 4096
 
 /*
  * For crypto 5.0 which has burst size alignment requirement.
