@@ -121,7 +121,11 @@
 	qcom,vfe@1b10000 {
 		cell-index = <0>;
 		compatible = "qcom,vfe32";
+<<<<<<< HEAD
 		reg = <0x1b10000 0x800>,
+=======
+		reg = <0x1b10000 0x830>,
+>>>>>>> 0e91d2a... Nougat
 			<0x1b40000 0x200>;
 		reg-names = "vfe", "vfe_vbif";
 		interrupts = <0 52 0>;

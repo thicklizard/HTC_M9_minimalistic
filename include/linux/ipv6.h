@@ -4,6 +4,10 @@
 #include <uapi/linux/ipv6.h>
 
 #define ipv6_optlen(p)  (((p)->hdrlen+1) << 3)
+<<<<<<< HEAD
+=======
+#define ipv6_authlen(p) (((p)->hdrlen+2) << 2)
+>>>>>>> 0e91d2a... Nougat
 /*
  * This structure contains configuration options per IPv6 link.
  */
@@ -50,7 +54,11 @@ struct ipv6_devconf {
 	__s32		force_tllao;
 	__s32           ndisc_notify;
 	__s32		accept_ra_prefix_route;
+<<<<<<< HEAD
 	__s32		accept_ra_mtu;
+=======
+	__s32		use_oif_addrs_only;
+>>>>>>> 0e91d2a... Nougat
 	void		*sysctl;
 };
 
@@ -80,7 +88,11 @@ static inline struct ipv6hdr *ipipv6_hdr(const struct sk_buff *skb)
 	return (struct ipv6hdr *)skb_transport_header(skb);
 }
 
+<<<<<<< HEAD
 /* 
+=======
+/*
+>>>>>>> 0e91d2a... Nougat
    This structure contains results of exthdrs parsing
    as offsets from skb->nh.
  */
@@ -202,13 +214,24 @@ struct ipv6_pinfo {
 	/* sockopt flags */
 	__u16			recverr:1,
 	                        sndflow:1,
+<<<<<<< HEAD
 				pmtudisc:2,
 				ipv6only:1,
+=======
+				repflow:1,
+				pmtudisc:3,
+				padding:1,	/* 1 bit hole */
+>>>>>>> 0e91d2a... Nougat
 				srcprefs:3,	/* 001: prefer temporary address
 						 * 010: prefer public address
 						 * 100: prefer care-of address
 						 */
+<<<<<<< HEAD
 				dontfrag:1;
+=======
+				dontfrag:1,
+				autoflowlabel:1;
+>>>>>>> 0e91d2a... Nougat
 	__u8			min_hopcount;
 	__u8			tclass;
 	__u8			rcv_tclass;
@@ -273,9 +296,9 @@ static inline struct inet6_timewait_sock *inet6_twsk(const struct sock *sk)
 }
 
 #if IS_ENABLED(CONFIG_IPV6)
-static inline struct ipv6_pinfo * inet6_sk(const struct sock *__sk)
+static inline struct ipv6_pinfo *inet6_sk(const struct sock *__sk)
 {
-	return inet_sk(__sk)->pinet6;
+	return sk_fullsock(__sk) ? inet_sk(__sk)->pinet6 : NULL;
 }
 
 static inline struct inet6_request_sock *
@@ -340,8 +363,13 @@ static inline struct in6_addr *inet6_rcv_saddr(const struct sock *sk)
 
 static inline int inet_v6_ipv6only(const struct sock *sk)
 {
+<<<<<<< HEAD
 	return likely(sk->sk_state != TCP_TIME_WAIT) ?
 		ipv6_only_sock(sk) : inet_twsk(sk)->tw_ipv6only;
+=======
+	/* ipv6only field is at same position for timewait and other sockets */
+	return ipv6_only_sock(sk);
+>>>>>>> 0e91d2a... Nougat
 }
 #else
 #define __ipv6_only_sock(sk)	0
@@ -378,6 +406,7 @@ static inline struct raw6_sock *raw6_sk(const struct sock *sk)
 	   ((__sk)->sk_bound_dev_if == (__dif))) 		&&	\
 	 net_eq(sock_net(__sk), (__net)))
 
+<<<<<<< HEAD
 #define INET6_TW_MATCH(__sk, __net, __saddr, __daddr, __ports, __dif)	   \
 	((inet_twsk(__sk)->tw_portpair == (__ports))			&& \
 	 ((__sk)->sk_family == AF_INET6)				&& \
@@ -387,4 +416,6 @@ static inline struct raw6_sock *raw6_sk(const struct sock *sk)
 	  ((__sk)->sk_bound_dev_if == (__dif)))				&& \
 	 net_eq(sock_net(__sk), (__net)))
 
+=======
+>>>>>>> 0e91d2a... Nougat
 #endif /* _IPV6_H */

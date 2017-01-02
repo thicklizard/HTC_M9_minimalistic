@@ -1,11 +1,29 @@
 Fairchild Semiconductor FAN53555 regulator
 
+<<<<<<< HEAD
 The FAN53555 is a step-down switching voltage regulator that delivers a
 digitally programmable output from an input voltage supply of 2.5 V to 5.5 V.
 The output voltage is programmed through an I2C interface capable of operating
 up to 3.4 MHz.
 
 The fan53555 interface is via I2C bus.
+=======
+Required properties:
+  - compatible: one of "fcs,fan53555", "silergy,syr827", "silergy,syr828" or
+    "halo,hl7509"
+  - reg: I2C address
+
+Optional properties:
+  - fcs,suspend-voltage-selector: declare which of the two available
+		voltage selector registers should be used for the suspend
+		voltage. The other one is used for the runtime voltage setting
+		Possible values are either <0> or <1>
+  - vin-supply: regulator supplying the vin pin
+  - fcs,disable-suspend: Boolean flag which specifies if suspend voltage
+		configuration should be avoided. If this property is present,
+		then the voltage selector register defined by
+		fcs,suspend-voltage-selector should not be modified at runtime.
+>>>>>>> 0e91d2a... Nougat
 
 Required Properties:
 - compatible:			Must be "fairchild,fan53555-regulator".
@@ -53,4 +71,13 @@ Example:
 			fairchild,restore-reg;
 			fairchild,disable-suspend;
 		};
+	};
+
+	regulator@60 {
+		compatible = "halo,hl7509";
+		regulator-name = "hl7509";
+		regulator-min-microvolt = <600000>;
+		regulator-max-microvolt = <1230000>;
+		fcs,suspend-voltage-selector = <1>;
+		fcs,disable-suspend;
 	};

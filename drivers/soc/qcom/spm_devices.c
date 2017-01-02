@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -187,12 +191,21 @@ static void msm_spm_config_q2s(struct msm_spm_device *dev, unsigned int mode)
 }
 
 static int msm_spm_dev_set_low_power_mode(struct msm_spm_device *dev,
-		unsigned int mode, bool notify_rpm)
+		unsigned int mode, bool notify_rpm, bool set_spm_enable)
 {
 	uint32_t i;
 	uint32_t start_addr = 0;
 	int ret = -EINVAL;
+<<<<<<< HEAD
 	bool pc_mode = false;
+=======
+	uint32_t ctl = 0;
+
+	if (!dev) {
+		pr_err("dev is NULL\n");
+		return -ENODEV;
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	if (!dev->initialized)
 		return -ENXIO;
@@ -201,9 +214,11 @@ static int msm_spm_dev_set_low_power_mode(struct msm_spm_device *dev,
 			|| (mode == MSM_SPM_MODE_GDHS))
 		pc_mode = true;
 
-	if (mode == MSM_SPM_MODE_DISABLED) {
+	if (mode == MSM_SPM_MODE_DISABLED && set_spm_enable) {
 		ret = msm_spm_drv_set_spm_enable(&dev->reg_data, false);
-	} else if (!msm_spm_drv_set_spm_enable(&dev->reg_data, true)) {
+	} else {
+		if (set_spm_enable)
+			ret = msm_spm_drv_set_spm_enable(&dev->reg_data, true);
 		for (i = 0; i < dev->num_modes; i++) {
 			if (dev->modes[i].mode != mode)
 				continue;
@@ -353,10 +368,28 @@ bool msm_spm_is_mode_avail(unsigned int mode)
 int msm_spm_set_low_power_mode(unsigned int mode, bool notify_rpm)
 {
 	struct msm_spm_device *dev = &__get_cpu_var(msm_cpu_spm_device);
+<<<<<<< HEAD
 	dev->current_mode = mode;
 	return msm_spm_dev_set_low_power_mode(dev, mode, notify_rpm);
+=======
+	return msm_spm_dev_set_low_power_mode(dev, mode, notify_rpm, true);
+>>>>>>> 0e91d2a... Nougat
 }
 EXPORT_SYMBOL(msm_spm_set_low_power_mode);
+
+void msm_spm_set_rpm_hs(bool allow_rpm_hs)
+{
+	struct msm_spm_device *dev = &__get_cpu_var(msm_cpu_spm_device);
+
+	dev->allow_rpm_hs = allow_rpm_hs;
+}
+EXPORT_SYMBOL(msm_spm_set_rpm_hs);
+
+int msm_spm_config_low_power_mode_addr(struct msm_spm_device *dev,
+		unsigned int mode, bool notify_rpm)
+{
+	return msm_spm_dev_set_low_power_mode(dev, mode, notify_rpm, false);
+}
 
 /**
  * msm_spm_init(): Board initalization function
@@ -399,7 +432,7 @@ struct msm_spm_device *msm_spm_get_device_by_name(const char *name)
 int msm_spm_config_low_power_mode(struct msm_spm_device *dev,
 		unsigned int mode, bool notify_rpm)
 {
-	return msm_spm_dev_set_low_power_mode(dev, mode, notify_rpm);
+	return msm_spm_dev_set_low_power_mode(dev, mode, notify_rpm, true);
 }
 #ifdef CONFIG_MSM_L2_SPM
 

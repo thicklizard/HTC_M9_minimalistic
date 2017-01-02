@@ -283,6 +283,15 @@ irq_set_affinity_notifier(unsigned int irq, struct irq_affinity_notify *notify)
 	list_add(&notify->list, &desc->affinity_notify);
 	raw_spin_unlock_irqrestore(&desc->lock, flags);
 
+<<<<<<< HEAD
+=======
+	if (!notify && old_notify)
+		cancel_work_sync(&old_notify->work);
+
+	if (old_notify)
+		kref_put(&old_notify->kref, old_notify->release);
+
+>>>>>>> 0e91d2a... Nougat
 	return 0;
 }
 EXPORT_SYMBOL_GPL(irq_set_affinity_notifier);

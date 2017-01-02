@@ -2779,10 +2779,18 @@ static int mvneta_probe(struct platform_device *pdev)
 
 	netif_napi_add(dev, &pp->napi, mvneta_poll, pp->weight);
 
+<<<<<<< HEAD
 	dev->features = NETIF_F_SG | NETIF_F_IP_CSUM;
 	dev->hw_features |= NETIF_F_SG | NETIF_F_IP_CSUM;
 	dev->vlan_features |= NETIF_F_SG | NETIF_F_IP_CSUM;
 	dev->priv_flags |= IFF_UNICAST_FLT;
+=======
+	dev->features = NETIF_F_SG | NETIF_F_IP_CSUM | NETIF_F_TSO;
+	dev->hw_features |= dev->features;
+	dev->vlan_features |= dev->features;
+	dev->priv_flags |= IFF_UNICAST_FLT | IFF_LIVE_ADDR_CHANGE;
+	dev->gso_max_segs = MVNETA_MAX_TSO_SEGS;
+>>>>>>> 0e91d2a... Nougat
 
 	err = register_netdev(dev);
 	if (err < 0) {

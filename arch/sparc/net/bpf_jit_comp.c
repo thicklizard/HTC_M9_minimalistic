@@ -414,6 +414,7 @@ void bpf_jit_compile(struct sk_filter *fp)
 		}
 		emit_reg_move(O7, r_saved_O7);
 
+<<<<<<< HEAD
 		switch (filter[0].code) {
 		case BPF_S_RET_K:
 		case BPF_S_LD_W_LEN:
@@ -437,8 +438,11 @@ void bpf_jit_compile(struct sk_filter *fp)
 			/* Make sure we dont leak kernel information to the
 			 * user.
 			 */
+=======
+		/* Make sure we dont leak kernel information to the user. */
+		if (bpf_needs_clear_a(&filter[0]))
+>>>>>>> 0e91d2a... Nougat
 			emit_clear(r_A); /* A = 0 */
-		}
 
 		for (i = 0; i < flen; i++) {
 			unsigned int K = filter[i].k;
@@ -773,7 +777,7 @@ cond_branch:			f_offset = addrs[i + filter[i].jf];
 				if (unlikely(proglen + ilen > oldproglen)) {
 					pr_err("bpb_jit_compile fatal error\n");
 					kfree(addrs);
-					module_free(NULL, image);
+					module_memfree(image);
 					return;
 				}
 				memcpy(image + proglen, temp, ilen);
@@ -819,8 +823,13 @@ out:
 
 static void jit_free_defer(struct work_struct *arg)
 {
+<<<<<<< HEAD
 	module_free(NULL, arg);
 }
+=======
+	if (fp->jited)
+		module_memfree(fp->bpf_func);
+>>>>>>> 0e91d2a... Nougat
 
 /* run from softirq, we must use a work_struct to call
  * module_free() from process context

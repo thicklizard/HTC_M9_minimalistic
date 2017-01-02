@@ -13,6 +13,8 @@
 #include <net/dst.h>
 #include <net/ip.h>
 #include <net/xfrm.h>
+#include <net/ip_tunnels.h>
+#include <net/ip6_tunnel.h>
 
 static struct kmem_cache *secpath_cachep __read_mostly;
 
@@ -111,6 +113,7 @@ int xfrm_input(struct sk_buff *skb, int nexthdr, __be32 spi, int encap_type)
 	struct xfrm_state *x;
 	xfrm_address_t *daddr;
 	struct xfrm_mode *inner_mode;
+	u32 mark = skb->mark;
 	unsigned int family;
 	int decaps = 0;
 	int async = 0;
@@ -123,6 +126,25 @@ int xfrm_input(struct sk_buff *skb, int nexthdr, __be32 spi, int encap_type)
 		goto resume;
 	}
 
+<<<<<<< HEAD
+=======
+	daddr = (xfrm_address_t *)(skb_network_header(skb) +
+				   XFRM_SPI_SKB_CB(skb)->daddroff);
+	family = XFRM_SPI_SKB_CB(skb)->family;
+
+	/* if tunnel is present override skb->mark value with tunnel i_key */
+	if (XFRM_TUNNEL_SKB_CB(skb)->tunnel.ip4) {
+		switch (family) {
+		case AF_INET:
+			mark = be32_to_cpu(XFRM_TUNNEL_SKB_CB(skb)->tunnel.ip4->parms.i_key);
+			break;
+		case AF_INET6:
+			mark = be32_to_cpu(XFRM_TUNNEL_SKB_CB(skb)->tunnel.ip6->parms.i_key);
+			break;
+		}
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	/* Allocate new secpath or COW existing one. */
 	if (!skb->sp || atomic_read(&skb->sp->refcnt) != 1) {
 		struct sec_path *sp;
@@ -153,7 +175,7 @@ int xfrm_input(struct sk_buff *skb, int nexthdr, __be32 spi, int encap_type)
 			goto drop;
 		}
 
-		x = xfrm_state_lookup(net, skb->mark, daddr, spi, nexthdr, family);
+		x = xfrm_state_lookup(net, mark, daddr, spi, nexthdr, family);
 		if (x == NULL) {
 			XFRM_INC_STATS(net, LINUX_MIB_XFRMINNOSTATES);
 			xfrm_audit_state_notfound(skb, family, spi, seq);
@@ -191,6 +213,7 @@ int xfrm_input(struct sk_buff *skb, int nexthdr, __be32 spi, int encap_type)
 		XFRM_SKB_CB(skb)->seq.input.hi = seq_hi;
 
 		skb_dst_force(skb);
+		dev_hold(skb->dev);
 
 		nexthdr = x->type->input(x, skb);
 
@@ -198,6 +221,8 @@ int xfrm_input(struct sk_buff *skb, int nexthdr, __be32 spi, int encap_type)
 			return 0;
 
 resume:
+		dev_put(skb->dev);
+
 		spin_lock(&x->lock);
 		if (nexthdr <= 0) {
 			if (nexthdr == -EBADMSG) {

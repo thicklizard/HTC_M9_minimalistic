@@ -68,11 +68,25 @@ static int change_memory_common(unsigned long addr, int numpages,
 
 	if (!IS_ENABLED(CONFIG_FORCE_PAGES)) {
 		if (start < MODULES_VADDR || start >= MODULES_END)
+<<<<<<< HEAD
+=======
 			return -EINVAL;
 
 		if (end < MODULES_VADDR || end >= MODULES_END)
+>>>>>>> 0e91d2a... Nougat
+			return -EINVAL;
+
+<<<<<<< HEAD
+		if (end < MODULES_VADDR || end >= MODULES_END)
 			return -EINVAL;
 	}
+=======
+	if (!numpages)
+		return 0;
+
+	data.set_mask = set_mask;
+	data.clear_mask = clear_mask;
+>>>>>>> 0e91d2a... Nougat
 
 	if (set)
 		ret = apply_to_page_range(&init_mm, start, size,

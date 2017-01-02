@@ -3489,7 +3489,7 @@ static void print_str_arg(struct trace_seq *s, void *data, int size,
 	struct print_flag_sym *flag;
 	struct format_field *field;
 	unsigned long long val, fval;
-	unsigned long addr;
+	unsigned long long addr;
 	char *str;
 	unsigned char *hex;
 	int print;
@@ -3522,8 +3522,35 @@ static void print_str_arg(struct trace_seq *s, void *data, int size,
 		 */
 		if (!(field->flags & FIELD_IS_ARRAY) &&
 		    field->size == pevent->long_size) {
+<<<<<<< HEAD
 			addr = *(unsigned long *)(data + field->offset);
 			trace_seq_printf(s, "%lx", addr);
+=======
+
+			/* Handle heterogeneous recording and processing
+			 * architectures
+			 *
+			 * CASE I:
+			 * Traces recorded on 32-bit devices (32-bit
+			 * addressing) and processed on 64-bit devices:
+			 * In this case, only 32 bits should be read.
+			 *
+			 * CASE II:
+			 * Traces recorded on 64 bit devices and processed
+			 * on 32-bit devices:
+			 * In this case, 64 bits must be read.
+			 */
+			addr = (pevent->long_size == 8) ?
+				*(unsigned long long *)(data + field->offset) :
+				(unsigned long long)*(unsigned int *)(data + field->offset);
+
+			/* Check if it matches a print format */
+			printk = find_printk(pevent, addr);
+			if (printk)
+				trace_seq_puts(s, printk->printk);
+			else
+				trace_seq_printf(s, "%llx", addr);
+>>>>>>> 0e91d2a... Nougat
 			break;
 		}
 		str = malloc(len + 1);
@@ -4190,13 +4217,12 @@ static void pretty_print(struct trace_seq *s, void *data, int size, struct event
 				    sizeof(long) != 8) {
 					char *p;
 
-					ls = 2;
 					/* make %l into %ll */
-					p = strchr(format, 'l');
-					if (p)
+					if (ls == 1 && (p = strchr(format, 'l')))
 						memmove(p+1, p, strlen(p)+1);
 					else if (strcmp(format, "%p") == 0)
 						strcpy(format, "0x%llx");
+					ls = 2;
 				}
 				switch (ls) {
 				case -2:

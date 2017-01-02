@@ -1129,6 +1129,13 @@ struct radeon_pm {
 	/* internal thermal controller on rv6xx+ */
 	enum radeon_int_thermal_type int_thermal_type;
 	struct device	        *int_hwmon_dev;
+<<<<<<< HEAD
+=======
+	/* dpm */
+	bool                    dpm_enabled;
+	bool                    sysfs_initialized;
+	struct radeon_dpm       dpm;
+>>>>>>> 0e91d2a... Nougat
 };
 
 int radeon_pm_get_type_index(struct radeon_device *rdev,

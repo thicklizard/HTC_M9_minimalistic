@@ -688,6 +688,8 @@ struct iommu_domain *iommu_domain_alloc(struct bus_type *bus)
 	if (ret)
 		goto out_free;
 
+	iommu_debug_domain_add(domain);
+
 	return domain;
 
 out_free:
@@ -701,6 +703,8 @@ void iommu_domain_free(struct iommu_domain *domain)
 {
 	if (likely(domain->ops->domain_destroy != NULL))
 		domain->ops->domain_destroy(domain);
+
+	iommu_debug_domain_remove(domain);
 
 	kfree(domain);
 }
@@ -778,24 +782,80 @@ int iommu_domain_has_cap(struct iommu_domain *domain,
 	if (unlikely(domain->ops->domain_has_cap == NULL))
 		return 0;
 
+<<<<<<< HEAD
 	return domain->ops->domain_has_cap(domain, cap);
+=======
+	return domain->ops->iova_to_phys_hard(domain, iova);
+}
+
+static unsigned long iommu_get_pgsize_bitmap(struct iommu_domain *domain)
+{
+	if (domain->ops->get_pgsize_bitmap)
+		return domain->ops->get_pgsize_bitmap(domain);
+	return domain->ops->pgsize_bitmap;
+}
+
+size_t iommu_pgsize(unsigned long pgsize_bitmap,
+		    unsigned long addr_merge, size_t size)
+{
+	unsigned int pgsize_idx;
+	size_t pgsize;
+
+	/* Max page size that still fits into 'size' */
+	pgsize_idx = __fls(size);
+
+	/* need to consider alignment requirements ? */
+	if (likely(addr_merge)) {
+		/* Max page size allowed by address */
+		unsigned int align_pgsize_idx = __ffs(addr_merge);
+		pgsize_idx = min(pgsize_idx, align_pgsize_idx);
+	}
+
+	/* build a mask of acceptable page sizes */
+	pgsize = (1UL << (pgsize_idx + 1)) - 1;
+
+	/* throw away page sizes not supported by the hardware */
+	pgsize &= pgsize_bitmap;
+
+	/* make sure we're still sane */
+	if (!pgsize) {
+		pr_err("invalid pgsize/addr/size! 0x%lx 0x%lx 0x%zx\n",
+		       pgsize_bitmap, addr_merge, size);
+		BUG();
+	}
+
+	/* pick the biggest page */
+	pgsize_idx = __fls(pgsize);
+	pgsize = 1UL << pgsize_idx;
+
+	return pgsize;
+>>>>>>> 0e91d2a... Nougat
 }
 EXPORT_SYMBOL_GPL(iommu_domain_has_cap);
 
 int iommu_map(struct iommu_domain *domain, unsigned long iova,
 	      phys_addr_t paddr, size_t size, int prot)
 {
-	unsigned long orig_iova = iova;
+	unsigned long orig_iova = iova, pgsize_bitmap;
 	unsigned int min_pagesz;
 	size_t orig_size = size;
 	int ret = 0;
 
+<<<<<<< HEAD
 	if (unlikely(domain->ops->unmap == NULL ||
 		     domain->ops->pgsize_bitmap == 0UL))
+=======
+	trace_map_start(iova, paddr, size);
+	if (unlikely(domain->ops->map == NULL ||
+		     (domain->ops->pgsize_bitmap == 0UL &&
+		      !domain->ops->get_pgsize_bitmap))) {
+		trace_map_end(iova, paddr, size);
+>>>>>>> 0e91d2a... Nougat
 		return -ENODEV;
 
+	pgsize_bitmap = iommu_get_pgsize_bitmap(domain);
 	/* find out the minimum page size supported */
-	min_pagesz = 1 << __ffs(domain->ops->pgsize_bitmap);
+	min_pagesz = 1 << __ffs(pgsize_bitmap);
 
 	/*
 	 * both the virtual address and the physical one, as well as
@@ -813,6 +873,7 @@ int iommu_map(struct iommu_domain *domain, unsigned long iova,
 				(unsigned long)paddr, (unsigned long)size);
 
 	while (size) {
+<<<<<<< HEAD
 		unsigned long pgsize, addr_merge = iova | paddr;
 		unsigned int pgsize_idx;
 
@@ -829,6 +890,9 @@ int iommu_map(struct iommu_domain *domain, unsigned long iova,
 
 		/* build a mask of acceptable page sizes */
 		pgsize = (1UL << (pgsize_idx + 1)) - 1;
+=======
+		size_t pgsize = iommu_pgsize(pgsize_bitmap, iova | paddr, size);
+>>>>>>> 0e91d2a... Nougat
 
 		/* throw away page sizes not supported by the hardware */
 		pgsize &= domain->ops->pgsize_bitmap;
@@ -866,11 +930,17 @@ size_t iommu_unmap(struct iommu_domain *domain, unsigned long iova, size_t size)
 	unsigned int min_pagesz;
 
 	if (unlikely(domain->ops->unmap == NULL ||
+<<<<<<< HEAD
 		     domain->ops->pgsize_bitmap == 0UL))
+=======
+		     (domain->ops->pgsize_bitmap == 0UL &&
+		      !domain->ops->get_pgsize_bitmap))) {
+		trace_unmap_end(iova, 0, size);
+>>>>>>> 0e91d2a... Nougat
 		return -ENODEV;
 
 	/* find out the minimum page size supported */
-	min_pagesz = 1 << __ffs(domain->ops->pgsize_bitmap);
+	min_pagesz = 1 << __ffs(iommu_get_pgsize_bitmap(domain));
 
 	/*
 	 * The virtual address, as well as the size of the mapping, must be
@@ -991,7 +1061,7 @@ int iommu_domain_get_attr(struct iommu_domain *domain,
 		break;
 	case DOMAIN_ATTR_PAGING:
 		paging  = data;
-		*paging = (domain->ops->pgsize_bitmap != 0UL);
+		*paging = (iommu_get_pgsize_bitmap(domain) != 0UL);
 		break;
 	case DOMAIN_ATTR_WINDOWS:
 		count = data;

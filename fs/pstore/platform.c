@@ -65,6 +65,18 @@ struct pstore_info *psinfo;
 
 static char *backend;
 
+<<<<<<< HEAD
+=======
+/* Compression parameters */
+#define COMPR_LEVEL 6
+#define WINDOW_BITS 12
+#define MEM_LEVEL 4
+static struct z_stream_s stream;
+
+static char *big_oops_buf;
+static size_t big_oops_buf_sz;
+
+>>>>>>> 0e91d2a... Nougat
 /* How much of the console log to snapshot */
 static unsigned long kmsg_bytes = 10240;
 
@@ -117,6 +129,147 @@ bool pstore_cannot_block_path(enum kmsg_dump_reason reason)
 }
 EXPORT_SYMBOL_GPL(pstore_cannot_block_path);
 
+<<<<<<< HEAD
+=======
+/* Derived from logfs_compress() */
+static int pstore_compress(const void *in, void *out, size_t inlen,
+							size_t outlen)
+{
+	int err, ret;
+
+	ret = -EIO;
+	err = zlib_deflateInit2(&stream, COMPR_LEVEL, Z_DEFLATED, WINDOW_BITS,
+						MEM_LEVEL, Z_DEFAULT_STRATEGY);
+	if (err != Z_OK)
+		goto error;
+
+	stream.next_in = in;
+	stream.avail_in = inlen;
+	stream.total_in = 0;
+	stream.next_out = out;
+	stream.avail_out = outlen;
+	stream.total_out = 0;
+
+	err = zlib_deflate(&stream, Z_FINISH);
+	if (err != Z_STREAM_END)
+		goto error;
+
+	err = zlib_deflateEnd(&stream);
+	if (err != Z_OK)
+		goto error;
+
+	if (stream.total_out >= stream.total_in)
+		goto error;
+
+	ret = stream.total_out;
+error:
+	return ret;
+}
+
+/* Derived from logfs_uncompress */
+static int pstore_decompress(void *in, void *out, size_t inlen, size_t outlen)
+{
+	int err, ret;
+
+	ret = -EIO;
+	err = zlib_inflateInit2(&stream, WINDOW_BITS);
+	if (err != Z_OK)
+		goto error;
+
+	stream.next_in = in;
+	stream.avail_in = inlen;
+	stream.total_in = 0;
+	stream.next_out = out;
+	stream.avail_out = outlen;
+	stream.total_out = 0;
+
+	err = zlib_inflate(&stream, Z_FINISH);
+	if (err != Z_STREAM_END)
+		goto error;
+
+	err = zlib_inflateEnd(&stream);
+	if (err != Z_OK)
+		goto error;
+
+	ret = stream.total_out;
+error:
+	return ret;
+}
+
+static void allocate_buf_for_compression(void)
+{
+	size_t size;
+	size_t cmpr;
+
+	/* HTC: disable pstore buf compression; we prefer plain text OOPS
+	 * for debugging */
+	return;
+
+	switch (psinfo->bufsize) {
+	/* buffer range for efivars */
+	case 1000 ... 2000:
+		cmpr = 56;
+		break;
+	case 2001 ... 3000:
+		cmpr = 54;
+		break;
+	case 3001 ... 3999:
+		cmpr = 52;
+		break;
+	/* buffer range for nvram, erst */
+	case 4000 ... 10000:
+		cmpr = 45;
+		break;
+	default:
+		cmpr = 60;
+		break;
+	}
+
+	big_oops_buf_sz = (psinfo->bufsize * 100) / cmpr;
+	big_oops_buf = kmalloc(big_oops_buf_sz, GFP_KERNEL);
+	if (big_oops_buf) {
+		size = max(zlib_deflate_workspacesize(WINDOW_BITS, MEM_LEVEL),
+			zlib_inflate_workspacesize());
+		stream.workspace = kmalloc(size, GFP_KERNEL);
+		if (!stream.workspace) {
+			pr_err("No memory for compression workspace; skipping compression\n");
+			kfree(big_oops_buf);
+			big_oops_buf = NULL;
+		}
+	} else {
+		pr_err("No memory for uncompressed data; skipping compression\n");
+		stream.workspace = NULL;
+	}
+
+}
+
+/*
+ * Called when compression fails, since the printk buffer
+ * would be fetched for compression calling it again when
+ * compression fails would have moved the iterator of
+ * printk buffer which results in fetching old contents.
+ * Copy the recent messages from big_oops_buf to psinfo->buf
+ */
+static size_t copy_kmsg_to_buffer(int hsize, size_t len)
+{
+	size_t total_len;
+	size_t diff;
+
+	total_len = hsize + len;
+
+	if (total_len > psinfo->bufsize) {
+		diff = total_len - psinfo->bufsize + hsize;
+		memcpy(psinfo->buf, big_oops_buf, hsize);
+		memcpy(psinfo->buf + hsize, big_oops_buf + diff,
+					psinfo->bufsize - hsize);
+		total_len = psinfo->bufsize;
+	} else
+		memcpy(psinfo->buf, big_oops_buf, total_len);
+
+	return total_len;
+}
+
+>>>>>>> 0e91d2a... Nougat
 /*
  * callback from kmsg_dump. (s2,l2) has the most recently
  * written bytes, older bytes are in (s1,l1). Save as much
@@ -305,9 +458,19 @@ void pstore_get_records(int quiet)
 
 	while ((size = psi->read(&id, &type, &count, &time, &buf, psi)) > 0) {
 		rc = pstore_mkfile(type, psi->name, id, count, buf,
+<<<<<<< HEAD
 				  (size_t)size, time, psi);
 		kfree(buf);
 		buf = NULL;
+=======
+				  compressed, (size_t)size, time, psi);
+		if (unzipped_len < 0) {
+			/* Free buffer other than big oops */
+			kfree(buf);
+			buf = NULL;
+		} else
+			unzipped_len = -1;
+>>>>>>> 0e91d2a... Nougat
 		if (rc && (rc != -EEXIST || !quiet))
 			failed++;
 	}

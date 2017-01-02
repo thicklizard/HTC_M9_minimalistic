@@ -1234,7 +1234,14 @@ int acpiphp_enable_slot(struct acpiphp_slot *slot)
 {
 	int retval;
 
+<<<<<<< HEAD
 	mutex_lock(&slot->crit_sect);
+=======
+	if (slot->flags & SLOT_IS_GOING_AWAY) {
+		pci_unlock_rescan_remove();
+		return -ENODEV;
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	/* wake up all functions */
 	retval = power_on_slot(slot);

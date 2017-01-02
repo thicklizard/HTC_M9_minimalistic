@@ -60,9 +60,16 @@ obj-$(CONFIG_BRCMSMAC)	+= brcm80211/
 
 obj-$(CONFIG_LIBRA_SDIOIF)	+= libra/
 obj-$(CONFIG_WCNSS_CORE)	+= wcnss/
+<<<<<<< HEAD
 obj-$(CONFIG_CNSS)		+= cnss/
 obj-$(CONFIG_BCM4356)          += bcmdhd_4356/
 obj-$(CONFIG_BCMDHD_GPIO)      += bcmdhd_gpio/
+=======
+
+obj-$(CONFIG_CNSS)	+= cnss/
+obj-$(CONFIG_WCNSS_MEM_PRE_ALLOC) += cnss_prealloc/
+obj-$(CONFIG_CNSS_CRYPTO)   += cnss_crypto/
+>>>>>>> 0e91d2a... Nougat
 
 # HTC WLAN
 obj-y						   += htc_wifi_nvs.o

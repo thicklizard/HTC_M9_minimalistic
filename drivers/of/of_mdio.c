@@ -233,9 +233,68 @@ struct phy_device *of_phy_connect_fixed_link(struct net_device *dev,
 	if (!dev->dev.parent)
 		return NULL;
 
+<<<<<<< HEAD
 	net_np = dev->dev.parent->of_node;
 	if (!net_np)
 		return NULL;
+=======
+	return phy_attach_direct(dev, phy, flags, iface) ? NULL : phy;
+}
+EXPORT_SYMBOL(of_phy_attach);
+
+#if defined(CONFIG_FIXED_PHY)
+/*
+ * of_phy_is_fixed_link() and of_phy_register_fixed_link() must
+ * support two DT bindings:
+ * - the old DT binding, where 'fixed-link' was a property with 5
+ *   cells encoding various informations about the fixed PHY
+ * - the new DT binding, where 'fixed-link' is a sub-node of the
+ *   Ethernet device.
+ */
+bool of_phy_is_fixed_link(struct device_node *np)
+{
+	struct device_node *dn;
+	int len, err;
+	const char *managed;
+
+	/* New binding */
+	dn = of_get_child_by_name(np, "fixed-link");
+	if (dn) {
+		of_node_put(dn);
+		return true;
+	}
+
+	err = of_property_read_string(np, "managed", &managed);
+	if (err == 0 && strcmp(managed, "auto") != 0)
+		return true;
+
+	/* Old binding */
+	if (of_get_property(np, "fixed-link", &len) &&
+	    len == (5 * sizeof(__be32)))
+		return true;
+
+	return false;
+}
+EXPORT_SYMBOL(of_phy_is_fixed_link);
+
+int of_phy_register_fixed_link(struct device_node *np)
+{
+	struct fixed_phy_status status = {};
+	struct device_node *fixed_link_node;
+	const __be32 *fixed_link_prop;
+	int len, err;
+	struct phy_device *phy;
+	const char *managed;
+
+	err = of_property_read_string(np, "managed", &managed);
+	if (err == 0) {
+		if (strcmp(managed, "in-band-status") == 0) {
+			/* status is zeroed, namely its .link member */
+			phy = fixed_phy_register(PHY_POLL, &status, np);
+			return IS_ERR(phy) ? PTR_ERR(phy) : 0;
+		}
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	phy_id = of_get_property(net_np, "fixed-link", &sz);
 	if (!phy_id || sz < sizeof(*phy_id))

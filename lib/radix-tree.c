@@ -33,6 +33,7 @@
 #include <linux/bitops.h>
 #include <linux/rcupdate.h>
 
+<<<<<<< HEAD
 
 #ifdef __KERNEL__
 #define RADIX_TREE_MAP_SHIFT	(CONFIG_BASE_SMALL ? 4 : 6)
@@ -61,6 +62,8 @@ struct radix_tree_node {
 #define RADIX_TREE_MAX_PATH (DIV_ROUND_UP(RADIX_TREE_INDEX_BITS, \
 					  RADIX_TREE_MAP_SHIFT))
 
+=======
+>>>>>>> 0e91d2a... Nougat
 /*
  * The height_to_maxindex array needs to be one deeper than the maximum
  * path as height 0 holds only 1 entry.
@@ -943,6 +946,7 @@ unsigned long radix_tree_next_hole(struct radix_tree_root *root,
 			break;
 	}
 
+<<<<<<< HEAD
 	return index;
 }
 EXPORT_SYMBOL(radix_tree_next_hole);
@@ -977,6 +981,17 @@ unsigned long radix_tree_prev_hole(struct radix_tree_root *root,
 			break;
 		index--;
 		if (index == ULONG_MAX)
+=======
+	radix_tree_for_each_slot(slot, root, &iter, first_index) {
+		results[ret] = rcu_dereference_raw(*slot);
+		if (!results[ret])
+			continue;
+		if (radix_tree_is_indirect_ptr(results[ret])) {
+			slot = radix_tree_iter_retry(&iter);
+			continue;
+		}
+		if (++ret == max_items)
+>>>>>>> 0e91d2a... Nougat
 			break;
 	}
 
@@ -1094,9 +1109,13 @@ radix_tree_gang_lookup_tag(struct radix_tree_root *root, void **results,
 		return 0;
 
 	radix_tree_for_each_tagged(slot, root, &iter, first_index, tag) {
-		results[ret] = indirect_to_ptr(rcu_dereference_raw(*slot));
+		results[ret] = rcu_dereference_raw(*slot);
 		if (!results[ret])
 			continue;
+		if (radix_tree_is_indirect_ptr(results[ret])) {
+			slot = radix_tree_iter_retry(&iter);
+			continue;
+		}
 		if (++ret == max_items)
 			break;
 	}

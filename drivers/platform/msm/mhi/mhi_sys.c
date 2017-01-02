@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -18,6 +22,7 @@
 
 #include "mhi_sys.h"
 
+<<<<<<< HEAD
 enum MHI_DEBUG_LEVEL mhi_msg_lvl = MHI_MSG_CRITICAL;
 enum MHI_DEBUG_LEVEL mhi_ipc_log_lvl = MHI_MSG_INFO;
 enum MHI_DEBUG_CLASS mhi_msg_class = MHI_DBG_DATA | MHI_DBG_POWER;
@@ -31,17 +36,41 @@ MODULE_PARM_DESC(tx_mhi_intmodt, "xfer interrupt modulation");
 enum MHI_DEBUG_LEVEL rx_mhi_intmodt = 6;
 module_param(rx_mhi_intmodt, uint, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(rx_mhi_intmodt, "rcver interrupt modulation");
+=======
+enum MHI_DEBUG_LEVEL mhi_msg_lvl = MHI_MSG_ERROR;
+
+#ifdef CONFIG_MSM_MHI_DEBUG
+	enum MHI_DEBUG_LEVEL mhi_ipc_log_lvl = MHI_MSG_VERBOSE;
+#else
+	enum MHI_DEBUG_LEVEL mhi_ipc_log_lvl = MHI_MSG_ERROR;
+#endif
+
+unsigned int mhi_log_override;
+>>>>>>> 0e91d2a... Nougat
 
 module_param(mhi_msg_lvl , uint, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(mhi_msg_lvl, "dbg lvl");
 module_param(mhi_ipc_log_lvl, uint, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(mhi_ipc_log_lvl, "dbg lvl");
 
+<<<<<<< HEAD
 module_param(mhi_msg_class , uint, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(mhi_msg_class, "dbg class");
 u32 m3_timer_val_ms = 1000;
 module_param(m3_timer_val_ms, uint, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(m3_timer_val_ms, "timer val");
+=======
+const char * const mhi_states_str[MHI_STATE_LIMIT] = {
+	"RESET",
+	"READY",
+	"M0",
+	"M1",
+	"M2",
+	"M3",
+	"BHI",
+	"SYS_ERR",
+};
+>>>>>>> 0e91d2a... Nougat
 
 static ssize_t mhi_dbgfs_chan_read(struct file *fp, char __user *buf,
 				size_t count, loff_t *offp)
@@ -55,11 +84,27 @@ static ssize_t mhi_dbgfs_chan_read(struct file *fp, char __user *buf,
 	if (NULL == mhi_dev_ctxt)
 		return -EIO;
 	*offp = (u32)(*offp) % MHI_MAX_CHANNELS;
+<<<<<<< HEAD
 	if (*offp == (MHI_MAX_CHANNELS - 1))
 		msleep(1000);
 	while (!VALID_CHAN_NR(*offp)) {
 		*offp += 1;
 		*offp = (u32)(*offp) % MHI_MAX_CHANNELS;
+=======
+
+	while (!valid_chan) {
+		if (*offp == (MHI_MAX_CHANNELS - 1))
+			msleep(1000);
+		if (!VALID_CHAN_NR(*offp) ||
+		    !cc_list[*offp].mhi_trb_ring_base_addr ||
+		    !mhi_dev_ctxt->client_handle_list[*offp]) {
+			*offp += 1;
+			*offp = (u32)(*offp) % MHI_MAX_CHANNELS;
+			continue;
+		}
+		client_handle = mhi_dev_ctxt->client_handle_list[*offp];
+		valid_chan = 1;
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	get_element_index(&mhi_dev_ctxt->mhi_local_chan_ctxt[*offp],
@@ -215,9 +260,9 @@ static ssize_t mhi_dbgfs_state_read(struct file *fp, char __user *buf,
 	amnt_copied =
 	scnprintf(mhi_dev_ctxt->chan_info,
 			MHI_LOG_SIZE,
-			"%s %u %s %d %s %d %s %d %s %d %s %d %s %d %s %d %s %d %s %d %s %d, %s, %d, %s %d\n",
+			"%s %s %s %d %s %d %s %d %s %d %s %d %s %d %s %d %s %d %s %d %s %d, %s, %d, %s %d\n",
 			"Our State:",
-			mhi_dev_ctxt->mhi_state,
+			TO_MHI_STATE_STR(mhi_dev_ctxt->mhi_state),
 			"M0->M1:",
 			mhi_dev_ctxt->counters.m0_m1,
 			"M0<-M1:",

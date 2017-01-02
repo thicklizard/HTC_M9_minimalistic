@@ -2781,6 +2781,10 @@ irqreturn_t xhci_irq(struct usb_hcd *hcd)
 	if (status == 0xffffffff)
 		goto hw_died;
 
+	if (status & STS_HCE) {
+		xhci_warn(xhci, "WARNING: Host controller Error\n");
+	}
+
 	if (!(status & STS_EINT)) {
 		spin_unlock(&xhci->lock);
 		return IRQ_NONE;
@@ -4096,6 +4100,15 @@ static int queue_command(struct xhci_hcd *xhci, u32 field1, u32 field2,
 {
 	int reserved_trbs = xhci->cmd_ring_reserved_trbs;
 	int ret;
+<<<<<<< HEAD
+=======
+
+	if ((xhci->xhc_state & XHCI_STATE_DYING) ||
+		(xhci->xhc_state & XHCI_STATE_HALTED)) {
+		xhci_dbg(xhci, "xHCI dying or halted, can't queue_command\n");
+		return -ESHUTDOWN;
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	if (!command_must_succeed)
 		reserved_trbs++;

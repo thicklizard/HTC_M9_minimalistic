@@ -197,6 +197,15 @@ enum task_event {
 	IRQ_UPDATE	= 5,
 };
 
+enum migrate_types {
+	GROUP_TO_RQ,
+	RQ_TO_GROUP,
+	RQ_TO_RQ,
+	GROUP_TO_GROUP,
+};
+
+extern const char *migrate_type_names[];
+
 #include <linux/spinlock.h>
 
 extern rwlock_t tasklist_lock;
@@ -528,6 +537,7 @@ struct user_struct {
 	unsigned long mq_bytes;	
 #endif
 	unsigned long locked_shm; 
+	unsigned long unix_inflight;	
 
 #ifdef CONFIG_KEYS
 	struct key *uid_keyring;	
@@ -803,6 +813,7 @@ struct sched_statistics {
 #endif
 
 #define RAVG_HIST_SIZE_MAX  5
+#define NUM_BUSY_BUCKETS 10
 
 struct ravg {
 	u64 mark_start;
@@ -810,6 +821,12 @@ struct ravg {
 	u32 sum_history[RAVG_HIST_SIZE_MAX];
 #ifdef CONFIG_SCHED_FREQ_INPUT
 	u32 curr_window, prev_window;
+<<<<<<< HEAD
+=======
+	u16 active_windows;
+	u32 pred_demand;
+	u8 busy_buckets[NUM_BUSY_BUCKETS];
+>>>>>>> 0e91d2a... Nougat
 #endif
 };
 
@@ -891,8 +908,21 @@ struct task_struct {
 #ifdef CONFIG_SCHED_HMP
 	struct ravg ravg;
 	u32 init_load_pct;
+<<<<<<< HEAD
 	u64 run_start;
 #endif
+=======
+	u64 last_wake_ts;
+	u64 last_switch_out_ts;
+	u64 last_cpu_selected_ts;
+#ifdef CONFIG_SCHED_QHMP
+	u64 run_start;
+#endif
+	struct related_thread_group *grp;
+	struct list_head grp_list;
+	u64 cpu_cycles;
+#endif
+>>>>>>> 0e91d2a... Nougat
 #ifdef CONFIG_CGROUP_SCHED
 	struct task_group *sched_task_group;
 #endif
@@ -1081,6 +1111,9 @@ struct task_struct {
 	unsigned int lockdep_recursion;
 	struct held_lock held_locks[MAX_LOCK_DEPTH];
 	gfp_t lockdep_reclaim_gfp;
+#endif
+#ifdef CONFIG_UBSAN
+	unsigned int in_ubsan;
 #endif
 
 	void *journal_info;
@@ -1366,10 +1399,33 @@ extern void thread_group_cputime_adjusted(struct task_struct *p, cputime_t *ut, 
 
 extern int task_free_register(struct notifier_block *n);
 extern int task_free_unregister(struct notifier_block *n);
+<<<<<<< HEAD
 #ifdef CONFIG_SCHED_FREQ_INPUT
 extern int sched_set_window(u64 window_start, unsigned int window_size);
 extern unsigned long sched_get_busy(int cpu);
 extern void sched_get_cpus_busy(unsigned long *busy,
+=======
+
+struct sched_load {
+	unsigned long prev_load;
+	unsigned long new_task_load;
+	unsigned long predicted_load;
+};
+
+#if defined(CONFIG_SCHED_QHMP) || !defined(CONFIG_SCHED_HMP)
+static inline int sched_update_freq_max_load(const cpumask_t *cpumask)
+{
+	return 0;
+}
+#else
+int sched_update_freq_max_load(const cpumask_t *cpumask);
+#endif
+
+#if defined(CONFIG_SCHED_FREQ_INPUT)
+extern int sched_set_window(u64 window_start, unsigned int window_size);
+extern unsigned long sched_get_busy(int cpu);
+extern void sched_get_cpus_busy(struct sched_load *busy,
+>>>>>>> 0e91d2a... Nougat
 				const struct cpumask *query_cpus);
 extern void sched_set_io_is_busy(int val);
 #else
@@ -1527,8 +1583,11 @@ extern void do_set_cpus_allowed(struct task_struct *p,
 
 extern int set_cpus_allowed_ptr(struct task_struct *p,
 				const struct cpumask *new_mask);
+<<<<<<< HEAD
 extern void sched_set_cpu_cstate(int cpu, int cstate,
 			 int wakeup_energy, int wakeup_latency);
+=======
+>>>>>>> 0e91d2a... Nougat
 #else
 static inline void do_set_cpus_allowed(struct task_struct *p,
 				      const struct cpumask *new_mask)
@@ -1541,10 +1600,13 @@ static inline int set_cpus_allowed_ptr(struct task_struct *p,
 		return -EINVAL;
 	return 0;
 }
+<<<<<<< HEAD
 static inline void
 sched_set_cpu_cstate(int cpu, int cstate, int wakeup_energy, int wakeup_latency)
 {
 }
+=======
+>>>>>>> 0e91d2a... Nougat
 #endif
 
 extern int sched_set_wake_up_idle(struct task_struct *p, int wake_up_idle);
@@ -1555,6 +1617,22 @@ extern u32 sched_get_wake_up_idle(struct task_struct *p);
 extern int sched_set_boost(int enable);
 extern int sched_set_init_task_load(struct task_struct *p, int init_load_pct);
 extern u32 sched_get_init_task_load(struct task_struct *p);
+<<<<<<< HEAD
+=======
+extern int sched_set_static_cpu_pwr_cost(int cpu, unsigned int cost);
+extern unsigned int sched_get_static_cpu_pwr_cost(int cpu);
+extern int sched_set_static_cluster_pwr_cost(int cpu, unsigned int cost);
+extern unsigned int sched_get_static_cluster_pwr_cost(int cpu);
+extern int sched_set_cpu_budget(int cpu, int nr_run);
+extern int sched_get_cpu_budget(int cpu);
+extern void sched_set_cpu_cstate(int cpu, int cstate,
+			 int wakeup_energy, int wakeup_latency);
+extern void sched_set_cluster_dstate(const cpumask_t *cluster_cpus, int dstate,
+				int wakeup_energy, int wakeup_latency);
+extern void sched_update_cpu_freq_min_max(const cpumask_t *cpus, u32 fmin, u32
+					  fmax);
+#ifdef CONFIG_SCHED_QHMP
+>>>>>>> 0e91d2a... Nougat
 extern int sched_set_cpu_prefer_idle(int cpu, int prefer_idle);
 extern int sched_get_cpu_prefer_idle(int cpu);
 extern int sched_set_cpu_mostly_idle_load(int cpu, int mostly_idle_pct);
@@ -1572,6 +1650,18 @@ static inline int sched_set_boost(int enable)
 {
 	return -EINVAL;
 }
+static inline void
+sched_set_cpu_cstate(int cpu, int cstate, int wakeup_energy, int wakeup_latency)
+{
+}
+
+static inline void sched_set_cluster_dstate(const cpumask_t *cluster_cpus,
+			int dstate, int wakeup_energy, int wakeup_latency)
+{
+}
+
+static inline void
+sched_update_cpu_freq_min_max(const cpumask_t *cpus, u32 fmin, u32 fmax) { }
 #endif
 
 #ifdef CONFIG_NO_HZ_COMMON
@@ -2163,6 +2253,25 @@ extern int __cond_resched_softirq(void);
 	__cond_resched_softirq();					\
 })
 
+<<<<<<< HEAD
+=======
+static inline void cond_resched_rcu(void)
+{
+#if defined(CONFIG_DEBUG_ATOMIC_SLEEP) || !defined(CONFIG_PREEMPT_RCU)
+	rcu_read_unlock();
+	cond_resched();
+	rcu_read_lock();
+#endif
+}
+
+#ifdef CONFIG_DEBUG_PREEMPT
+static inline unsigned long get_preempt_disable_ip(struct task_struct *p)
+{
+	return p->preempt_disable_ip;
+}
+#endif
+
+>>>>>>> 0e91d2a... Nougat
 static inline int spin_needbreak(spinlock_t *lock)
 {
 #ifdef CONFIG_PREEMPT
@@ -2392,5 +2501,10 @@ static inline unsigned long rlimit_max(unsigned int limit)
 {
 	return task_rlimit_max(current, limit);
 }
+
+struct cpu_cycle_counter_cb {
+	u64 (*get_cpu_cycle_counter)(int cpu);
+};
+int register_cpu_cycle_counter_cb(struct cpu_cycle_counter_cb *cb);
 
 #endif

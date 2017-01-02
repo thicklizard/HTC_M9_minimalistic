@@ -51,7 +51,15 @@ EXPORT_SYMBOL_GPL(zpci_list);
 DEFINE_MUTEX(zpci_list_lock);
 EXPORT_SYMBOL_GPL(zpci_list_lock);
 
+<<<<<<< HEAD
 static struct pci_hp_callback_ops *hotplug_ops;
+=======
+static struct irq_chip zpci_irq_chip = {
+	.name = "zPCI",
+	.irq_unmask = pci_msi_unmask_irq,
+	.irq_mask = pci_msi_mask_irq,
+};
+>>>>>>> 0e91d2a... Nougat
 
 static DECLARE_BITMAP(zpci_domain, ZPCI_NR_DEVICES);
 static DEFINE_SPINLOCK(zpci_domain_lock);
@@ -250,6 +258,11 @@ int zpci_fmb_enable_device(struct zpci_dev *zdev)
 	if (!zdev->fmb)
 		return -ENOMEM;
 	WARN_ON((u64) zdev->fmb & 0xf);
+
+	/* reset software counters */
+	atomic64_set(&zdev->allocated_pages, 0);
+	atomic64_set(&zdev->mapped_pages, 0);
+	atomic64_set(&zdev->unmapped_pages, 0);
 
 	args.fmb_addr = virt_to_phys(zdev->fmb);
 	return mod_pci(zdev, ZPCI_MOD_FC_SET_MEASURE, 0, &args);
@@ -876,6 +889,44 @@ static void zpci_free_domain(struct zpci_dev *zdev)
 	spin_unlock(&zpci_domain_lock);
 }
 
+<<<<<<< HEAD
+=======
+void pcibios_remove_bus(struct pci_bus *bus)
+{
+	struct zpci_dev *zdev = get_zdev_by_bus(bus);
+
+	zpci_exit_slot(zdev);
+	zpci_cleanup_bus_resources(zdev);
+	zpci_free_domain(zdev);
+
+	spin_lock(&zpci_list_lock);
+	list_del(&zdev->entry);
+	spin_unlock(&zpci_list_lock);
+
+	kfree(zdev);
+}
+
+static int zpci_scan_bus(struct zpci_dev *zdev)
+{
+	LIST_HEAD(resources);
+	int ret;
+
+	ret = zpci_setup_bus_resources(zdev, &resources);
+	if (ret)
+		return ret;
+
+	zdev->bus = pci_scan_root_bus(NULL, ZPCI_BUS_NR, &pci_root_ops,
+				      zdev, &resources);
+	if (!zdev->bus) {
+		zpci_cleanup_bus_resources(zdev);
+		return -EIO;
+	}
+	zdev->bus->max_bus_speed = zdev->max_bus_speed;
+	pci_bus_add_devices(zdev->bus);
+	return 0;
+}
+
+>>>>>>> 0e91d2a... Nougat
 int zpci_enable_device(struct zpci_dev *zdev)
 {
 	int rc;
@@ -976,13 +1027,18 @@ static inline int barsize(u8 size)
 
 static int zpci_mem_init(void)
 {
+<<<<<<< HEAD
 	zdev_irq_cache = kmem_cache_create("PCI_IRQ_cache", sizeof(struct zdev_irq_map),
 				L1_CACHE_BYTES, SLAB_HWCACHE_ALIGN, NULL);
 	if (!zdev_irq_cache)
 		goto error_zdev;
+=======
+	BUILD_BUG_ON(!is_power_of_2(__alignof__(struct zpci_fmb)) ||
+		     __alignof__(struct zpci_fmb) < sizeof(struct zpci_fmb));
+>>>>>>> 0e91d2a... Nougat
 
 	zdev_fmb_cache = kmem_cache_create("PCI_FMB_cache", sizeof(struct zpci_fmb),
-				16, 0, NULL);
+					   __alignof__(struct zpci_fmb), 0, NULL);
 	if (!zdev_fmb_cache)
 		goto error_fmb;
 

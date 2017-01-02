@@ -31,6 +31,7 @@ static struct clk *step_clk;
 static struct clk *pll2_pfd2_396m_clk;
 
 static struct device *cpu_dev;
+static bool free_opp;
 static struct cpufreq_frequency_table *freq_table;
 static unsigned int transition_latency;
 
@@ -248,9 +249,27 @@ static int imx6q_cpufreq_probe(struct platform_device *pdev)
 	/* We expect an OPP table supplied by platform */
 	num = dev_pm_opp_get_opp_count(cpu_dev);
 	if (num < 0) {
+<<<<<<< HEAD
 		ret = num;
 		dev_err(cpu_dev, "no OPP table is found: %d\n", ret);
 		goto put_node;
+=======
+		ret = dev_pm_opp_of_add_table(cpu_dev);
+		if (ret < 0) {
+			dev_err(cpu_dev, "failed to init OPP table: %d\n", ret);
+			goto put_reg;
+		}
+
+		/* Because we have added the OPPs here, we must free them */
+		free_opp = true;
+
+		num = dev_pm_opp_get_opp_count(cpu_dev);
+		if (num < 0) {
+			ret = num;
+			dev_err(cpu_dev, "no OPP table is found: %d\n", ret);
+			goto out_free_opp;
+		}
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	ret = dev_pm_opp_init_cpufreq_table(cpu_dev, &freq_table);
@@ -302,7 +321,31 @@ static int imx6q_cpufreq_probe(struct platform_device *pdev)
 
 free_freq_table:
 	dev_pm_opp_free_cpufreq_table(cpu_dev, &freq_table);
+<<<<<<< HEAD
 put_node:
+=======
+out_free_opp:
+	if (free_opp)
+		dev_pm_opp_of_remove_table(cpu_dev);
+put_reg:
+	if (!IS_ERR(arm_reg))
+		regulator_put(arm_reg);
+	if (!IS_ERR(pu_reg))
+		regulator_put(pu_reg);
+	if (!IS_ERR(soc_reg))
+		regulator_put(soc_reg);
+put_clk:
+	if (!IS_ERR(arm_clk))
+		clk_put(arm_clk);
+	if (!IS_ERR(pll1_sys_clk))
+		clk_put(pll1_sys_clk);
+	if (!IS_ERR(pll1_sw_clk))
+		clk_put(pll1_sw_clk);
+	if (!IS_ERR(step_clk))
+		clk_put(step_clk);
+	if (!IS_ERR(pll2_pfd2_396m_clk))
+		clk_put(pll2_pfd2_396m_clk);
+>>>>>>> 0e91d2a... Nougat
 	of_node_put(np);
 	return ret;
 }
@@ -311,6 +354,20 @@ static int imx6q_cpufreq_remove(struct platform_device *pdev)
 {
 	cpufreq_unregister_driver(&imx6q_cpufreq_driver);
 	dev_pm_opp_free_cpufreq_table(cpu_dev, &freq_table);
+<<<<<<< HEAD
+=======
+	if (free_opp)
+		dev_pm_opp_of_remove_table(cpu_dev);
+	regulator_put(arm_reg);
+	if (!IS_ERR(pu_reg))
+		regulator_put(pu_reg);
+	regulator_put(soc_reg);
+	clk_put(arm_clk);
+	clk_put(pll1_sys_clk);
+	clk_put(pll1_sw_clk);
+	clk_put(step_clk);
+	clk_put(pll2_pfd2_396m_clk);
+>>>>>>> 0e91d2a... Nougat
 
 	return 0;
 }
@@ -318,7 +375,6 @@ static int imx6q_cpufreq_remove(struct platform_device *pdev)
 static struct platform_driver imx6q_cpufreq_platdrv = {
 	.driver = {
 		.name	= "imx6q-cpufreq",
-		.owner	= THIS_MODULE,
 	},
 	.probe		= imx6q_cpufreq_probe,
 	.remove		= imx6q_cpufreq_remove,

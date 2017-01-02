@@ -226,6 +226,10 @@ static enum iommu_init_state init_state = IOMMU_START_STATE;
 static int amd_iommu_enable_interrupts(void);
 static int __init iommu_go_to_state(enum iommu_init_state state);
 
+static int iommu_pc_get_set_reg_val(struct amd_iommu *iommu,
+				    u8 bank, u8 cntr, u8 fxn,
+				    u64 *value, bool is_write);
+
 static inline void update_last_devid(u16 devid)
 {
 	if (devid > amd_iommu_last_bdf)
@@ -1056,6 +1060,34 @@ static void amd_iommu_erratum_746_workaround(struct amd_iommu *iommu)
 }
 
 /*
+ * Family15h Model 30h-3fh (IOMMU Mishandles ATS Write Permission)
+ * Workaround:
+ *     BIOS should enable ATS write permission check by setting
+ *     L2_DEBUG_3[AtsIgnoreIWDis](D0F2xF4_x47[0]) = 1b
+ */
+static void amd_iommu_ats_write_check_workaround(struct amd_iommu *iommu)
+{
+	u32 value;
+
+	if ((boot_cpu_data.x86 != 0x15) ||
+	    (boot_cpu_data.x86_model < 0x30) ||
+	    (boot_cpu_data.x86_model > 0x3f))
+		return;
+
+	/* Test L2_DEBUG_3[AtsIgnoreIWDis] == 1 */
+	value = iommu_read_l2(iommu, 0x47);
+
+	if (value & BIT(0))
+		return;
+
+	/* Set L2_DEBUG_3[AtsIgnoreIWDis] = 1 */
+	iommu_write_l2(iommu, 0x47, value | BIT(0));
+
+	pr_info("AMD-Vi: Applying ATS write check workaround for IOMMU at %s\n",
+		dev_name(&iommu->dev->dev));
+}
+
+/*
  * This function clues the initialization function for one IOMMU
  * together and also allocates the command buffer and programs the
  * hardware. It does NOT enable the IOMMU. This is done afterwards.
@@ -1160,6 +1192,69 @@ static int __init init_iommu_all(struct acpi_table_header *table)
 	return 0;
 }
 
+<<<<<<< HEAD
+=======
+
+static void init_iommu_perf_ctr(struct amd_iommu *iommu)
+{
+	u64 val = 0xabcd, val2 = 0;
+
+	if (!iommu_feature(iommu, FEATURE_PC))
+		return;
+
+	amd_iommu_pc_present = true;
+
+	/* Check if the performance counters can be written to */
+	if ((0 != iommu_pc_get_set_reg_val(iommu, 0, 0, 0, &val, true)) ||
+	    (0 != iommu_pc_get_set_reg_val(iommu, 0, 0, 0, &val2, false)) ||
+	    (val != val2)) {
+		pr_err("AMD-Vi: Unable to write to IOMMU perf counter.\n");
+		amd_iommu_pc_present = false;
+		return;
+	}
+
+	pr_info("AMD-Vi: IOMMU performance counters supported\n");
+
+	val = readl(iommu->mmio_base + MMIO_CNTR_CONF_OFFSET);
+	iommu->max_banks = (u8) ((val >> 12) & 0x3f);
+	iommu->max_counters = (u8) ((val >> 7) & 0xf);
+}
+
+static ssize_t amd_iommu_show_cap(struct device *dev,
+				  struct device_attribute *attr,
+				  char *buf)
+{
+	struct amd_iommu *iommu = dev_get_drvdata(dev);
+	return sprintf(buf, "%x\n", iommu->cap);
+}
+static DEVICE_ATTR(cap, S_IRUGO, amd_iommu_show_cap, NULL);
+
+static ssize_t amd_iommu_show_features(struct device *dev,
+				       struct device_attribute *attr,
+				       char *buf)
+{
+	struct amd_iommu *iommu = dev_get_drvdata(dev);
+	return sprintf(buf, "%llx\n", iommu->features);
+}
+static DEVICE_ATTR(features, S_IRUGO, amd_iommu_show_features, NULL);
+
+static struct attribute *amd_iommu_attrs[] = {
+	&dev_attr_cap.attr,
+	&dev_attr_features.attr,
+	NULL,
+};
+
+static struct attribute_group amd_iommu_group = {
+	.name = "amd-iommu",
+	.attrs = amd_iommu_attrs,
+};
+
+static const struct attribute_group *amd_iommu_groups[] = {
+	&amd_iommu_group,
+	NULL,
+};
+
+>>>>>>> 0e91d2a... Nougat
 static int iommu_init_pci(struct amd_iommu *iommu)
 {
 	int cap_ptr = iommu->cap_ptr;
@@ -1254,6 +1349,7 @@ static int iommu_init_pci(struct amd_iommu *iommu)
 	}
 
 	amd_iommu_erratum_746_workaround(iommu);
+	amd_iommu_ats_write_check_workaround(iommu);
 
 	return pci_enable_device(iommu->dev);
 }
@@ -2232,3 +2328,93 @@ bool amd_iommu_v2_supported(void)
 	return amd_iommu_v2_present;
 }
 EXPORT_SYMBOL(amd_iommu_v2_supported);
+<<<<<<< HEAD
+=======
+
+/****************************************************************************
+ *
+ * IOMMU EFR Performance Counter support functionality. This code allows
+ * access to the IOMMU PC functionality.
+ *
+ ****************************************************************************/
+
+u8 amd_iommu_pc_get_max_banks(u16 devid)
+{
+	struct amd_iommu *iommu;
+	u8 ret = 0;
+
+	/* locate the iommu governing the devid */
+	iommu = amd_iommu_rlookup_table[devid];
+	if (iommu)
+		ret = iommu->max_banks;
+
+	return ret;
+}
+EXPORT_SYMBOL(amd_iommu_pc_get_max_banks);
+
+bool amd_iommu_pc_supported(void)
+{
+	return amd_iommu_pc_present;
+}
+EXPORT_SYMBOL(amd_iommu_pc_supported);
+
+u8 amd_iommu_pc_get_max_counters(u16 devid)
+{
+	struct amd_iommu *iommu;
+	u8 ret = 0;
+
+	/* locate the iommu governing the devid */
+	iommu = amd_iommu_rlookup_table[devid];
+	if (iommu)
+		ret = iommu->max_counters;
+
+	return ret;
+}
+EXPORT_SYMBOL(amd_iommu_pc_get_max_counters);
+
+static int iommu_pc_get_set_reg_val(struct amd_iommu *iommu,
+				    u8 bank, u8 cntr, u8 fxn,
+				    u64 *value, bool is_write)
+{
+	u32 offset;
+	u32 max_offset_lim;
+
+	/* Check for valid iommu and pc register indexing */
+	if (WARN_ON((fxn > 0x28) || (fxn & 7)))
+		return -ENODEV;
+
+	offset = (u32)(((0x40|bank) << 12) | (cntr << 8) | fxn);
+
+	/* Limit the offset to the hw defined mmio region aperture */
+	max_offset_lim = (u32)(((0x40|iommu->max_banks) << 12) |
+				(iommu->max_counters << 8) | 0x28);
+	if ((offset < MMIO_CNTR_REG_OFFSET) ||
+	    (offset > max_offset_lim))
+		return -EINVAL;
+
+	if (is_write) {
+		writel((u32)*value, iommu->mmio_base + offset);
+		writel((*value >> 32), iommu->mmio_base + offset + 4);
+	} else {
+		*value = readl(iommu->mmio_base + offset + 4);
+		*value <<= 32;
+		*value = readl(iommu->mmio_base + offset);
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(amd_iommu_pc_get_set_reg_val);
+
+int amd_iommu_pc_get_set_reg_val(u16 devid, u8 bank, u8 cntr, u8 fxn,
+				    u64 *value, bool is_write)
+{
+	struct amd_iommu *iommu = amd_iommu_rlookup_table[devid];
+
+	/* Make sure the IOMMU PC resource is available */
+	if (!amd_iommu_pc_present || iommu == NULL)
+		return -ENODEV;
+
+	return iommu_pc_get_set_reg_val(iommu, bank, cntr, fxn,
+					value, is_write);
+}
+>>>>>>> 0e91d2a... Nougat

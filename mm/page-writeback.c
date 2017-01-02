@@ -2390,6 +2390,10 @@ int test_clear_page_writeback(struct page *page)
 		dec_zone_page_state(page, NR_WRITEBACK);
 		inc_zone_page_state(page, NR_WRITTEN);
 	}
+<<<<<<< HEAD
+=======
+	mem_cgroup_end_page_stat(memcg, &locked, &memcg_flags);
+>>>>>>> 0e91d2a... Nougat
 	return ret;
 }
 
@@ -2422,8 +2426,16 @@ int test_set_page_writeback(struct page *page)
 	} else {
 		ret = TestSetPageWriteback(page);
 	}
+<<<<<<< HEAD
 	if (!ret)
 		account_page_writeback(page);
+=======
+	if (!ret) {
+		mem_cgroup_inc_page_stat(memcg, MEM_CGROUP_STAT_WRITEBACK);
+		inc_zone_page_state(page, NR_WRITEBACK);
+	}
+	mem_cgroup_end_page_stat(memcg, &locked, &memcg_flags);
+>>>>>>> 0e91d2a... Nougat
 	return ret;
 
 }

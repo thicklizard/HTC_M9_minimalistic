@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -43,9 +43,12 @@
 #define DEFAULT_WIDTH 1920
 #define MIN_SUPPORTED_WIDTH 32
 #define MIN_SUPPORTED_HEIGHT 32
+<<<<<<< HEAD
 #define MAX_SUPPORTED_INSTANCES_COUNT 13
+=======
+#define DEFAULT_FPS 15
+>>>>>>> 0e91d2a... Nougat
 
-/* Maintains the number of FTB's between each FBD over a window */
 #define DCVS_FTB_WINDOW 32
 
 #define V4L2_EVENT_VIDC_BASE  10
@@ -81,8 +84,6 @@ enum vidc_core_state {
 	VIDC_CORE_INVALID
 };
 
-/* Do not change the enum values unless
- * you know what you are doing*/
 enum instance_state {
 	MSM_VIDC_CORE_UNINIT_DONE = 0x0001,
 	MSM_VIDC_CORE_INIT,
@@ -148,6 +149,7 @@ struct msm_vidc_drv {
 	int num_cores;
 	struct dentry *debugfs_root;
 	int thermal_level;
+	u32 platform_version;
 };
 
 struct msm_video_device {
@@ -300,6 +302,7 @@ struct msm_vidc_inst {
 	bool in_reconfig;
 	u32 reconfig_width;
 	u32 reconfig_height;
+	u32 seqchanged_count;
 	struct dentry *debugfs_root;
 	struct vb2_buffer *vb2_seq_hdr;
 	void *priv;
@@ -313,6 +316,15 @@ struct msm_vidc_inst {
 	atomic_t seq_hdr_reqs;
 	struct v4l2_ctrl **ctrls;
 	bool dcvs_mode;
+<<<<<<< HEAD
+=======
+	enum msm_vidc_pixel_depth bit_depth;
+	struct kref kref;
+	unsigned long instant_bitrate;
+	u32 buffers_held_in_driver;
+	atomic_t in_flush;
+	u32 pic_struct;
+>>>>>>> 0e91d2a... Nougat
 };
 
 extern struct msm_vidc_drv *vidc_driver;
@@ -388,4 +400,9 @@ struct msm_smem *msm_smem_user_to_kernel(void *clt, int fd, u32 offset,
 int msm_smem_get_domain_partition(void *clt, u32 flags, enum hal_buffer
 		buffer_type, int *domain_num, int *partition_num);
 void msm_vidc_fw_unload_handler(struct work_struct *work);
+<<<<<<< HEAD
+=======
+int8_t msm_smem_compare_buffers(void *clt, int fd, void *priv);
+int msm_vidc_destroy(struct msm_vidc_inst *inst);
+>>>>>>> 0e91d2a... Nougat
 #endif

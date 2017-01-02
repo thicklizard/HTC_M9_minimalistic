@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -82,8 +86,9 @@ struct qcom_ice_variant_ops {
 	int	(*reset)(struct platform_device *);
 	int	(*resume)(struct platform_device *);
 	int	(*suspend)(struct platform_device *);
-	int	(*config)(struct platform_device *, struct request* ,
-				struct ice_data_setting*);
+	int	(*config_start)(struct platform_device *, struct request *,
+				struct ice_data_setting *, bool);
+	int	(*config_end)(struct request *);
 	int	(*status)(struct platform_device *);
 };
 

@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -683,18 +687,34 @@ struct vss_istream_cmd_set_packet_exchange_mode_t {
 
 #define VSS_IVOCPROC_VOCPROC_MODE_EC_EXT_MIXING	0x00010F7D
 
+<<<<<<< HEAD
 #define VSS_IVOCPROC_PORT_ID_NONE			0xFFFF
+=======
+/* Default AFE port ID. Applicable to Tx and Rx. */
+#define VSS_IVOCPROC_PORT_ID_NONE		0xFFFF
+>>>>>>> 0e91d2a... Nougat
 
-#define VSS_NETWORK_ID_DEFAULT				0x00010037
-#define VSS_NETWORK_ID_VOIP_NB				0x00011240
-#define VSS_NETWORK_ID_VOIP_WB				0x00011241
-#define VSS_NETWORK_ID_VOIP_WV				0x00011242
+#define VSS_NETWORK_ID_DEFAULT		0x00010037
+
+/* Voice over Internet Protocol (VoIP) network ID. Common for all bands.*/
+#define VSS_NETWORK_ID_VOIP		0x00011362
 
 #define VSS_MEDIA_ID_EVRC_MODEM		0x00010FC2
 #define VSS_MEDIA_ID_AMR_NB_MODEM	0x00010FC6
 #define VSS_MEDIA_ID_AMR_WB_MODEM	0x00010FC7
+<<<<<<< HEAD
 #define VSS_MEDIA_ID_PCM_NB		0x00010FCB
 #define VSS_MEDIA_ID_PCM_WB		0x00010FCC
+=======
+/* 80-VF690-47 UMTS AMR-WB vocoder modem format. */
+
+#define VSS_MEDIA_ID_PCM_8_KHZ		0x00010FCB
+#define VSS_MEDIA_ID_PCM_16_KHZ		0x00010FCC
+#define VSS_MEDIA_ID_PCM_32_KHZ		0x00010FD9
+#define VSS_MEDIA_ID_PCM_48_KHZ		0x00010FD6
+
+/* Linear PCM (16-bit, little-endian). */
+>>>>>>> 0e91d2a... Nougat
 #define VSS_MEDIA_ID_G711_ALAW		0x00010FCD
 #define VSS_MEDIA_ID_G711_MULAW		0x00010FCE
 #define VSS_MEDIA_ID_G729		0x00010FD0
@@ -781,7 +801,12 @@ struct vss_ivocproc_cmd_register_volume_cal_data_t {
 
 #define VSS_IVPCM_SAMPLING_RATE_16K	16000
 
+<<<<<<< HEAD
 #define MAX_TAP_POINTS_SUPPORTED	1
+=======
+/* RX and TX */
+#define MAX_TAP_POINTS_SUPPORTED	2
+>>>>>>> 0e91d2a... Nougat
 
 struct vss_ivpcm_tap_point {
 	uint32_t tap_point;

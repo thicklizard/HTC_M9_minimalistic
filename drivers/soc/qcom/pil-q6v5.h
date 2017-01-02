@@ -1,5 +1,9 @@
 /*
+<<<<<<< HEAD
  * Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+=======
+ * Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -32,6 +36,13 @@ struct q6v5_data {
 	struct clk *reg_clk;	   /* CPU access registers */
 	struct clk *gpll0_mss_clk; /* GPLL0 to MSS connection */
 	struct clk *rom_clk;	   /* Boot ROM */
+<<<<<<< HEAD
+=======
+	struct clk *snoc_axi_clk;
+	struct clk *mnoc_axi_clk;
+	struct clk *qdss_clk;
+	struct clk *qpic_clk;
+>>>>>>> 0e91d2a... Nougat
 	void __iomem *axi_halt_base; /* Halt base of q6, mss,
 					nc are in same 4K page */
 	void __iomem *axi_halt_q6;
@@ -52,9 +63,19 @@ struct q6v5_data {
 	bool qdsp6v5_2_0;
 	bool qdsp6v56;
 	bool qdsp6v56_1_3;
+<<<<<<< HEAD
+=======
+	bool qdsp6v56_1_5;
+	bool qdsp6v56_1_8;
+	bool qdsp6v56_1_8_inrush_current;
+	bool qdsp6v56_1_10;
+	bool qdsp6v61_1_1;
+	bool qdsp6v62_1_2;
+>>>>>>> 0e91d2a... Nougat
 	bool non_elf_image;
 	bool restart_reg_sec;
 	bool override_acc;
+	int override_acc_1;
 	bool ahb_clk_vote;
 };
 

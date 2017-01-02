@@ -154,6 +154,7 @@ static inline bool mem_cgroup_disabled(void)
 	return false;
 }
 
+<<<<<<< HEAD
 void __mem_cgroup_begin_update_page_stat(struct page *page, bool *locked,
 					 unsigned long *flags);
 
@@ -181,6 +182,14 @@ static inline void mem_cgroup_end_update_page_stat(struct page *page,
 		__mem_cgroup_end_update_page_stat(page, flags);
 	rcu_read_unlock();
 }
+=======
+struct mem_cgroup *mem_cgroup_begin_page_stat(struct page *page, bool *locked,
+					      unsigned long *flags);
+void mem_cgroup_end_page_stat(struct mem_cgroup *memcg, bool *locked,
+			      unsigned long *flags);
+void mem_cgroup_update_page_stat(struct mem_cgroup *memcg,
+				 enum mem_cgroup_stat_index idx, int val);
+>>>>>>> 0e91d2a... Nougat
 
 void mem_cgroup_update_page_stat(struct page *page,
 				 enum mem_cgroup_page_stat_item idx,
@@ -361,7 +370,11 @@ static inline void mem_cgroup_begin_update_page_stat(struct page *page,
 {
 }
 
+<<<<<<< HEAD
 static inline void mem_cgroup_end_update_page_stat(struct page *page,
+=======
+static inline void mem_cgroup_end_page_stat(struct mem_cgroup *memcg,
+>>>>>>> 0e91d2a... Nougat
 					bool *locked, unsigned long *flags)
 {
 }

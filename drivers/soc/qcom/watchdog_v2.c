@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -436,6 +440,7 @@ static void ping_other_cpus(struct msm_watchdog_data *wdog_dd)
 
 static void pet_watchdog_work(struct work_struct *work)
 {
+<<<<<<< HEAD
 	unsigned long delay_time;
 	struct delayed_work *delayed_work = to_delayed_work(work);
 	struct msm_watchdog_data *wdog_dd = container_of(delayed_work,
@@ -451,6 +456,33 @@ static void pet_watchdog_work(struct work_struct *work)
 		queue_delayed_work(wdog_wq,
 				&wdog_dd->dogwork_struct, delay_time);
 
+=======
+	struct msm_watchdog_data *wdog_dd =
+		(struct msm_watchdog_data *)data;
+	complete(&wdog_dd->pet_complete);
+}
+
+static __ref int watchdog_kthread(void *arg)
+{
+	struct msm_watchdog_data *wdog_dd =
+		(struct msm_watchdog_data *)arg;
+	unsigned long delay_time = 0;
+	struct sched_param param = {.sched_priority = MAX_RT_PRIO-1};
+
+	sched_setscheduler(current, SCHED_FIFO, &param);
+	while (!kthread_should_stop()) {
+		while (wait_for_completion_interruptible(
+			&wdog_dd->pet_complete) != 0)
+			;
+		reinit_completion(&wdog_dd->pet_complete);
+		if (enable) {
+			delay_time = msecs_to_jiffies(wdog_dd->pet_time);
+			if (wdog_dd->do_ipi_ping)
+				ping_other_cpus(wdog_dd);
+			pet_watchdog(wdog_dd);
+		}
+		mod_timer(&wdog_dd->pet_timer, jiffies + delay_time);
+>>>>>>> 0e91d2a... Nougat
 #if defined(CONFIG_HTC_DEBUG_WATCHDOG)
 	htc_debug_watchdog_update_last_pet(wdog_dd->last_pet);
 	

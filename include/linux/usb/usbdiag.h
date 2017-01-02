@@ -23,7 +23,11 @@
 
 #include <linux/err.h>
 
+<<<<<<< HEAD
 /*++ 2014/09/18, USB Team, PCN00002 ++*/
+=======
+/*++ 2015/07/15, USB Team, PCN00017 ++*/
+>>>>>>> 0e91d2a... Nougat
 /*DRIVER_DIAG_FUNCTION*/
 #define DIAG_ERR(fmt, args...) \
 	printk(KERN_ERR "[USBDIAG:ERR] " fmt, ## args)
@@ -52,12 +56,23 @@
 #define SDLOG_INFO(fmt, args...) \
 	printk(KERN_INFO "[USBDIAG] " fmt, ## args)
 #define SDLOG_DBUG(fmt, args...) \
+<<<<<<< HEAD
 	printk(KERN_DEBUG "[USBDIAG] " fmt, ## args)
 /*-- 2014/09/18, USB Team, PCN00002 --*/
 /*++ 2014/10/17, USB Team, PCN00016 ++*/
 /* #define SDQXDM_DEBUG */
 #define DIAG_XPST 1
 /*-- 2014/10/17, USB Team, PCN00016 --*/
+=======
+	do { \
+		if (diag7k_debug_mask) \
+			printk(KERN_INFO "[DIAGSDLOG] " fmt, ## args); \
+		else \
+			pr_debug("[DIAGSDLOG] " fmt, ## args); \
+	} while (0)
+#define DIAG_XPST 1        /*++ 2015/10/23, USB Team, PCN00026 ++*/
+/*-- 2015/07/15, USB Team, PCN00017 --*/
+>>>>>>> 0e91d2a... Nougat
 #define DIAG_LEGACY		"diag"
 #define DIAG_MDM		"diag_mdm"
 #define DIAG_QSC		"diag_qsc"
@@ -115,6 +130,7 @@ int usb_diag_write(struct usb_diag_ch *ch, struct diag_request *d_req)
 {
 	return -ENODEV;
 }
+<<<<<<< HEAD
 #endif /* CONFIG_USB_G_ANDROID */
 /*++ 2014/10/17, USB Team, PCN00016 ++*/
 int checkcmd_modem_epst(unsigned char *buf);
@@ -124,3 +140,13 @@ extern int smd_diag_initialized;
 
 #endif /* _DRIVERS_USB_DIAG_H_ */
 /*-- 2014/10/17, USB Team, PCN00016 --*/
+=======
+
+#endif /* CONFIG_USB_G_ANDROID */
+/*++ 2015/10/23, USB Team, PCN00026 ++*/
+int checkcmd_modem_epst(unsigned char *buf);
+int modem_to_userspace(void *buf, int r, int cmdtype, int is9k);
+extern int diag_initialized;
+/*-- 2015/10/23, USB Team, PCN00026 --*/
+#endif /* _DRIVERS_USB_DIAG_H_ */
+>>>>>>> 0e91d2a... Nougat

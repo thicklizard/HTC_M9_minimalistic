@@ -790,8 +790,13 @@ struct ubifs_scan_leb *ubifs_recover_leb(struct ubifs_info *c, int lnum,
 
 corrupted_rescan:
 	/* Re-scan the corrupted data with verbose messages */
+<<<<<<< HEAD
 	ubifs_err("corruption %d", c->vi.ubi_num, ret);
 	ubifs_scan_a_node(c, buf, len, lnum, offs, 1);
+=======
+	ubifs_err(c, "corruption %d", ret);
+	ubifs_scan_a_node(c, buf, len, lnum, offs, 0);
+>>>>>>> 0e91d2a... Nougat
 corrupted:
 	ubifs_scanned_corruption(c, lnum, offs, buf);
 	err = -EUCLEAN;
@@ -1341,6 +1346,7 @@ void ubifs_destroy_size_tree(struct ubifs_info *c)
 	struct rb_node *this = c->size_tree.rb_node;
 	struct size_entry *e;
 
+<<<<<<< HEAD
 	while (this) {
 		if (this->rb_left) {
 			this = this->rb_left;
@@ -1359,6 +1365,10 @@ void ubifs_destroy_size_tree(struct ubifs_info *c)
 			else
 				this->rb_right = NULL;
 		}
+=======
+	rbtree_postorder_for_each_entry_safe(e, n, &c->size_tree, rb) {
+		iput(e->inode);
+>>>>>>> 0e91d2a... Nougat
 		kfree(e);
 	}
 	c->size_tree = RB_ROOT;
@@ -1559,8 +1569,7 @@ int ubifs_recover_size(struct ubifs_info *c)
 				err = fix_size_in_place(c, e);
 				if (err)
 					return err;
-				if (e->inode)
-					iput(e->inode);
+				iput(e->inode);
 			}
 		}
 

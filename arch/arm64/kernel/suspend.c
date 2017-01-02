@@ -90,6 +90,13 @@ int cpu_suspend(unsigned long arg)
 	pause_graph_tracing();
 
 	/*
+	 * Function graph tracer state gets incosistent when the kernel
+	 * calls functions that never return (aka suspend finishers) hence
+	 * disable graph tracing during their execution.
+	 */
+	pause_graph_tracing();
+
+	/*
 	 * mm context saved on the stack, it will be restored when
 	 * the cpu comes out of reset through the identity mapped
 	 * page tables, so that the thread address space is properly

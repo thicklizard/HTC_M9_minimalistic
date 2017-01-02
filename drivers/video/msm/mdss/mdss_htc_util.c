@@ -24,11 +24,19 @@
 #include "mdss_mdp.h"
 
 struct attribute_status htc_attr_status[] = {
+<<<<<<< HEAD
 	{"cabc_level_ctl", 1, 1, 1},
 	{"mdss_pp_hue", 0, 0, 0},
 	{"pp_pcc", 0, 0, 0},
 	{"sre_level", 0, 0, 0},
 	{"limit_brightness", MDSS_MAX_BL_BRIGHTNESS, MDSS_MAX_BL_BRIGHTNESS, MDSS_MAX_BL_BRIGHTNESS},
+=======
+	{"cabc_level_ctl", 0, 0, 0},
+	{"color_temp_ctl", UNDEF_VALUE, UNDEF_VALUE, UNDEF_VALUE},
+	{"color_profile_ctl", 0, 0, 0},
+	{"vddio_switch", 0, 0, 0},
+	{"burst_switch", 0, 0, 0},
+>>>>>>> 0e91d2a... Nougat
 };
 
 int dspp_pcc_mode_cnt;

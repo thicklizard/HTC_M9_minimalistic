@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2011-2015 The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -78,6 +82,7 @@ void diag_cntl_stm_notify(struct diag_smd_info *smd_info, int action)
 	if (!smd_info || smd_info->type != SMD_CNTL_TYPE)
 		return;
 
+<<<<<<< HEAD
 	if (action == CLEAR_PERIPHERAL_STM_STATE) {
 		driver->peripheral_supports_stm[smd_info->peripheral] =
 								DISABLE_STM;
@@ -88,6 +93,49 @@ void diag_cntl_stm_notify(struct diag_smd_info *smd_info, int action)
 		driver->stm_state[smd_info->peripheral] = DISABLE_STM;
 		driver->stm_state_requested[smd_info->peripheral] = DISABLE_STM;
 	}
+=======
+	mutex_lock(&driver->md_session_lock);
+	memset(&info, 0, sizeof(struct siginfo));
+	info.si_code = SI_QUEUE;
+	info.si_int = (PERIPHERAL_MASK(peripheral) | data);
+	info.si_signo = SIGCONT;
+	if (driver->md_session_map[peripheral] &&
+		driver->md_session_map[peripheral]->task) {
+		if (driver->md_session_map[peripheral]->pid ==
+			driver->md_session_map[peripheral]->task->tgid) {
+			DIAG_LOG(DIAG_DEBUG_PERIPHERALS,
+				"md_session %d pid = %d, md_session %d task tgid = %d\n",
+				peripheral,
+				driver->md_session_map[peripheral]->pid,
+				peripheral,
+				driver->md_session_map[peripheral]->task->tgid);
+			stat = send_sig_info(info.si_signo, &info,
+				driver->md_session_map[peripheral]->task);
+			if (stat)
+				pr_err("diag: Err sending signal to memory device client, signal data: 0x%x, stat: %d\n",
+					info.si_int, stat);
+		} else
+			pr_err("diag: md_session_map[%d] data is corrupted, signal data: 0x%x, stat: %d\n",
+				peripheral, info.si_int, stat);
+	}
+	mutex_unlock(&driver->md_session_lock);
+}
+
+static void process_pd_status(uint8_t *buf, uint32_t len,
+			      uint8_t peripheral)
+{
+	struct diag_ctrl_msg_pd_status *pd_msg = NULL;
+	uint32_t pd;
+	int status = DIAG_STATUS_CLOSED;
+
+	if (!buf || peripheral >= NUM_PERIPHERALS || len < sizeof(*pd_msg))
+		return;
+
+	pd_msg = (struct diag_ctrl_msg_pd_status *)buf;
+	pd = pd_msg->pd_id;
+	status = (pd_msg->status == 0) ? DIAG_STATUS_OPEN : DIAG_STATUS_CLOSED;
+	diag_notify_md_client(peripheral, status);
+>>>>>>> 0e91d2a... Nougat
 }
 
 static void enable_stm_feature(struct diag_smd_info *smd_info)
@@ -659,6 +707,14 @@ void diag_update_real_time_vote(uint16_t proc, uint8_t real_time, int index)
 {
 	int i;
 
+<<<<<<< HEAD
+=======
+	if (index >= DIAG_NUM_PROC) {
+		pr_err("diag: In %s, invalid index %d\n", __func__, index);
+		return;
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	mutex_lock(&driver->real_time_mutex);
 	if (index == ALL_PROC) {
 		for (i = 0; i < DIAG_NUM_PROC; i++) {
@@ -932,6 +988,11 @@ int diag_send_peripheral_buffering_mode(struct diag_buffering_mode_t *params)
 	driver->buffering_mode[peripheral].mode = params->mode;
 	driver->buffering_mode[peripheral].low_wm_val = params->low_wm_val;
 	driver->buffering_mode[peripheral].high_wm_val = params->high_wm_val;
+<<<<<<< HEAD
+=======
+	if (params->mode == DIAG_BUFFERING_MODE_STREAMING)
+		driver->buffering_flag[peripheral] = 0;
+>>>>>>> 0e91d2a... Nougat
 fail:
 	mutex_unlock(&driver->mode_lock);
 	return err;

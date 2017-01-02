@@ -197,6 +197,28 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(time_to_full_avg),
 	POWER_SUPPLY_ATTR(type),
 	POWER_SUPPLY_ATTR(scope),
+<<<<<<< HEAD
+=======
+	POWER_SUPPLY_ATTR(charge_term_current),
+	POWER_SUPPLY_ATTR(calibrate),
+	/* Local extensions */
+	POWER_SUPPLY_ATTR(usb_hc),
+	POWER_SUPPLY_ATTR(usb_otg),
+	POWER_SUPPLY_ATTR(charge_enabled),
+	POWER_SUPPLY_ATTR(battery_charging_enabled),
+	POWER_SUPPLY_ATTR(charging_enabled),
+	POWER_SUPPLY_ATTR(input_suspend),
+	POWER_SUPPLY_ATTR(input_voltage_regulation),
+	POWER_SUPPLY_ATTR(input_current_max),
+	POWER_SUPPLY_ATTR(input_current_trim),
+	POWER_SUPPLY_ATTR(input_current_settled),
+	POWER_SUPPLY_ATTR(bypass_vchg_loop_debouncer),
+	POWER_SUPPLY_ATTR(charge_counter_shadow),
+	POWER_SUPPLY_ATTR(hi_power),
+	POWER_SUPPLY_ATTR(low_power),
+	POWER_SUPPLY_ATTR(temp_cool),
+	POWER_SUPPLY_ATTR(temp_warm),
+>>>>>>> 0e91d2a... Nougat
 	POWER_SUPPLY_ATTR(system_temp_level),
 	POWER_SUPPLY_ATTR(resistance),
 	POWER_SUPPLY_ATTR(resistance_capacitive),
@@ -216,7 +238,22 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(force_tlim),
 	POWER_SUPPLY_ATTR(allow_detection),
 	POWER_SUPPLY_ATTR(cycle_count_id),
+<<<<<<< HEAD
 	
+=======
+	POWER_SUPPLY_ATTR(safety_timer_expired),
+	POWER_SUPPLY_ATTR(restricted_charging),
+	POWER_SUPPLY_ATTR(current_capability),
+	POWER_SUPPLY_ATTR(typec_mode),
+	POWER_SUPPLY_ATTR(allow_hvdcp3),
+	POWER_SUPPLY_ATTR(max_pulse_allowed),
+	POWER_SUPPLY_ATTR(soc_reporting_ready),
+	POWER_SUPPLY_ATTR(ignore_false_negative_isense),
+	POWER_SUPPLY_ATTR(enable_jeita_detection),
+	POWER_SUPPLY_ATTR(battery_info),
+	POWER_SUPPLY_ATTR(battery_info_id),
+	/* Local extensions of type int64_t */
+>>>>>>> 0e91d2a... Nougat
 	POWER_SUPPLY_ATTR(charge_counter_ext),
 	
 	POWER_SUPPLY_ATTR(model_name),

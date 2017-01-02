@@ -383,8 +383,13 @@ static void unmap_peb(struct ubi_attach_info *ai, int pnum)
  * < 0 indicates an internal error.
  */
 static int scan_pool(struct ubi_device *ubi, struct ubi_attach_info *ai,
+<<<<<<< HEAD
 		     int *pebs, int pool_size, unsigned long long *max_sqnum,
 		     struct list_head *eba_orphans, struct list_head *free)
+=======
+		     __be32 *pebs, int pool_size, unsigned long long *max_sqnum,
+		     struct list_head *free)
+>>>>>>> 0e91d2a... Nougat
 {
 	struct ubi_vid_hdr *vh;
 	struct ubi_ec_hdr *ech;
@@ -733,7 +738,7 @@ static int ubi_attach_fastmap(struct ubi_device *ubi,
 		for (j = 0; j < be32_to_cpu(fm_eba->reserved_pebs); j++) {
 			int pnum = be32_to_cpu(fm_eba->pnum[j]);
 
-			if ((int)be32_to_cpu(fm_eba->pnum[j]) < 0)
+			if (pnum < 0)
 				continue;
 
 			aeb = NULL;

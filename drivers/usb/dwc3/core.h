@@ -439,6 +439,7 @@
 
 struct dwc3_trb;
 
+<<<<<<< HEAD
 /**
  * struct dwc3_event_buffer - Software event buffer representation
  * @list: a list of event buffers
@@ -450,6 +451,16 @@ struct dwc3_trb;
  * @dma: dma_addr_t
  * @dwc: pointer to DWC controller
  */
+=======
+enum event_buf_type {
+	EVT_BUF_TYPE_NORMAL,
+	EVT_BUF_TYPE_GSI
+};
+
+#define DWC_CTRL_COUNT	10
+#define NUM_LOG_PAGES	12
+
+>>>>>>> 0e91d2a... Nougat
 struct dwc3_event_buffer {
 	void			*buf;
 	unsigned		length;
@@ -536,6 +547,7 @@ struct dwc3_ep {
 
 	struct dwc3_trb		*trb_pool;
 	dma_addr_t		trb_pool_dma;
+	u32			num_trbs;
 	u32			free_slot;
 	u32			busy_slot;
 	const struct usb_ss_ep_comp_descriptor *comp_desc;
@@ -734,6 +746,13 @@ struct dwc3_scratchpad_array {
 #define DWC3_CORE_PM_RESUME_EVENT			6
 #define DWC3_CONTROLLER_POST_INITIALIZATION_EVENT	7
 #define DWC3_CONTROLLER_CONNDONE_EVENT			8
+<<<<<<< HEAD
+=======
+#define DWC3_CONTROLLER_NOTIFY_OTG_EVENT		9
+#define DWC3_CONTROLLER_SET_CURRENT_DRAW_EVENT		10
+#define DWC3_CONTROLLER_RESTART_USB_SESSION		11
+#define DWC3_CONTROLLER_NOTIFY_DISABLE_UPDXFER		12
+>>>>>>> 0e91d2a... Nougat
 
 #define MAX_INTR_STATS				10
 /**
@@ -897,6 +916,35 @@ struct dwc3 {
 
 	u8			test_mode;
 	u8			test_mode_nr;
+<<<<<<< HEAD
+=======
+	u8			lpm_nyet_threshold;
+	u8			hird_threshold;
+
+	void (*notify_event)(struct dwc3 *, unsigned, unsigned);
+	struct work_struct	wakeup_work;
+
+	unsigned		delayed_status:1;
+	unsigned		ep0_bounced:1;
+	unsigned		ep0_expect_in:1;
+	unsigned		has_hibernation:1;
+	unsigned		has_lpm_erratum:1;
+	unsigned		is_utmi_l1_suspend:1;
+	unsigned		is_selfpowered:1;
+	unsigned		needs_fifo_resize:1;
+	unsigned		pullups_connected:1;
+	unsigned		resize_fifos:1;
+	unsigned		setup_packet_pending:1;
+	unsigned		start_config_issued:1;
+	unsigned		three_stage_setup:1;
+	unsigned		is_drd:1;
+
+	
+	unsigned		vbus_active:1;
+
+	
+	unsigned		softconnect:1;
+>>>>>>> 0e91d2a... Nougat
 
 	/* Indicate if the gadget was powered by the otg driver */
 	bool			vbus_active;
@@ -929,6 +977,18 @@ struct dwc3 {
 	unsigned                irq_event_count[MAX_INTR_STATS];
 	unsigned                irq_dbg_index;
 	wait_queue_head_t	wait_linkstate;
+<<<<<<< HEAD
+=======
+	
+	bool usb_disable;
+	struct work_struct disable_work;
+	void	(*notify_usb_disabled)(void);
+	
+	
+	int		max_speed_backup;
+	
+	void			*dwc_ipc_log_ctxt;
+>>>>>>> 0e91d2a... Nougat
 };
 
 /* -------------------------------------------------------------------------- */
@@ -1129,7 +1189,7 @@ void dwc3_gadget_enable_irq(struct dwc3 *dwc);
 void dwc3_gadget_disable_irq(struct dwc3 *dwc);
 
 extern void dwc3_set_notifier(
-		void (*notify) (struct dwc3 *dwc3, unsigned event));
-extern int dwc3_notify_event(struct dwc3 *dwc3, unsigned event);
+	void (*notify)(struct dwc3 *dwc3, unsigned event, unsigned value));
+extern int dwc3_notify_event(struct dwc3 *dwc3, unsigned event, unsigned value);
 
 #endif /* __DRIVERS_USB_DWC3_CORE_H */

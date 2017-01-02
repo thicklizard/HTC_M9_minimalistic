@@ -66,6 +66,9 @@ struct fuse_file *fuse_file_alloc(struct fuse_conn *fc)
 		return NULL;
 
 	ff->rw_lower_file = NULL;
+	ff->shortcircuit_enabled = 0;
+	if (fc->shortcircuit_io)
+		ff->shortcircuit_enabled = 1;
 	ff->fc = fc;
 	ff->reserved_req = fuse_request_alloc(0);
 	if (unlikely(!ff->reserved_req)) {
@@ -900,8 +903,13 @@ static ssize_t fuse_file_aio_read(struct kiocb *iocb, const struct iovec *iov,
 			return err;
 	}
 
+<<<<<<< HEAD
 	if (ff && ff->rw_lower_file)
 		ret_val = fuse_shortcircuit_aio_read(iocb, iov, nr_segs, pos);
+=======
+	if (ff && ff->shortcircuit_enabled && ff->rw_lower_file)
+		ret_val = fuse_shortcircuit_read_iter(iocb, to);
+>>>>>>> 0e91d2a... Nougat
 	else
 		ret_val = generic_file_aio_read(iocb, iov, nr_segs, pos);
 
@@ -1044,8 +1052,12 @@ static ssize_t fuse_fill_write_pages(struct fuse_req *req,
 		pagefault_enable();
 		flush_dcache_page(page);
 
+<<<<<<< HEAD
 		mark_page_accessed(page);
 
+=======
+		iov_iter_advance(ii, tmp);
+>>>>>>> 0e91d2a... Nougat
 		if (!tmp) {
 			unlock_page(page);
 			page_cache_release(page);
@@ -1058,7 +1070,6 @@ static ssize_t fuse_fill_write_pages(struct fuse_req *req,
 		req->page_descs[req->num_pages].length = tmp;
 		req->num_pages++;
 
-		iov_iter_advance(ii, tmp);
 		count += tmp;
 		pos += tmp;
 		offset += tmp;
@@ -1192,10 +1203,15 @@ static ssize_t fuse_file_aio_write(struct kiocb *iocb, const struct iovec *iov,
 	if (err)
 		goto out;
 
+<<<<<<< HEAD
 	collect_io_stats(count, WRITE);
 	if (ff && ff->rw_lower_file) {
 		written = fuse_shortcircuit_aio_write(iocb, iov, nr_segs,
 							iocb->ki_pos);
+=======
+	if (ff && ff->shortcircuit_enabled && ff->rw_lower_file) {
+		written = fuse_shortcircuit_write_iter(iocb, from);
+>>>>>>> 0e91d2a... Nougat
 		goto out;
 	}
 
@@ -1756,6 +1772,9 @@ static const struct vm_operations_struct fuse_file_vm_ops = {
 
 static int fuse_file_mmap(struct file *file, struct vm_area_struct *vma)
 {
+	struct fuse_file *ff = file->private_data;
+
+	ff->shortcircuit_enabled = 0;
 	if ((vma->vm_flags & VM_SHARED) && (vma->vm_flags & VM_MAYWRITE))
 		fuse_link_write_file(file);
 
@@ -1766,6 +1785,10 @@ static int fuse_file_mmap(struct file *file, struct vm_area_struct *vma)
 
 static int fuse_direct_mmap(struct file *file, struct vm_area_struct *vma)
 {
+	struct fuse_file *ff = file->private_data;
+
+	ff->shortcircuit_enabled = 0;
+
 	
 	if (vma->vm_flags & VM_MAYSHARE)
 		return -ENODEV;

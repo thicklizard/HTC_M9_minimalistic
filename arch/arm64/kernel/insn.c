@@ -65,6 +65,35 @@ bool __kprobes aarch64_insn_is_nop(u32 insn)
 	}
 }
 
+<<<<<<< HEAD
+=======
+static DEFINE_SPINLOCK(patch_lock);
+
+static void __kprobes *patch_map(void *addr, int fixmap)
+{
+	unsigned long uintaddr = (uintptr_t) addr;
+	bool module = !core_kernel_text(uintaddr);
+	struct page *page;
+
+	if (module && IS_ENABLED(CONFIG_DEBUG_SET_MODULE_RONX))
+		page = vmalloc_to_page(addr);
+	else if (!module && (IS_ENABLED(CONFIG_DEBUG_RODATA) ||
+			IS_ENABLED(CONFIG_KERNEL_TEXT_RDONLY)))
+		page = virt_to_page(addr);
+	else
+		return addr;
+
+	BUG_ON(!page);
+	set_fixmap(fixmap, page_to_phys(page));
+
+	return (void *) (__fix_to_virt(fixmap) + (uintaddr & ~PAGE_MASK));
+}
+
+static void __kprobes patch_unmap(int fixmap)
+{
+	clear_fixmap(fixmap);
+}
+>>>>>>> 0e91d2a... Nougat
 /*
  * In ARMv8-A, A64 instructions have a fixed length of 32 bits and are always
  * little-endian.

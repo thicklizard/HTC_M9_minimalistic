@@ -776,9 +776,12 @@ find_root:
 	if (IS_ERR(new_root))
 		return ERR_CAST(new_root);
 
+<<<<<<< HEAD
 	if (btrfs_root_refs(&new_root->root_item) == 0)
 		return ERR_PTR(-ENOENT);
 
+=======
+>>>>>>> 0e91d2a... Nougat
 	if (!(sb->s_flags & MS_RDONLY)) {
 		int ret;
 		down_read(&fs_info->cleanup_work_sem);
@@ -1495,6 +1498,26 @@ static int btrfs_calc_avail_data_space(struct btrfs_root *root, u64 *free_bytes)
 	return 0;
 }
 
+<<<<<<< HEAD
+=======
+/*
+ * Calculate numbers for 'df', pessimistic in case of mixed raid profiles.
+ *
+ * If there's a redundant raid level at DATA block groups, use the respective
+ * multiplier to scale the sizes.
+ *
+ * Unused device space usage is based on simulating the chunk allocator
+ * algorithm that respects the device sizes, order of allocations and the
+ * 'alloc_start' value, this is a close approximation of the actual use but
+ * there are other factors that may change the result (like a new metadata
+ * chunk).
+ *
+ * If metadata is exhausted, f_bavail will be 0.
+ *
+ * FIXME: not accurate for mixed block groups, total and free/used are ok,
+ * available appears slightly larger.
+ */
+>>>>>>> 0e91d2a... Nougat
 static int btrfs_statfs(struct dentry *dentry, struct kstatfs *buf)
 {
 	struct btrfs_fs_info *fs_info = btrfs_sb(dentry->d_sb);
@@ -1503,9 +1526,11 @@ static int btrfs_statfs(struct dentry *dentry, struct kstatfs *buf)
 	struct btrfs_space_info *found;
 	u64 total_used = 0;
 	u64 total_free_data = 0;
+	u64 total_free_meta = 0;
 	int bits = dentry->d_sb->s_blocksize_bits;
 	__be32 *fsid = (__be32 *)fs_info->fsid;
 	int ret;
+	u64 thresh = 0;
 
 	/* holding chunk_muext to avoid allocating new chunks */
 	mutex_lock(&fs_info->chunk_mutex);
@@ -1516,6 +1541,8 @@ static int btrfs_statfs(struct dentry *dentry, struct kstatfs *buf)
 			total_free_data -=
 				btrfs_account_ro_block_groups_free_space(found);
 		}
+		if (found->flags & BTRFS_BLOCK_GROUP_METADATA)
+			total_free_meta += found->disk_total - found->disk_used;
 
 		total_used += found->disk_used;
 	}
@@ -1535,6 +1562,32 @@ static int btrfs_statfs(struct dentry *dentry, struct kstatfs *buf)
 	buf->f_bavail += total_free_data;
 	buf->f_bavail = buf->f_bavail >> bits;
 	mutex_unlock(&fs_info->chunk_mutex);
+<<<<<<< HEAD
+=======
+	mutex_unlock(&fs_info->fs_devices->device_list_mutex);
+
+	/*
+	 * We calculate the remaining metadata space minus global reserve. If
+	 * this is (supposedly) smaller than zero, there's no space. But this
+	 * does not hold in practice, the exhausted state happens where's still
+	 * some positive delta. So we apply some guesswork and compare the
+	 * delta to a 4M threshold.  (Practically observed delta was ~2M.)
+	 *
+	 * We probably cannot calculate the exact threshold value because this
+	 * depends on the internal reservations requested by various
+	 * operations, so some operations that consume a few metadata will
+	 * succeed even if the Avail is zero. But this is better than the other
+	 * way around.
+	 */
+	thresh = 4 * 1024 * 1024;
+
+	if (total_free_meta - thresh < block_rsv->size)
+		buf->f_bavail = 0;
+
+	buf->f_type = BTRFS_SUPER_MAGIC;
+	buf->f_bsize = dentry->d_sb->s_blocksize;
+	buf->f_namelen = BTRFS_NAME_LEN;
+>>>>>>> 0e91d2a... Nougat
 
 	/* We treat it as constant endianness (it doesn't matter _which_)
 	   because we want the fsid to come out the same whether mounted

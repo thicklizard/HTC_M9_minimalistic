@@ -76,6 +76,7 @@ struct idletimer_tg {
 	bool active;
 	bool suspend_time_valid;
 	uid_t uid;
+	bool suspend_time_valid;
 };
 
 static LIST_HEAD(idletimer_tg_list);
@@ -292,6 +293,7 @@ static int idletimer_tg_create(struct idletimer_tg_info *info)
 		goto out;
 	}
 
+	sysfs_attr_init(&info->timer->attr.attr);
 	info->timer->attr.attr.name = kstrdup(info->label, GFP_KERNEL);
 	if (!info->timer->attr.attr.name) {
 		ret = -ENOMEM;

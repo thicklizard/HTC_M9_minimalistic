@@ -298,8 +298,108 @@ static void ieee80211_sta_join_ibss(struct ieee80211_sub_if_data *sdata,
 				  tsf, false);
 }
 
+<<<<<<< HEAD
 static struct sta_info *ieee80211_ibss_finish_sta(struct sta_info *sta,
 						  bool auth)
+=======
+int ieee80211_ibss_csa_beacon(struct ieee80211_sub_if_data *sdata,
+			      struct cfg80211_csa_settings *csa_settings)
+{
+	struct ieee80211_if_ibss *ifibss = &sdata->u.ibss;
+	struct beacon_data *presp, *old_presp;
+	struct cfg80211_bss *cbss;
+	const struct cfg80211_bss_ies *ies;
+	u16 capability = 0;
+	u64 tsf;
+	int ret = 0;
+
+	sdata_assert_lock(sdata);
+
+	if (ifibss->privacy)
+		capability = WLAN_CAPABILITY_PRIVACY;
+
+	cbss = cfg80211_get_bss(sdata->local->hw.wiphy, ifibss->chandef.chan,
+				ifibss->bssid, ifibss->ssid,
+				ifibss->ssid_len, IEEE80211_BSS_TYPE_IBSS,
+				IEEE80211_PRIVACY(ifibss->privacy));
+
+	if (WARN_ON(!cbss)) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	rcu_read_lock();
+	ies = rcu_dereference(cbss->ies);
+	tsf = ies->tsf;
+	rcu_read_unlock();
+	cfg80211_put_bss(sdata->local->hw.wiphy, cbss);
+
+	old_presp = rcu_dereference_protected(ifibss->presp,
+					  lockdep_is_held(&sdata->wdev.mtx));
+
+	presp = ieee80211_ibss_build_presp(sdata,
+					   sdata->vif.bss_conf.beacon_int,
+					   sdata->vif.bss_conf.basic_rates,
+					   capability, tsf, &ifibss->chandef,
+					   NULL, csa_settings);
+	if (!presp) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	rcu_assign_pointer(ifibss->presp, presp);
+	if (old_presp)
+		kfree_rcu(old_presp, rcu_head);
+
+	return BSS_CHANGED_BEACON;
+ out:
+	return ret;
+}
+
+int ieee80211_ibss_finish_csa(struct ieee80211_sub_if_data *sdata)
+{
+	struct ieee80211_if_ibss *ifibss = &sdata->u.ibss;
+	struct cfg80211_bss *cbss;
+	int err, changed = 0;
+
+	sdata_assert_lock(sdata);
+
+	/* update cfg80211 bss information with the new channel */
+	if (!is_zero_ether_addr(ifibss->bssid)) {
+		cbss = cfg80211_get_bss(sdata->local->hw.wiphy,
+					ifibss->chandef.chan,
+					ifibss->bssid, ifibss->ssid,
+					ifibss->ssid_len,
+					IEEE80211_BSS_TYPE_IBSS,
+					IEEE80211_PRIVACY(ifibss->privacy));
+		/* XXX: should not really modify cfg80211 data */
+		if (cbss) {
+			cbss->channel = sdata->csa_chandef.chan;
+			cfg80211_put_bss(sdata->local->hw.wiphy, cbss);
+		}
+	}
+
+	ifibss->chandef = sdata->csa_chandef;
+
+	/* generate the beacon */
+	err = ieee80211_ibss_csa_beacon(sdata, NULL);
+	if (err < 0)
+		return err;
+
+	changed |= err;
+
+	return changed;
+}
+
+void ieee80211_ibss_stop(struct ieee80211_sub_if_data *sdata)
+{
+	struct ieee80211_if_ibss *ifibss = &sdata->u.ibss;
+
+	cancel_work_sync(&ifibss->csa_connection_drop_work);
+}
+
+static struct sta_info *ieee80211_ibss_finish_sta(struct sta_info *sta)
+>>>>>>> 0e91d2a... Nougat
 	__acquires(RCU)
 {
 	struct ieee80211_sub_if_data *sdata = sta->sdata;
@@ -381,7 +481,89 @@ ieee80211_ibss_add_sta(struct ieee80211_sub_if_data *sdata,
 
 	/* make sure mandatory rates are always added */
 	sta->sta.supp_rates[band] = supp_rates |
+<<<<<<< HEAD
 			ieee80211_mandatory_rates(local, band);
+=======
+			ieee80211_mandatory_rates(sband, scan_width);
+
+	return ieee80211_ibss_finish_sta(sta);
+}
+
+static int ieee80211_sta_active_ibss(struct ieee80211_sub_if_data *sdata)
+{
+	struct ieee80211_local *local = sdata->local;
+	int active = 0;
+	struct sta_info *sta;
+
+	sdata_assert_lock(sdata);
+
+	rcu_read_lock();
+
+	list_for_each_entry_rcu(sta, &local->sta_list, list) {
+		if (sta->sdata == sdata &&
+		    time_after(sta->last_rx + IEEE80211_IBSS_MERGE_INTERVAL,
+			       jiffies)) {
+			active++;
+			break;
+		}
+	}
+
+	rcu_read_unlock();
+
+	return active;
+}
+
+static void ieee80211_ibss_disconnect(struct ieee80211_sub_if_data *sdata)
+{
+	struct ieee80211_if_ibss *ifibss = &sdata->u.ibss;
+	struct ieee80211_local *local = sdata->local;
+	struct cfg80211_bss *cbss;
+	struct beacon_data *presp;
+	struct sta_info *sta;
+
+	if (!is_zero_ether_addr(ifibss->bssid)) {
+		cbss = cfg80211_get_bss(local->hw.wiphy, ifibss->chandef.chan,
+					ifibss->bssid, ifibss->ssid,
+					ifibss->ssid_len,
+					IEEE80211_BSS_TYPE_IBSS,
+					IEEE80211_PRIVACY(ifibss->privacy));
+
+		if (cbss) {
+			cfg80211_unlink_bss(local->hw.wiphy, cbss);
+			cfg80211_put_bss(sdata->local->hw.wiphy, cbss);
+		}
+	}
+
+	ifibss->state = IEEE80211_IBSS_MLME_SEARCH;
+
+	sta_info_flush(sdata);
+
+	spin_lock_bh(&ifibss->incomplete_lock);
+	while (!list_empty(&ifibss->incomplete_stations)) {
+		sta = list_first_entry(&ifibss->incomplete_stations,
+				       struct sta_info, list);
+		list_del(&sta->list);
+		spin_unlock_bh(&ifibss->incomplete_lock);
+
+		sta_info_free(local, sta);
+		spin_lock_bh(&ifibss->incomplete_lock);
+	}
+	spin_unlock_bh(&ifibss->incomplete_lock);
+
+	netif_carrier_off(sdata->dev);
+
+	sdata->vif.bss_conf.ibss_joined = false;
+	sdata->vif.bss_conf.ibss_creator = false;
+	sdata->vif.bss_conf.enable_beacon = false;
+	sdata->vif.bss_conf.ssid_len = 0;
+
+	/* remove beacon */
+	presp = rcu_dereference_protected(ifibss->presp,
+					  lockdep_is_held(&sdata->wdev.mtx));
+	RCU_INIT_POINTER(sdata->u.ibss.presp, NULL);
+	if (presp)
+		kfree_rcu(presp, rcu_head);
+>>>>>>> 0e91d2a... Nougat
 
 	return ieee80211_ibss_finish_sta(sta, auth);
 }
@@ -771,7 +953,6 @@ static void ieee80211_sta_find_ibss(struct ieee80211_sub_if_data *sdata)
 	struct ieee80211_channel *chan = NULL;
 	const u8 *bssid = NULL;
 	int active_ibss;
-	u16 capability;
 
 	lockdep_assert_held(&ifibss->mtx);
 
@@ -781,9 +962,6 @@ static void ieee80211_sta_find_ibss(struct ieee80211_sub_if_data *sdata)
 	if (active_ibss)
 		return;
 
-	capability = WLAN_CAPABILITY_IBSS;
-	if (ifibss->privacy)
-		capability |= WLAN_CAPABILITY_PRIVACY;
 	if (ifibss->fixed_bssid)
 		bssid = ifibss->bssid;
 	if (ifibss->fixed_channel)
@@ -792,8 +970,8 @@ static void ieee80211_sta_find_ibss(struct ieee80211_sub_if_data *sdata)
 		bssid = ifibss->bssid;
 	cbss = cfg80211_get_bss(local->hw.wiphy, chan, bssid,
 				ifibss->ssid, ifibss->ssid_len,
-				WLAN_CAPABILITY_IBSS | WLAN_CAPABILITY_PRIVACY,
-				capability);
+				IEEE80211_BSS_TYPE_IBSS,
+				IEEE80211_PRIVACY(ifibss->privacy));
 
 	if (cbss) {
 		struct ieee80211_bss *bss;
@@ -1031,7 +1209,6 @@ void ieee80211_ibss_notify_scan_completed(struct ieee80211_local *local)
 		if (sdata->vif.type != NL80211_IFTYPE_ADHOC)
 			continue;
 		sdata->u.ibss.last_scan_completed = jiffies;
-		ieee80211_queue_work(&local->hw, &sdata->work);
 	}
 	mutex_unlock(&local->iflist_mtx);
 }

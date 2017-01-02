@@ -22,7 +22,19 @@
 #include "mdss_fb.h"
 #include "mdss_mdp.h"
 
+<<<<<<< HEAD
 #define MAX_MODE_NAME_SIZE 32
+=======
+#define UNDEF_VALUE -1U
+
+enum {
+	CABC_INDEX = 0,
+	COLOR_TEMP_INDEX = 1,
+	COLOR_PROFILE_INDEX = 2,
+	VDDIO_INDEX = 3,
+	BURST_SWITCH_INDEX = 4,
+};
+>>>>>>> 0e91d2a... Nougat
 
 enum {
 	CABC_INDEX = 0,

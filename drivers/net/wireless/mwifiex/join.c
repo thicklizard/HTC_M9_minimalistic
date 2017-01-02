@@ -1426,7 +1426,16 @@ int mwifiex_deauthenticate(struct mwifiex_private *priv, u8 *mac)
 
 	switch (priv->bss_mode) {
 	case NL80211_IFTYPE_STATION:
+<<<<<<< HEAD
 		return mwifiex_deauthenticate_infra(priv, mac);
+=======
+	case NL80211_IFTYPE_P2P_CLIENT:
+		ret = mwifiex_deauthenticate_infra(priv, mac);
+		if (ret)
+			cfg80211_disconnected(priv->netdev, 0, NULL, 0,
+					      true, GFP_KERNEL);
+		break;
+>>>>>>> 0e91d2a... Nougat
 	case NL80211_IFTYPE_ADHOC:
 		return mwifiex_send_cmd_sync(priv,
 					     HostCmd_CMD_802_11_AD_HOC_STOP,

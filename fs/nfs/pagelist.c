@@ -60,8 +60,8 @@ EXPORT_SYMBOL_GPL(nfs_pgheader_init);
 void nfs_set_pgio_error(struct nfs_pgio_header *hdr, int error, loff_t pos)
 {
 	spin_lock(&hdr->lock);
-	if (pos < hdr->io_start + hdr->good_bytes) {
-		set_bit(NFS_IOHDR_ERROR, &hdr->flags);
+	if (!test_and_set_bit(NFS_IOHDR_ERROR, &hdr->flags)
+	    || pos < hdr->io_start + hdr->good_bytes) {
 		clear_bit(NFS_IOHDR_EOF, &hdr->flags);
 		hdr->good_bytes = pos - hdr->io_start;
 		hdr->error = error;
@@ -288,7 +288,12 @@ bool nfs_generic_pg_test(struct nfs_pageio_descriptor *desc, struct nfs_page *pr
 	 * since nfs_flush_multi and nfs_pagein_multi assume you
 	 * can have only one struct nfs_page.
 	 */
+<<<<<<< HEAD
 	if (desc->pg_bsize < PAGE_SIZE)
+=======
+	if (((desc->pg_count + req->wb_bytes) >> PAGE_SHIFT) *
+			sizeof(struct page *) > PAGE_SIZE)
+>>>>>>> 0e91d2a... Nougat
 		return 0;
 
 	return desc->pg_count + req->wb_bytes <= desc->pg_bsize;

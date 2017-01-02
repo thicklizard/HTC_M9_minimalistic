@@ -42,10 +42,24 @@
  * | Virtual Port                 |       0xa007       |		|
  * | ISP82XX Specific             |       0xb086       | 0xb002,0xb024  |
  * | MultiQ                       |       0xc00c       |		|
+<<<<<<< HEAD
  * | Misc                         |       0xd010       |		|
  * | Target Mode		  |	  0xe070       |		|
  * | Target Mode Management	  |	  0xf072       |		|
  * | Target Mode Task Management  |	  0x1000b      |		|
+=======
+ * | Misc                         |       0xd213       | 0xd011-0xd017	|
+ * |                              |                    | 0xd021,0xd024	|
+ * |                              |                    | 0xd025,0xd029	|
+ * |                              |                    | 0xd02a,0xd02e	|
+ * |                              |                    | 0xd031-0xd0ff	|
+ * |                              |                    | 0xd101-0xd1fe	|
+ * |                              |                    | 0xd214-0xd2fe	|
+ * | Target Mode		  |	  0xe080       |		|
+ * | Target Mode Management	  |	  0xf096       | 0xf002		|
+ * |                              |                    | 0xf046-0xf049  |
+ * | Target Mode Task Management  |	  0x1000d      |		|
+>>>>>>> 0e91d2a... Nougat
  * ----------------------------------------------------------------------
  */
 

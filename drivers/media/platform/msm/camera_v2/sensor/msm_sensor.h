@@ -50,17 +50,29 @@ struct msm_sensor_fn_t {
 #ifdef CONFIG_COMPAT
 	int (*sensor_config32) (struct msm_sensor_ctrl_t *, void __user *);
 #endif
+<<<<<<< HEAD
 	int (*sensor_power_down) (struct msm_sensor_ctrl_t *);
 	int (*sensor_power_up) (struct msm_sensor_ctrl_t *);
 	int (*sensor_match_id) (struct msm_sensor_ctrl_t *);
 	int (*sensor_i2c_read_fuseid)(struct sensorb_cfg_data *cdata, struct msm_sensor_ctrl_t *s_ctrl); 
+=======
+	int (*sensor_power_down)(struct msm_sensor_ctrl_t *);
+	int (*sensor_power_up)(struct msm_sensor_ctrl_t *);
+	int (*sensor_match_id)(struct msm_sensor_ctrl_t *);
+/*HTC_START, HTC_VCM*/
+   int (*sensor_i2c_read_fuseid)(struct sensorb_cfg_data *cdata, struct msm_sensor_ctrl_t *s_ctrl); /*HTC Harvey 20130628 - Porting read OTP*/
+>>>>>>> 0e91d2a... Nougat
 #ifdef CONFIG_COMPAT
-	int (*sensor_i2c_read_fuseid32)(struct sensorb_cfg_data32 *cdata, struct msm_sensor_ctrl_t *s_ctrl); 
+	int (*sensor_i2c_read_fuseid32)(struct sensorb_cfg_data32 *cdata, struct msm_sensor_ctrl_t *s_ctrl); /*HTC Harvey 20130628 - Porting read OTP*/
 #endif
+<<<<<<< HEAD
 	int (*sensor_i2c_read_emmc)(struct sensorb_cfg_data *cdata);
 #ifdef CONFIG_COMPAT
 	int (*sensor_i2c_read_emmc32)(struct sensorb_cfg_data32 *cdata);
 #endif
+=======
+/*HTC_END, HTC_VCM*/
+>>>>>>> 0e91d2a... Nougat
 };
 
 struct msm_sensor_ctrl_t {
@@ -90,6 +102,14 @@ struct msm_sensor_ctrl_t {
 	uint8_t driver_ic; 
 };
 
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_OIS_CALIBRATION
+/*HTC_START*/
+int htc_ois_calibration(struct msm_sensor_ctrl_t *s_ctrl, int cam_id);
+/*HTC_END*/
+#endif
+>>>>>>> 0e91d2a... Nougat
 int msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp);
 
 int msm_sensor_config32(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp);

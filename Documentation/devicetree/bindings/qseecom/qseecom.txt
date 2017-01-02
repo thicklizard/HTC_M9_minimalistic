@@ -19,7 +19,15 @@ Optional properties:
   - qcom,support-bus-scaling : indicates if driver support scaling the bus for crypto operation.
   - qcom,support-fde : indicates if driver support key managing for full disk encryption feature.
   - qcom,support-pfe : indicates if driver support key managing for per file encryption feature.
+<<<<<<< HEAD
   - qcom,no-clock-support; indicates clocks are not handled by qseecom (could be handled by RPM)
+=======
+  - qcom,no-clock-support : indicates clocks are not handled by qseecom (could be handled by RPM)
+  - qcom,appsbl-qseecom-support : indicates if there is qseecom support in appsbootloader
+  - vdd-hba-supply   : handle for fixed power regulator
+  - qcom,qsee-reentrancy-support: indicates the qsee reentrancy phase supported by the target
+  - qcom,commonlib64-loaded-by-uefi: indicates commonlib64 is loaded by uefi already
+>>>>>>> 0e91d2a... Nougat
 
 Example:
 	qcom,qseecom@fe806000 {

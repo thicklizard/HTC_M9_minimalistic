@@ -56,7 +56,7 @@ static int smp_e(struct crypto_blkcipher *tfm, const u8 *k, u8 *r)
 	unsigned char iv[128];
 
 	if (tfm == NULL) {
-		BT_ERR("tfm %p", tfm);
+		BT_ERR("tfm %pK", tfm);
 		return -EINVAL;
 	}
 
@@ -375,7 +375,7 @@ static void confirm_work(struct work_struct *work)
 	int ret;
 	u8 res[16], reason;
 
-	BT_DBG("conn %p", conn);
+	BT_DBG("conn %pK", conn);
 
 	tfm = crypto_alloc_blkcipher("ecb(aes)", 0, CRYPTO_ALG_ASYNC);
 	if (IS_ERR(tfm)) {
@@ -422,7 +422,7 @@ static void random_work(struct work_struct *work)
 		goto error;
 	}
 
-	BT_DBG("conn %p %s", conn, conn->hcon->out ? "master" : "slave");
+	BT_DBG("conn %pK %s", conn, conn->hcon->out ? "master" : "slave");
 
 	if (hcon->out)
 		ret = smp_c1(tfm, smp->tk, smp->rrnd, smp->preq, smp->prsp, 0,
@@ -461,8 +461,34 @@ static void random_work(struct work_struct *work)
 			goto error;
 		}
 
+<<<<<<< HEAD
 		hci_le_start_enc(hcon, ediv, rand, stk);
 		hcon->enc_key_size = smp->enc_key_size;
+=======
+static void smp_distribute_keys(struct smp_chan *smp)
+{
+	struct smp_cmd_pairing *req, *rsp;
+	struct l2cap_conn *conn = smp->conn;
+	struct hci_conn *hcon = conn->hcon;
+	struct hci_dev *hdev = hcon->hdev;
+	__u8 *keydist;
+
+	BT_DBG("conn %pK", conn);
+
+	rsp = (void *) &smp->prsp[1];
+
+	/* The responder sends its keys first */
+	if (hcon->out && (smp->remote_key_dist & KEY_DIST_MASK)) {
+		smp_allow_key_dist(smp);
+		return;
+	}
+
+	req = (void *) &smp->preq[1];
+
+	if (hcon->out) {
+		keydist = &rsp->init_key_dist;
+		*keydist &= req->init_key_dist;
+>>>>>>> 0e91d2a... Nougat
 	} else {
 		u8 stk[16], r[16], rand[8];
 		__le16 ediv;
@@ -484,7 +510,23 @@ static void random_work(struct work_struct *work)
 			    ediv, rand);
 	}
 
+<<<<<<< HEAD
 	return;
+=======
+	set_bit(SMP_FLAG_COMPLETE, &smp->flags);
+	smp_notify_keys(conn);
+
+	smp_chan_destroy(conn);
+}
+
+static void smp_timeout(struct work_struct *work)
+{
+	struct smp_chan *smp = container_of(work, struct smp_chan,
+					    security_timer.work);
+	struct l2cap_conn *conn = smp->conn;
+
+	BT_DBG("conn %pK", conn);
+>>>>>>> 0e91d2a... Nougat
 
 error:
 	smp_failure(conn, reason, 1);
@@ -574,7 +616,7 @@ static u8 smp_cmd_pairing_req(struct l2cap_conn *conn, struct sk_buff *skb)
 	u8 auth = SMP_AUTH_NONE;
 	int ret;
 
-	BT_DBG("conn %p", conn);
+	BT_DBG("conn %pK", conn);
 
 	if (conn->hcon->link_mode & HCI_LM_MASTER)
 		return SMP_CMD_NOTSUPP;
@@ -628,7 +670,7 @@ static u8 smp_cmd_pairing_rsp(struct l2cap_conn *conn, struct sk_buff *skb)
 	u8 key_size, auth = SMP_AUTH_NONE;
 	int ret;
 
-	BT_DBG("conn %p", conn);
+	BT_DBG("conn %pK", conn);
 
 	if (!(conn->hcon->link_mode & HCI_LM_MASTER))
 		return SMP_CMD_NOTSUPP;
@@ -674,7 +716,7 @@ static u8 smp_cmd_pairing_confirm(struct l2cap_conn *conn, struct sk_buff *skb)
 	struct smp_chan *smp = conn->smp_chan;
 	struct hci_dev *hdev = conn->hcon->hdev;
 
-	BT_DBG("conn %p %s", conn, conn->hcon->out ? "master" : "slave");
+	BT_DBG("conn %pK %s", conn, conn->hcon->out ? "master" : "slave");
 
 	memcpy(smp->pcnf, skb->data, sizeof(smp->pcnf));
 	skb_pull(skb, sizeof(smp->pcnf));
@@ -699,7 +741,7 @@ static u8 smp_cmd_pairing_random(struct l2cap_conn *conn, struct sk_buff *skb)
 	struct smp_chan *smp = conn->smp_chan;
 	struct hci_dev *hdev = conn->hcon->hdev;
 
-	BT_DBG("conn %p", conn);
+	BT_DBG("conn %pK", conn);
 
 	swap128(skb->data, smp->rrnd);
 	skb_pull(skb, sizeof(smp->rrnd));
@@ -737,7 +779,7 @@ static u8 smp_cmd_security_req(struct l2cap_conn *conn, struct sk_buff *skb)
 	struct hci_conn *hcon = conn->hcon;
 	struct smp_chan *smp;
 
-	BT_DBG("conn %p", conn);
+	BT_DBG("conn %pK", conn);
 
 	hcon->pending_sec_level = authreq_to_seclevel(rp->auth_req);
 
@@ -770,7 +812,7 @@ int smp_conn_security(struct hci_conn *hcon, __u8 sec_level)
 	struct smp_chan *smp = conn->smp_chan;
 	__u8 authreq;
 
-	BT_DBG("conn %p hcon %p level 0x%2.2x", conn, hcon, sec_level);
+	BT_DBG("conn %pK hcon %pK level 0x%2.2x", conn, hcon, sec_level);
 
 	if (!test_bit(HCI_LE_ENABLED, &hcon->hdev->dev_flags))
 		return 1;
@@ -817,7 +859,19 @@ done:
 static int smp_cmd_encrypt_info(struct l2cap_conn *conn, struct sk_buff *skb)
 {
 	struct smp_cmd_encrypt_info *rp = (void *) skb->data;
+<<<<<<< HEAD
 	struct smp_chan *smp = conn->smp_chan;
+=======
+	struct l2cap_chan *chan = conn->smp;
+	struct smp_chan *smp = chan->data;
+
+	BT_DBG("conn %pK", conn);
+
+	if (skb->len < sizeof(*rp))
+		return SMP_INVALID_PARAMS;
+
+	SMP_ALLOW_CMD(smp, SMP_CMD_MASTER_IDENT);
+>>>>>>> 0e91d2a... Nougat
 
 	skb_pull(skb, sizeof(*rp));
 
@@ -834,6 +888,133 @@ static int smp_cmd_master_ident(struct l2cap_conn *conn, struct sk_buff *skb)
 	struct hci_conn *hcon = conn->hcon;
 	u8 authenticated;
 
+<<<<<<< HEAD
+=======
+	BT_DBG("conn %pK", conn);
+
+	if (skb->len < sizeof(*rp))
+		return SMP_INVALID_PARAMS;
+
+	/* Mark the information as received */
+	smp->remote_key_dist &= ~SMP_DIST_ENC_KEY;
+
+	if (smp->remote_key_dist & SMP_DIST_ID_KEY)
+		SMP_ALLOW_CMD(smp, SMP_CMD_IDENT_INFO);
+	else if (smp->remote_key_dist & SMP_DIST_SIGN)
+		SMP_ALLOW_CMD(smp, SMP_CMD_SIGN_INFO);
+
+	skb_pull(skb, sizeof(*rp));
+
+	hci_dev_lock(hdev);
+	authenticated = (hcon->sec_level == BT_SECURITY_HIGH);
+	ltk = hci_add_ltk(hdev, &hcon->dst, hcon->dst_type, SMP_LTK,
+			  authenticated, smp->tk, smp->enc_key_size,
+			  rp->ediv, rp->rand);
+	smp->ltk = ltk;
+	if (!(smp->remote_key_dist & KEY_DIST_MASK))
+		smp_distribute_keys(smp);
+	hci_dev_unlock(hdev);
+
+	return 0;
+}
+
+static int smp_cmd_ident_info(struct l2cap_conn *conn, struct sk_buff *skb)
+{
+	struct smp_cmd_ident_info *info = (void *) skb->data;
+	struct l2cap_chan *chan = conn->smp;
+	struct smp_chan *smp = chan->data;
+
+	BT_DBG("");
+
+	if (skb->len < sizeof(*info))
+		return SMP_INVALID_PARAMS;
+
+	SMP_ALLOW_CMD(smp, SMP_CMD_IDENT_ADDR_INFO);
+
+	skb_pull(skb, sizeof(*info));
+
+	memcpy(smp->irk, info->irk, 16);
+
+	return 0;
+}
+
+static int smp_cmd_ident_addr_info(struct l2cap_conn *conn,
+				   struct sk_buff *skb)
+{
+	struct smp_cmd_ident_addr_info *info = (void *) skb->data;
+	struct l2cap_chan *chan = conn->smp;
+	struct smp_chan *smp = chan->data;
+	struct hci_conn *hcon = conn->hcon;
+	bdaddr_t rpa;
+
+	BT_DBG("");
+
+	if (skb->len < sizeof(*info))
+		return SMP_INVALID_PARAMS;
+
+	/* Mark the information as received */
+	smp->remote_key_dist &= ~SMP_DIST_ID_KEY;
+
+	if (smp->remote_key_dist & SMP_DIST_SIGN)
+		SMP_ALLOW_CMD(smp, SMP_CMD_SIGN_INFO);
+
+	skb_pull(skb, sizeof(*info));
+
+	hci_dev_lock(hcon->hdev);
+
+	/* Strictly speaking the Core Specification (4.1) allows sending
+	 * an empty address which would force us to rely on just the IRK
+	 * as "identity information". However, since such
+	 * implementations are not known of and in order to not over
+	 * complicate our implementation, simply pretend that we never
+	 * received an IRK for such a device.
+	 *
+	 * The Identity Address must also be a Static Random or Public
+	 * Address, which hci_is_identity_address() checks for.
+	 */
+	if (!bacmp(&info->bdaddr, BDADDR_ANY) ||
+	    !hci_is_identity_address(&info->bdaddr, info->addr_type)) {
+		BT_ERR("Ignoring IRK with no identity address");
+		goto distribute;
+	}
+
+	bacpy(&smp->id_addr, &info->bdaddr);
+	smp->id_addr_type = info->addr_type;
+
+	if (hci_bdaddr_is_rpa(&hcon->dst, hcon->dst_type))
+		bacpy(&rpa, &hcon->dst);
+	else
+		bacpy(&rpa, BDADDR_ANY);
+
+	smp->remote_irk = hci_add_irk(conn->hcon->hdev, &smp->id_addr,
+				      smp->id_addr_type, smp->irk, &rpa);
+
+distribute:
+	if (!(smp->remote_key_dist & KEY_DIST_MASK))
+		smp_distribute_keys(smp);
+
+	hci_dev_unlock(hcon->hdev);
+
+	return 0;
+}
+
+static int smp_cmd_sign_info(struct l2cap_conn *conn, struct sk_buff *skb)
+{
+	struct smp_cmd_sign_info *rp = (void *) skb->data;
+	struct l2cap_chan *chan = conn->smp;
+	struct smp_chan *smp = chan->data;
+	struct hci_dev *hdev = conn->hcon->hdev;
+	struct smp_csrk *csrk;
+
+	BT_DBG("conn %pK", conn);
+
+	if (skb->len < sizeof(*rp))
+		return SMP_INVALID_PARAMS;
+
+	/* Mark the information as received */
+	smp->remote_key_dist &= ~SMP_DIST_SIGN;
+
+>>>>>>> 0e91d2a... Nougat
 	skb_pull(skb, sizeof(*rp));
 
 	hci_dev_lock(hdev);
@@ -934,16 +1115,29 @@ done:
 
 int smp_distribute_keys(struct l2cap_conn *conn, __u8 force)
 {
+<<<<<<< HEAD
 	struct smp_cmd_pairing *req, *rsp;
 	struct smp_chan *smp = conn->smp_chan;
 	__u8 *keydist;
+=======
+	struct l2cap_conn *conn = chan->conn;
+
+	BT_DBG("chan %pK", chan);
+
+	if (chan->data)
+		smp_chan_destroy(conn);
+>>>>>>> 0e91d2a... Nougat
 
 	BT_DBG("conn %p force %d", conn, force);
 
 	if (!test_bit(HCI_CONN_LE_SMP_PEND, &conn->hcon->flags))
 		return 0;
 
+<<<<<<< HEAD
 	rsp = (void *) &smp->prsp[1];
+=======
+	BT_DBG("chan %pK", chan);
+>>>>>>> 0e91d2a... Nougat
 
 	/* The responder sends its keys first */
 	if (!force && conn->hcon->out && (rsp->resp_key_dist & 0x07))
@@ -962,12 +1156,16 @@ int smp_distribute_keys(struct l2cap_conn *conn, __u8 force)
 
 	BT_DBG("keydist 0x%x", *keydist);
 
+<<<<<<< HEAD
 	if (*keydist & SMP_DIST_ENC_KEY) {
 		struct smp_cmd_encrypt_info enc;
 		struct smp_cmd_master_ident ident;
 		struct hci_conn *hcon = conn->hcon;
 		u8 authenticated;
 		__le16 ediv;
+=======
+	BT_DBG("chan %pK", chan);
+>>>>>>> 0e91d2a... Nougat
 
 		get_random_bytes(enc.ltk, sizeof(enc.ltk));
 		get_random_bytes(&ediv, sizeof(ediv));
@@ -975,10 +1173,14 @@ int smp_distribute_keys(struct l2cap_conn *conn, __u8 force)
 
 		smp_send_cmd(conn, SMP_CMD_ENCRYPT_INFO, sizeof(enc), &enc);
 
+<<<<<<< HEAD
 		authenticated = hcon->sec_level == BT_SECURITY_HIGH;
 		hci_add_ltk(conn->hcon->hdev, conn->dst, hcon->dst_type,
 			    HCI_SMP_LTK_SLAVE, 1, authenticated,
 			    enc.ltk, smp->enc_key_size, ediv, ident.rand);
+=======
+	BT_DBG("chan %pK", chan);
+>>>>>>> 0e91d2a... Nougat
 
 		ident.ediv = ediv;
 
@@ -991,8 +1193,12 @@ int smp_distribute_keys(struct l2cap_conn *conn, __u8 force)
 		struct smp_cmd_ident_addr_info addrinfo;
 		struct smp_cmd_ident_info idinfo;
 
+<<<<<<< HEAD
 		/* Send a dummy key */
 		get_random_bytes(idinfo.irk, sizeof(idinfo.irk));
+=======
+	BT_DBG("pchan %pK", pchan);
+>>>>>>> 0e91d2a... Nougat
 
 		smp_send_cmd(conn, SMP_CMD_IDENT_INFO, sizeof(idinfo), &idinfo);
 
@@ -1000,8 +1206,12 @@ int smp_distribute_keys(struct l2cap_conn *conn, __u8 force)
 		memset(&addrinfo, 0, sizeof(addrinfo));
 		bacpy(&addrinfo.bdaddr, conn->src);
 
+<<<<<<< HEAD
 		smp_send_cmd(conn, SMP_CMD_IDENT_ADDR_INFO, sizeof(addrinfo),
 								&addrinfo);
+=======
+	BT_DBG("created chan %pK", chan);
+>>>>>>> 0e91d2a... Nougat
 
 		*keydist &= ~SMP_DIST_ID_KEY;
 	}
@@ -1025,3 +1235,26 @@ int smp_distribute_keys(struct l2cap_conn *conn, __u8 force)
 
 	return 0;
 }
+<<<<<<< HEAD
+=======
+
+void smp_unregister(struct hci_dev *hdev)
+{
+	struct l2cap_chan *chan = hdev->smp_data;
+	struct crypto_blkcipher *tfm_aes;
+
+	if (!chan)
+		return;
+
+	BT_DBG("%s chan %pK", hdev->name, chan);
+
+	tfm_aes = chan->data;
+	if (tfm_aes) {
+		chan->data = NULL;
+		crypto_free_blkcipher(tfm_aes);
+	}
+
+	hdev->smp_data = NULL;
+	l2cap_chan_put(chan);
+}
+>>>>>>> 0e91d2a... Nougat

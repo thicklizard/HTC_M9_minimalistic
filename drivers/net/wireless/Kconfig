@@ -364,6 +364,7 @@ config CNSS_MAC_BUG
 	 from 0 to 4K. So fill it with zero's; to an address for which PCIe root
 	 complex would honor the read without any errors.
 
+<<<<<<< HEAD
 config CLD_LL_CORE
 	tristate "Qualcomm CORE driver for QCA6174"
 	select WIRELESS_EXT
@@ -373,6 +374,33 @@ config CLD_LL_CORE
 	select NL80211_TESTMODE
 	depends on PCI
 	depends on PCI_MSI
+=======
+config WCNSS_MEM_PRE_ALLOC
+	tristate "WCNSS pre-alloc memory support"
+	---help---
+	  Pre-allocate memory for the WLAN driver module.
+	  This feature enable cld wlan driver to use pre allocated memory
+	  for it's internal usage and release it to back to pre allocated pool.
+	  This memory is allocated at the cold boot time.
+endif
+
+config WCNSS_SKB_PRE_ALLOC
+	tristate "CNSS pre-alloc memory support for skb"
+	depends on WCNSS_MEM_PRE_ALLOC
+	---help---
+	 The cnss wlan module which has interfaced with high latency
+	 bus(e.g. SDIO) needs physical contiguous memory more than one
+	 page for its socket buffer initialization. If the system memory
+	 has high fragmented it’s not possible to get this much huge
+	 physically contiguous memory through dynamic memory allocation.
+
+	 This feature enable socket buffer to use pre allocated memory
+	 for socket buffer initialization and release it to back to
+	 pre-allocated pool.
+
+config CNSS_CRYPTO
+	tristate "Enable CNSS crypto support"
+>>>>>>> 0e91d2a... Nougat
 	---help---
 	  Core driver for the Qualcomm QCA6174 Chipset
 

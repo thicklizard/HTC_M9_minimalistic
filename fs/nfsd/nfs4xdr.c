@@ -1013,10 +1013,18 @@ nfsd4_decode_rename(struct nfsd4_compoundargs *argp, struct nfsd4_rename *rename
 	DECODE_HEAD;
 
 	READ_BUF(4);
+<<<<<<< HEAD
 	READ32(rename->rn_snamelen);
 	READ_BUF(rename->rn_snamelen + 4);
 	SAVEMEM(rename->rn_sname, rename->rn_snamelen);
 	READ32(rename->rn_tnamelen);
+=======
+	rename->rn_snamelen = be32_to_cpup(p++);
+	READ_BUF(rename->rn_snamelen);
+	SAVEMEM(rename->rn_sname, rename->rn_snamelen);
+	READ_BUF(4);
+	rename->rn_tnamelen = be32_to_cpup(p++);
+>>>>>>> 0e91d2a... Nougat
 	READ_BUF(rename->rn_tnamelen);
 	SAVEMEM(rename->rn_tname, rename->rn_tnamelen);
 	if ((status = check_filename(rename->rn_sname, rename->rn_snamelen)))
@@ -1089,16 +1097,30 @@ nfsd4_decode_setclientid(struct nfsd4_compoundargs *argp, struct nfsd4_setclient
 	if (status)
 		return nfserr_bad_xdr;
 	READ_BUF(8);
+<<<<<<< HEAD
 	READ32(setclientid->se_callback_prog);
 	READ32(setclientid->se_callback_netid_len);
 
 	READ_BUF(setclientid->se_callback_netid_len + 4);
 	SAVEMEM(setclientid->se_callback_netid_val, setclientid->se_callback_netid_len);
 	READ32(setclientid->se_callback_addr_len);
+=======
+	setclientid->se_callback_prog = be32_to_cpup(p++);
+	setclientid->se_callback_netid_len = be32_to_cpup(p++);
+	READ_BUF(setclientid->se_callback_netid_len);
+	SAVEMEM(setclientid->se_callback_netid_val, setclientid->se_callback_netid_len);
+	READ_BUF(4);
+	setclientid->se_callback_addr_len = be32_to_cpup(p++);
+>>>>>>> 0e91d2a... Nougat
 
-	READ_BUF(setclientid->se_callback_addr_len + 4);
+	READ_BUF(setclientid->se_callback_addr_len);
 	SAVEMEM(setclientid->se_callback_addr_val, setclientid->se_callback_addr_len);
+<<<<<<< HEAD
 	READ32(setclientid->se_callback_ident);
+=======
+	READ_BUF(4);
+	setclientid->se_callback_ident = be32_to_cpup(p++);
+>>>>>>> 0e91d2a... Nougat
 
 	DECODE_TAIL;
 }
@@ -1590,11 +1612,21 @@ nfsd4_decode_compound(struct nfsd4_compoundargs *argp)
 	int i;
 
 	READ_BUF(4);
+<<<<<<< HEAD
 	READ32(argp->taglen);
 	READ_BUF(argp->taglen + 8);
 	SAVEMEM(argp->tag, argp->taglen);
 	READ32(argp->minorversion);
 	READ32(argp->opcnt);
+=======
+	argp->taglen = be32_to_cpup(p++);
+	READ_BUF(argp->taglen);
+	SAVEMEM(argp->tag, argp->taglen);
+	READ_BUF(8);
+	argp->minorversion = be32_to_cpup(p++);
+	argp->opcnt = be32_to_cpup(p++);
+	max_reply += 4 + (XDR_QUADLEN(argp->taglen) << 2);
+>>>>>>> 0e91d2a... Nougat
 
 	if (argp->taglen > NFSD4_MAX_TAGLEN)
 		goto xdr_error;
@@ -1933,12 +1965,19 @@ nfsd4_encode_name(struct svc_rqst *rqstp, int whotype, kuid_t uid, kgid_t gid,
 	return 0;
 }
 
+<<<<<<< HEAD
 static inline __be32
 nfsd4_encode_user(struct svc_rqst *rqstp, kuid_t user, __be32 **p, int *buflen)
 {
 	return nfsd4_encode_name(rqstp, NFS4_ACL_WHO_NAMED, user, INVALID_GID,
 				 p, buflen);
 }
+=======
+#define WORD0_ABSENT_FS_ATTRS (FATTR4_WORD0_FS_LOCATIONS | FATTR4_WORD0_FSID | \
+			      FATTR4_WORD0_RDATTR_ERROR)
+#define WORD1_ABSENT_FS_ATTRS FATTR4_WORD1_MOUNTED_ON_FILEID
+#define WORD2_ABSENT_FS_ATTRS 0
+>>>>>>> 0e91d2a... Nougat
 
 static inline __be32
 nfsd4_encode_group(struct svc_rqst *rqstp, kgid_t group, __be32 **p, int *buflen)
@@ -1967,7 +2006,7 @@ nfsd4_encode_aclname(struct svc_rqst *rqstp, struct nfs4_ace *ace,
 			      FATTR4_WORD0_RDATTR_ERROR)
 #define WORD1_ABSENT_FS_ATTRS FATTR4_WORD1_MOUNTED_ON_FILEID
 
-static __be32 fattr_handle_absent_fs(u32 *bmval0, u32 *bmval1, u32 *rdattr_err)
+static __be32 fattr_handle_absent_fs(u32 *bmval0, u32 *bmval1, u32 *bmval2, u32 *rdattr_err)
 {
 	/* As per referral draft:  */
 	if (*bmval0 & ~WORD0_ABSENT_FS_ATTRS ||
@@ -1980,6 +2019,7 @@ static __be32 fattr_handle_absent_fs(u32 *bmval0, u32 *bmval1, u32 *rdattr_err)
 	}
 	*bmval0 &= WORD0_ABSENT_FS_ATTRS;
 	*bmval1 &= WORD1_ABSENT_FS_ATTRS;
+	*bmval2 &= WORD2_ABSENT_FS_ATTRS;
 	return 0;
 }
 
@@ -2040,8 +2080,7 @@ nfsd4_encode_fattr(struct svc_fh *fhp, struct svc_export *exp,
 	BUG_ON(bmval2 & ~nfsd_suppattrs2(minorversion));
 
 	if (exp->ex_fslocs.migrated) {
-		BUG_ON(bmval[2]);
-		status = fattr_handle_absent_fs(&bmval0, &bmval1, &rdattr_err);
+		status = fattr_handle_absent_fs(&bmval0, &bmval1, &bmval2, &rdattr_err);
 		if (status)
 			goto out;
 	}
@@ -2079,6 +2118,24 @@ nfsd4_encode_fattr(struct svc_fh *fhp, struct svc_export *exp,
 		}
 	}
 
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_NFSD_V4_SECURITY_LABEL
+	if ((bmval2 & FATTR4_WORD2_SECURITY_LABEL) ||
+	     bmval0 & FATTR4_WORD0_SUPPORTED_ATTRS) {
+		err = security_inode_getsecctx(dentry->d_inode,
+						&context, &contextlen);
+		contextsupport = (err == 0);
+		if (bmval2 & FATTR4_WORD2_SECURITY_LABEL) {
+			if (err == -EOPNOTSUPP)
+				bmval2 &= ~FATTR4_WORD2_SECURITY_LABEL;
+			else if (err)
+				goto out_nfserr;
+		}
+	}
+#endif /* CONFIG_NFSD_V4_SECURITY_LABEL */
+
+>>>>>>> 0e91d2a... Nougat
 	if (bmval2) {
 		if ((buflen -= 16) < 0)
 			goto out_resource;

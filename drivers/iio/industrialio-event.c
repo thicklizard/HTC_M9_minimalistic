@@ -76,6 +76,12 @@ static unsigned int iio_event_poll(struct file *filep,
 	struct iio_event_interface *ev_int = filep->private_data;
 	unsigned int events = 0;
 
+<<<<<<< HEAD
+=======
+	if (!indio_dev->info)
+		return events;
+
+>>>>>>> 0e91d2a... Nougat
 	poll_wait(filep, &ev_int->wait, wait);
 
 	spin_lock_irq(&ev_int->wait.lock);

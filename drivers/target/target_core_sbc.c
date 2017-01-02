@@ -264,7 +264,12 @@ sbc_setup_write_same(struct se_cmd *cmd, unsigned char *flags, struct sbc_ops *o
 	return 0;
 }
 
+<<<<<<< HEAD
 static void xdreadwrite_callback(struct se_cmd *cmd)
+=======
+static sense_reason_t xdreadwrite_callback(struct se_cmd *cmd, bool success,
+					   int *post_ret)
+>>>>>>> 0e91d2a... Nougat
 {
 	unsigned char *buf, *addr;
 	struct scatterlist *sg;
@@ -316,6 +321,340 @@ static void xdreadwrite_callback(struct se_cmd *cmd)
 
 out:
 	kfree(buf);
+<<<<<<< HEAD
+=======
+	return ret;
+}
+
+static sense_reason_t
+sbc_execute_rw(struct se_cmd *cmd)
+{
+	return cmd->execute_rw(cmd, cmd->t_data_sg, cmd->t_data_nents,
+			       cmd->data_direction);
+}
+
+static sense_reason_t compare_and_write_post(struct se_cmd *cmd, bool success,
+					     int *post_ret)
+{
+	struct se_device *dev = cmd->se_dev;
+
+	/*
+	 * Only set SCF_COMPARE_AND_WRITE_POST to force a response fall-through
+	 * within target_complete_ok_work() if the command was successfully
+	 * sent to the backend driver.
+	 */
+	spin_lock_irq(&cmd->t_state_lock);
+	if ((cmd->transport_state & CMD_T_SENT) && !cmd->scsi_status) {
+		cmd->se_cmd_flags |= SCF_COMPARE_AND_WRITE_POST;
+		*post_ret = 1;
+	}
+	spin_unlock_irq(&cmd->t_state_lock);
+
+	/*
+	 * Unlock ->caw_sem originally obtained during sbc_compare_and_write()
+	 * before the original READ I/O submission.
+	 */
+	up(&dev->caw_sem);
+
+	return TCM_NO_SENSE;
+}
+
+static sense_reason_t compare_and_write_callback(struct se_cmd *cmd, bool success,
+						 int *post_ret)
+{
+	struct se_device *dev = cmd->se_dev;
+	struct scatterlist *write_sg = NULL, *sg;
+	unsigned char *buf = NULL, *addr;
+	struct sg_mapping_iter m;
+	unsigned int offset = 0, len;
+	unsigned int nlbas = cmd->t_task_nolb;
+	unsigned int block_size = dev->dev_attrib.block_size;
+	unsigned int compare_len = (nlbas * block_size);
+	sense_reason_t ret = TCM_NO_SENSE;
+	int rc, i;
+
+	/*
+	 * Handle early failure in transport_generic_request_failure(),
+	 * which will not have taken ->caw_sem yet..
+	 */
+	if (!success && (!cmd->t_data_sg || !cmd->t_bidi_data_sg))
+		return TCM_NO_SENSE;
+	/*
+	 * Handle special case for zero-length COMPARE_AND_WRITE
+	 */
+	if (!cmd->data_length)
+		goto out;
+	/*
+	 * Immediately exit + release dev->caw_sem if command has already
+	 * been failed with a non-zero SCSI status.
+	 */
+	if (cmd->scsi_status) {
+		pr_err("compare_and_write_callback: non zero scsi_status:"
+			" 0x%02x\n", cmd->scsi_status);
+		goto out;
+	}
+
+	buf = kzalloc(cmd->data_length, GFP_KERNEL);
+	if (!buf) {
+		pr_err("Unable to allocate compare_and_write buf\n");
+		ret = TCM_OUT_OF_RESOURCES;
+		goto out;
+	}
+
+	write_sg = kmalloc(sizeof(struct scatterlist) * cmd->t_data_nents,
+			   GFP_KERNEL);
+	if (!write_sg) {
+		pr_err("Unable to allocate compare_and_write sg\n");
+		ret = TCM_OUT_OF_RESOURCES;
+		goto out;
+	}
+	sg_init_table(write_sg, cmd->t_data_nents);
+	/*
+	 * Setup verify and write data payloads from total NumberLBAs.
+	 */
+	rc = sg_copy_to_buffer(cmd->t_data_sg, cmd->t_data_nents, buf,
+			       cmd->data_length);
+	if (!rc) {
+		pr_err("sg_copy_to_buffer() failed for compare_and_write\n");
+		ret = TCM_OUT_OF_RESOURCES;
+		goto out;
+	}
+	/*
+	 * Compare against SCSI READ payload against verify payload
+	 */
+	for_each_sg(cmd->t_bidi_data_sg, sg, cmd->t_bidi_data_nents, i) {
+		addr = (unsigned char *)kmap_atomic(sg_page(sg));
+		if (!addr) {
+			ret = TCM_OUT_OF_RESOURCES;
+			goto out;
+		}
+
+		len = min(sg->length, compare_len);
+
+		if (memcmp(addr, buf + offset, len)) {
+			pr_warn("Detected MISCOMPARE for addr: %p buf: %p\n",
+				addr, buf + offset);
+			kunmap_atomic(addr);
+			goto miscompare;
+		}
+		kunmap_atomic(addr);
+
+		offset += len;
+		compare_len -= len;
+		if (!compare_len)
+			break;
+	}
+
+	i = 0;
+	len = cmd->t_task_nolb * block_size;
+	sg_miter_start(&m, cmd->t_data_sg, cmd->t_data_nents, SG_MITER_TO_SG);
+	/*
+	 * Currently assumes NoLB=1 and SGLs are PAGE_SIZE..
+	 */
+	while (len) {
+		sg_miter_next(&m);
+
+		if (block_size < PAGE_SIZE) {
+			sg_set_page(&write_sg[i], m.page, block_size,
+				    m.piter.sg->offset + block_size);
+		} else {
+			sg_miter_next(&m);
+			sg_set_page(&write_sg[i], m.page, block_size,
+				    m.piter.sg->offset);
+		}
+		len -= block_size;
+		i++;
+	}
+	sg_miter_stop(&m);
+	/*
+	 * Save the original SGL + nents values before updating to new
+	 * assignments, to be released in transport_free_pages() ->
+	 * transport_reset_sgl_orig()
+	 */
+	cmd->t_data_sg_orig = cmd->t_data_sg;
+	cmd->t_data_sg = write_sg;
+	cmd->t_data_nents_orig = cmd->t_data_nents;
+	cmd->t_data_nents = 1;
+
+	cmd->sam_task_attr = MSG_HEAD_TAG;
+	cmd->transport_complete_callback = compare_and_write_post;
+	/*
+	 * Now reset ->execute_cmd() to the normal sbc_execute_rw() handler
+	 * for submitting the adjusted SGL to write instance user-data.
+	 */
+	cmd->execute_cmd = sbc_execute_rw;
+
+	spin_lock_irq(&cmd->t_state_lock);
+	cmd->t_state = TRANSPORT_PROCESSING;
+	cmd->transport_state |= CMD_T_ACTIVE|CMD_T_BUSY|CMD_T_SENT;
+	spin_unlock_irq(&cmd->t_state_lock);
+
+	__target_execute_cmd(cmd);
+
+	kfree(buf);
+	return ret;
+
+miscompare:
+	pr_warn("Target/%s: Send MISCOMPARE check condition and sense\n",
+		dev->transport->name);
+	ret = TCM_MISCOMPARE_VERIFY;
+out:
+	/*
+	 * In the MISCOMPARE or failure case, unlock ->caw_sem obtained in
+	 * sbc_compare_and_write() before the original READ I/O submission.
+	 */
+	up(&dev->caw_sem);
+	kfree(write_sg);
+	kfree(buf);
+	return ret;
+}
+
+static sense_reason_t
+sbc_compare_and_write(struct se_cmd *cmd)
+{
+	struct se_device *dev = cmd->se_dev;
+	sense_reason_t ret;
+	int rc;
+	/*
+	 * Submit the READ first for COMPARE_AND_WRITE to perform the
+	 * comparision using SGLs at cmd->t_bidi_data_sg..
+	 */
+	rc = down_interruptible(&dev->caw_sem);
+	if ((rc != 0) || signal_pending(current)) {
+		cmd->transport_complete_callback = NULL;
+		return TCM_LOGICAL_UNIT_COMMUNICATION_FAILURE;
+	}
+	/*
+	 * Reset cmd->data_length to individual block_size in order to not
+	 * confuse backend drivers that depend on this value matching the
+	 * size of the I/O being submitted.
+	 */
+	cmd->data_length = cmd->t_task_nolb * dev->dev_attrib.block_size;
+
+	ret = cmd->execute_rw(cmd, cmd->t_bidi_data_sg, cmd->t_bidi_data_nents,
+			      DMA_FROM_DEVICE);
+	if (ret) {
+		cmd->transport_complete_callback = NULL;
+		up(&dev->caw_sem);
+		return ret;
+	}
+	/*
+	 * Unlock of dev->caw_sem to occur in compare_and_write_callback()
+	 * upon MISCOMPARE, or in compare_and_write_done() upon completion
+	 * of WRITE instance user-data.
+	 */
+	return TCM_NO_SENSE;
+}
+
+static int
+sbc_set_prot_op_checks(u8 protect, enum target_prot_type prot_type,
+		       bool is_write, struct se_cmd *cmd)
+{
+	if (is_write) {
+		cmd->prot_op = protect ? TARGET_PROT_DOUT_PASS :
+					 TARGET_PROT_DOUT_INSERT;
+		switch (protect) {
+		case 0x0:
+		case 0x3:
+			cmd->prot_checks = 0;
+			break;
+		case 0x1:
+		case 0x5:
+			cmd->prot_checks = TARGET_DIF_CHECK_GUARD;
+			if (prot_type == TARGET_DIF_TYPE1_PROT)
+				cmd->prot_checks |= TARGET_DIF_CHECK_REFTAG;
+			break;
+		case 0x2:
+			if (prot_type == TARGET_DIF_TYPE1_PROT)
+				cmd->prot_checks = TARGET_DIF_CHECK_REFTAG;
+			break;
+		case 0x4:
+			cmd->prot_checks = TARGET_DIF_CHECK_GUARD;
+			break;
+		default:
+			pr_err("Unsupported protect field %d\n", protect);
+			return -EINVAL;
+		}
+	} else {
+		cmd->prot_op = protect ? TARGET_PROT_DIN_PASS :
+					 TARGET_PROT_DIN_STRIP;
+		switch (protect) {
+		case 0x0:
+		case 0x1:
+		case 0x5:
+			cmd->prot_checks = TARGET_DIF_CHECK_GUARD;
+			if (prot_type == TARGET_DIF_TYPE1_PROT)
+				cmd->prot_checks |= TARGET_DIF_CHECK_REFTAG;
+			break;
+		case 0x2:
+			if (prot_type == TARGET_DIF_TYPE1_PROT)
+				cmd->prot_checks = TARGET_DIF_CHECK_REFTAG;
+			break;
+		case 0x3:
+			cmd->prot_checks = 0;
+			break;
+		case 0x4:
+			cmd->prot_checks = TARGET_DIF_CHECK_GUARD;
+			break;
+		default:
+			pr_err("Unsupported protect field %d\n", protect);
+			return -EINVAL;
+		}
+	}
+
+	return 0;
+}
+
+static bool
+sbc_check_prot(struct se_device *dev, struct se_cmd *cmd, unsigned char *cdb,
+	       u32 sectors, bool is_write)
+{
+	u8 protect = cdb[1] >> 5;
+
+	if ((!cmd->t_prot_sg || !cmd->t_prot_nents) && cmd->prot_pto)
+		return true;
+
+	switch (dev->dev_attrib.pi_prot_type) {
+	case TARGET_DIF_TYPE3_PROT:
+		cmd->reftag_seed = 0xffffffff;
+		break;
+	case TARGET_DIF_TYPE2_PROT:
+		if (protect)
+			return false;
+
+		cmd->reftag_seed = cmd->t_task_lba;
+		break;
+	case TARGET_DIF_TYPE1_PROT:
+		cmd->reftag_seed = cmd->t_task_lba;
+		break;
+	case TARGET_DIF_TYPE0_PROT:
+	default:
+		return true;
+	}
+
+	if (sbc_set_prot_op_checks(protect, dev->dev_attrib.pi_prot_type,
+				   is_write, cmd))
+		return false;
+
+	cmd->prot_type = dev->dev_attrib.pi_prot_type;
+	cmd->prot_length = dev->prot_length * sectors;
+
+	/**
+	 * In case protection information exists over the wire
+	 * we modify command data length to describe pure data.
+	 * The actual transfer length is data length + protection
+	 * length
+	 **/
+	if (protect)
+		cmd->data_length = sectors * dev->dev_attrib.block_size;
+
+	pr_debug("%s: prot_type=%d, data_length=%d, prot_length=%d "
+		 "prot_op=%d prot_checks=%d\n",
+		 __func__, cmd->prot_type, cmd->data_length, cmd->prot_length,
+		 cmd->prot_op, cmd->prot_checks);
+
+	return true;
+>>>>>>> 0e91d2a... Nougat
 }
 
 sense_reason_t

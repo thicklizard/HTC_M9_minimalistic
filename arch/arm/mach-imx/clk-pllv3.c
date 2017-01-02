@@ -86,11 +86,15 @@ static int clk_pllv3_enable(struct clk_hw *hw)
 	struct clk_pllv3 *pll = to_clk_pllv3(hw);
 	u32 val;
 
+<<<<<<< HEAD
 	val = readl_relaxed(pll->base);
 	val |= BM_PLL_ENABLE;
 	writel_relaxed(val, pll->base);
 
 	return 0;
+=======
+	return clk_pllv3_wait_lock(pll);
+>>>>>>> 0e91d2a... Nougat
 }
 
 static void clk_pllv3_disable(struct clk_hw *hw)

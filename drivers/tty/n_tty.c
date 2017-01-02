@@ -170,10 +170,42 @@ static void n_tty_set_room(struct tty_struct *tty)
 
 static void put_tty_queue_nolock(unsigned char c, struct n_tty_data *ldata)
 {
+<<<<<<< HEAD
 	if (ldata->read_cnt < N_TTY_BUF_SIZE) {
 		ldata->read_buf[ldata->read_head] = c;
 		ldata->read_head = (ldata->read_head + 1) & (N_TTY_BUF_SIZE-1);
 		ldata->read_cnt++;
+=======
+	if (tty->driver->type == TTY_DRIVER_TYPE_PTY) {
+		if (chars_in_buffer(tty) > TTY_THRESHOLD_UNTHROTTLE)
+			return;
+		if (!tty->count)
+			return;
+		n_tty_set_room(tty);
+		tty_wakeup(tty->link);
+		return;
+	}
+
+	/* If there is enough space in the read buffer now, let the
+	 * low-level driver know. We use chars_in_buffer() to
+	 * check the buffer, as it now knows about canonical mode.
+	 * Otherwise, if the driver is throttled and the line is
+	 * longer than TTY_THRESHOLD_UNTHROTTLE in canonical mode,
+	 * we won't get any more characters.
+	 */
+
+	while (1) {
+		int unthrottled;
+		tty_set_flow_change(tty, TTY_UNTHROTTLE_SAFE);
+		if (chars_in_buffer(tty) > TTY_THRESHOLD_UNTHROTTLE)
+			break;
+		if (!tty->count)
+			break;
+		n_tty_set_room(tty);
+		unthrottled = tty_unthrottle_safe(tty);
+		if (!unthrottled)
+			break;
+>>>>>>> 0e91d2a... Nougat
 	}
 }
 
@@ -1342,9 +1374,14 @@ handle_newline:
 			ldata->canon_data++;
 			raw_spin_unlock_irqrestore(&ldata->read_lock, flags);
 			kill_fasync(&tty->fasync, SIGIO, POLL_IN);
+<<<<<<< HEAD
 			if (waitqueue_active(&tty->read_wait))
 				wake_up_interruptible(&tty->read_wait);
 			return;
+=======
+			wake_up_interruptible_poll(&tty->read_wait, POLLIN);
+			return 0;
+>>>>>>> 0e91d2a... Nougat
 		}
 	}
 
@@ -1464,8 +1501,12 @@ static void n_tty_receive_buf(struct tty_struct *tty, const unsigned char *cp,
 	if ((!ldata->icanon && (ldata->read_cnt >= tty->minimum_to_wake)) ||
 		L_EXTPROC(tty)) {
 		kill_fasync(&tty->fasync, SIGIO, POLL_IN);
+<<<<<<< HEAD
 		if (waitqueue_active(&tty->read_wait))
 			wake_up_interruptible(&tty->read_wait);
+=======
+		wake_up_interruptible_poll(&tty->read_wait, POLLIN);
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	/*

@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2008-2015 The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2008-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -331,7 +335,44 @@ proceed:
 			break;
 	}
 err:
+<<<<<<< HEAD
 	mutex_unlock(&msg_mask.lock);
+=======
+	mutex_unlock(&mask_info->lock);
+}
+
+static void diag_send_time_sync_update(uint8_t peripheral)
+{
+	struct diag_ctrl_msg_time_sync time_sync_msg;
+	int msg_size = sizeof(struct diag_ctrl_msg_time_sync);
+	int err = 0;
+
+	if (peripheral >= NUM_PERIPHERALS) {
+		pr_err("diag: In %s, Invalid peripheral, %d\n",
+				__func__, peripheral);
+		return;
+	}
+
+	if (!driver->diagfwd_cntl[peripheral] ||
+		!driver->diagfwd_cntl[peripheral]->ch_open) {
+		pr_err("diag: In %s, control channel is not open, p: %d, %pK\n",
+			__func__, peripheral, driver->diagfwd_cntl[peripheral]);
+		return;
+	}
+
+	mutex_lock(&driver->diag_cntl_mutex);
+	time_sync_msg.ctrl_pkt_id = DIAG_CTRL_MSG_TIME_SYNC_PKT;
+	time_sync_msg.ctrl_pkt_data_len = 5;
+	time_sync_msg.version = 1;
+	time_sync_msg.time_api = driver->uses_time_api;
+
+	err = diagfwd_write(peripheral, TYPE_CNTL, &time_sync_msg, msg_size);
+	if (err)
+		pr_err("diag: In %s, unable to write to peripheral: %d, type: %d, len: %d, err: %d\n",
+				__func__, peripheral, TYPE_CNTL,
+				msg_size, err);
+	mutex_unlock(&driver->diag_cntl_mutex);
+>>>>>>> 0e91d2a... Nougat
 }
 
 static void diag_send_feature_mask_update(struct diag_smd_info *smd_info)
@@ -349,9 +390,16 @@ static void diag_send_feature_mask_update(struct diag_smd_info *smd_info)
 		return;
 	}
 
+<<<<<<< HEAD
 	if (!smd_info->ch) {
 		pr_err("diag: In %s, smd channel not open for peripheral: %d, type: %d\n",
 				__func__, smd_info->peripheral, smd_info->type);
+=======
+	if (!driver->diagfwd_cntl[peripheral] ||
+	    !driver->diagfwd_cntl[peripheral]->ch_open) {
+		pr_err("diag: In %s, control channel is not open, p: %d, %pK\n",
+		       __func__, peripheral, driver->diagfwd_cntl[peripheral]);
+>>>>>>> 0e91d2a... Nougat
 		return;
 	}
 
@@ -389,10 +437,21 @@ static int diag_cmd_get_ssid_range(unsigned char *src_buf, int src_len,
 	struct diag_msg_mask_t *mask_ptr = NULL;
 	struct diag_msg_ssid_query_t rsp;
 	struct diag_ssid_range_t ssid_range;
+<<<<<<< HEAD
 
 	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0) {
 		pr_err("diag: Invalid input in %s, src_buf: %p, src_len: %d, dest_buf: %p, dest_len: %d",
 		       __func__, src_buf, src_len, dest_buf, dest_len);
+=======
+	struct diag_mask_info *mask_info = NULL;
+
+	mask_info = (!info) ? &msg_mask : info->msg_mask;
+	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0 ||
+	    !mask_info) {
+		pr_err("diag: Invalid input in %s, src_buf: %pK, src_len: %d, dest_buf: %pK, dest_len: %d, mask_info: %pK\n",
+		       __func__, src_buf, src_len, dest_buf, dest_len,
+		       mask_info);
+>>>>>>> 0e91d2a... Nougat
 		return -EINVAL;
 	}
 
@@ -435,7 +494,11 @@ static int diag_cmd_get_build_mask(unsigned char *src_buf, int src_len,
 	struct diag_msg_build_mask_t rsp;
 
 	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0) {
+<<<<<<< HEAD
 		pr_err("diag: Invalid input in %s, src_buf: %p, src_len: %d, dest_buf: %p, dest_len: %d",
+=======
+		pr_err("diag: Invalid input in %s, src_buf: %pK, src_len: %d, dest_buf: %pK, dest_len: %d\n",
+>>>>>>> 0e91d2a... Nougat
 		       __func__, src_buf, src_len, dest_buf, dest_len);
 		return -EINVAL;
 	}
@@ -486,10 +549,21 @@ static int diag_cmd_get_msg_mask(unsigned char *src_buf, int src_len,
 	struct diag_msg_mask_t *mask = NULL;
 	struct diag_build_mask_req_t *req = NULL;
 	struct diag_msg_build_mask_t rsp;
+<<<<<<< HEAD
 
 	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0) {
 		pr_err("diag: Invalid input in %s, src_buf: %p, src_len: %d, dest_buf: %p, dest_len: %d",
 		       __func__, src_buf, src_len, dest_buf, dest_len);
+=======
+	struct diag_mask_info *mask_info = NULL;
+
+	mask_info = (!info) ? &msg_mask : info->msg_mask;
+	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0 ||
+	    !mask_info) {
+		pr_err("diag: Invalid input in %s, src_buf: %pK, src_len: %d, dest_buf: %pK, dest_len: %d, mask_info: %pK\n",
+		       __func__, src_buf, src_len, dest_buf, dest_len,
+		       mask_info);
+>>>>>>> 0e91d2a... Nougat
 		return -EINVAL;
 	}
 
@@ -537,10 +611,23 @@ static int diag_cmd_set_msg_mask(unsigned char *src_buf, int src_len,
 	struct diag_msg_mask_t *mask = NULL;
 	struct diag_msg_build_mask_t *req = NULL;
 	struct diag_msg_build_mask_t rsp;
+<<<<<<< HEAD
 
 	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0) {
 		pr_err("diag: Invalid input in %s, src_buf: %p, src_len: %d, dest_buf: %p, dest_len: %d",
 		       __func__, src_buf, src_len, dest_buf, dest_len);
+=======
+	struct diag_mask_info *mask_info = NULL;
+	struct diag_msg_mask_t *mask_next = NULL;
+	uint32_t *temp = NULL;
+
+	mask_info = (!info) ? &msg_mask : info->msg_mask;
+	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0 ||
+	    !mask_info) {
+		pr_err("diag: Invalid input in %s, src_buf: %pK, src_len: %d, dest_buf: %pK, dest_len: %d, mask_info: %pK\n",
+		       __func__, src_buf, src_len, dest_buf, dest_len,
+		       mask_info);
+>>>>>>> 0e91d2a... Nougat
 		return -EINVAL;
 	}
 
@@ -549,10 +636,22 @@ static int diag_cmd_set_msg_mask(unsigned char *src_buf, int src_len,
 	mutex_lock(&msg_mask.lock);
 	mask = (struct diag_msg_mask_t *)msg_mask.ptr;
 	for (i = 0; i < driver->msg_mask_tbl_count; i++, mask++) {
+		if (i < (driver->msg_mask_tbl_count - 1)) {
+			mask_next = mask;
+			mask_next++;
+		} else
+			mask_next = NULL;
+
 		if ((req->ssid_first < mask->ssid_first) ||
+<<<<<<< HEAD
 		    (req->ssid_first > mask->ssid_last)) {
+=======
+		    (req->ssid_first > mask->ssid_first + MAX_SSID_PER_RANGE) ||
+		    (mask_next && (req->ssid_first >= mask_next->ssid_first))) {
+>>>>>>> 0e91d2a... Nougat
 			continue;
 		}
+		mask_next = NULL;
 		found = 1;
 		if (req->ssid_last > mask->ssid_last) {
 			pr_debug("diag: Msg SSID range mismatch\n");
@@ -562,9 +661,34 @@ static int diag_cmd_set_msg_mask(unsigned char *src_buf, int src_len,
 		if (mask_size > mask->range) {
 			pr_warn("diag: In %s, truncating ssid range, %d-%d to max allowed: %d\n",
 				__func__, mask->ssid_first, mask->ssid_last,
+<<<<<<< HEAD
 				mask->range);
 			mask_size = mask->range;
 			mask->ssid_last = mask->ssid_first + mask->range;
+=======
+				MAX_SSID_PER_RANGE);
+			mask_size = MAX_SSID_PER_RANGE;
+			mask->range_tools = MAX_SSID_PER_RANGE;
+			mask->ssid_last_tools =
+				mask->ssid_first + mask->range_tools;
+		}
+		if (req->ssid_last > mask->ssid_last_tools) {
+			pr_debug("diag: Msg SSID range mismatch\n");
+			if (mask_size != MAX_SSID_PER_RANGE)
+				mask->ssid_last_tools = req->ssid_last;
+			mask->range_tools =
+				mask->ssid_last_tools - mask->ssid_first + 1;
+			temp = krealloc(mask->ptr,
+					mask->range_tools * sizeof(uint32_t),
+					GFP_KERNEL);
+			if (!temp) {
+				pr_err_ratelimited("diag: In %s, unable to allocate memory for msg mask ptr, mask_size: %d\n",
+						   __func__, mask_size);
+				mutex_unlock(&mask->lock);
+				return -ENOMEM;
+			}
+			mask->ptr = temp;
+>>>>>>> 0e91d2a... Nougat
 		}
 		offset = req->ssid_first - mask->ssid_first;
 		if (offset + mask_size > mask->range) {
@@ -625,11 +749,23 @@ static int diag_cmd_set_all_msg_mask(unsigned char *src_buf, int src_len,
 	int header_len = sizeof(struct diag_msg_config_rsp_t);
 	struct diag_msg_config_rsp_t rsp;
 	struct diag_msg_config_rsp_t *req = NULL;
+<<<<<<< HEAD
 	struct diag_msg_mask_t *mask = (struct diag_msg_mask_t *)msg_mask.ptr;
 
 	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0) {
 		pr_err("diag: Invalid input in %s, src_buf: %p, src_len: %d, dest_buf: %p, dest_len: %d",
 		       __func__, src_buf, src_len, dest_buf, dest_len);
+=======
+	struct diag_msg_mask_t *mask = NULL;
+	struct diag_mask_info *mask_info = NULL;
+
+	mask_info = (!info) ? &msg_mask : info->msg_mask;
+	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0 ||
+	    !mask_info) {
+		pr_err("diag: Invalid input in %s, src_buf: %pK, src_len: %d, dest_buf: %pK, dest_len: %d, mask_info: %pK\n",
+		       __func__, src_buf, src_len, dest_buf, dest_len,
+		       mask_info);
+>>>>>>> 0e91d2a... Nougat
 		return -EINVAL;
 	}
 
@@ -684,7 +820,11 @@ static int diag_cmd_get_event_mask(unsigned char *src_buf, int src_len,
 	struct diag_event_mask_config_t rsp;
 
 	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0) {
+<<<<<<< HEAD
 		pr_err("diag: Invalid input in %s, src_buf: %p, src_len: %d, dest_buf: %p, dest_len: %d",
+=======
+		pr_err("diag: Invalid input in %s, src_buf: %pK, src_len: %d, dest_buf: %pK, dest_len: %d\n",
+>>>>>>> 0e91d2a... Nougat
 		       __func__, src_buf, src_len, dest_buf, dest_len);
 		return -EINVAL;
 	}
@@ -720,10 +860,21 @@ static int diag_cmd_update_event_mask(unsigned char *src_buf, int src_len,
 	int header_len = sizeof(struct diag_event_mask_config_t);
 	struct diag_event_mask_config_t rsp;
 	struct diag_event_mask_config_t *req;
+<<<<<<< HEAD
 
 	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0) {
 		pr_err("diag: Invalid input in %s, src_buf: %p, src_len: %d, dest_buf: %p, dest_len: %d",
 		       __func__, src_buf, src_len, dest_buf, dest_len);
+=======
+	struct diag_mask_info *mask_info = NULL;
+
+	mask_info = (!info) ? &event_mask : info->event_mask;
+	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0 ||
+	    !mask_info) {
+		pr_err("diag: Invalid input in %s, src_buf: %pK, src_len: %d, dest_buf: %pK, dest_len: %d, mask_info: %pK\n",
+		       __func__, src_buf, src_len, dest_buf, dest_len,
+		       mask_info);
+>>>>>>> 0e91d2a... Nougat
 		return -EINVAL;
 	}
 
@@ -778,10 +929,21 @@ static int diag_cmd_toggle_events(unsigned char *src_buf, int src_len,
 	int write_len = 0;
 	uint8_t toggle = 0;
 	struct diag_event_report_t header;
+<<<<<<< HEAD
 
 	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0) {
 		pr_err("diag: Invalid input in %s, src_buf: %p, src_len: %d, dest_buf: %p, dest_len: %d",
 		       __func__, src_buf, src_len, dest_buf, dest_len);
+=======
+	struct diag_mask_info *mask_info = NULL;
+
+	mask_info = (!info) ? &event_mask : info->event_mask;
+	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0 ||
+	    !mask_info) {
+		pr_err("diag: Invalid input in %s, src_buf: %pK, src_len: %d, dest_buf: %pK, dest_len: %d, mask_info: %pK\n",
+		       __func__, src_buf, src_len, dest_buf, dest_len,
+		       mask_info);
+>>>>>>> 0e91d2a... Nougat
 		return -EINVAL;
 	}
 
@@ -835,10 +997,21 @@ static int diag_cmd_get_log_mask(unsigned char *src_buf, int src_len,
 	struct diag_log_mask_t *log_item = NULL;
 	struct diag_log_config_req_t *req;
 	struct diag_log_config_rsp_t rsp;
+<<<<<<< HEAD
 
 	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0) {
 		pr_err("diag: Invalid input in %s, src_buf: %p, src_len: %d, dest_buf: %p, dest_len: %d",
 		       __func__, src_buf, src_len, dest_buf, dest_len);
+=======
+	struct diag_mask_info *mask_info = NULL;
+
+	mask_info = (!info) ? &log_mask : info->log_mask;
+	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0 ||
+	    !mask_info) {
+		pr_err("diag: Invalid input in %s, src_buf: %pK, src_len: %d, dest_buf: %pK, dest_len: %d, mask_info: %pK\n",
+		       __func__, src_buf, src_len, dest_buf, dest_len,
+		       mask_info);
+>>>>>>> 0e91d2a... Nougat
 		return -EINVAL;
 	}
 
@@ -906,9 +1079,18 @@ static int diag_cmd_get_log_range(unsigned char *src_buf, int src_len,
 	if (!diag_apps_responds())
 		return 0;
 
+<<<<<<< HEAD
 	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0) {
 		pr_err("diag: Invalid input in %s, src_buf: %p, src_len: %d, dest_buf: %p, dest_len: %d",
 		       __func__, src_buf, src_len, dest_buf, dest_len);
+=======
+	mask_info = (!info) ? &log_mask : info->log_mask;
+	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0 ||
+	    !mask_info) {
+		pr_err("diag: Invalid input in %s, src_buf: %pK, src_len: %d, dest_buf: %pK, dest_len: %d, mask_info: %pK\n",
+		       __func__, src_buf, src_len, dest_buf, dest_len,
+		       mask_info);
+>>>>>>> 0e91d2a... Nougat
 		return -EINVAL;
 	}
 
@@ -944,10 +1126,21 @@ static int diag_cmd_set_log_mask(unsigned char *src_buf, int src_len,
 	struct diag_log_config_req_t *req;
 	struct diag_log_config_set_rsp_t rsp;
 	unsigned char *temp_buf = NULL;
+<<<<<<< HEAD
 
 	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0) {
 		pr_err("diag: Invalid input in %s, src_buf: %p, src_len: %d, dest_buf: %p, dest_len: %d",
 		       __func__, src_buf, src_len, dest_buf, dest_len);
+=======
+	struct diag_mask_info *mask_info = NULL;
+
+	mask_info = (!info) ? &log_mask : info->log_mask;
+	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0 ||
+	    !mask_info) {
+		pr_err("diag: Invalid input in %s, src_buf: %pK, src_len: %d, dest_buf: %pK, dest_len: %d, mask_info: %pK\n",
+		       __func__, src_buf, src_len, dest_buf, dest_len,
+		       mask_info);
+>>>>>>> 0e91d2a... Nougat
 		return -EINVAL;
 	}
 
@@ -1050,9 +1243,18 @@ static int diag_cmd_disable_log_mask(unsigned char *src_buf, int src_len,
 	int write_len = 0;
 	int i;
 
+<<<<<<< HEAD
 	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0) {
 		pr_err("diag: Invalid input in %s, src_buf: %p, src_len: %d, dest_buf: %p, dest_len: %d",
 		       __func__, src_buf, src_len, dest_buf, dest_len);
+=======
+	mask_info = (!info) ? &log_mask : info->log_mask;
+	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0 ||
+	    !mask_info) {
+		pr_err("diag: Invalid input in %s, src_buf: %pK, src_len: %d, dest_buf: %pK, dest_len: %d, mask_info: %pK\n",
+		       __func__, src_buf, src_len, dest_buf, dest_len,
+		       mask_info);
+>>>>>>> 0e91d2a... Nougat
 		return -EINVAL;
 	}
 

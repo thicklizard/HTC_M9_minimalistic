@@ -291,6 +291,17 @@ void path_put(const struct path *path)
 }
 EXPORT_SYMBOL(path_put);
 
+static bool path_connected(const struct path *path)
+{
+	struct vfsmount *mnt = path->mnt;
+
+	
+	if (mnt->mnt_root == mnt->mnt_sb->s_root)
+		return true;
+
+	return is_subdir(path->dentry, mnt->mnt_root);
+}
+
 
 static inline void lock_rcu_walk(void)
 {
@@ -816,6 +827,8 @@ static int follow_dotdot_rcu(struct nameidata *nd)
 				goto failed;
 			nd->path.dentry = parent;
 			nd->seq = seq;
+			if (unlikely(!path_connected(&nd->path)))
+				goto failed;
 			break;
 		}
 		if (!follow_up_rcu(&nd->path))
@@ -881,7 +894,7 @@ static void follow_mount(struct path *path)
 	}
 }
 
-static void follow_dotdot(struct nameidata *nd)
+static int follow_dotdot(struct nameidata *nd)
 {
 	set_root(nd);
 
@@ -896,6 +909,10 @@ static void follow_dotdot(struct nameidata *nd)
 			
 			nd->path.dentry = dget_parent(nd->path.dentry);
 			dput(old);
+			if (unlikely(!path_connected(&nd->path))) {
+				path_put(&nd->path);
+				return -ENOENT;
+			}
 			break;
 		}
 		if (!follow_up(&nd->path))
@@ -903,6 +920,7 @@ static void follow_dotdot(struct nameidata *nd)
 	}
 	follow_mount(&nd->path);
 	nd->inode = nd->path.dentry->d_inode;
+	return 0;
 }
 
 static struct dentry *lookup_dcache(struct qstr *name, struct dentry *dir,
@@ -1091,7 +1109,7 @@ static inline int handle_dots(struct nameidata *nd, int type)
 			if (follow_dotdot_rcu(nd))
 				return -ECHILD;
 		} else
-			follow_dotdot(nd);
+			return follow_dotdot(nd);
 	}
 	return 0;
 }
@@ -1686,7 +1704,148 @@ user_path_parent(int dfd, const char __user *path, struct nameidata *nd,
 	return s;
 }
 
+<<<<<<< HEAD
 static inline int check_sticky(struct inode *dir, struct inode *inode)
+=======
+static int
+mountpoint_last(struct nameidata *nd, struct path *path)
+{
+	int error = 0;
+	struct dentry *dentry;
+	struct dentry *dir = nd->path.dentry;
+
+	
+	if (nd->flags & LOOKUP_RCU) {
+		if (unlazy_walk(nd, NULL)) {
+			error = -ECHILD;
+			goto out;
+		}
+	}
+
+	nd->flags &= ~LOOKUP_PARENT;
+
+	if (unlikely(nd->last_type != LAST_NORM)) {
+		error = handle_dots(nd, nd->last_type);
+		if (error)
+			return error;
+		dentry = dget(nd->path.dentry);
+		goto done;
+	}
+
+	mutex_lock(&dir->d_inode->i_mutex);
+	dentry = d_lookup(dir, &nd->last);
+	if (!dentry) {
+		dentry = d_alloc(dir, &nd->last);
+		if (!dentry) {
+			error = -ENOMEM;
+			mutex_unlock(&dir->d_inode->i_mutex);
+			goto out;
+		}
+		dentry = lookup_real(dir->d_inode, dentry, nd->flags);
+		error = PTR_ERR(dentry);
+		if (IS_ERR(dentry)) {
+			mutex_unlock(&dir->d_inode->i_mutex);
+			goto out;
+		}
+	}
+	mutex_unlock(&dir->d_inode->i_mutex);
+
+done:
+	if (!dentry->d_inode || d_is_negative(dentry)) {
+		error = -ENOENT;
+		dput(dentry);
+		goto out;
+	}
+	path->dentry = dentry;
+	path->mnt = nd->path.mnt;
+	if (should_follow_link(dentry, nd->flags & LOOKUP_FOLLOW))
+		return 1;
+	mntget(path->mnt);
+	follow_mount(path);
+	error = 0;
+out:
+	terminate_walk(nd);
+	return error;
+}
+
+static int
+path_mountpoint(int dfd, const char *name, struct path *path, unsigned int flags)
+{
+	struct file *base = NULL;
+	struct nameidata nd;
+	int err;
+
+	err = path_init(dfd, name, flags | LOOKUP_PARENT, &nd, &base);
+	if (unlikely(err))
+		goto out;
+
+	current->total_link_count = 0;
+	err = link_path_walk(name, &nd);
+	if (err)
+		goto out;
+
+	err = mountpoint_last(&nd, path);
+	while (err > 0) {
+		void *cookie;
+		struct path link = *path;
+		err = may_follow_link(&link, &nd);
+		if (unlikely(err))
+			break;
+		nd.flags |= LOOKUP_PARENT;
+		err = follow_link(&link, &nd, &cookie);
+		if (err)
+			break;
+		err = mountpoint_last(&nd, path);
+		put_link(&nd, &link, cookie);
+	}
+out:
+	if (base)
+		fput(base);
+
+	if (nd.root.mnt && !(nd.flags & LOOKUP_ROOT))
+		path_put(&nd.root);
+
+	return err;
+}
+
+static int
+filename_mountpoint(int dfd, struct filename *s, struct path *path,
+			unsigned int flags)
+{
+	int error = path_mountpoint(dfd, s->name, path, flags | LOOKUP_RCU);
+	if (unlikely(error == -ECHILD))
+		error = path_mountpoint(dfd, s->name, path, flags);
+	if (unlikely(error == -ESTALE))
+		error = path_mountpoint(dfd, s->name, path, flags | LOOKUP_REVAL);
+	if (likely(!error))
+		audit_inode(s, path->dentry, 0);
+	return error;
+}
+
+int
+user_path_mountpoint_at(int dfd, const char __user *name, unsigned int flags,
+			struct path *path)
+{
+	struct filename *s = getname(name);
+	int error;
+	if (IS_ERR(s))
+		return PTR_ERR(s);
+	error = filename_mountpoint(dfd, s, path, flags);
+	putname(s);
+	return error;
+}
+
+int
+kern_path_mountpoint(int dfd, const char *name, struct path *path,
+			unsigned int flags)
+{
+	struct filename s = {.name = name};
+	return filename_mountpoint(dfd, &s, path, flags);
+}
+EXPORT_SYMBOL(kern_path_mountpoint);
+
+int __check_sticky(struct inode *dir, struct inode *inode)
+>>>>>>> 0e91d2a... Nougat
 {
 	kuid_t fsuid = current_fsuid();
 
@@ -2280,6 +2439,10 @@ opened:
 			goto exit_fput;
 	}
 out:
+	if (unlikely(error > 0)) {
+		WARN_ON(1);
+		error = -EINVAL;
+	}
 	if (got_write)
 		mnt_drop_write(nd->path.mnt);
 	path_put(&save_parent);
@@ -2374,6 +2537,8 @@ out:
 				error = -ESTALE;
 		}
 		file = ERR_PTR(error);
+	} else {
+		global_filetable_add(file);
 	}
 	return file;
 }

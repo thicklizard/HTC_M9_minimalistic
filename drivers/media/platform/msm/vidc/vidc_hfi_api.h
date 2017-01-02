@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -114,6 +114,18 @@ enum hal_extradata_id {
 	HAL_EXTRADATA_DIGITAL_ZOOM,
 	HAL_EXTRADATA_LTR_INFO,
 	HAL_EXTRADATA_METADATA_MBI,
+<<<<<<< HEAD
+=======
+	HAL_EXTRADATA_VQZIP_SEI,
+	HAL_EXTRADATA_YUV_STATS,
+	HAL_EXTRADATA_ROI_QP,
+	HAL_EXTRADATA_OUTPUT_CROP,
+	HAL_EXTRADATA_MASTERING_DISPLAY_COLOUR_SEI,
+	HAL_EXTRADATA_CONTENT_LIGHT_LEVEL_SEI,
+	HAL_EXTRADATA_VUI_DISPLAY_INFO,
+	HAL_EXTRADATA_VPX_COLORSPACE,
+	HAL_EXTRADATA_PQ_INFO,
+>>>>>>> 0e91d2a... Nougat
 };
 
 enum hal_property {
@@ -214,6 +226,24 @@ enum hal_property {
 	HAL_PARAM_VENC_HIER_B_MAX_ENH_LAYERS,
 	HAL_PARAM_VDEC_NON_SECURE_OUTPUT2,
 	HAL_PARAM_VENC_HIER_P_HYBRID_MODE,
+<<<<<<< HEAD
+=======
+	HAL_PARAM_VENC_MBI_STATISTICS_MODE,
+	HAL_PARAM_SYNC_BASED_INTERRUPT,
+	HAL_CONFIG_VENC_FRAME_QP,
+	HAL_CONFIG_VENC_BASELAYER_PRIORITYID,
+	HAL_PARAM_VENC_VQZIP_SEI,
+	HAL_PROPERTY_PARAM_VENC_ASPECT_RATIO,
+	HAL_CONFIG_VDEC_ENTROPY,
+	HAL_PARAM_VENC_BITRATE_TYPE,
+	HAL_PARAM_VENC_H264_PIC_ORDER_CNT,
+	HAL_PARAM_VENC_LOW_LATENCY,
+	HAL_PARAM_VENC_CONSTRAINED_INTRA_PRED,
+	HAL_CONFIG_VENC_BLUR_RESOLUTION,
+	HAL_PARAM_VENC_VIDEO_SIGNAL_INFO,
+	HAL_PARAM_VENC_SESSION_QP_RANGE_PACKED,
+	HAL_PARAM_VENC_H264_TRANSFORM_8x8,
+>>>>>>> 0e91d2a... Nougat
 };
 
 enum hal_domain {
@@ -660,6 +690,8 @@ enum hal_rate_control {
 	HAL_RATE_CONTROL_VBR_CFR,
 	HAL_RATE_CONTROL_CBR_VFR,
 	HAL_RATE_CONTROL_CBR_CFR,
+	HAL_RATE_CONTROL_MBR_CFR,
+	HAL_RATE_CONTROL_MBR_VFR,
 	HAL_UNUSED_RC = 0x10000000,
 };
 
@@ -922,6 +954,13 @@ struct hal_vpe_color_space_conversion {
 	u32 csc_matrix[HAL_MAX_MATRIX_COEFFS];
 	u32 csc_bias[HAL_MAX_BIAS_COEFFS];
 	u32 csc_limit[HAL_MAX_LIMIT_COEFFS];
+};
+
+struct hal_video_signal_info {
+	u32 color_space;
+	u32 transfer_chars;
+	u32 matrix_coeffs;
+	bool full_range;
 };
 
 enum vidc_resource_id {
@@ -1260,6 +1299,78 @@ struct vidc_hal_session_init_done {
 	struct hal_intra_refresh intra_refresh;
 	struct hal_seq_header_info seq_hdr_info;
 	enum buffer_mode_type alloc_mode_out;
+<<<<<<< HEAD
+=======
+	enum buffer_mode_type alloc_mode_in;
+	u32 pixelprocess_capabilities;
+};
+
+struct vidc_hal_sys_init_done {
+	u32 dec_codec_supported;
+	u32 enc_codec_supported;
+	u32 codec_count;
+	struct msm_vidc_capability *capabilities;
+	u32 max_sessions_supported;
+};
+
+struct vidc_hal_session_init_done {
+	struct msm_vidc_capability capability;
+};
+
+struct msm_vidc_cb_cmd_done {
+	u32 device_id;
+	void *session_id;
+	enum vidc_status status;
+	u32 size;
+	union {
+		struct vidc_resource_hdr resource_hdr;
+		struct vidc_buffer_addr_info buffer_addr_info;
+		struct vidc_frame_plane_config frame_plane_config;
+		struct vidc_uncompressed_frame_config uncompressed_frame_config;
+		struct vidc_frame_data frame_data;
+		struct vidc_seq_hdr seq_hdr;
+		struct vidc_hal_ebd ebd;
+		struct vidc_hal_fbd fbd;
+		struct vidc_hal_sys_init_done sys_init_done;
+		struct vidc_hal_session_init_done session_init_done;
+		struct hal_buffer_info buffer_info;
+		union hal_get_property property;
+	} data;
+};
+
+struct msm_vidc_cb_event {
+	u32 device_id;
+	void *session_id;
+	enum vidc_status status;
+	u32 height;
+	u32 width;
+	enum msm_vidc_pixel_depth bit_depth;
+	u32 hal_event_type;
+	ion_phys_addr_t packet_buffer;
+	ion_phys_addr_t extra_data_buffer;
+	u32 pic_struct;
+};
+
+struct msm_vidc_cb_data_done {
+	u32 device_id;
+	void *session_id;
+	enum vidc_status status;
+	u32 size;
+	u32 clnt_data;
+	union {
+		struct vidc_hal_ebd input_done;
+		struct vidc_hal_fbd output_done;
+	};
+};
+
+struct msm_vidc_cb_info {
+	enum hal_command_response response_type;
+	union {
+		struct msm_vidc_cb_cmd_done cmd;
+		struct msm_vidc_cb_event event;
+		struct msm_vidc_cb_data_done data;
+	} response;
+>>>>>>> 0e91d2a... Nougat
 };
 
 enum msm_vidc_hfi_type {

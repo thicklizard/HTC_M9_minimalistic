@@ -430,6 +430,7 @@ static inline struct file *find_any_file(struct nfs4_file *f)
 
 /* "ol" stands for "Open or Lock".  Better suggestions welcome. */
 struct nfs4_ol_stateid {
+<<<<<<< HEAD
 	struct nfs4_stid    st_stid; /* must be first field */
 	struct list_head              st_perfile;
 	struct list_head              st_perstateowner;
@@ -439,6 +440,17 @@ struct nfs4_ol_stateid {
 	unsigned long                 st_access_bmap;
 	unsigned long                 st_deny_bmap;
 	struct nfs4_ol_stateid         * st_openstp;
+=======
+	struct nfs4_stid		st_stid;
+	struct list_head		st_perfile;
+	struct list_head		st_perstateowner;
+	struct list_head		st_locks;
+	struct nfs4_stateowner		*st_stateowner;
+	unsigned char			st_access_bmap;
+	unsigned char			st_deny_bmap;
+	struct nfs4_ol_stateid		*st_openstp;
+	struct rw_semaphore		st_rwsem;
+>>>>>>> 0e91d2a... Nougat
 };
 
 static inline struct nfs4_ol_stateid *openlockstateid(struct nfs4_stid *s)

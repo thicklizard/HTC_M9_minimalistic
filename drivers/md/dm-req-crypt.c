@@ -877,8 +877,18 @@ static int req_crypt_endio(struct dm_target *ti, struct request *clone,
 	struct bio_vec *bvec = NULL;
 	struct req_dm_crypt_io *req_io = map_context->ptr;
 
+<<<<<<< HEAD
 	/* If it is a write request, do nothing just return. */
 	bvec = NULL;
+=======
+	/* If it is for ICE, free up req_io and return */
+	if (encryption_mode == DM_REQ_CRYPT_ENCRYPTION_MODE_TRANSPARENT) {
+		mempool_free(req_io, req_io_pool);
+		err = error;
+		goto submit_request;
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	if (rq_data_dir(clone) == WRITE) {
 		rq_for_each_segment(bvec, clone, iter1) {
 			if (req_io->should_encrypt && bvec->bv_offset == 0) {

@@ -195,7 +195,12 @@ extern void __inc_zone_state(struct zone *, enum zone_stat_item);
 extern void dec_zone_state(struct zone *, enum zone_stat_item);
 extern void __dec_zone_state(struct zone *, enum zone_stat_item);
 
+<<<<<<< HEAD
 void refresh_cpu_vm_stats(int);
+=======
+void quiet_vmstat(void);
+void cpu_vm_stats_fold(int cpu);
+>>>>>>> 0e91d2a... Nougat
 void refresh_zone_stat_thresholds(void);
 
 void drain_zonestat(struct zone *zone, struct per_cpu_pageset *);
@@ -252,6 +257,11 @@ static inline void __dec_zone_page_state(struct page *page,
 
 static inline void refresh_cpu_vm_stats(int cpu) { }
 static inline void refresh_zone_stat_thresholds(void) { }
+<<<<<<< HEAD
+=======
+static inline void cpu_vm_stats_fold(int cpu) { }
+static inline void quiet_vmstat(void) { }
+>>>>>>> 0e91d2a... Nougat
 
 static inline void drain_zonestat(struct zone *zone,
 			struct per_cpu_pageset *pset) { }

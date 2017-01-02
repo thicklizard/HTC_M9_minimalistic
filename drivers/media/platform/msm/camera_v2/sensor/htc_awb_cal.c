@@ -600,7 +600,6 @@ static ssize_t awb_calibration_show(struct device *dev,
 	
 
 	ret = sizeof(struct qct_awb_lsc_struct);
-	printk(KERN_INFO "[CAM]awb_calibration_show(%d)\n", ret);
 	memcpy(buf, ptr, ret);
 
 #ifdef CAM_AWB_CAL_DEBUG
@@ -683,7 +682,6 @@ static ssize_t awb_calibration_3D_show(struct device *dev,
 	ptr = get_cam_awb_cal();
 	
 
-	printk(KERN_INFO "[CAM]awb_calibration_3D_show(%d)\n", ret);
 	memcpy(buf, ptr + 0x3000U, ret);
 
 

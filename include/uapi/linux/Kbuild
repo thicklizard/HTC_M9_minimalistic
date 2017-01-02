@@ -253,6 +253,7 @@ header-y += map_to_7segment.h
 header-y += matroxfb.h
 header-y += mdio.h
 header-y += media.h
+header-y += media-bus-format.h
 header-y += mei.h
 header-y += mempolicy.h
 header-y += meye.h
@@ -265,7 +266,10 @@ header-y += mroute.h
 header-y += mroute6.h
 header-y += msdos_fs.h
 header-y += msg.h
+<<<<<<< HEAD
 header-y += msm-core-interface.h
+=======
+>>>>>>> 0e91d2a... Nougat
 header-y += msm_adc.h
 header-y += msm_adsp.h
 header-y += msm_dsps.h
@@ -292,7 +296,19 @@ header-y += msm_audio_amrnb.h
 header-y += msm_audio_amrwb.h
 header-y += msm_audio_amrwbplus.h
 header-y += msm_audio_voicememo.h
+<<<<<<< HEAD
 header-y += msm_audio_sbc.h
+=======
+header-y += msm_audio_wma.h
+header-y += msm_audio_wmapro.h
+header-y += msm_audio_alac.h
+header-y += msm_audio_ape.h
+header-y += msm_audio_g711.h
+header-y += msm-core-interface.h
+header-y += msm_dsps.h
+header-y += msm_ion.h
+header-y += msm_ipa.h
+>>>>>>> 0e91d2a... Nougat
 header-y += msm_ipc.h
 header-y += msm_charm.h
 header-y += msm_rmnet.h
@@ -417,7 +433,9 @@ header-y += stat.h
 header-y += stddef.h
 header-y += string.h
 header-y += suspend_ioctls.h
+header-y += sw_sync.h
 header-y += swab.h
+header-y += sync.h
 header-y += synclink.h
 header-y += sysctl.h
 header-y += sysinfo.h
@@ -482,7 +500,12 @@ header-y += xfrm.h
 header-y += msm_thermal_ioctl.h
 header-y += hw_breakpoint.h
 header-y += android_pmem.h
+<<<<<<< HEAD
 header-y += tsc.h
 header-y += danipc_ioctl.h
 header-y += shub_ctrl.h
+=======
+header-y += smcinvoke.h
+
+>>>>>>> 0e91d2a... Nougat
 header-y += minifb.h

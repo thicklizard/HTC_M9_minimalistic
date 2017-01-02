@@ -282,6 +282,23 @@ typedef struct {
 			     (1ULL << CW_STEP_DETECTOR_W) | \
 			     (1ULL << CW_STEP_COUNTER_W))
 
+<<<<<<< HEAD
+=======
+#define COMPASS_EN_MASK ((1ULL << CW_MAGNETIC) | \
+			 (1ULL << CW_ORIENTATION) | \
+			 (1ULL << CW_ROTATIONVECTOR) | \
+			 (1ULL << CW_LINEARACCELERATION) | \
+			 (1ULL << CW_GRAVITY) | \
+			 (1ULL << CW_MAGNETIC_UNCALIBRATED) | \
+			 (1ULL << CW_GEOMAGNETIC_ROTATION_VECTOR) | \
+			 (1ULL << CW_MAGNETIC_W) | \
+			 (1ULL << CW_ORIENTATION_W) | \
+			 (1ULL << CW_ROTATIONVECTOR_W) | \
+			 (1ULL << CW_LINEARACCELERATION_W) | \
+			 (1ULL << CW_GRAVITY_W) | \
+			 (1ULL << CW_MAGNETIC_UNCALIBRATED_W) | \
+			 (1ULL << CW_GEOMAGNETIC_ROTATION_VECTOR_W))
+>>>>>>> 0e91d2a... Nougat
 
 struct cwmcu_ramdump_param {
     u32 start_addr;

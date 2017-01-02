@@ -1,6 +1,7 @@
 #ifndef __LINUX_MSMB_CAMERA_H
 #define __LINUX_MSMB_CAMERA_H
 
+<<<<<<< HEAD
 #include <linux/videodev2.h>
 #include <linux/types.h>
 #include <linux/ioctl.h>
@@ -17,6 +18,9 @@
 #define MSM_CAM_V4L2_IOCTL_NOTIFY_ERROR \
 	_IOW('V', BASE_VIDIOC_PRIVATE + 33, struct msm_v4l2_event_data)
 
+=======
+#include <uapi/media/msmb_camera.h>
+>>>>>>> 0e91d2a... Nougat
 
 #ifdef CONFIG_COMPAT
 #define MSM_CAM_V4L2_IOCTL_NOTIFY32 \
@@ -33,6 +37,7 @@
 
 #endif
 
+<<<<<<< HEAD
 #define QCAMERA_DEVICE_GROUP_ID	1
 #define QCAMERA_VNODE_GROUP_ID	2
 #define MSM_CAMERA_NAME					"msm_camera"
@@ -171,3 +176,7 @@ struct msm_camera_smmu_attach_type {
 };
 
 #endif 
+=======
+#endif
+
+>>>>>>> 0e91d2a... Nougat

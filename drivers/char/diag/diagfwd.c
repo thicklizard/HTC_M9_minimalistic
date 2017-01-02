@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2008-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -50,10 +50,18 @@
 #define STM_RSP_NUM_BYTES		9
 
 #define SMD_DRAIN_BUF_SIZE 4096
+<<<<<<< HEAD
 /*++ 2014/09/18, USB Team, PCN00002 ++*/
 extern unsigned diag7k_debug_mask;
 extern unsigned diag9k_debug_mask;
 /*-- 2014/09/18, USB Team, PCN00002 --*/
+=======
+/*++ 2015/07/14, USB Team, PCN00012 ++*/
+extern unsigned diag7k_debug_mask;
+extern unsigned diag9k_debug_mask;
+/*-- 2015/07/14, USB Team, PCN00012 --*/
+bool DM_enable = false;/*++ 2015/10/26, USB Team, PCN00032 ++*/
+>>>>>>> 0e91d2a... Nougat
 int diag_debug_buf_idx;
 unsigned char diag_debug_buf[1024];
 /* Number of entries in table of buffers */
@@ -73,6 +81,11 @@ static uint8_t common_cmds[DIAG_NUM_COMMON_CMD] = {
 	DIAG_CMD_LOG_ON_DMND
 };
 
+<<<<<<< HEAD
+=======
+static uint8_t hdlc_timer_in_progress;
+
+>>>>>>> 0e91d2a... Nougat
 /* Determine if this device uses a device tree */
 #ifdef CONFIG_OF
 static int has_device_tree(void)
@@ -166,9 +179,13 @@ int chk_apps_only(void)
 	case MSM_CPU_8627:
 	case MSM_CPU_9615:
 	case MSM_CPU_8974:
+<<<<<<< HEAD
 /*++ 2014/10/22, USB Team, PCN00022 ++*/
 	case MSM_CPU_8994:
 /*-- 2014/10/22, USB Team, PCN00022 --*/
+=======
+	case MSM_CPU_8996:/*++ 2015/07/14, USB Team, PCN00012 ++*/
+>>>>>>> 0e91d2a... Nougat
 		return 1;
 	default:
 		return 0;
@@ -199,9 +216,15 @@ int chk_polling_response(void)
 		 * has registered to respond for polling
 		 */
 		return 1;
+<<<<<<< HEAD
 	else if (!((driver->smd_data[MODEM_DATA].ch) &&
 		 (driver->rcvd_feature_mask[MODEM_DATA])) &&
 		 (chk_apps_master()))
+=======
+	else if (!(driver->diagfwd_cntl[PERIPHERAL_MODEM] &&
+		   driver->diagfwd_cntl[PERIPHERAL_MODEM]->ch_open) &&
+		 (driver->feature[PERIPHERAL_MODEM].rcvd_feature_mask))
+>>>>>>> 0e91d2a... Nougat
 		/*
 		 * If the apps processor is not the master and the modem
 		 * is not up or we did not receive the feature masks from Modem
@@ -214,13 +237,18 @@ int chk_polling_response(void)
 /*
  * This function should be called if you feel that the logging process may
  * need to be woken up. For instance, if the logging mode is MEMORY_DEVICE MODE
+<<<<<<< HEAD
  * and while trying to read data from a SMD data channel there are no buffers
+=======
+ * and while trying to read data from data channel there are no buffers
+>>>>>>> 0e91d2a... Nougat
  * available to read the data into, then this function should be called to
  * determine if the logging process needs to be woken up.
  */
 void chk_logging_wakeup(void)
 {
 	int i;
+<<<<<<< HEAD
 
 	/* Find the index of the logging process */
 	for (i = 0; i < driver->num_clients; i++)
@@ -238,6 +266,31 @@ void chk_logging_wakeup(void)
 		 */
 /*++ 2014/09/18, USB Team, PCN00002 ++*/
 		if ((driver->data_ready[i] & USERMODE_DIAGFWD) == 0) {
+=======
+	int j;
+	int pid = 0;
+
+	for (j = 0; j < NUM_MD_SESSIONS; j++) {
+		if (!driver->md_session_map[j])
+			continue;
+		pid = driver->md_session_map[j]->pid;
+
+		/* Find the index of the logging process */
+		for (i = 0; i < driver->num_clients; i++) {
+			if (driver->client_map[i].pid != pid)
+				continue;
+/*++ 2015/07/14, USB Team, PCN00012 ++*/
+			if (driver->data_ready[i] & USERMODE_DIAGFWD)
+				continue;
+			/*
+			 * At very high logging rates a race condition can
+			 * occur where the buffers containing the data from
+			 * a channel are all in use, but the data_ready flag
+			 * is cleared. In this case, the buffers never have
+			 * their data read/logged. Detect and remedy this
+			 * situation.
+			 */
+>>>>>>> 0e91d2a... Nougat
 			driver->data_ready[i] |= USERMODE_DIAGFWD;
 			if (diag7k_debug_mask)
 				DIAG_INFO("diag: Force wakeup of logging process\n");
@@ -287,6 +340,7 @@ int diag_add_hdlc_encoding(struct diag_smd_info *smd_info, void *buf,
 			success = 0;
 			break;
 		}
+<<<<<<< HEAD
 
 		max_size = 2 * header->length + 3;
 		if (bytes_remaining < max_size) {
@@ -294,6 +348,15 @@ int diag_add_hdlc_encoding(struct diag_smd_info *smd_info, void *buf,
 				__func__, smd_info->peripheral,
 				bytes_remaining, max_size);
 			success = 0;
+=======
+/*-- 2015/07/14, USB Team, PCN00012 --*/
+		/*
+		 * Diag Memory Device is in normal. Check only for the first
+		 * index as all the indices point to the same session
+		 * structure.
+		 */
+		if ((driver->md_session_mask == DIAG_CON_ALL) && (j == 0))
+>>>>>>> 0e91d2a... Nougat
 			break;
 		}
 
@@ -456,6 +519,7 @@ int diag_process_smd_read_data(struct diag_smd_info *smd_info, void *buf,
 		return 0;
 	}
 
+<<<<<<< HEAD
 	if (write_length > 0) {
 		spin_lock_irqsave(&smd_info->in_busy_lock, flags);
 		*in_busy_ptr = 1;
@@ -547,6 +611,32 @@ static int diag_smd_resize_buf(struct diag_smd_info *smd_info, void **buf,
 		pr_err_ratelimited("diag: In %s, SMD peripheral: %d. packet size sent: %d, resize to support failed. Data beyond %d will be lost\n",
 			__func__, smd_info->peripheral, requested_size,
 			*buf_size);
+=======
+	/*
+	 * Keep trying till we get the buffer back. It should probably
+	 * take one or two iterations. When this loops till UINT_MAX, it
+	 * means we did not get a write complete for the previous
+	 * response.
+	 */
+	while (retry_count < UINT_MAX) {
+		if (!driver->rsp_buf_busy)
+			break;
+		/*
+		 * Wait for sometime and try again. The value 10000 was chosen
+		 * empirically as an optimum value for USB to complete a write
+		 */
+		usleep_range(10000, 10100);
+		retry_count++;
+
+		/*
+		 * There can be a race conditon that clears the data ready flag
+		 * for responses. Make sure we don't miss previous wakeups for
+		 * draining responses when we are in Memory Device Mode.
+		 */
+		if (driver->logging_mode == DIAG_MEMORY_DEVICE_MODE ||
+				driver->logging_mode == DIAG_MULTI_MODE)
+			chk_logging_wakeup();
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	return success;
@@ -808,7 +898,12 @@ void encode_rsp_and_send(int buf_length)
 		 * for responses. Make sure we don't miss previous wakeups for
 		 * draining responses when we are in Memory Device Mode.
 		 */
+<<<<<<< HEAD
 		if (driver->logging_mode == MEMORY_DEVICE_MODE)
+=======
+		if (driver->logging_mode == DIAG_MEMORY_DEVICE_MODE ||
+				driver->logging_mode == DIAG_MULTI_MODE)
+>>>>>>> 0e91d2a... Nougat
 			chk_logging_wakeup();
 	}
 	if (driver->rsp_buf_busy) {
@@ -847,8 +942,14 @@ void diag_update_pkt_buffer(unsigned char *buf, int type)
 	unsigned int length;
 	int *in_busy = NULL;
 
+<<<<<<< HEAD
 	if (!buf) {
 		pr_err("diag: Invalid buffer in %s\n", __func__);
+=======
+	if (!buf || len == 0) {
+		pr_err("diag: In %s, Invalid ptr %pK and length %d\n",
+		       __func__, buf, len);
+>>>>>>> 0e91d2a... Nougat
 		return;
 	}
 
@@ -960,11 +1061,18 @@ int diag_send_data(struct diag_master_table entry, unsigned char *buf,
 void diag_process_stm_mask(uint8_t cmd, uint8_t data_mask, int data_type)
 {
 	int status = 0;
+<<<<<<< HEAD
 	if (data_type >= MODEM_DATA && data_type <= SENSORS_DATA) {
 		if (driver->peripheral_supports_stm[data_type]) {
 			status = diag_send_stm_state(
 				&driver->smd_cntl[data_type], cmd);
 			if (status == 1)
+=======
+	if (data_type >= PERIPHERAL_MODEM && data_type <= PERIPHERAL_SENSORS) {
+		if (driver->feature[data_type].stm_support) {
+			status = diag_send_stm_state(data_type, cmd);
+			if (status == 0)
+>>>>>>> 0e91d2a... Nougat
 				driver->stm_state[data_type] = cmd;
 		}
 		driver->stm_state_requested[data_type] = cmd;
@@ -982,7 +1090,7 @@ int diag_process_stm_cmd(unsigned char *buf, unsigned char *dest_buf)
 	int i;
 
 	if (!buf || !dest_buf) {
-		pr_err("diag: Invalid pointers buf: %p, dest_buf %p in %s\n",
+		pr_err("diag: Invalid pointers buf: %pK, dest_buf %pK in %s\n",
 		       buf, dest_buf, __func__);
 		return -EIO;
 	}
@@ -1024,7 +1132,11 @@ int diag_process_stm_cmd(unsigned char *buf, unsigned char *dest_buf)
 		dest_buf[i] = *(buf + i);
 
 	/* Set mask denoting which peripherals support STM */
+<<<<<<< HEAD
 	if (driver->peripheral_supports_stm[MODEM_DATA])
+=======
+	if (driver->feature[PERIPHERAL_MODEM].stm_support)
+>>>>>>> 0e91d2a... Nougat
 		rsp_supported |= DIAG_STM_MODEM;
 
 	if (driver->peripheral_supports_stm[LPASS_DATA])
@@ -1039,8 +1151,13 @@ int diag_process_stm_cmd(unsigned char *buf, unsigned char *dest_buf)
 	rsp_supported |= DIAG_STM_APPS;
 
 	/* Set mask denoting STM state/status for each peripheral/APSS */
+<<<<<<< HEAD
 	if (driver->stm_state[MODEM_DATA])
 		rsp_smd_status |= DIAG_STM_MODEM;
+=======
+	if (driver->stm_state[PERIPHERAL_MODEM])
+		rsp_status |= DIAG_STM_MODEM;
+>>>>>>> 0e91d2a... Nougat
 
 	if (driver->stm_state[LPASS_DATA])
 		rsp_smd_status |= DIAG_STM_LPASS;
@@ -1060,6 +1177,104 @@ int diag_process_stm_cmd(unsigned char *buf, unsigned char *dest_buf)
 	return STM_RSP_NUM_BYTES;
 }
 
+<<<<<<< HEAD
+=======
+int diag_process_time_sync_query_cmd(unsigned char *src_buf, int src_len,
+				      unsigned char *dest_buf, int dest_len)
+{
+	int write_len = 0;
+	struct diag_cmd_time_sync_query_req_t *req = NULL;
+	struct diag_cmd_time_sync_query_rsp_t rsp;
+
+	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0) {
+		pr_err("diag: Invalid input in %s, src_buf: %pK, src_len: %d, dest_buf: %pK, dest_len: %d",
+			__func__, src_buf, src_len, dest_buf, dest_len);
+		return -EINVAL;
+	}
+
+	req = (struct diag_cmd_time_sync_query_req_t *)src_buf;
+	rsp.header.cmd_code = req->header.cmd_code;
+	rsp.header.subsys_id = req->header.subsys_id;
+	rsp.header.subsys_cmd_code = req->header.subsys_cmd_code;
+	rsp.version = req->version;
+	rsp.time_api = driver->uses_time_api;
+	memcpy(dest_buf, &rsp, sizeof(rsp));
+	write_len = sizeof(rsp);
+	return write_len;
+}
+
+int diag_process_time_sync_switch_cmd(unsigned char *src_buf, int src_len,
+				      unsigned char *dest_buf, int dest_len)
+{
+	uint8_t peripheral, status = 0;
+	struct diag_cmd_time_sync_switch_req_t *req = NULL;
+	struct diag_cmd_time_sync_switch_rsp_t rsp;
+	struct diag_ctrl_msg_time_sync time_sync_msg;
+	int msg_size = sizeof(struct diag_ctrl_msg_time_sync);
+	int err = 0, write_len = 0;
+
+	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0) {
+		pr_err("diag: Invalid input in %s, src_buf: %pK, src_len: %d, dest_buf: %pK, dest_len: %d",
+			__func__, src_buf, src_len, dest_buf, dest_len);
+		return -EINVAL;
+	}
+
+	req = (struct diag_cmd_time_sync_switch_req_t *)src_buf;
+	rsp.header.cmd_code = req->header.cmd_code;
+	rsp.header.subsys_id = req->header.subsys_id;
+	rsp.header.subsys_cmd_code = req->header.subsys_cmd_code;
+	rsp.version = req->version;
+	rsp.time_api = req->time_api;
+	if ((req->version > 1) || (req->time_api > 1) ||
+					(req->persist_time > 0)) {
+		dest_buf[0] = BAD_PARAM_RESPONSE_MESSAGE;
+		rsp.time_api_status = 0;
+		rsp.persist_time_status = PERSIST_TIME_NOT_SUPPORTED;
+		memcpy(dest_buf + 1, &rsp, sizeof(rsp));
+		write_len = sizeof(rsp) + 1;
+		timestamp_switch = 0;
+		return write_len;
+	}
+
+	time_sync_msg.ctrl_pkt_id = DIAG_CTRL_MSG_TIME_SYNC_PKT;
+	time_sync_msg.ctrl_pkt_data_len = 5;
+	time_sync_msg.version = 1;
+	time_sync_msg.time_api = req->time_api;
+
+	for (peripheral = 0; peripheral < NUM_PERIPHERALS; peripheral++) {
+		err = diagfwd_write(peripheral, TYPE_CNTL, &time_sync_msg,
+					msg_size);
+		if (err && err != -ENODEV) {
+			pr_err("diag: In %s, unable to write to peripheral: %d, type: %d, len: %d, err: %d\n",
+				__func__, peripheral, TYPE_CNTL,
+				msg_size, err);
+			status |= (1 << peripheral);
+		}
+	}
+
+	driver->time_sync_enabled = 1;
+	driver->uses_time_api = req->time_api;
+
+	switch (req->time_api) {
+	case 0:
+		timestamp_switch = 0;
+		break;
+	case 1:
+		timestamp_switch = 1;
+		break;
+	default:
+		timestamp_switch = 0;
+		break;
+	}
+
+	rsp.time_api_status = status;
+	rsp.persist_time_status = PERSIST_TIME_NOT_SUPPORTED;
+	memcpy(dest_buf, &rsp, sizeof(rsp));
+	write_len = sizeof(rsp);
+	return write_len;
+}
+
+>>>>>>> 0e91d2a... Nougat
 int diag_cmd_log_on_demand(unsigned char *src_buf, int src_len,
 			   unsigned char *dest_buf, int dest_len)
 {
@@ -1070,7 +1285,7 @@ int diag_cmd_log_on_demand(unsigned char *src_buf, int src_len,
 		return 0;
 
 	if (!src_buf || !dest_buf || src_len <= 0 || dest_len <= 0) {
-		pr_err("diag: Invalid input in %s, src_buf: %p, src_len: %d, dest_buf: %p, dest_len: %d",
+		pr_err("diag: Invalid input in %s, src_buf: %pK, src_len: %d, dest_buf: %pK, dest_len: %d",
 		       __func__, src_buf, src_len, dest_buf, dest_len);
 		return -EINVAL;
 	}
@@ -1225,8 +1440,140 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 		}
 		return len;
 	}
+<<<<<<< HEAD
 	/* Check for download command */
 	else if ((cpu_is_msm8x60() || chk_apps_master()) && (*buf == 0x3A)) {
+=======
+
+	memcpy(&rsp.header, header, sizeof(struct diag_pkt_header_t));
+	rsp.framing_version = 1;
+	rsp.result = 0;
+	write_len = sizeof(rsp);
+	memcpy(dest_buf, &rsp, sizeof(rsp));
+
+	return write_len;
+}
+
+void diag_send_error_rsp(unsigned char *buf, int len)
+{
+	/* -1 to accomodate the first byte 0x13 */
+	if (len > (DIAG_MAX_RSP_SIZE - 1)) {
+		pr_err("diag: cannot send err rsp, huge length: %d\n", len);
+		return;
+	}
+
+	*(uint8_t *)driver->apps_rsp_buf = DIAG_CMD_ERROR;
+	memcpy((driver->apps_rsp_buf + sizeof(uint8_t)), buf, len);
+	diag_send_rsp(driver->apps_rsp_buf, len + 1);
+}
+
+int diag_process_apps_pkt(unsigned char *buf, int len,
+			struct diag_md_session_t *info)
+{
+	int i;
+	int mask_ret;
+	int write_len = 0;
+	unsigned char *temp = NULL;
+	struct diag_cmd_reg_entry_t entry;
+	struct diag_cmd_reg_entry_t *temp_entry = NULL;
+	struct diag_cmd_reg_t *reg_item = NULL;
+
+	if (!buf)
+		return -EIO;
+
+	/* Check if the command is a supported mask command */
+	mask_ret = diag_process_apps_masks(buf, len, info);
+	if (mask_ret > 0) {
+		diag_send_rsp(driver->apps_rsp_buf, mask_ret);
+		return 0;
+	}
+
+	temp = buf;
+	entry.cmd_code = (uint16_t)(*(uint8_t *)temp);
+	temp += sizeof(uint8_t);
+	entry.subsys_id = (uint16_t)(*(uint8_t *)temp);
+	temp += sizeof(uint8_t);
+	entry.cmd_code_hi = (uint16_t)(*(uint16_t *)temp);
+	entry.cmd_code_lo = (uint16_t)(*(uint16_t *)temp);
+	temp += sizeof(uint16_t);
+
+	DIAGFWD_INFO("diag: In %s, received cmd %02x %02x %02x\n",
+		 __func__, entry.cmd_code, entry.subsys_id, entry.cmd_code_hi);
+
+	if (*buf == DIAG_CMD_LOG_ON_DMND && driver->log_on_demand_support &&
+	    driver->feature[PERIPHERAL_MODEM].rcvd_feature_mask) {
+		write_len = diag_cmd_log_on_demand(buf, len,
+						   driver->apps_rsp_buf,
+						   DIAG_MAX_RSP_SIZE);
+		if (write_len > 0)
+			diag_send_rsp(driver->apps_rsp_buf, write_len);
+		return 0;
+	}
+
+	mutex_lock(&driver->cmd_reg_mutex);
+	temp_entry = diag_cmd_search(&entry, ALL_PROC);
+	if (temp_entry) {
+		reg_item = container_of(temp_entry, struct diag_cmd_reg_t,
+								entry);
+		if (info) {
+			if (MD_PERIPHERAL_MASK(reg_item->proc) &
+				info->peripheral_mask)
+				write_len = diag_send_data(reg_item, buf, len);
+		} else {
+			if (MD_PERIPHERAL_MASK(reg_item->proc) &
+				driver->logging_mask)
+				diag_send_error_rsp(buf, len);
+			else
+				write_len = diag_send_data(reg_item, buf, len);
+		}
+		mutex_unlock(&driver->cmd_reg_mutex);
+		return write_len;
+	}
+	mutex_unlock(&driver->cmd_reg_mutex);
+
+#if defined(CONFIG_DIAG_OVER_USB)
+	/* Check for the command/respond msg for the maximum packet length */
+	if ((*buf == 0x4b) && (*(buf+1) == 0x12) &&
+		(*(uint16_t *)(buf+2) == 0x0055)) {
+		for (i = 0; i < 4; i++)
+			*(driver->apps_rsp_buf+i) = *(buf+i);
+		*(uint32_t *)(driver->apps_rsp_buf+4) = DIAG_MAX_REQ_SIZE;
+		diag_send_rsp(driver->apps_rsp_buf, 8);
+		return 0;
+	} else if ((*buf == 0x4b) && (*(buf+1) == 0x12) &&
+		(*(uint16_t *)(buf+2) == DIAG_DIAG_STM)) {
+		len = diag_process_stm_cmd(buf, driver->apps_rsp_buf);
+		if (len > 0) {
+			diag_send_rsp(driver->apps_rsp_buf, len);
+			return 0;
+		}
+		return len;
+	}
+	/* Check for time sync query command */
+	else if ((*buf == DIAG_CMD_DIAG_SUBSYS) &&
+		(*(buf+1) == DIAG_SS_DIAG) &&
+		(*(uint16_t *)(buf+2) == DIAG_GET_TIME_API)) {
+		write_len = diag_process_time_sync_query_cmd(buf, len,
+							driver->apps_rsp_buf,
+							DIAG_MAX_RSP_SIZE);
+		if (write_len > 0)
+			diag_send_rsp(driver->apps_rsp_buf, write_len);
+		return 0;
+	}
+	/* Check for time sync switch command */
+	else if ((*buf == DIAG_CMD_DIAG_SUBSYS) &&
+		(*(buf+1) == DIAG_SS_DIAG) &&
+		(*(uint16_t *)(buf+2) == DIAG_SET_TIME_API)) {
+		write_len = diag_process_time_sync_switch_cmd(buf, len,
+							driver->apps_rsp_buf,
+							DIAG_MAX_RSP_SIZE);
+		if (write_len > 0)
+			diag_send_rsp(driver->apps_rsp_buf, write_len);
+		return 0;
+	}
+	/* Check for download command */
+	else if ((chk_apps_master()) && (*buf == 0x3A)) {
+>>>>>>> 0e91d2a... Nougat
 		/* send response back */
 		driver->apps_rsp_buf[0] = *buf;
 		encode_rsp_and_send(0);
@@ -1270,6 +1617,7 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 		encode_rsp_and_send(5);
 		return 0;
 	}
+<<<<<<< HEAD
 	/* Log on Demand Rsp */
 	else if (*buf == DIAG_CMD_LOG_ON_DMND) {
 		write_len = diag_cmd_log_on_demand(buf, len,
@@ -1279,6 +1627,8 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 			encode_rsp_and_send(write_len - 1);
 		return 0;
 	}
+=======
+>>>>>>> 0e91d2a... Nougat
 	/* Mobile ID Rsp */
 	else if ((*buf == DIAG_CMD_DIAG_SUBSYS) &&
 		(*(buf+1) == DIAG_SS_PARAMS) &&
@@ -1299,9 +1649,15 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 	  * respond for 0X7C command
 	  */
 	else if (chk_apps_master() &&
+<<<<<<< HEAD
 			!(driver->polling_reg_flag) &&
 			!(driver->smd_data[MODEM_DATA].ch) &&
 			!(driver->rcvd_feature_mask[MODEM_DATA])) {
+=======
+		 !(driver->polling_reg_flag) &&
+		 !(driver->diagfwd_cntl[PERIPHERAL_MODEM]->ch_open) &&
+		 !(driver->feature[PERIPHERAL_MODEM].rcvd_feature_mask)) {
+>>>>>>> 0e91d2a... Nougat
 		/* respond to 0x0 command */
 		if (*buf == 0x00) {
 			for (i = 0; i < 55; i++)
@@ -1324,6 +1680,40 @@ int diag_process_apps_pkt(unsigned char *buf, int len)
 			return 0;
 		}
 	}
+<<<<<<< HEAD
+=======
+	write_len = diag_cmd_chk_stats(buf, len, driver->apps_rsp_buf,
+				       DIAG_MAX_RSP_SIZE);
+	if (write_len > 0) {
+		diag_send_rsp(driver->apps_rsp_buf, write_len);
+		return 0;
+	}
+	write_len = diag_cmd_disable_hdlc(buf, len, driver->apps_rsp_buf,
+					  DIAG_MAX_RSP_SIZE);
+	if (write_len > 0) {
+		/*
+		 * This mutex lock is necessary since we need to drain all the
+		 * pending buffers from peripherals which may be HDLC encoded
+		 * before disabling HDLC encoding on Apps processor.
+		 */
+		mutex_lock(&driver->hdlc_disable_mutex);
+		diag_send_rsp(driver->apps_rsp_buf, write_len);
+		/*
+		 * Set the value of hdlc_disabled after sending the response to
+		 * the tools. This is required since the tools is expecting a
+		 * HDLC encoded reponse for this request.
+		 */
+		DIAGFWD_DBUG("diag: In %s, disabling HDLC encoding\n",
+		       __func__);
+		if (info)
+			info->hdlc_disabled = 1;
+		else
+			driver->hdlc_disabled = 1;
+		diag_update_md_clients(HDLC_SUPPORT_TYPE);
+		mutex_unlock(&driver->hdlc_disable_mutex);
+		return 0;
+	}
+>>>>>>> 0e91d2a... Nougat
 #endif
 	return packet_type;
 }
@@ -1333,11 +1723,17 @@ void diag_send_error_rsp(int index)
 {
 	int i;
 
+<<<<<<< HEAD
 	/* -1 to accomodate the first byte 0x13 */
 	if (index > APPS_BUF_SIZE-1) {
 		pr_err("diag: cannot send err rsp, huge length: %d\n", index);
 		return;
 	}
+=======
+	/* We have now come to the end of the function. */
+	if (chk_apps_only())
+		diag_send_error_rsp(buf, len);
+>>>>>>> 0e91d2a... Nougat
 
 	driver->apps_rsp_buf[0] = 0x13; /* error code 13 */
 	for (i = 0; i < index; i++)
@@ -1379,6 +1775,7 @@ void diag_process_hdlc(void *data, unsigned len)
 		}
 	}
 
+<<<<<<< HEAD
 	/*
 	 * If the message is 3 bytes or less in length then the message is
 	 * too short. A message will need 4 bytes minimum, since there are
@@ -1390,6 +1787,40 @@ void diag_process_hdlc(void *data, unsigned len)
 			__func__, len, hdlc.dest_idx);
 		mutex_unlock(&driver->diag_hdlc_mutex);
 		return;
+=======
+	mutex_lock(&driver->diag_hdlc_mutex);
+	DIAGFWD_DBUG("diag: In %s, received packet of length: %d, req_buf_len: %d\n",
+		 __func__, len, driver->hdlc_buf_len);
+
+	if (driver->hdlc_buf_len >= DIAG_MAX_REQ_SIZE) {
+		pr_err("diag: In %s, request length is more than supported len. Dropping packet.\n",
+		       __func__);
+		goto fail;
+	}
+
+/*++ 2015/07/14, USB Team, PCN00012 ++*/
+	DIAGFWD_DBUG("HDLC decode fn, len of data  %d\n", len);
+/*-- 2015/07/14, USB Team, PCN00012 --*/
+	hdlc_decode->dest_ptr = driver->hdlc_buf + driver->hdlc_buf_len;
+	hdlc_decode->dest_size = DIAG_MAX_HDLC_BUF_SIZE - driver->hdlc_buf_len;
+	hdlc_decode->src_ptr = data;
+	hdlc_decode->src_size = len;
+	hdlc_decode->src_idx = 0;
+	hdlc_decode->dest_idx = 0;
+	ret = diag_hdlc_decode(hdlc_decode);
+	/*
+	 * driver->hdlc_buf is of size DIAG_MAX_HDLC_BUF_SIZE. But the decoded
+	 * packet should be within DIAG_MAX_REQ_SIZE.
+	 */
+	if (driver->hdlc_buf_len + hdlc_decode->dest_idx <= DIAG_MAX_REQ_SIZE) {
+		driver->hdlc_buf_len += hdlc_decode->dest_idx;
+	} else {
+		pr_err_ratelimited("diag: In %s, Dropping packet. pkt_size: %d, max: %d\n",
+				   __func__,
+				   driver->hdlc_buf_len + hdlc_decode->dest_idx,
+				   DIAG_MAX_REQ_SIZE);
+		goto fail;
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	if (ret) {
@@ -1441,8 +1872,15 @@ void diag_process_hdlc(void *data, unsigned len)
 		err = diag_smd_write(&driver->smd_data[MODEM_DATA],
 				     driver->hdlc_buf, hdlc.dest_idx - 3);
 		if (err) {
+<<<<<<< HEAD
 			pr_err("diag: In %s, unable to write to smd, peripheral: %d, type: %d, err: %d\n",
 			       __func__, MODEM_DATA, SMD_DATA_TYPE, err);
+=======
+			/* CRC check failed. */
+			pr_err_ratelimited("diag: In %s, bad CRC. Dropping packet\n",
+					   __func__);
+			goto fail;
+>>>>>>> 0e91d2a... Nougat
 		}
 		APPEND_DEBUG('h');
 /*++ 2014/09/18, USB Team, PCN00002 ++*/
@@ -1510,6 +1948,19 @@ static void diag_smd_reset_buf(struct diag_smd_info *smd_info, int num)
 	else
 		queue_work(driver->diag_wq, &(smd_info->diag_read_smd_work));
 
+<<<<<<< HEAD
+=======
+fail:
+	/*
+	 * Tools needs to get a response in order to start its
+	 * recovery algorithm. Send an error response if the
+	 * packet is not in expected format.
+	 */
+	diag_send_error_rsp(driver->hdlc_buf, driver->hdlc_buf_len);
+	driver->hdlc_buf_len = 0;
+end:
+	mutex_unlock(&driver->diag_hdlc_mutex);
+>>>>>>> 0e91d2a... Nougat
 }
 
 static int diagfwd_mux_open(int id, int mode)
@@ -1530,6 +1981,10 @@ static int diagfwd_mux_open(int id, int mode)
 	}
 	switch (mode) {
 	case DIAG_USB_MODE:
+<<<<<<< HEAD
+=======
+		driver->qxdmusb_drop = 0;/*++ 2015/10/23, USB Team, PCN00026 ++*/
+>>>>>>> 0e91d2a... Nougat
 		driver->usb_connected = 1;
 /*++ 2014/10/17, USB Team, PCN00016 ++*/
 		driver->qxdmusb_drop = 0;
@@ -1540,6 +1995,7 @@ static int diagfwd_mux_open(int id, int mode)
 	default:
 		return -EINVAL;
 	}
+<<<<<<< HEAD
 /*++ 2014/11/04, USB Team, PCN00037 ++*/
 	if ((mode == DIAG_USB_MODE &&
 			driver->logging_mode == MEMORY_DEVICE_MODE) ||
@@ -1551,6 +2007,19 @@ static int diagfwd_mux_open(int id, int mode)
 		*/
 	} else {
 		diag_reset_smd_data(RESET_AND_QUEUE);
+=======
+
+	if (driver->rsp_buf_busy) {
+		/*
+		 * When a client switches from callback mode to USB mode
+		 * explicitly, there can be a situation when the last response
+		 * is not drained to the user space application. Reset the
+		 * in_busy flag in this case.
+		 */
+		spin_lock_irqsave(&driver->rsp_buf_busy_lock, flags);
+		driver->rsp_buf_busy = 0;
+		spin_unlock_irqrestore(&driver->rsp_buf_busy_lock, flags);
+>>>>>>> 0e91d2a... Nougat
 	}
 /*-- 2014/11/04, USB Team, PCN00037 --*/
 	for (i = 0; i < NUM_SMD_CONTROL_CHANNELS; i++) {
@@ -1569,9 +2038,13 @@ static int diagfwd_mux_close(int id, int mode)
 
 	switch (mode) {
 	case DIAG_USB_MODE:
+<<<<<<< HEAD
 /*++ 2014/10/17, USB Team, PCN00016 ++*/
 		driver->qxdmusb_drop = 1;
 /*-- 2014/10/17, USB Team, PCN00016 --*/
+=======
+		driver->qxdmusb_drop = 1;/*++ 2015/10/23, USB Team, PCN00026 ++*/
+>>>>>>> 0e91d2a... Nougat
 		driver->usb_connected = 0;
 		break;
 	case DIAG_MEMORY_DEVICE_MODE:
@@ -1580,6 +2053,7 @@ static int diagfwd_mux_close(int id, int mode)
 		return -EINVAL;
 	}
 
+<<<<<<< HEAD
 /*++ 2014/11/04, USB Team, PCN00037 ++*/
 	if (driver->logging_mode == USB_MODE) {
 		for (i = 0; i < NUM_SMD_DATA_CHANNELS; i++) {
@@ -1604,12 +2078,236 @@ static int diagfwd_mux_close(int id, int mode)
 			}
 		}
 /*-- 2014/11/04, USB Team, PCN00037 --*/
+=======
+	if ((driver->logging_mode == DIAG_MULTI_MODE &&
+		driver->md_session_mode == DIAG_MD_NONE) ||
+		(driver->md_session_mode == DIAG_MD_PERIPHERAL)) {
+		/*
+		 * In this case the channel must not be closed. This case
+		 * indicates that the USB is removed but there is a client
+		 * running in background with Memory Device mode
+		 */
+	} else {
+		for (i = 0; i < NUM_PERIPHERALS; i++) {
+			if (!DM_enable) { /*++ 2015/10/14, USB Team, PCN00092 ++*/
+				diagfwd_close(i, TYPE_DATA);
+				diagfwd_close(i, TYPE_CMD);
+			}
+		}
+		/* Re enable HDLC encoding */
+		DIAGFWD_DBUG("diag: In %s, re-enabling HDLC encoding\n",
+		       __func__);
+		mutex_lock(&driver->hdlc_disable_mutex);
+		if (driver->md_session_mode == DIAG_MD_NONE)
+			driver->hdlc_disabled = 0;
+		mutex_unlock(&driver->hdlc_disable_mutex);
+		queue_work(driver->diag_wq,
+			&(driver->update_user_clients));
+>>>>>>> 0e91d2a... Nougat
 	}
 	queue_work(driver->diag_real_time_wq,
 		   &driver->diag_real_time_work);
 	return 0;
 }
 
+<<<<<<< HEAD
+=======
+static uint8_t hdlc_reset;
+
+static void hdlc_reset_timer_start(struct diag_md_session_t *info)
+{
+	if (!hdlc_timer_in_progress) {
+		hdlc_timer_in_progress = 1;
+		if (info)
+			mod_timer(&info->hdlc_reset_timer,
+			  jiffies + msecs_to_jiffies(200));
+		else
+			mod_timer(&driver->hdlc_reset_timer,
+			  jiffies + msecs_to_jiffies(200));
+	}
+}
+
+static void hdlc_reset_timer_func(unsigned long data)
+{
+	DIAGFWD_DBUG("diag: In %s, re-enabling HDLC encoding\n",
+		       __func__);
+	if (hdlc_reset) {
+		driver->hdlc_disabled = 0;
+		queue_work(driver->diag_wq,
+			&(driver->update_user_clients));
+	}
+	hdlc_timer_in_progress = 0;
+}
+
+void diag_md_hdlc_reset_timer_func(unsigned long pid)
+{
+	struct diag_md_session_t *session_info = NULL;
+
+	pr_debug("diag: In %s, re-enabling HDLC encoding\n",
+		       __func__);
+	if (hdlc_reset) {
+		session_info = diag_md_session_get_pid(pid);
+		if (session_info)
+			session_info->hdlc_disabled = 0;
+		queue_work(driver->diag_wq,
+			&(driver->update_md_clients));
+	}
+	hdlc_timer_in_progress = 0;
+}
+
+static void diag_hdlc_start_recovery(unsigned char *buf, int len,
+				     struct diag_md_session_t *info)
+{
+	int i;
+	static uint32_t bad_byte_counter;
+	unsigned char *start_ptr = NULL;
+	struct diag_pkt_frame_t *actual_pkt = NULL;
+
+	hdlc_reset = 1;
+	hdlc_reset_timer_start(info);
+
+	actual_pkt = (struct diag_pkt_frame_t *)buf;
+	for (i = 0; i < len; i++) {
+		if (actual_pkt->start == CONTROL_CHAR &&
+			actual_pkt->version == 1 &&
+			actual_pkt->length < len &&
+			(*(uint8_t *)(buf + sizeof(struct diag_pkt_frame_t) +
+			actual_pkt->length) == CONTROL_CHAR)) {
+				start_ptr = &buf[i];
+				break;
+		}
+		bad_byte_counter++;
+		if (bad_byte_counter > (DIAG_MAX_REQ_SIZE +
+				sizeof(struct diag_pkt_frame_t) + 1)) {
+			bad_byte_counter = 0;
+			pr_err("diag: In %s, re-enabling HDLC encoding\n",
+					__func__);
+			mutex_lock(&driver->hdlc_disable_mutex);
+			if (info)
+				info->hdlc_disabled = 0;
+			else
+				driver->hdlc_disabled = 0;
+			mutex_unlock(&driver->hdlc_disable_mutex);
+			diag_update_md_clients(HDLC_SUPPORT_TYPE);
+
+			return;
+		}
+	}
+
+	if (start_ptr) {
+		/* Discard any partial packet reads */
+		driver->incoming_pkt.processing = 0;
+		diag_process_non_hdlc_pkt(start_ptr, len - i, info);
+	}
+}
+
+void diag_process_non_hdlc_pkt(unsigned char *buf, int len,
+			       struct diag_md_session_t *info)
+{
+	int err = 0;
+	uint16_t pkt_len = 0;
+	uint32_t read_bytes = 0;
+	const uint32_t header_len = sizeof(struct diag_pkt_frame_t);
+	struct diag_pkt_frame_t *actual_pkt = NULL;
+	unsigned char *data_ptr = NULL;
+	struct diag_partial_pkt_t *partial_pkt = &driver->incoming_pkt;
+
+	if (!buf || len <= 0)
+		return;
+
+	if (!partial_pkt->processing)
+		goto start;
+
+	if (partial_pkt->remaining > len) {
+		if ((partial_pkt->read_len + len) > partial_pkt->capacity) {
+			pr_err("diag: Invalid length %d, %d received in %s\n",
+			       partial_pkt->read_len, len, __func__);
+			goto end;
+		}
+		memcpy(partial_pkt->data + partial_pkt->read_len, buf, len);
+		read_bytes += len;
+		buf += read_bytes;
+		partial_pkt->read_len += len;
+		partial_pkt->remaining -= len;
+	} else {
+		if ((partial_pkt->read_len + partial_pkt->remaining) >
+						partial_pkt->capacity) {
+			pr_err("diag: Invalid length during partial read %d, %d received in %s\n",
+			       partial_pkt->read_len,
+			       partial_pkt->remaining, __func__);
+			goto end;
+		}
+		memcpy(partial_pkt->data + partial_pkt->read_len, buf,
+						partial_pkt->remaining);
+		read_bytes += partial_pkt->remaining;
+		buf += read_bytes;
+		partial_pkt->read_len += partial_pkt->remaining;
+		partial_pkt->remaining = 0;
+	}
+
+	if (partial_pkt->remaining == 0) {
+		actual_pkt = (struct diag_pkt_frame_t *)(partial_pkt->data);
+		data_ptr = partial_pkt->data + header_len;
+		if (*(uint8_t *)(data_ptr + actual_pkt->length) != CONTROL_CHAR)
+			diag_hdlc_start_recovery(buf, len, info);
+		err = diag_process_apps_pkt(data_ptr,
+					    actual_pkt->length, info);
+		if (err) {
+			pr_err("diag: In %s, unable to process incoming data packet, err: %d\n",
+			       __func__, err);
+			goto end;
+		}
+		partial_pkt->read_len = 0;
+		partial_pkt->total_len = 0;
+		partial_pkt->processing = 0;
+		goto start;
+	}
+	goto end;
+
+start:
+	while (read_bytes < len) {
+		actual_pkt = (struct diag_pkt_frame_t *)buf;
+		pkt_len = actual_pkt->length;
+
+		if (actual_pkt->start != CONTROL_CHAR) {
+			diag_hdlc_start_recovery(buf, len, info);
+			diag_send_error_rsp(buf, len);
+			goto end;
+		}
+
+		if (pkt_len + header_len > partial_pkt->capacity) {
+			pr_err("diag: In %s, incoming data is too large for the request buffer %d\n",
+			       __func__, pkt_len);
+			diag_hdlc_start_recovery(buf, len, info);
+			break;
+		}
+
+		if ((pkt_len + header_len) > (len - read_bytes)) {
+			partial_pkt->read_len = len - read_bytes;
+			partial_pkt->total_len = pkt_len + header_len;
+			partial_pkt->remaining = partial_pkt->total_len -
+						 partial_pkt->read_len;
+			partial_pkt->processing = 1;
+			memcpy(partial_pkt->data, buf, partial_pkt->read_len);
+			break;
+		}
+		data_ptr = buf + header_len;
+		if (*(uint8_t *)(data_ptr + actual_pkt->length) != CONTROL_CHAR)
+			diag_hdlc_start_recovery(buf, len, info);
+		else
+			hdlc_reset = 0;
+		err = diag_process_apps_pkt(data_ptr,
+					    actual_pkt->length, info);
+		if (err)
+			break;
+		read_bytes += header_len + pkt_len + 1;
+		buf += header_len + pkt_len + 1; /* advance to next pkt */
+	}
+end:
+	return;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static int diagfwd_mux_read_done(unsigned char *buf, int len, int ctxt)
 {
 	if (!buf || len <= 0)
@@ -2203,10 +2901,15 @@ int diagfwd_init(void)
 	driver->use_device_tree = has_device_tree();
 	for (i = 0; i < DIAG_NUM_PROC; i++)
 		driver->real_time_mode[i] = 1;
+<<<<<<< HEAD
 	driver->supports_separate_cmdrsp = device_supports_separate_cmdrsp();
 /*++ 2014/09/18, USB Team, PCN00002 ++*/
 	driver->supports_apps_hdlc_encoding = 0;
 /*-- 2014/09/18, USB Team, PCN00002 --*/
+=======
+	driver->supports_separate_cmdrsp = 1;
+	driver->supports_apps_hdlc_encoding = 0;/*++ 2015/07/14, USB Team, PCN00012 ++*/
+>>>>>>> 0e91d2a... Nougat
 	mutex_init(&driver->diag_hdlc_mutex);
 	mutex_init(&driver->diag_cntl_mutex);
 	mutex_init(&driver->mode_lock);

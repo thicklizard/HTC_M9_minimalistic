@@ -283,7 +283,18 @@ out_put_node:
 	of_node_put(np);
 	return ret;
 }
+<<<<<<< HEAD
 late_initcall(spear_cpufreq_driver_init);
+=======
+
+static struct platform_driver spear_cpufreq_platdrv = {
+	.driver = {
+		.name	= "spear-cpufreq",
+	},
+	.probe		= spear_cpufreq_probe,
+};
+module_platform_driver(spear_cpufreq_platdrv);
+>>>>>>> 0e91d2a... Nougat
 
 MODULE_AUTHOR("Deepak Sikri <deepak.sikri@st.com>");
 MODULE_DESCRIPTION("SPEAr CPUFreq driver");

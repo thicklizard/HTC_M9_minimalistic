@@ -43,6 +43,12 @@ struct msm_rpm_master_stats_platform_data {
 
 
 #ifdef CONFIG_HTC_POWER_DEBUG
+<<<<<<< HEAD
 void msm_rpm_dump_stat(void);
 int htc_get_xo_vddmin_info(uint32_t *xo_count, uint64_t *xo_time, uint32_t *vddmin_count, uint64_t *vddmin_time);
+=======
+void msm_rpm_dump_stat(bool print_embedded);
+#endif
+
+>>>>>>> 0e91d2a... Nougat
 #endif

@@ -123,9 +123,17 @@ static int qpdi_enable(struct qpdi_drvdata *drvdata)
 	if (drvdata->enable)
 		goto out;
 
+<<<<<<< HEAD
 	ret = __qpdi_enable(drvdata);
 	if (ret)
 		goto err;
+=======
+	if (drvdata->pmic_gpio_vote < 0) {
+		ret = __qpdi_enable(drvdata);
+		if (ret)
+			goto err;
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	qpdi_writel(drvdata, 0, QPDI_DISABLE_CFG);
 
@@ -161,7 +169,12 @@ static void qpdi_disable(struct qpdi_drvdata *drvdata)
 
 	qpdi_writel(drvdata, 1, QPDI_DISABLE_CFG);
 
+<<<<<<< HEAD
 	__qpdi_disable(drvdata);
+=======
+	if (drvdata->pmic_gpio_vote < 0)
+		__qpdi_disable(drvdata);
+>>>>>>> 0e91d2a... Nougat
 
 	drvdata->enable = false;
 	mutex_unlock(&drvdata->mutex);
@@ -275,6 +288,28 @@ static int qpdi_parse_of_data(struct platform_device *pdev,
 		dev_err(dev,
 			"sdc io voltage supply not specified or available\n");
 	}
+<<<<<<< HEAD
+=======
+
+	drvdata->pmic_gpio_vote = of_get_named_gpio(pdev->dev.of_node,
+						"qcom,pmic-carddetect-gpio", 0);
+	if (drvdata->pmic_gpio_vote < 0)
+		dev_info(dev, "QPDI hotplug card detection is not supported\n");
+	else {
+		ret = gpio_request(drvdata->pmic_gpio_vote, "qpdi_gpio_hp");
+		if (ret) {
+			dev_err(dev, "failed to allocate the GPIO\n");
+			return ret;
+		}
+
+		ret = gpio_direction_input(drvdata->pmic_gpio_vote);
+		if (ret) {
+			dev_err(dev, "failed to set the gpio to input\n");
+			gpio_free(drvdata->pmic_gpio_vote);
+			return ret;
+		}
+	}
+>>>>>>> 0e91d2a... Nougat
 	return 0;
 }
 

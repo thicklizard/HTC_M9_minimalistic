@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -19,7 +23,11 @@
 #include <linux/platform_device.h>
 #include <linux/interrupt.h>
 #include <media/v4l2-subdev.h>
+#include "msm_generic_buf_mgr.h"
 #include "msm_sd.h"
+#include "cam_soc_api.h"
+#include "cam_hw_ops.h"
+#include <media/msmb_pproc.h>
 
 #define CPP_HW_VERSION_1_1_0  0x10010000
 #define CPP_HW_VERSION_1_1_1  0x10010001
@@ -83,6 +91,22 @@
 #define MSM_CPP_TASKLETQ_SIZE		16
 #define MSM_CPP_TX_FIFO_LEVEL		16
 #define MSM_CPP_RX_FIFO_LEVEL		512
+
+enum cpp_vbif_error {
+	CPP_VBIF_ERROR_HANG,
+	CPP_VBIF_ERROR_MAX,
+};
+
+enum cpp_vbif_client {
+	VBIF_CLIENT_CPP,
+	VBIF_CLIENT_FD,
+	VBIF_CLIENT_MAX,
+};
+
+struct msm_cpp_vbif_data {
+	int (*err_handler[VBIF_CLIENT_MAX])(void *, uint32_t);
+	void *dev[VBIF_CLIENT_MAX];
+};
 
 struct cpp_subscribe_info {
 	struct v4l2_fh *vfh;
@@ -171,17 +195,26 @@ struct cpp_device {
 	struct platform_device *pdev;
 	struct msm_sd_subdev msm_sd;
 	struct v4l2_subdev subdev;
-	struct resource *mem;
 	struct resource *irq;
+<<<<<<< HEAD
 	struct resource *io;
 	struct resource	*vbif_mem;
 	struct resource *vbif_io;
 	struct resource	*cpp_hw_mem;
+=======
+>>>>>>> 0e91d2a... Nougat
 	void __iomem *vbif_base;
 	void __iomem *base;
 	void __iomem *cpp_hw_base;
 	struct clk **cpp_clk;
+<<<<<<< HEAD
 	struct regulator *fs_cpp;
+=======
+	struct msm_cam_clk_info *clk_info;
+	size_t num_clks;
+	struct msm_cam_regulator *cpp_vdd;
+	int num_reg;
+>>>>>>> 0e91d2a... Nougat
 	struct mutex mutex;
 	enum cpp_state state;
 	enum cpp_iommu_state iommu_state;
@@ -220,6 +253,29 @@ struct cpp_device {
 
 	struct msm_cpp_buff_queue_info_t *buff_queue;
 	uint32_t num_buffq;
+<<<<<<< HEAD
 	struct v4l2_subdev *buf_mgr_subdev;
 };
 #endif 
+=======
+	struct msm_cam_buf_mgr_req_ops buf_mgr_ops;
+
+	uint32_t bus_client;
+	uint32_t bus_idx;
+	uint32_t bus_master_flag;
+	struct msm_cpp_payload_params payload_params;
+	struct msm_cpp_vbif_data *vbif_data;
+};
+
+int msm_cpp_set_micro_clk(struct cpp_device *cpp_dev);
+int msm_update_freq_tbl(struct cpp_device *cpp_dev);
+int msm_cpp_get_clock_index(struct cpp_device *cpp_dev, const char *clk_name);
+long msm_cpp_set_core_clk(struct cpp_device *cpp_dev, long rate, int idx);
+void msm_cpp_fetch_dt_params(struct cpp_device *cpp_dev);
+int msm_cpp_read_payload_params_from_dt(struct cpp_device *cpp_dev);
+void msm_cpp_vbif_register_error_handler(void *dev,
+	enum cpp_vbif_client client,
+	int (*client_vbif_error_handler)(void *, uint32_t));
+
+#endif /* __MSM_CPP_H__ */
+>>>>>>> 0e91d2a... Nougat

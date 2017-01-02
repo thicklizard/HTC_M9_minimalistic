@@ -44,6 +44,20 @@ static bool static_hdmi_pcm;
 module_param(static_hdmi_pcm, bool, 0644);
 MODULE_PARM_DESC(static_hdmi_pcm, "Don't restrict PCM parameters per ELD info");
 
+<<<<<<< HEAD
+=======
+#define is_haswell(codec)  ((codec)->vendor_id == 0x80862807)
+#define is_broadwell(codec)    ((codec)->vendor_id == 0x80862808)
+#define is_skylake(codec) ((codec)->vendor_id == 0x80862809)
+#define is_broxton(codec) ((codec)->vendor_id == 0x8086280a)
+#define is_haswell_plus(codec) (is_haswell(codec) || is_broadwell(codec) \
+				|| is_skylake(codec) || is_broxton(codec))
+
+#define is_valleyview(codec) ((codec)->vendor_id == 0x80862882)
+#define is_cherryview(codec) ((codec)->vendor_id == 0x80862883)
+#define is_valleyview_plus(codec) (is_valleyview(codec) || is_cherryview(codec))
+
+>>>>>>> 0e91d2a... Nougat
 struct hdmi_spec_per_cvt {
 	hda_nid_t cvt_nid;
 	int assigned;
@@ -375,9 +389,16 @@ static int hdmi_eld_ctl_get(struct snd_kcontrol *kcontrol,
 	pin_idx = kcontrol->private_value;
 	eld = &get_pin(spec, pin_idx)->sink_eld;
 
+<<<<<<< HEAD
 	mutex_lock(&eld->lock);
 	if (eld->eld_size > ARRAY_SIZE(ucontrol->value.bytes.data)) {
 		mutex_unlock(&eld->lock);
+=======
+	mutex_lock(&per_pin->lock);
+	if (eld->eld_size > ARRAY_SIZE(ucontrol->value.bytes.data) ||
+	    eld->eld_size > ELD_MAX_SIZE) {
+		mutex_unlock(&per_pin->lock);
+>>>>>>> 0e91d2a... Nougat
 		snd_BUG();
 		return -EINVAL;
 	}
@@ -1251,6 +1272,8 @@ static void hdmi_present_sense(struct hdmi_spec_per_pin *per_pin, int repoll)
 	bool eld_changed = false;
 
 	pin_eld->monitor_present = !!(present & AC_PINSENSE_PRESENCE);
+	eld->monitor_present = pin_eld->monitor_present;
+
 	if (pin_eld->monitor_present)
 		eld->eld_valid  = !!(present & AC_PINSENSE_ELDV);
 	else
@@ -2619,6 +2642,15 @@ static const struct hda_codec_preset snd_hda_preset_hdmi[] = {
 { .id = 0x10de0051, .name = "GPU 51 HDMI/DP",	.patch = patch_nvhdmi },
 { .id = 0x10de0060, .name = "GPU 60 HDMI/DP",	.patch = patch_nvhdmi },
 { .id = 0x10de0067, .name = "MCP67 HDMI",	.patch = patch_nvhdmi_2ch },
+<<<<<<< HEAD
+=======
+{ .id = 0x10de0070, .name = "GPU 70 HDMI/DP",	.patch = patch_nvhdmi },
+{ .id = 0x10de0071, .name = "GPU 71 HDMI/DP",	.patch = patch_nvhdmi },
+{ .id = 0x10de0072, .name = "GPU 72 HDMI/DP",	.patch = patch_nvhdmi },
+{ .id = 0x10de007d, .name = "GPU 7d HDMI/DP",	.patch = patch_nvhdmi },
+{ .id = 0x10de0082, .name = "GPU 82 HDMI/DP",	.patch = patch_nvhdmi },
+{ .id = 0x10de0083, .name = "GPU 83 HDMI/DP",	.patch = patch_nvhdmi },
+>>>>>>> 0e91d2a... Nougat
 { .id = 0x10de8001, .name = "MCP73 HDMI",	.patch = patch_nvhdmi_2ch },
 { .id = 0x11069f80, .name = "VX900 HDMI/DP",	.patch = patch_via_hdmi },
 { .id = 0x11069f81, .name = "VX900 HDMI/DP",	.patch = patch_via_hdmi },
@@ -2632,6 +2664,11 @@ static const struct hda_codec_preset snd_hda_preset_hdmi[] = {
 { .id = 0x80862805, .name = "CougarPoint HDMI",	.patch = patch_generic_hdmi },
 { .id = 0x80862806, .name = "PantherPoint HDMI", .patch = patch_generic_hdmi },
 { .id = 0x80862807, .name = "Haswell HDMI",	.patch = patch_generic_hdmi },
+<<<<<<< HEAD
+=======
+{ .id = 0x80862808, .name = "Broadwell HDMI",	.patch = patch_generic_hdmi },
+{ .id = 0x80862809, .name = "Skylake HDMI",	.patch = patch_generic_hdmi },
+>>>>>>> 0e91d2a... Nougat
 { .id = 0x80862880, .name = "CedarTrail HDMI",	.patch = patch_generic_hdmi },
 { .id = 0x808629fb, .name = "Crestline HDMI",	.patch = patch_generic_hdmi },
 {} /* terminator */
@@ -2672,6 +2709,13 @@ MODULE_ALIAS("snd-hda-codec-id:10de0044");
 MODULE_ALIAS("snd-hda-codec-id:10de0051");
 MODULE_ALIAS("snd-hda-codec-id:10de0060");
 MODULE_ALIAS("snd-hda-codec-id:10de0067");
+<<<<<<< HEAD
+=======
+MODULE_ALIAS("snd-hda-codec-id:10de0070");
+MODULE_ALIAS("snd-hda-codec-id:10de0071");
+MODULE_ALIAS("snd-hda-codec-id:10de0072");
+MODULE_ALIAS("snd-hda-codec-id:10de007d");
+>>>>>>> 0e91d2a... Nougat
 MODULE_ALIAS("snd-hda-codec-id:10de8001");
 MODULE_ALIAS("snd-hda-codec-id:11069f80");
 MODULE_ALIAS("snd-hda-codec-id:11069f81");
@@ -2686,6 +2730,11 @@ MODULE_ALIAS("snd-hda-codec-id:80862804");
 MODULE_ALIAS("snd-hda-codec-id:80862805");
 MODULE_ALIAS("snd-hda-codec-id:80862806");
 MODULE_ALIAS("snd-hda-codec-id:80862807");
+<<<<<<< HEAD
+=======
+MODULE_ALIAS("snd-hda-codec-id:80862808");
+MODULE_ALIAS("snd-hda-codec-id:80862809");
+>>>>>>> 0e91d2a... Nougat
 MODULE_ALIAS("snd-hda-codec-id:80862880");
 MODULE_ALIAS("snd-hda-codec-id:808629fb");
 

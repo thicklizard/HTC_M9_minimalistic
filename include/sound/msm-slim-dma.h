@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014,2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -38,7 +38,12 @@ struct msm_slim_dma_data {
 
 	/* Callback for data channel control */
 	int (*dai_channel_ctl) (struct msm_slim_dma_data *dma_data,
+<<<<<<< HEAD
 				struct snd_soc_dai *dai, bool enable);
+=======
+				struct snd_soc_dai *dai,
+				enum msm_dai_slim_event event);
+>>>>>>> 0e91d2a... Nougat
 };
 
 #endif

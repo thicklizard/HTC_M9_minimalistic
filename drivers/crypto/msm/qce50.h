@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -37,6 +41,9 @@
 /* QCE max number of descriptor in a descriptor list */
 #define QCE_MAX_NUM_DESC    128
 #define SPS_MAX_PKT_SIZE  (32 * 1024  - 64)
+
+/* default bam ipc log level */
+#define QCE_BAM_DEFAULT_IPC_LOGLVL 2
 
 /* State of consumer/producer Pipe */
 enum qce_pipe_st_enum {
@@ -193,7 +200,30 @@ struct ce_sps_data {
 	struct sps_transfer in_transfer;
 	struct sps_transfer out_transfer;
 
+<<<<<<< HEAD
 	int ce_burst_size;
+=======
+struct ce_request_info {
+	bool in_use;
+	bool in_prog;
+	enum qce_xfer_type_enum	xfer_type;
+	struct ce_sps_data ce_sps;
+	qce_comp_func_ptr_t qce_cb;	/* qce callback function pointer */
+	void *user;
+	void *areq;
+	int assoc_nents;
+	int src_nents;
+	int dst_nents;
+	dma_addr_t phy_iv_in;
+	unsigned char dec_iv[16];
+	int dir;
+	enum qce_cipher_mode_enum mode;
+	dma_addr_t phy_ota_src;
+	dma_addr_t phy_ota_dst;
+	unsigned int ota_size;
+	unsigned int req_len;
+};
+>>>>>>> 0e91d2a... Nougat
 
 	struct qce_cmdlistptr_ops cmdlistptr;
 	uint32_t result_dump;

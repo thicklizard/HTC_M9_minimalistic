@@ -18,6 +18,13 @@ Required properties:
 	- qcom,msm-bus,num-cases
 	- qcom,msm-bus,num-paths
 	- qcom,msm-bus,vectors-KBps
+<<<<<<< HEAD
+=======
+  - mhi-chan-cfg-#: mhi channel configuration parameters for platform
+  - mhi-event-cfg-#: mhi event ring configuration parameters for platform
+  - mhi-event-rings: number of event rings supported by platform
+  - mhi-dev-address-win-size: size of the MHI device addressing window
+>>>>>>> 0e91d2a... Nougat
 
 Example:
 
@@ -33,4 +40,11 @@ Example:
 		qcom,msm-bus,vectors-KBps =
 				<100 512 0 0>,
 				<100 512 1200000000 1200000000>;
+<<<<<<< HEAD
+=======
+		mhi-event-rings = <6>;
+		mhi-chan-cfg-102 = <0x66 0x80 0x5 0x62>;
+		mhi-event-cfg-0 = <0x80 0x0 0x0 0x11>;
+		mhi-dev-address-win-size= <0x10 0x00000000>;
+>>>>>>> 0e91d2a... Nougat
 	};

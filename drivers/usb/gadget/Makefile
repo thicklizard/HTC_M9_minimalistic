@@ -6,6 +6,7 @@ ccflags-$(CONFIG_USB_GADGET_DEBUG) := -DDEBUG
 obj-$(CONFIG_USB_GADGET)	+= udc-core.o
 obj-$(CONFIG_USB_LIBCOMPOSITE)	+= libcomposite.o
 libcomposite-y			:= usbstring.o config.o epautoconf.o
+<<<<<<< HEAD
 #++ 2014.10.29 USB Team, PCN00025 ++
 libcomposite-y			+= functions.o configfs.o
 #-- 2014.10.29 USB Team, PCN00025 --
@@ -38,6 +39,11 @@ obj-$(CONFIG_USB_CI13XXX_MSM_HSIC)	+= ci13xxx_msm_hsic.o
 obj-$(CONFIG_USB_CI13XXX_MSM)	+= ci13xxx_msm.o
 obj-$(CONFIG_USB_FUSB300)	+= fusb300_udc.o
 obj-$(CONFIG_USB_MV_U3D)	+= mv_u3d_core.o
+=======
+#++ 2015/11/16 USB Team, PCN00038 ++
+libcomposite-y			+= functions.o u_f.o
+#-- 2015/11/16 USB Team, PCN00038 --
+>>>>>>> 0e91d2a... Nougat
 
 # USB Functions
 usb_f_acm-y			:= f_acm.o

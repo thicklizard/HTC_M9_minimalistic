@@ -86,10 +86,13 @@ struct usb_phy {
 	struct usb_phy_io_ops	*io_ops;
 	void __iomem		*io_priv;
 
+<<<<<<< HEAD
 /*++ 2014/11/26 USB Team, PCN00023 ++*/
 	bool is_in_host;
 /*-- 2014/11/26 USB Team, PCN00023 --*/
 
+=======
+>>>>>>> 0e91d2a... Nougat
 	/* for notification of usb_phy_events */
 	struct atomic_notifier_head	notifier;
 
@@ -107,12 +110,15 @@ struct usb_phy {
 	/* enable/disable VBUS */
 	int	(*set_vbus)(struct usb_phy *x, int on);
 
+<<<<<<< HEAD
 	/* set additional settings parameters post-init */
 	int	(*set_params)(struct usb_phy *x);
 
 	/* do additional settings after complete initialization */
 	int	(*post_init)(struct usb_phy *x);
 
+=======
+>>>>>>> 0e91d2a... Nougat
 	/* effective for B devices, ignored for A-peripheral */
 	int	(*set_power)(struct usb_phy *x,
 				unsigned mA);
@@ -121,6 +127,16 @@ struct usb_phy {
 	int	(*set_suspend)(struct usb_phy *x,
 				int suspend);
 
+<<<<<<< HEAD
+=======
+	/*
+	 * Set wakeup enable for PHY, in that case, the PHY can be
+	 * woken up from suspend status due to external events,
+	 * like vbus change, dp/dm change and id.
+	 */
+	int	(*set_wakeup)(struct usb_phy *x, bool enabled);
+
+>>>>>>> 0e91d2a... Nougat
 	/* notify phy connect status change */
 	int	(*notify_connect)(struct usb_phy *x,
 			enum usb_device_speed speed);
@@ -129,6 +145,17 @@ struct usb_phy {
 
 	/* reset the PHY clocks */
 	int	(*reset)(struct usb_phy *x);
+<<<<<<< HEAD
+=======
+
+	/* for notification of usb_phy_dbg_events */
+	void    (*dbg_event)(struct usb_phy *x,
+			char *event, int msg1, int msg2);
+	/* update DP/DM state */
+	int	(*change_dpdm)(struct usb_phy *x, int dpdm);
+	/* return linestate with Idp_src (used for DCD with USB2 PHY) */
+	int	(*dpdm_with_idp_src)(struct usb_phy *x);
+>>>>>>> 0e91d2a... Nougat
 };
 
 /**
@@ -294,6 +321,17 @@ usb_phy_set_power(struct usb_phy *x, unsigned mA)
 	return 0;
 }
 
+<<<<<<< HEAD
+=======
+static inline int
+usb_phy_change_dpdm(struct usb_phy *x, int dpdm)
+{
+	if (x && x->change_dpdm)
+		return x->change_dpdm(x, dpdm);
+	return 0;
+}
+
+>>>>>>> 0e91d2a... Nougat
 /* Context: can sleep */
 static inline int
 usb_phy_set_suspend(struct usb_phy *x, int suspend)
@@ -322,6 +360,25 @@ usb_phy_notify_disconnect(struct usb_phy *x, enum usb_device_speed speed)
 		return 0;
 }
 
+<<<<<<< HEAD
+=======
+static inline void
+usb_phy_dbg_events(struct usb_phy *x,
+		char *event, int msg1, int msg2)
+{
+	if (x && x->dbg_event)
+		x->dbg_event(x, event, msg1, msg2);
+}
+
+static inline int
+usb_phy_dpdm_with_idp_src(struct usb_phy *x)
+{
+	if (x && x->dpdm_with_idp_src)
+		return x->dpdm_with_idp_src(x);
+	return 0;
+}
+
+>>>>>>> 0e91d2a... Nougat
 /* notifiers */
 static inline int
 usb_register_notifier(struct usb_phy *x, struct notifier_block *nb)

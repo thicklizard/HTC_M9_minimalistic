@@ -31,6 +31,11 @@
 #include <asm/nmi.h>
 #include <asm/smp.h>
 #include <asm/alternative.h>
+<<<<<<< HEAD
+=======
+#include <asm/tlbflush.h>
+#include <asm/mmu_context.h>
+>>>>>>> 0e91d2a... Nougat
 #include <asm/timer.h>
 #include <asm/desc.h>
 #include <asm/ldt.h>
@@ -1922,21 +1927,29 @@ static unsigned long get_segment_base(unsigned int segment)
 	int idx = segment >> 3;
 
 	if ((segment & SEGMENT_TI_MASK) == SEGMENT_LDT) {
+		struct ldt_struct *ldt;
+
 		if (idx > LDT_ENTRIES)
 			return 0;
 
-		if (idx > current->active_mm->context.size)
+		/* IRQs are off, so this synchronizes with smp_store_release */
+		ldt = lockless_dereference(current->active_mm->context.ldt);
+		if (!ldt || idx > ldt->size)
 			return 0;
 
-		desc = current->active_mm->context.ldt;
+		desc = &ldt->entries[idx];
 	} else {
 		if (idx > GDT_ENTRIES)
 			return 0;
 
+<<<<<<< HEAD
 		desc = __this_cpu_ptr(&gdt_page.gdt[0]);
+=======
+		desc = raw_cpu_ptr(gdt_page.gdt) + idx;
+>>>>>>> 0e91d2a... Nougat
 	}
 
-	return get_desc_base(desc + idx);
+	return get_desc_base(desc);
 }
 
 #ifdef CONFIG_COMPAT

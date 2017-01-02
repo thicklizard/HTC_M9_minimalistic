@@ -26,6 +26,15 @@ obj-$(CONFIG_VIDEO_ADV7183) += adv7183.o
 obj-$(CONFIG_VIDEO_ADV7343) += adv7343.o
 obj-$(CONFIG_VIDEO_ADV7393) += adv7393.o
 obj-$(CONFIG_VIDEO_ADV7604) += adv7604.o
+<<<<<<< HEAD
+=======
+obj-$(CONFIG_VIDEO_ADV7842) += adv7842.o
+ccflags-y += -Idrivers/media/platform/msm/camera_v2
+ccflags-y += -Idrivers/media/platform/msm/camera_v2/common
+ccflags-y += -Idrivers/media/platform/msm/camera_v2/sensor/io
+ccflags-y += -Idrivers/media/platform/msm/camera_v2/sensor/cci
+obj-$(CONFIG_VIDEO_ADV7481) += adv7481.o
+>>>>>>> 0e91d2a... Nougat
 obj-$(CONFIG_VIDEO_AD9389B) += ad9389b.o
 obj-$(CONFIG_VIDEO_VPX3220) += vpx3220.o
 obj-$(CONFIG_VIDEO_VS6624)  += vs6624.o

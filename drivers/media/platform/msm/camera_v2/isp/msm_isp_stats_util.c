@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -52,6 +56,55 @@ static int msm_isp_stats_cfg_ping_pong_address(struct vfe_device *vfe_dev,
 		rc = -EINVAL;
 		goto buf_error;
 	}
+<<<<<<< HEAD
+=======
+	if (vfe_dev->is_split) {
+		dual_vfe_res = vfe_dev->common_data->dual_vfe_res;
+		if (!dual_vfe_res->vfe_base[ISP_VFE0] ||
+			!dual_vfe_res->stats_data[ISP_VFE0] ||
+			!dual_vfe_res->vfe_base[ISP_VFE1] ||
+			!dual_vfe_res->stats_data[ISP_VFE1]) {
+			pr_err("%s:%d error vfe0 %pK %pK vfe1 %pK %pK\n",
+				__func__, __LINE__,
+				dual_vfe_res->vfe_base[ISP_VFE0],
+				dual_vfe_res->stats_data[ISP_VFE0],
+				dual_vfe_res->vfe_base[ISP_VFE1],
+				dual_vfe_res->stats_data[ISP_VFE1]);
+		} else {
+			for (vfe_id = 0; vfe_id < MAX_VFE; vfe_id++) {
+				dual_vfe_stream_info = &dual_vfe_res->
+					stats_data[vfe_id]->
+					stream_info[stats_idx];
+				if (buf)
+					vfe_dev->hw_info->vfe_ops.stats_ops.
+						update_ping_pong_addr(
+						dual_vfe_res->vfe_base[vfe_id],
+						dual_vfe_stream_info,
+						pingpong_status,
+						buf->mapped_info[0].paddr +
+						dual_vfe_stream_info->
+						buffer_offset);
+				else
+					msm_isp_stats_cfg_stream_scratch(
+						vfe_dev,
+						dual_vfe_stream_info,
+						pingpong_status);
+
+				dual_vfe_stream_info->buf[pingpong_bit]
+					= buf;
+			}
+		}
+	} else {
+		if (buf)
+			vfe_dev->hw_info->vfe_ops.stats_ops.
+				update_ping_pong_addr(
+				vfe_dev->vfe_base, stream_info,
+				pingpong_status, buf->mapped_info[0].paddr +
+				stream_info->buffer_offset);
+		else
+			msm_isp_stats_cfg_stream_scratch(vfe_dev,
+					stream_info, pingpong_status);
+>>>>>>> 0e91d2a... Nougat
 
 	vfe_dev->hw_info->vfe_ops.stats_ops.update_ping_pong_addr(
 		vfe_dev, stream_info,
@@ -69,17 +122,182 @@ buf_error:
 	return rc;
 }
 
+<<<<<<< HEAD
 void msm_isp_process_stats_irq(struct vfe_device *vfe_dev,
 	uint32_t irq_status0, uint32_t irq_status1,
 	struct msm_isp_timestamp *ts)
+=======
+static int32_t msm_isp_stats_buf_divert(struct vfe_device *vfe_dev,
+	struct msm_isp_timestamp *ts,
+	struct msm_isp_event_data *buf_event,
+	struct msm_vfe_stats_stream *stream_info,
+	uint32_t *comp_stats_type_mask, uint32_t pingpong_status)
+{
+	int32_t rc = 0, frame_id = 0, drop_buffer = 0;
+	struct msm_isp_stats_event *stats_event = NULL;
+	struct msm_isp_sw_framskip *sw_skip = NULL;
+	int32_t buf_index = -1;
+	uint32_t pingpong_bit;
+	struct msm_isp_buffer *done_buf;
+	uint32_t stats_pingpong_offset;
+	uint32_t stats_idx;
+
+	if (!vfe_dev || !ts || !buf_event || !stream_info) {
+		pr_err("%s:%d failed: invalid params %pK %pK %pK %pK\n",
+			__func__, __LINE__, vfe_dev, ts, buf_event,
+			stream_info);
+		return -EINVAL;
+	}
+	frame_id = vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id;
+	sw_skip = &stream_info->sw_skip;
+	stats_event = &buf_event->u.stats;
+
+	if (sw_skip->stats_type_mask &
+		(1 << stream_info->stats_type)) {
+		if (sw_skip->skip_mode == SKIP_ALL) {
+			
+			drop_buffer = 1;
+		} else if (sw_skip->skip_mode == SKIP_RANGE &&
+		(sw_skip->min_frame_id <= frame_id &&
+		sw_skip->max_frame_id >= frame_id)) {
+			drop_buffer = 1;
+		} else if (frame_id > sw_skip->max_frame_id) {
+			memset(sw_skip, 0, sizeof
+				(struct msm_isp_sw_framskip));
+		}
+	}
+	stats_idx = STATS_IDX(stream_info->stream_handle);
+
+	stats_pingpong_offset =
+			vfe_dev->hw_info->stats_hw_info->stats_ping_pong_offset[
+			stats_idx];
+	pingpong_bit = (~(pingpong_status >> stats_pingpong_offset) & 0x1);
+
+	done_buf = stream_info->buf[pingpong_bit];
+
+	if (done_buf)
+		buf_index = done_buf->buf_idx;
+
+	rc = vfe_dev->buf_mgr->ops->update_put_buf_cnt(
+		vfe_dev->buf_mgr, vfe_dev->pdev->id, stream_info->bufq_handle,
+		buf_index, &ts->buf_time,
+		frame_id, pingpong_bit);
+
+	if (rc < 0) {
+		if (rc == -EFAULT)
+			msm_isp_halt_send_error(vfe_dev,
+					ISP_EVENT_PING_PONG_MISMATCH);
+		pr_err("stats_buf_divert: update put buf cnt fail\n");
+		return rc;
+	}
+
+	if (rc > 0) {
+		ISP_DBG("%s: vfe_id %d buf_id %d bufq %x put_cnt 1\n", __func__,
+			vfe_dev->pdev->id, buf_index,
+			stream_info->bufq_handle);
+		return rc;
+	}
+
+	
+	rc = msm_isp_stats_cfg_ping_pong_address(vfe_dev, stream_info,
+						pingpong_status);
+	if (rc)
+		return rc;
+
+	if (drop_buffer && done_buf) {
+		rc = vfe_dev->buf_mgr->ops->buf_done(
+			vfe_dev->buf_mgr,
+			done_buf->bufq_handle,
+			done_buf->buf_idx, &ts->buf_time, frame_id, 0);
+		if (rc == -EFAULT)
+			msm_isp_halt_send_error(vfe_dev,
+					ISP_EVENT_BUF_FATAL_ERROR);
+		return rc;
+	}
+
+	if (done_buf) {
+		stats_event->stats_buf_idxs
+			[stream_info->stats_type] =
+			done_buf->buf_idx;
+		if (NULL == comp_stats_type_mask) {
+			stats_event->stats_mask =
+				1 << stream_info->stats_type;
+			ISP_DBG("%s: stats frameid: 0x%x %d bufq %x\n",
+				__func__, buf_event->frame_id,
+				stream_info->stats_type, done_buf->bufq_handle);
+			msm_isp_send_event(vfe_dev,
+				ISP_EVENT_STATS_NOTIFY +
+				stream_info->stats_type,
+				buf_event);
+		} else {
+			*comp_stats_type_mask |=
+				1 << stream_info->stats_type;
+		}
+	}
+
+	return rc;
+}
+
+static int32_t msm_isp_stats_configure(struct vfe_device *vfe_dev,
+	uint32_t stats_irq_mask, struct msm_isp_timestamp *ts,
+	uint32_t pingpong_status, bool is_composite)
+>>>>>>> 0e91d2a... Nougat
 {
 	int i, j, rc;
 	struct msm_isp_event_data buf_event;
 	struct msm_isp_stats_event *stats_event = &buf_event.u.stats;
 	struct msm_isp_buffer *done_buf;
 	struct msm_vfe_stats_stream *stream_info = NULL;
+<<<<<<< HEAD
 	uint32_t pingpong_status;
 	uint32_t comp_stats_type_mask = 0, atomic_stats_mask = 0;
+=======
+	uint32_t comp_stats_type_mask = 0;
+	int result = 0;
+
+	memset(&buf_event, 0, sizeof(struct msm_isp_event_data));
+	buf_event.timestamp = ts->buf_time;
+	buf_event.frame_id = vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id;
+
+	for (i = 0; i < vfe_dev->hw_info->stats_hw_info->num_stats_type; i++) {
+		if (!(stats_irq_mask & (1 << i)))
+			continue;
+		stream_info = &vfe_dev->stats_data.stream_info[i];
+		if (stream_info->state == STATS_INACTIVE) {
+			pr_debug("%s: Warning! Stream already inactive. Drop irq handling\n",
+				__func__);
+			continue;
+		}
+
+		rc = msm_isp_stats_buf_divert(vfe_dev, ts,
+				&buf_event, stream_info,
+				is_composite ? &comp_stats_type_mask : NULL,
+				pingpong_status);
+		if (rc < 0) {
+			pr_err("%s:%d failed: stats buf divert rc %d\n",
+				__func__, __LINE__, rc);
+			result = rc;
+		}
+	}
+	if (is_composite && comp_stats_type_mask) {
+		ISP_DBG("%s:vfe_id %d comp_stats frameid %x,comp_mask %x\n",
+			__func__, vfe_dev->pdev->id, buf_event.frame_id,
+			comp_stats_type_mask);
+		stats_event->stats_mask = comp_stats_type_mask;
+		msm_isp_send_event(vfe_dev,
+			ISP_EVENT_COMP_STATS_NOTIFY, &buf_event);
+		comp_stats_type_mask = 0;
+	}
+	return result;
+}
+
+void msm_isp_process_stats_irq(struct vfe_device *vfe_dev,
+	uint32_t irq_status0, uint32_t irq_status1,
+	uint32_t pingpong_status, struct msm_isp_timestamp *ts)
+{
+	int j, rc;
+	uint32_t atomic_stats_mask = 0;
+>>>>>>> 0e91d2a... Nougat
 	uint32_t stats_comp_mask = 0, stats_irq_mask = 0;
 	uint32_t num_stats_comp_mask =
 		vfe_dev->hw_info->stats_hw_info->num_stats_comp_mask;
@@ -101,6 +319,7 @@ void msm_isp_process_stats_irq(struct vfe_device *vfe_dev,
 	for (j = 0; j < num_stats_comp_mask; j++) {
 		atomic_stats_mask = atomic_read(
 			&vfe_dev->stats_data.stats_comp_mask[j]);
+<<<<<<< HEAD
 		if (!stats_comp_mask) {
 			stats_irq_mask &= ~atomic_stats_mask;
 		} else {
@@ -122,6 +341,20 @@ void msm_isp_process_stats_irq(struct vfe_device *vfe_dev,
 		for (i = 0; i < vfe_dev->hw_info->stats_hw_info->num_stats_type;
 			i++) {
 			if (!(stats_irq_mask & (1 << i)))
+=======
+	}
+
+	
+	if (stats_irq_mask) {
+		rc = msm_isp_stats_configure(vfe_dev, stats_irq_mask, ts,
+			pingpong_status, comp_flag);
+	}
+
+	
+	if (stats_comp_mask) {
+		for (j = 0; j < num_stats_comp_mask; j++) {
+			if (!(stats_comp_mask & (1 << j)))
+>>>>>>> 0e91d2a... Nougat
 				continue;
 
 			stats_irq_mask &= ~(1 << i);
@@ -158,6 +391,7 @@ void msm_isp_process_stats_irq(struct vfe_device *vfe_dev,
 			}
 		}
 
+<<<<<<< HEAD
 		if (comp_stats_type_mask) {
 			ISP_DBG("%s: comp_stats frameid: 0x%x, 0x%x\n",
 				__func__, buf_event.frame_id,
@@ -166,6 +400,10 @@ void msm_isp_process_stats_irq(struct vfe_device *vfe_dev,
 			msm_isp_send_event(vfe_dev,
 				ISP_EVENT_COMP_STATS_NOTIFY, &buf_event);
 			comp_stats_type_mask = 0;
+=======
+			rc = msm_isp_stats_configure(vfe_dev, atomic_stats_mask,
+				ts, pingpong_status, !comp_flag);
+>>>>>>> 0e91d2a... Nougat
 		}
 	}
 }
@@ -262,10 +500,6 @@ int msm_isp_request_stats_stream(struct vfe_device *vfe_dev, void *arg)
 		stream_info->framedrop_pattern = 0x1;
 	stream_info->framedrop_period = framedrop_period - 1;
 
-	if (!stream_info->composite_flag)
-		vfe_dev->hw_info->vfe_ops.stats_ops.
-			cfg_wm_irq_mask(vfe_dev, stream_info);
-
 	if (stream_info->init_stats_frame_drop == 0)
 		vfe_dev->hw_info->vfe_ops.stats_ops.cfg_wm_reg(vfe_dev,
 			stream_info);
@@ -298,10 +532,6 @@ int msm_isp_release_stats_stream(struct vfe_device *vfe_dev, void *arg)
 			stream_release_cmd->stream_handle;
 		rc = msm_isp_cfg_stats_stream(vfe_dev, &stream_cfg_cmd);
 	}
-
-	if (!stream_info->composite_flag)
-		vfe_dev->hw_info->vfe_ops.stats_ops.
-			clear_wm_irq_mask(vfe_dev, stream_info);
 
 	vfe_dev->hw_info->vfe_ops.stats_ops.clear_wm_reg(vfe_dev, stream_info);
 	memset(stream_info, 0, sizeof(struct msm_vfe_stats_stream));
@@ -457,6 +687,56 @@ static int msm_isp_stats_update_cgc_override(struct vfe_device *vfe_dev,
 	return 0;
 }
 
+<<<<<<< HEAD
+=======
+int msm_isp_stats_reset(struct vfe_device *vfe_dev)
+{
+	int i = 0, rc = 0;
+	struct msm_vfe_stats_stream *stream_info = NULL;
+	struct msm_vfe_stats_shared_data *stats_data = &vfe_dev->stats_data;
+	struct msm_isp_timestamp timestamp;
+        pr_err("%s: E\n", __func__);
+
+	msm_isp_get_timestamp(&timestamp, vfe_dev);
+
+	for (i = 0; i < MSM_ISP_STATS_MAX; i++) {
+		stream_info = &stats_data->stream_info[i];
+		if (stream_info->state != STATS_ACTIVE)
+			continue;
+
+		rc = vfe_dev->buf_mgr->ops->flush_buf(vfe_dev->buf_mgr,
+			vfe_dev->pdev->id, stream_info->bufq_handle,
+			MSM_ISP_BUFFER_FLUSH_ALL, &timestamp.buf_time,
+			vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id);
+		if (rc == -EFAULT) {
+			msm_isp_halt_send_error(vfe_dev,
+				ISP_EVENT_BUF_FATAL_ERROR);
+			return rc;
+		}
+	}
+        pr_err("%s: X\n", __func__);
+	return rc;
+}
+
+int msm_isp_stats_restart(struct vfe_device *vfe_dev)
+{
+	int i = 0;
+	struct msm_vfe_stats_stream *stream_info = NULL;
+	struct msm_vfe_stats_shared_data *stats_data = &vfe_dev->stats_data;
+        pr_err("%s: E\n", __func__);
+
+	for (i = 0; i < MSM_ISP_STATS_MAX; i++) {
+		stream_info = &stats_data->stream_info[i];
+			if (stream_info->state < STATS_ACTIVE)
+				continue;
+		msm_isp_init_stats_ping_pong_reg(vfe_dev, stream_info);
+	}
+
+        pr_err("%s: X\n", __func__);
+	return 0;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static int msm_isp_start_stats_stream(struct vfe_device *vfe_dev,
 	struct msm_vfe_stats_stream_cfg_cmd *stream_cfg_cmd)
 {
@@ -500,6 +780,9 @@ static int msm_isp_start_stats_stream(struct vfe_device *vfe_dev,
 			pr_err("%s: No buffer for stream%d\n", __func__, idx);
 			return rc;
 		}
+		if (!stream_info->composite_flag)
+			vfe_dev->hw_info->vfe_ops.stats_ops.
+				cfg_wm_irq_mask(vfe_dev, stream_info);
 
 		if (vfe_dev->axi_data.src_info[VFE_PIX_0].active)
 			stream_info->state = STATS_START_PENDING;
@@ -542,6 +825,13 @@ static int msm_isp_stop_stats_stream(struct vfe_device *vfe_dev,
 	uint32_t num_stats_comp_mask = 0;
 	struct msm_vfe_stats_stream *stream_info;
 	struct msm_vfe_stats_shared_data *stats_data = &vfe_dev->stats_data;
+<<<<<<< HEAD
+=======
+	struct msm_isp_timestamp timestamp;
+
+	msm_isp_get_timestamp(&timestamp, vfe_dev);
+
+>>>>>>> 0e91d2a... Nougat
 	num_stats_comp_mask =
 		vfe_dev->hw_info->stats_hw_info->num_stats_comp_mask;
 
@@ -568,6 +858,10 @@ static int msm_isp_stop_stats_stream(struct vfe_device *vfe_dev,
 				num_stats_comp_mask);
 			return -EINVAL;
 		}
+
+		if (!stream_info->composite_flag)
+			vfe_dev->hw_info->vfe_ops.stats_ops.
+				clear_wm_irq_mask(vfe_dev, stream_info);
 
 		if (vfe_dev->axi_data.src_info[VFE_PIX_0].active)
 			stream_info->state = STATS_STOP_PENDING;
@@ -642,20 +936,23 @@ int msm_isp_update_stats_stream(struct vfe_device *vfe_dev, void *arg)
 
 	
 	for (i = 0; i < update_cmd->num_streams; i++) {
-		update_info = &update_cmd->update_info[i];
+		update_info = (struct msm_vfe_axi_stream_cfg_update_info *)
+				&update_cmd->update_info[i];
 		
 		if (STATS_IDX(update_info->stream_handle)
 			> vfe_dev->hw_info->stats_hw_info->num_stats_type) {
 			pr_err("%s: stats idx %d out of bound!", __func__,
-				STATS_IDX(update_info->stream_handle));
+			STATS_IDX(update_info->stream_handle));
 			return -EINVAL;
 		}
 	}
 
 	for (i = 0; i < update_cmd->num_streams; i++) {
-		update_info = &update_cmd->update_info[i];
+		update_info = (struct msm_vfe_axi_stream_cfg_update_info *)
+				&update_cmd->update_info[i];
 		stream_info = &stats_data->stream_info[
-				STATS_IDX(update_info->stream_handle)];
+			STATS_IDX(
+			update_info->stream_handle)];
 		if (stream_info->stream_handle !=
 			update_info->stream_handle) {
 			pr_err("%s: stats stream handle %x %x mismatch!\n",
@@ -669,7 +966,8 @@ int msm_isp_update_stats_stream(struct vfe_device *vfe_dev, void *arg)
 			uint32_t framedrop_period =
 				msm_isp_get_framedrop_period(
 				   update_info->skip_pattern);
-			if (update_info->skip_pattern == SKIP_ALL)
+			if (update_info->skip_pattern ==
+				SKIP_ALL)
 				stream_info->framedrop_pattern = 0x0;
 			else
 				stream_info->framedrop_pattern = 0x1;
@@ -679,6 +977,28 @@ int msm_isp_update_stats_stream(struct vfe_device *vfe_dev, void *arg)
 					vfe_dev, stream_info);
 			break;
 		}
+<<<<<<< HEAD
+=======
+		case UPDATE_STREAM_SW_FRAME_DROP: {
+			sw_skip_info =
+			&update_info->sw_skip_info;
+			if (!stream_info->sw_skip.stream_src_mask)
+				stream_info->sw_skip = *sw_skip_info;
+
+			if (sw_skip_info->stats_type_mask != 0) {
+				
+				pr_debug("%s:%x skip type %x mode %d min %d max %d\n",
+					__func__, stream_info->stream_id,
+					sw_skip_info->stats_type_mask,
+					sw_skip_info->skip_mode,
+					sw_skip_info->min_frame_id,
+					sw_skip_info->max_frame_id);
+				stream_info->sw_skip.stats_type_mask =
+					sw_skip_info->stats_type_mask;
+			}
+			break;
+		}
+>>>>>>> 0e91d2a... Nougat
 
 		default:
 			pr_err("%s: Invalid update type\n", __func__);

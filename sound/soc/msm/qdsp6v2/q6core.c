@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -181,7 +185,7 @@ void ocm_core_open(void)
 	if (q6core_lcl.core_handle_q == NULL)
 		q6core_lcl.core_handle_q = apr_register("ADSP", "CORE",
 					aprv2_core_fn_q, 0xFFFFFFFF, NULL);
-	pr_debug("%s: Open_q %p\n", __func__, q6core_lcl.core_handle_q);
+	pr_debug("%s: Open_q %pK\n", __func__, q6core_lcl.core_handle_q);
 	if (q6core_lcl.core_handle_q == NULL)
 		pr_err("%s: Unable to register CORE\n", __func__);
 }
@@ -341,7 +345,7 @@ int core_dts_eagle_set(int size, char *data)
 
 	pr_debug("DTS_EAGLE_CORE - %s\n", __func__);
 	if (size <= 0 || !data) {
-		pr_err("DTS_EAGLE_CORE - %s: invalid size %i or pointer %p.\n",
+		pr_err("DTS_EAGLE_CORE - %s: invalid size %i or pointer %pK.\n",
 			__func__, size, data);
 		return -EINVAL;
 	}
@@ -387,7 +391,7 @@ int core_dts_eagle_get(int id, int size, char *data)
 
 	pr_debug("DTS_EAGLE_CORE - %s\n", __func__);
 	if (size <= 0 || !data) {
-		pr_err("DTS_EAGLE_CORE - %s: invalid size %i or pointer %p.\n",
+		pr_err("DTS_EAGLE_CORE - %s: invalid size %i or pointer %pK.\n",
 			__func__, size, data);
 		return -EINVAL;
 	}
@@ -481,10 +485,59 @@ int core_get_low_power_segments(
 
 	pr_debug("%s:", __func__);
 
+<<<<<<< HEAD
 	ocm_core_open();
 	if (q6core_lcl.core_handle_q == NULL) {
 		pr_info("%s: apr registration for CORE failed\n", __func__);
 		return -ENODEV;
+=======
+	mmap_regions = (struct avs_cmd_shared_mem_map_regions *)mmap_region_cmd;
+	mmap_regions->hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
+						APR_HDR_LEN(APR_HDR_SIZE),
+								APR_PKT_VER);
+	mmap_regions->hdr.pkt_size = cmd_size;
+	mmap_regions->hdr.src_port = 0;
+	mmap_regions->hdr.dest_port = 0;
+	mmap_regions->hdr.token = 0;
+	mmap_regions->hdr.opcode = AVCS_CMD_SHARED_MEM_MAP_REGIONS;
+	mmap_regions->mem_pool_id = ADSP_MEMORY_MAP_SHMEM8_4K_POOL & 0x00ff;
+	mmap_regions->num_regions = bufcnt & 0x00ff;
+	mmap_regions->property_flag = 0x00;
+
+	payload = ((u8 *) mmap_region_cmd +
+				sizeof(struct avs_cmd_shared_mem_map_regions));
+	mregions = (struct avs_shared_map_region_payload *)payload;
+
+	for (i = 0; i < bufcnt; i++) {
+		mregions->shm_addr_lsw = lower_32_bits(buf_add[i]);
+		mregions->shm_addr_msw =
+				msm_audio_populate_upper_32_bits(buf_add[i]);
+		mregions->mem_size_bytes = bufsz[i];
+		++mregions;
+	}
+
+	pr_debug("%s: sending memory map, addr %pK, size %d, bufcnt = %d\n",
+		__func__, buf_add, bufsz[0], mmap_regions->num_regions);
+
+	*map_handle = 0;
+	q6core_lcl.bus_bw_resp_received = 0;
+	ret = apr_send_pkt(q6core_lcl.core_handle_q, (uint32_t *)
+		mmap_regions);
+	if (ret < 0) {
+		pr_err("%s: mmap regions failed %d\n",
+			__func__, ret);
+		ret = -EINVAL;
+		goto done;
+	}
+
+	ret = wait_event_timeout(q6core_lcl.bus_bw_req_wait,
+				(q6core_lcl.bus_bw_resp_received == 1),
+				msecs_to_jiffies(TIMEOUT_MS));
+	if (!ret) {
+		pr_err("%s: timeout. waited for memory map\n", __func__);
+		ret = -ETIME;
+		goto done;
+>>>>>>> 0e91d2a... Nougat
 	}
 
 
@@ -538,11 +591,24 @@ bool q6core_is_adsp_ready(void)
 
 	ocm_core_open();
 	q6core_lcl.bus_bw_resp_received = 0;
+<<<<<<< HEAD
 	rc = apr_send_pkt(q6core_lcl.core_handle_q, (uint32_t *)&hdr);
 	if (rc < 0) {
 		pr_err("%s: Get ADSP state APR packet send event %d\n",
 			__func__, rc);
 		goto bail;
+=======
+
+	pr_debug("%s: Register topologies addr %pK, size %zd, map handle %d\n",
+		__func__, &cal_block->cal_data.paddr, cal_block->cal_data.size,
+		cal_block->map_data.q6map_handle);
+
+	ret = apr_send_pkt(q6core_lcl.core_handle_q, (uint32_t *) &reg_top);
+	if (ret < 0) {
+		pr_err("%s: Register topologies failed %d\n",
+			__func__, ret);
+		goto unmap;
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	rc = wait_event_timeout(q6core_lcl.bus_bw_req_wait,

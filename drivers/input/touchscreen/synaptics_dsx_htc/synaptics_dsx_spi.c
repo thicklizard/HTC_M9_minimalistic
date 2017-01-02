@@ -187,6 +187,7 @@ static int parse_dt(struct device *dev, struct synaptics_dsx_board_data *bdata)
 		bdata->power_gpio = -1;
 	}
 
+<<<<<<< HEAD
 	if (of_property_read_bool(np, "synaptics,power-delay-ms")) {
 		retval = of_property_read_u32(np, "synaptics,power-delay-ms",
 				&value);
@@ -195,6 +196,11 @@ static int parse_dt(struct device *dev, struct synaptics_dsx_board_data *bdata)
 		else
 			bdata->power_delay_ms = value;
 	} else {
+=======
+	retval = of_property_read_u32(np, "synaptics,power-delay-ms",
+			&value);
+	if (retval < 0)
+>>>>>>> 0e91d2a... Nougat
 		bdata->power_delay_ms = 0;
 	}
 

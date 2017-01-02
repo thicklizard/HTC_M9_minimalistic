@@ -236,8 +236,9 @@ static int hdcp_scm_call(struct scm_hdcp_req *req, u32 *resp)
 	return ret;
 }
 
-static int hdmi_hdcp_authentication_part1(struct hdmi_hdcp_ctrl *hdcp_ctrl)
+static int hdmi_hdcp_load_keys(void *input)
 {
+<<<<<<< HEAD
 	int rc;
 	u32 qfprom_aksv_lsb, qfprom_aksv_msb;
 	u32 link0_aksv_0, link0_aksv_1;
@@ -258,23 +259,41 @@ static int hdmi_hdcp_authentication_part1(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 	u32 phy_addr;
 	u32 ret  = 0;
 	u32 resp = 0;
+=======
+	int rc = 0;
+	bool use_sw_keys = false;
+	u32 reg_val;
+	u32 ksv_lsb_addr, ksv_msb_addr;
+	u32 aksv_lsb, aksv_msb;
+	u8 aksv[5];
+	struct dss_io_data *io;
+	struct dss_io_data *qfprom_io;
+	struct hdmi_hdcp_ctrl *hdcp_ctrl = input;
+>>>>>>> 0e91d2a... Nougat
 
 	if (!hdcp_ctrl || !hdcp_ctrl->init_data.core_io ||
 		!hdcp_ctrl->init_data.qfprom_io) {
 		DEV_ERR("%s: invalid input\n", __func__);
 		rc = -EINVAL;
-		goto error;
+		goto end;
 	}
 
+<<<<<<< HEAD
 	phy_addr = hdcp_ctrl->init_data.phy_addr;
 
 	if (HDCP_STATE_AUTHENTICATING != hdcp_ctrl->hdcp_state) {
 		DEV_DBG("%s: %s: invalid state. returning\n", __func__,
+=======
+	if ((HDCP_STATE_INACTIVE != hdcp_ctrl->hdcp_state) &&
+		(HDCP_STATE_AUTH_FAIL != hdcp_ctrl->hdcp_state)) {
+		DEV_ERR("%s: %s: invalid state. returning\n", __func__,
+>>>>>>> 0e91d2a... Nougat
 			HDCP_STATE_NAME);
 		rc = -EINVAL;
-		goto error;
+		goto end;
 	}
 
+<<<<<<< HEAD
 	bksv = hdcp_ctrl->current_tp.bksv;
 
 	io = hdcp_ctrl->init_data.core_io;
@@ -284,34 +303,62 @@ static int hdmi_hdcp_authentication_part1(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 		HDCP_KSV_LSB);
 	qfprom_aksv_msb = DSS_REG_R(hdcp_ctrl->init_data.qfprom_io,
 		HDCP_KSV_MSB);
+=======
+	io = hdcp_ctrl->init_data.core_io;
+	qfprom_io = hdcp_ctrl->init_data.qfprom_io;
 
-	aksv[0] =  qfprom_aksv_lsb        & 0xFF;
-	aksv[1] = (qfprom_aksv_lsb >> 8)  & 0xFF;
-	aksv[2] = (qfprom_aksv_lsb >> 16) & 0xFF;
-	aksv[3] = (qfprom_aksv_lsb >> 24) & 0xFF;
-	aksv[4] =  qfprom_aksv_msb        & 0xFF;
+	
+	reg_val = DSS_REG_R(qfprom_io, SEC_CTRL_HW_VERSION);
+	if (reg_val >= HDCP_SEL_MIN_SEC_VERSION) {
+		reg_val = DSS_REG_R(qfprom_io,
+			QFPROM_RAW_FEAT_CONFIG_ROW0_MSB +
+			QFPROM_RAW_VERSION_4);
+
+		if (!(reg_val & BIT(23)))
+			use_sw_keys = true;
+	}
+
+	if (use_sw_keys) {
+		if (hdcp1_set_keys(&aksv_msb, &aksv_lsb)) {
+			pr_err("%s: setting hdcp SW keys failed\n", __func__);
+			rc = -EINVAL;
+			goto end;
+		}
+	} else {
+		
+		ksv_lsb_addr = HDCP_KSV_LSB;
+		ksv_msb_addr = HDCP_KSV_MSB;
+
+		if (hdcp_ctrl->hdmi_tx_ver_4) {
+			ksv_lsb_addr += HDCP_KSV_VERSION_4_OFFSET;
+			ksv_msb_addr += HDCP_KSV_VERSION_4_OFFSET;
+		}
+
+		aksv_lsb = DSS_REG_R(qfprom_io, ksv_lsb_addr);
+		aksv_msb = DSS_REG_R(qfprom_io, ksv_msb_addr);
+	}
+>>>>>>> 0e91d2a... Nougat
+
+	DEV_DBG("%s: %s: AKSV=%02x%08x\n", __func__, HDCP_STATE_NAME,
+		aksv_msb, aksv_lsb);
+
+	aksv[0] =  aksv_lsb        & 0xFF;
+	aksv[1] = (aksv_lsb >> 8)  & 0xFF;
+	aksv[2] = (aksv_lsb >> 16) & 0xFF;
+	aksv[3] = (aksv_lsb >> 24) & 0xFF;
+	aksv[4] =  aksv_msb        & 0xFF;
 
 	/* check there are 20 ones in AKSV */
 	if (hdmi_hdcp_count_one(aksv, 5) != 20) {
-		DEV_ERR("%s: %s: AKSV QFPROM doesn't have 20 1's, 20 0's\n",
-			__func__, HDCP_STATE_NAME);
-		DEV_ERR("%s: %s: QFPROM AKSV chk failed (AKSV=%02x%08x)\n",
-			__func__, HDCP_STATE_NAME, qfprom_aksv_msb,
-			qfprom_aksv_lsb);
+		DEV_ERR("%s: AKSV bit count failed\n", __func__);
 		rc = -EINVAL;
-		goto error;
+		goto end;
 	}
-	DEV_DBG("%s: %s: AKSV=%02x%08x\n", __func__, HDCP_STATE_NAME,
-		qfprom_aksv_msb, qfprom_aksv_lsb);
 
-	/*
-	 * Write AKSV read from QFPROM to the HDCP registers.
-	 * This step is needed for HDCP authentication and must be
-	 * written before enabling HDCP.
-	 */
-	DSS_REG_W(io, HDMI_HDCP_SW_LOWER_AKSV, qfprom_aksv_lsb);
-	DSS_REG_W(io, HDMI_HDCP_SW_UPPER_AKSV, qfprom_aksv_msb);
+	DSS_REG_W(io, HDMI_HDCP_SW_LOWER_AKSV, aksv_lsb);
+	DSS_REG_W(io, HDMI_HDCP_SW_UPPER_AKSV, aksv_msb);
 
+<<<<<<< HEAD
 	/* Check to see if link0_Status has stale values for An ready bit */
 	link0_status = DSS_REG_R(io, HDMI_HDCP_LINK0_STATUS);
 	DEV_DBG("%s: %s: Before enabling cipher Link0_status=0x%08x\n",
@@ -327,6 +374,70 @@ static int hdmi_hdcp_authentication_part1(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 	 * We need to first try to read an HDCP register on the sink to see if
 	 * the sink is ready for HDCP authentication
 	 */
+=======
+	
+	DSS_REG_W(io, HDMI_HDCP_ENTROPY_CTRL0, 0xB1FFB0FF);
+	DSS_REG_W(io, HDMI_HDCP_ENTROPY_CTRL1, 0xF00DFACE);
+
+	
+	DSS_REG_W(io, HDMI_HDCP_DEBUG_CTRL,
+		DSS_REG_R(io, HDMI_HDCP_DEBUG_CTRL) & ~(BIT(2)));
+
+	
+	wmb();
+
+	DSS_REG_W(io, HDMI_HDCP_CTRL, BIT(0));
+
+	hdcp_ctrl->hdcp_state = HDCP_STATE_AUTHENTICATING;
+end:
+	return rc;
+}
+
+static int hdmi_hdcp_authentication_part1(struct hdmi_hdcp_ctrl *hdcp_ctrl)
+{
+	int rc;
+	u32 link0_aksv_0, link0_aksv_1;
+	u32 link0_bksv_0, link0_bksv_1;
+	u32 link0_an_0, link0_an_1;
+	u32 timeout_count;
+	bool is_match;
+	struct dss_io_data *io;
+	struct dss_io_data *hdcp_io;
+	u8 aksv[5], *bksv = NULL;
+	u8 an[8];
+	u8 bcaps = 0;
+	struct hdmi_tx_ddc_data ddc_data;
+	u32 link0_status = 0, an_ready, keys_state;
+	u8 buf[0xFF];
+
+	struct scm_hdcp_req scm_buf[SCM_HDCP_MAX_REG];
+	u32 phy_addr;
+	u32 ret  = 0;
+	u32 resp = 0;
+
+	if (!hdcp_ctrl || !hdcp_ctrl->init_data.core_io ||
+		!hdcp_ctrl->init_data.qfprom_io) {
+		DEV_ERR("%s: invalid input\n", __func__);
+		rc = -EINVAL;
+		goto error;
+	}
+
+	phy_addr = hdcp_ctrl->init_data.phy_addr;
+	bksv = hdcp_ctrl->current_tp.bksv;
+	io = hdcp_ctrl->init_data.core_io;
+	hdcp_io = hdcp_ctrl->init_data.hdcp_io;
+
+	if (HDCP_STATE_AUTHENTICATING != hdcp_ctrl->hdcp_state) {
+		DEV_ERR("%s: %s: invalid state. returning\n", __func__,
+			HDCP_STATE_NAME);
+		rc = -EINVAL;
+		goto error;
+	}
+
+	
+	reset_hdcp_ddc_failures(hdcp_ctrl);
+
+>>>>>>> 0e91d2a... Nougat
 	memset(&ddc_data, 0, sizeof(ddc_data));
 	ddc_data.dev_addr = 0x74;
 	ddc_data.offset = 0x40;
@@ -348,6 +459,7 @@ static int hdmi_hdcp_authentication_part1(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 	hdcp_ctrl->current_tp.ds_type =
 		(bcaps & BIT(6)) >> 6 ? DS_REPEATER : DS_RECEIVER;
 
+<<<<<<< HEAD
 	/*
 	 * HDCP setup prior to enabling HDCP_CTRL.
 	 * Setup seed values for random number An.
@@ -378,6 +490,9 @@ static int hdmi_hdcp_authentication_part1(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 
 	/* Write BCAPS to the hardware */
 
+=======
+	
+>>>>>>> 0e91d2a... Nougat
 	if (hdcp_ctrl->tz_hdcp) {
 		memset(scm_buf, 0x00, sizeof(scm_buf));
 
@@ -397,6 +512,7 @@ static int hdmi_hdcp_authentication_part1(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 		DSS_REG_W(io, HDMI_HDCP_RCVPORT_DATA12, bcaps);
 	}
 
+<<<<<<< HEAD
 	/*
 	 * If we had stale values for the An ready bit, it should most
 	 * likely be cleared now after enabling HDCP cipher
@@ -411,6 +527,9 @@ static int hdmi_hdcp_authentication_part1(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 	}
 
 	/* Wait for HDCP keys to be checked and validated */
+=======
+	
+>>>>>>> 0e91d2a... Nougat
 	timeout_count = 100;
 	keys_state = (link0_status >> 28) & 0x7;
 	while ((keys_state != HDCP_KEYS_STATE_VALID) &&
@@ -457,6 +576,7 @@ static int hdmi_hdcp_authentication_part1(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 		goto error;
 	}
 
+<<<<<<< HEAD
 	/*
 	 * In cases where An_ready bits had stale values, it would be
 	 * better to delay reading of An to avoid any potential of this
@@ -466,6 +586,12 @@ static int hdmi_hdcp_authentication_part1(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 		msleep(200);
 		stale_an = false;
 	}
+=======
+	DEV_INFO("%s: Before read An, timeout=%d, l0_status=0x%08x\n",
+	     __func__, timeout_count, link0_status);
+	
+	msleep(20);
+>>>>>>> 0e91d2a... Nougat
 
 	/* Read An0 and An1 */
 	link0_an_0 = DSS_REG_R(io, HDMI_HDCP_RCVPORT_DATA5);
@@ -648,8 +774,14 @@ error:
 do { \
 	ddc_data.offset = (off); \
 	memset(what, 0, sizeof(what)); \
+<<<<<<< HEAD
 	snprintf(what, sizeof(what), (name)); \
 	rc = hdmi_ddc_read(hdcp_ctrl->init_data.ddc_ctrl, &ddc_data); \
+=======
+	snprintf(what, 20, (name)); \
+	hdcp_ctrl->init_data.ddc_ctrl->ddc_data = ddc_data; \
+	rc = hdmi_ddc_read(hdcp_ctrl->init_data.ddc_ctrl); \
+>>>>>>> 0e91d2a... Nougat
 	if (rc) { \
 		DEV_ERR("%s: %s: Read %s failed\n", __func__, HDCP_STATE_NAME, \
 			what); \
@@ -1228,11 +1360,13 @@ int hdmi_hdcp_authenticate(void *input)
 
 	DEV_DBG("%s: %s: Queuing work to start HDCP authentication", __func__,
 		HDCP_STATE_NAME);
-	mutex_lock(hdcp_ctrl->init_data.mutex);
-	hdcp_ctrl->hdcp_state = HDCP_STATE_AUTHENTICATING;
-	mutex_unlock(hdcp_ctrl->init_data.mutex);
-	queue_delayed_work(hdcp_ctrl->init_data.workq,
-		&hdcp_ctrl->hdcp_auth_work, 0);
+
+	if (!hdmi_hdcp_load_keys(input))
+		queue_delayed_work(hdcp_ctrl->init_data.workq,
+			&hdcp_ctrl->hdcp_auth_work, HZ/2);
+	else
+		queue_work(hdcp_ctrl->init_data.workq,
+			&hdcp_ctrl->hdcp_int_work);
 
 	return 0;
 } /* hdmi_hdcp_authenticate */
@@ -1276,6 +1410,7 @@ int hdmi_hdcp_reauthenticate(void *input)
 	/* Disable encryption and disable the HDCP block */
 	DSS_REG_W(io, HDMI_HDCP_CTRL, 0);
 
+<<<<<<< HEAD
 	/* Enable HPD circuitry */
 	DSS_REG_W(hdcp_ctrl->init_data.core_io, HDMI_HPD_CTRL,
 		DSS_REG_R(hdcp_ctrl->init_data.core_io,
@@ -1289,6 +1424,14 @@ int hdmi_hdcp_reauthenticate(void *input)
 	mutex_unlock(hdcp_ctrl->init_data.mutex);
 	queue_delayed_work(hdcp_ctrl->init_data.workq,
 		&hdcp_ctrl->hdcp_auth_work, HZ/2);
+=======
+	if (!hdmi_hdcp_load_keys(input))
+		queue_delayed_work(hdcp_ctrl->init_data.workq,
+			&hdcp_ctrl->hdcp_auth_work, HZ/2);
+	else
+		queue_work(hdcp_ctrl->init_data.workq,
+			&hdcp_ctrl->hdcp_int_work);
+>>>>>>> 0e91d2a... Nougat
 
 	return ret;
 } /* hdmi_hdcp_reauthenticate */

@@ -561,11 +561,24 @@ int sk_chk_filter(struct sock_filter *filter, unsigned int flen)
 			if (ftest->k == 0)
 				return -EINVAL;
 			break;
+<<<<<<< HEAD
 		case BPF_S_LD_MEM:
 		case BPF_S_LDX_MEM:
 		case BPF_S_ST:
 		case BPF_S_STX:
 			/* check for invalid memory addresses */
+=======
+		case BPF_ALU | BPF_LSH | BPF_K:
+		case BPF_ALU | BPF_RSH | BPF_K:
+			if (ftest->k >= 32)
+				return -EINVAL;
+			break;
+		case BPF_LD | BPF_MEM:
+		case BPF_LDX | BPF_MEM:
+		case BPF_ST:
+		case BPF_STX:
+			/* Check for invalid memory addresses */
+>>>>>>> 0e91d2a... Nougat
 			if (ftest->k >= BPF_MEMWORDS)
 				return -EINVAL;
 			break;

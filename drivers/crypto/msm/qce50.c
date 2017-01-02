@@ -1,6 +1,10 @@
 /* Qualcomm Crypto Engine driver.
  *
+<<<<<<< HEAD
  * Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+=======
+ * Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -57,16 +61,71 @@ struct bam_registration_info {
 };
 static LIST_HEAD(qce50_bam_list);
 
+<<<<<<< HEAD
+=======
+/* Used to determine the mode */
+#define MAX_BUNCH_MODE_REQ 2
+/* Max number of request supported */
+#define MAX_QCE_BAM_REQ 8
+/* Interrupt flag will be set for every SET_INTR_AT_REQ request */
+#define SET_INTR_AT_REQ			(MAX_QCE_BAM_REQ / 2)
+/* To create extra request space to hold dummy request */
+#define MAX_QCE_BAM_REQ_WITH_DUMMY_REQ	(MAX_QCE_BAM_REQ + 1)
+/* Allocate the memory for MAX_QCE_BAM_REQ  + 1 (for dummy request) */
+#define MAX_QCE_ALLOC_BAM_REQ		MAX_QCE_BAM_REQ_WITH_DUMMY_REQ
+/* QCE driver modes */
+#define IN_INTERRUPT_MODE 0
+#define IN_BUNCH_MODE 1
+/* Dummy request data length */
+#define DUMMY_REQ_DATA_LEN 64
+/* Delay timer to expire when in bunch mode */
+#define DELAY_IN_JIFFIES 5
+/* Index to point the dummy request */
+#define DUMMY_REQ_INDEX			MAX_QCE_BAM_REQ
+
+#define TOTAL_IOVEC_SPACE_PER_PIPE (QCE_MAX_NUM_DSCR * sizeof(struct sps_iovec))
+
+enum qce_owner {
+	QCE_OWNER_NONE   = 0,
+	QCE_OWNER_CLIENT = 1,
+	QCE_OWNER_TIMEOUT = 2
+};
+
+struct dummy_request {
+	struct qce_sha_req sreq;
+	uint8_t *in_buf;
+	struct scatterlist sg;
+	struct ahash_request areq;
+};
+
+/*
+ * CE HW device structure.
+ * Each engine has an instance of the structure.
+ * Each engine can only handle one crypto operation at one time. It is up to
+ * the sw above to ensure single threading of operation on an engine.
+ */
+>>>>>>> 0e91d2a... Nougat
 struct qce_device {
 	struct device *pdev;        
 	struct bam_registration_info *pbam;
 
+<<<<<<< HEAD
 	unsigned char *coh_vmem;    
 	dma_addr_t coh_pmem;	    
 	int memsize;				
 	uint32_t bam_mem;		
 	uint32_t bam_mem_size;		
 	int is_shared;			
+=======
+	unsigned char *coh_vmem;    /* Allocated coherent virtual memory */
+	dma_addr_t coh_pmem;	    /* Allocated coherent physical memory */
+	int memsize;				/* Memory allocated */
+	unsigned char *iovec_vmem;  /* Allocate iovec virtual memory */
+	int iovec_memsize;				/* Memory allocated */
+	uint32_t bam_mem;		/* bam physical address, from DT */
+	uint32_t bam_mem_size;		/* bam io size, from DT */
+	int is_shared;			/* CE HW is shared */
+>>>>>>> 0e91d2a... Nougat
 	bool support_cmd_dscr;
 	bool support_hw_key;
 	bool support_clk_mgmt_sus_res;
@@ -107,6 +166,25 @@ struct qce_device {
 	bool use_sw_ahash_algo;
 	bool use_sw_hmac_algo;
 	bool use_sw_aes_ccm_algo;
+<<<<<<< HEAD
+=======
+	uint32_t engines_avail;
+	struct qce_ce_cfg_reg_setting reg;
+	struct ce_bam_info ce_bam_info;
+	struct ce_request_info ce_request_info[MAX_QCE_ALLOC_BAM_REQ];
+	unsigned int ce_request_index;
+	enum qce_owner owner;
+	atomic_t no_of_queued_req;
+	struct timer_list timer;
+	struct dummy_request dummyreq;
+	unsigned int mode;
+	unsigned int intr_cadence;
+	unsigned int dev_no;
+	struct qce_driver_stats qce_stats;
+	atomic_t bunch_cmd_seq;
+	atomic_t last_intr_seq;
+	bool cadence_flag;
+>>>>>>> 0e91d2a... Nougat
 };
 
 static uint32_t  _std_init_vector_sha1[] =   {
@@ -162,8 +240,13 @@ static int count_sg(struct scatterlist *sg, int nbytes)
 {
 	int i;
 
-	for (i = 0; nbytes > 0; i++, sg = scatterwalk_sg_next(sg))
+	for (i = 0; nbytes > 0; i++, sg = scatterwalk_sg_next(sg)) {
+		if (NULL == sg) {
+			pr_err("qce50.c: count_sg, sg = NULL");
+			break;
+		}
 		nbytes -= sg->length;
+	}
 	return i;
 }
 
@@ -173,6 +256,10 @@ static int qce_dma_map_sg(struct device *dev, struct scatterlist *sg, int nents,
 	int i;
 
 	for (i = 0; i < nents; ++i) {
+		if (NULL == sg) {
+			pr_err("qce50.c: qce_dma_map_sg, sg = NULL");
+			break;
+		}
 		dma_map_sg(dev, sg, 1, direction);
 		sg = scatterwalk_sg_next(sg);
 	}
@@ -186,6 +273,10 @@ static int qce_dma_unmap_sg(struct device *dev, struct scatterlist *sg,
 	int i;
 
 	for (i = 0; i < nents; ++i) {
+		if (NULL == sg) {
+			pr_err("qce50.c: qce_dma_unmap_sg, sg = NULL");
+			break;
+		}
 		dma_unmap_sg(dev, sg, 1, direction);
 		sg = scatterwalk_sg_next(sg);
 	}
@@ -264,7 +355,7 @@ static int _ce_setup_hash(struct qce_device *pce_dev,
 				struct qce_sha_req *sreq,
 				struct qce_cmdlist_info *cmdlistinfo)
 {
-	uint32_t auth32[SHA256_DIGEST_SIZE / sizeof(uint32_t)];
+	uint32_t auth32[(SHA256_DIGEST_SIZE / sizeof(uint32_t))+1];
 	uint32_t diglen;
 	int i;
 	uint32_t mackey32[SHA_HMAC_KEY_SIZE/sizeof(uint32_t)] = {
@@ -1085,7 +1176,7 @@ static void _qce_dump_descr_fifos_dbg(struct qce_device *pce_dev)
 static int _ce_setup_hash_direct(struct qce_device *pce_dev,
 				struct qce_sha_req *sreq)
 {
-	uint32_t auth32[SHA256_DIGEST_SIZE / sizeof(uint32_t)];
+	uint32_t auth32[(SHA256_DIGEST_SIZE / sizeof(uint32_t))+1];
 	uint32_t diglen;
 	bool use_hw_key = false;
 	bool use_pipe_key = false;
@@ -2248,6 +2339,10 @@ static int _qce_sps_add_sg_data(struct qce_device *pce_dev,
 						sps_bam_pipe->iovec_count;
 
 	while (nbytes > 0) {
+		if (NULL == sg_src) {
+			pr_err("qce50.c: _qce_sps_add_sg_data, sg_src = NULL");
+			break;
+		}
 		len = min(nbytes, sg_dma_len(sg_src));
 		nbytes -= len;
 		addr = sg_dma_address(sg_src);
@@ -2298,11 +2393,28 @@ static int _qce_sps_add_cmd(struct qce_device *pce_dev, uint32_t flag,
 static int _qce_sps_transfer(struct qce_device *pce_dev)
 {
 	int rc = 0;
+<<<<<<< HEAD
 
 	_qce_dump_descr_fifos_dbg(pce_dev);
 	if (pce_dev->ce_sps.in_transfer.iovec_count) {
 		rc = sps_transfer(pce_dev->ce_sps.consumer.pipe,
 					  &pce_dev->ce_sps.in_transfer);
+=======
+	struct ce_sps_data *pce_sps_data;
+
+	pce_sps_data = &pce_dev->ce_request_info[req_info].ce_sps;
+	pce_sps_data->out_transfer.user =
+		(void *)((uintptr_t)(CRYPTO_REQ_USER_PAT |
+					(unsigned int) req_info));
+	pce_sps_data->in_transfer.user =
+		(void *)((uintptr_t)(CRYPTO_REQ_USER_PAT |
+					(unsigned int) req_info));
+	_qce_dump_descr_fifos_dbg(pce_dev, req_info);
+
+	if (pce_sps_data->in_transfer.iovec_count) {
+		rc = sps_transfer(pce_dev->ce_bam_info.consumer.pipe,
+					  &pce_sps_data->in_transfer);
+>>>>>>> 0e91d2a... Nougat
 		if (rc) {
 			pr_err("sps_xfr() fail (consumer pipe=0x%lx) rc = %d\n",
 				(uintptr_t)pce_dev->ce_sps.consumer.pipe, rc);
@@ -2314,9 +2426,16 @@ static int _qce_sps_transfer(struct qce_device *pce_dev)
 					  &pce_dev->ce_sps.out_transfer);
 	if (rc) {
 		pr_err("sps_xfr() fail (producer pipe=0x%lx) rc = %d\n",
+<<<<<<< HEAD
 				(uintptr_t)pce_dev->ce_sps.producer.pipe, rc);
 		return rc;
 	}
+=======
+			(uintptr_t)pce_dev->ce_bam_info.producer.pipe, rc);
+ret:
+	if (rc)
+		_qce_dump_descr_fifos(pce_dev, req_info);
+>>>>>>> 0e91d2a... Nougat
 	return rc;
 }
 
@@ -2534,8 +2653,14 @@ static int qce_sps_get_bam(struct qce_device *pce_dev)
 	else
 		bam.manage = SPS_BAM_MGR_LOCAL;
 
+<<<<<<< HEAD
 	bam.ee = 1;
 
+=======
+	bam.ee = pce_dev->ce_bam_info.bam_ee;
+	bam.ipc_loglevel = QCE_BAM_DEFAULT_IPC_LOGLVL;
+	bam.options |= SPS_BAM_CACHED_WP;
+>>>>>>> 0e91d2a... Nougat
 	pr_debug("bam physical base=0x%lx\n", (uintptr_t)bam.phys_addr);
 	pr_debug("bam virtual base=0x%p\n", bam.virt_addr);
 
@@ -2591,15 +2716,45 @@ sps_connect_producer_err:
 
 static void qce_sps_exit(struct qce_device *pce_dev)
 {
+<<<<<<< HEAD
 	qce_sps_exit_ep_conn(pce_dev, &pce_dev->ce_sps.consumer);
 	qce_sps_exit_ep_conn(pce_dev, &pce_dev->ce_sps.producer);
 	qce_sps_release_bam(pce_dev);
+=======
+	int i;
+	int request_index = pce_dev->ce_request_index;
+
+	for (i = 0; i < MAX_QCE_BAM_REQ; i++) {
+		request_index++;
+		if (request_index >= MAX_QCE_BAM_REQ)
+			request_index = 0;
+		if (xchg(&pce_dev->ce_request_info[request_index].
+						in_use, true) == false) {
+			pce_dev->ce_request_index = request_index;
+			return request_index;
+		}
+	}
+	pr_warn("pcedev %d no reqs available no_of_queued_req %d\n",
+			pce_dev->dev_no, atomic_read(
+					&pce_dev->no_of_queued_req));
+	return -EBUSY;
+>>>>>>> 0e91d2a... Nougat
 }
 
 static void _aead_sps_producer_callback(struct sps_event_notify *notify)
 {
+<<<<<<< HEAD
 	struct qce_device *pce_dev = (struct qce_device *)
 		((struct sps_event_notify *)notify)->user;
+=======
+	pce_dev->ce_request_info[req_info].xfer_type = QCE_XFER_TYPE_LAST;
+	if (xchg(&pce_dev->ce_request_info[req_info].in_use, false) == true) {
+		if (req_info < MAX_QCE_BAM_REQ && is_complete)
+			atomic_dec(&pce_dev->no_of_queued_req);
+	} else
+		pr_warn("request info %d free already\n", req_info);
+}
+>>>>>>> 0e91d2a... Nougat
 
 	pce_dev->ce_sps.notify = *notify;
 	pr_debug("sps ev_id=%d, addr=0x%x, size=0x%x, flags=0x%x\n",
@@ -2608,6 +2763,7 @@ static void _aead_sps_producer_callback(struct sps_event_notify *notify)
 			notify->data.transfer.iovec.size,
 			notify->data.transfer.iovec.flags);
 
+<<<<<<< HEAD
 	if (pce_dev->ce_sps.producer_state == QCE_PIPE_STATE_COMP) {
 		pce_dev->ce_sps.producer_state = QCE_PIPE_STATE_IDLE;
 		
@@ -2629,9 +2785,42 @@ static void _aead_sps_producer_callback(struct sps_event_notify *notify)
 		}
 	}
 };
+=======
+static void qce_multireq_timeout(unsigned long data)
+{
+	struct qce_device *pce_dev = (struct qce_device *)data;
+	int ret = 0;
+	int last_seq;
+
+	last_seq = atomic_read(&pce_dev->bunch_cmd_seq);
+	if (last_seq == 0 ||
+		last_seq != atomic_read(&pce_dev->last_intr_seq)) {
+		atomic_set(&pce_dev->last_intr_seq, last_seq);
+		mod_timer(&(pce_dev->timer), (jiffies + DELAY_IN_JIFFIES));
+		return;
+	}
+	/* last bunch mode command time out */
+	if (cmpxchg(&pce_dev->owner, QCE_OWNER_NONE, QCE_OWNER_TIMEOUT)
+							!= QCE_OWNER_NONE) {
+		mod_timer(&(pce_dev->timer), (jiffies + DELAY_IN_JIFFIES));
+		return;
+	}
+	del_timer(&(pce_dev->timer));
+	pce_dev->mode = IN_INTERRUPT_MODE;
+	pce_dev->qce_stats.no_of_timeouts++;
+	pr_debug("pcedev %d mode switch to INTR\n", pce_dev->dev_no);
+
+	ret = qce_dummy_req(pce_dev);
+	if (ret)
+		pr_warn("pcedev %d: Failed to insert dummy req\n",
+				pce_dev->dev_no);
+	cmpxchg(&pce_dev->owner, QCE_OWNER_TIMEOUT, QCE_OWNER_NONE);
+}
+>>>>>>> 0e91d2a... Nougat
 
 static void _sha_sps_producer_callback(struct sps_event_notify *notify)
 {
+<<<<<<< HEAD
 	struct qce_device *pce_dev = (struct qce_device *)
 		((struct sps_event_notify *)notify)->user;
 
@@ -2644,9 +2833,28 @@ static void _sha_sps_producer_callback(struct sps_event_notify *notify)
 	
 	_sha_complete(pce_dev);
 };
+=======
+	struct qce_device *pce_dev = (struct qce_device *) handle;
+
+	if (!_qce50_disp_stats)
+		return;
+	pr_info("Engine %d timeout occuured %d\n", pce_dev->dev_no,
+			pce_dev->qce_stats.no_of_timeouts);
+	pr_info("Engine %d dummy request inserted %d\n", pce_dev->dev_no,
+			pce_dev->qce_stats.no_of_dummy_reqs);
+	if (pce_dev->mode)
+		pr_info("Engine %d is in BUNCH MODE\n", pce_dev->dev_no);
+	else
+		pr_info("Engine %d is in INTERRUPT MODE\n", pce_dev->dev_no);
+	pr_info("Engine %d outstanding request %d\n", pce_dev->dev_no,
+			atomic_read(&pce_dev->no_of_queued_req));
+}
+EXPORT_SYMBOL(qce_get_driver_stats);
+>>>>>>> 0e91d2a... Nougat
 
 static void _f9_sps_producer_callback(struct sps_event_notify *notify)
 {
+<<<<<<< HEAD
 	struct qce_device *pce_dev = (struct qce_device *)
 		((struct sps_event_notify *)notify)->user;
 
@@ -2658,12 +2866,25 @@ static void _f9_sps_producer_callback(struct sps_event_notify *notify)
 			notify->data.transfer.iovec.flags);
 	
 	_f9_complete(pce_dev);
+=======
+	struct qce_device *pce_dev = (struct qce_device *) handle;
+
+	pce_dev->qce_stats.no_of_timeouts = 0;
+	pce_dev->qce_stats.no_of_dummy_reqs = 0;
+>>>>>>> 0e91d2a... Nougat
 }
 
 static void _f8_sps_producer_callback(struct sps_event_notify *notify)
 {
 	struct qce_device *pce_dev = (struct qce_device *)
 		((struct sps_event_notify *)notify)->user;
+<<<<<<< HEAD
+=======
+	int rc = 0;
+	unsigned int req_info;
+	struct ce_sps_data *pce_sps_data;
+	struct ce_request_info *preq_info;
+>>>>>>> 0e91d2a... Nougat
 
 	pce_dev->ce_sps.notify = *notify;
 	pr_debug("sps ev_id=%d, addr=0x%x, size=0x%x, flags=0x%x\n",
@@ -2719,8 +2940,13 @@ static void _ablk_cipher_sps_producer_callback(struct sps_event_notify *notify)
 					  &pce_dev->ce_sps.out_transfer);
 		_qce_set_flag(&pce_dev->ce_sps.out_transfer,
 				SPS_IOVEC_FLAG_INT);
+<<<<<<< HEAD
 		rc = sps_transfer(pce_dev->ce_sps.producer.pipe,
 					  &pce_dev->ce_sps.out_transfer);
+=======
+		rc = sps_transfer(pce_dev->ce_bam_info.producer.pipe,
+					  &pce_sps_data->out_transfer);
+>>>>>>> 0e91d2a... Nougat
 		if (rc) {
 			pr_err("sps_xfr() fail (producer pipe=0x%lx) rc = %d\n",
 				(uintptr_t)pce_dev->ce_sps.producer.pipe, rc);
@@ -3774,6 +4000,7 @@ static int qce_setup_cmdlistptrs(struct qce_device *pdev,
 static int qce_setup_ce_sps_data(struct qce_device *pce_dev)
 {
 	unsigned char *vaddr;
+<<<<<<< HEAD
 
 	vaddr = pce_dev->coh_vmem;
 	vaddr = (unsigned char *)ALIGN(((uintptr_t)vaddr),
@@ -3801,6 +4028,61 @@ static int qce_setup_ce_sps_data(struct qce_device *pce_dev)
 	vaddr += pce_dev->ce_sps.ce_burst_size * 2;
 
 	if ((vaddr - pce_dev->coh_vmem) > pce_dev->memsize)
+=======
+	int i;
+	unsigned char *iovec_vaddr;
+	int iovec_memsize;
+
+	vaddr = pce_dev->coh_vmem;
+	vaddr = (unsigned char *)ALIGN(((uintptr_t)vaddr),
+					pce_dev->ce_bam_info.ce_burst_size);
+	iovec_vaddr = pce_dev->iovec_vmem;
+	iovec_memsize = pce_dev->iovec_memsize;
+	for (i = 0; i < MAX_QCE_ALLOC_BAM_REQ; i++) {
+		/* Allow for 256 descriptor (cmd and data) entries per pipe */
+		pce_dev->ce_request_info[i].ce_sps.in_transfer.iovec =
+				(struct sps_iovec *)iovec_vaddr;
+		pce_dev->ce_request_info[i].ce_sps.in_transfer.iovec_phys =
+			virt_to_phys(pce_dev->ce_request_info[i].
+				ce_sps.in_transfer.iovec);
+		iovec_vaddr += TOTAL_IOVEC_SPACE_PER_PIPE;
+		iovec_memsize -= TOTAL_IOVEC_SPACE_PER_PIPE;
+		pce_dev->ce_request_info[i].ce_sps.out_transfer.iovec =
+				(struct sps_iovec *)iovec_vaddr;
+		pce_dev->ce_request_info[i].ce_sps.out_transfer.iovec_phys =
+			virt_to_phys(pce_dev->ce_request_info[i].
+				ce_sps.out_transfer.iovec);
+		iovec_vaddr += TOTAL_IOVEC_SPACE_PER_PIPE;
+		iovec_memsize -= TOTAL_IOVEC_SPACE_PER_PIPE;
+		if (pce_dev->support_cmd_dscr)
+			qce_setup_cmdlistptrs(pce_dev, i, &vaddr);
+		vaddr = (unsigned char *)ALIGN(((uintptr_t)vaddr),
+				pce_dev->ce_bam_info.ce_burst_size);
+		pce_dev->ce_request_info[i].ce_sps.result_dump =
+				(uintptr_t)vaddr;
+		pce_dev->ce_request_info[i].ce_sps.result_dump_phy =
+				GET_PHYS_ADDR((uintptr_t)vaddr);
+		pce_dev->ce_request_info[i].ce_sps.result =
+				(struct ce_result_dump_format *)vaddr;
+		vaddr += CRYPTO_RESULT_DUMP_SIZE;
+
+		pce_dev->ce_request_info[i].ce_sps.result_dump_null =
+				(uintptr_t)vaddr;
+		pce_dev->ce_request_info[i].ce_sps.result_dump_null_phy =
+				GET_PHYS_ADDR((uintptr_t)vaddr);
+		pce_dev->ce_request_info[i].ce_sps.result_null =
+				(struct ce_result_dump_format *)vaddr;
+		vaddr += CRYPTO_RESULT_DUMP_SIZE;
+
+		pce_dev->ce_request_info[i].ce_sps.ignore_buffer =
+				(uintptr_t)vaddr;
+		vaddr += pce_dev->ce_bam_info.ce_burst_size * 2;
+	}
+	pce_dev->dummyreq.in_buf = (uint8_t *)vaddr;
+	vaddr += DUMMY_REQ_DATA_LEN;
+	if ((vaddr - pce_dev->coh_vmem) > pce_dev->memsize ||
+							iovec_memsize < 0)
+>>>>>>> 0e91d2a... Nougat
 		panic("qce50: Not enough coherent memory. Allocate %x , need %lx\n",
 				 pce_dev->memsize, (uintptr_t)vaddr -
 				(uintptr_t)pce_dev->coh_vmem);
@@ -3981,6 +4263,125 @@ static int qce_init_ce_cfg_val(struct qce_device *pce_dev)
 	return 0;
 }
 
+<<<<<<< HEAD
+=======
+static void _qce_ccm_get_around_input(struct qce_device *pce_dev,
+	struct ce_request_info *preq_info, enum qce_cipher_dir_enum dir)
+{
+	struct qce_cmdlist_info *cmdlistinfo;
+	struct ce_sps_data *pce_sps_data;
+
+	pce_sps_data = &preq_info->ce_sps;
+	if ((dir == QCE_DECRYPT) && pce_dev->no_get_around &&
+			!(pce_dev->no_ccm_mac_status_get_around)) {
+		cmdlistinfo = &pce_sps_data->cmdlistptr.cipher_null;
+		_qce_sps_add_cmd(pce_dev, 0, cmdlistinfo,
+				&pce_sps_data->in_transfer);
+		_qce_sps_add_data(GET_PHYS_ADDR(pce_sps_data->ignore_buffer),
+			pce_dev->ce_bam_info.ce_burst_size,
+			&pce_sps_data->in_transfer);
+		_qce_set_flag(&pce_sps_data->in_transfer,
+				SPS_IOVEC_FLAG_EOT | SPS_IOVEC_FLAG_NWD);
+	}
+}
+
+static void _qce_ccm_get_around_output(struct qce_device *pce_dev,
+	struct ce_request_info *preq_info, enum qce_cipher_dir_enum dir)
+{
+	struct ce_sps_data *pce_sps_data;
+
+	pce_sps_data = &preq_info->ce_sps;
+
+	if ((dir == QCE_DECRYPT) && pce_dev->no_get_around &&
+			!(pce_dev->no_ccm_mac_status_get_around)) {
+		_qce_sps_add_data(GET_PHYS_ADDR(pce_sps_data->ignore_buffer),
+			pce_dev->ce_bam_info.ce_burst_size,
+			&pce_sps_data->out_transfer);
+		_qce_sps_add_data(GET_PHYS_ADDR(pce_sps_data->result_dump_null),
+			CRYPTO_RESULT_DUMP_SIZE, &pce_sps_data->out_transfer);
+	}
+}
+
+/* QCE_DUMMY_REQ */
+static void qce_dummy_complete(void *cookie, unsigned char *digest,
+		unsigned char *authdata, int ret)
+{
+	if (!cookie)
+		pr_err("invalid cookie\n");
+}
+
+static int qce_dummy_req(struct qce_device *pce_dev)
+{
+	int ret = 0;
+
+	if (!(xchg(&pce_dev->ce_request_info[DUMMY_REQ_INDEX].
+				in_use, true) == false))
+		return -EBUSY;
+	ret = qce_process_sha_req(pce_dev, NULL);
+	pce_dev->qce_stats.no_of_dummy_reqs++;
+	return ret;
+}
+
+static int select_mode(struct qce_device *pce_dev,
+		struct ce_request_info *preq_info)
+{
+	struct ce_sps_data *pce_sps_data = &preq_info->ce_sps;
+	unsigned int no_of_queued_req;
+	unsigned int cadence;
+
+	if (!pce_dev->no_get_around) {
+		_qce_set_flag(&pce_sps_data->out_transfer, SPS_IOVEC_FLAG_INT);
+		return 0;
+	}
+
+	/*
+	 * claim ownership of device
+	 */
+again:
+	if (cmpxchg(&pce_dev->owner, QCE_OWNER_NONE, QCE_OWNER_CLIENT)
+							!= QCE_OWNER_NONE) {
+		ndelay(40);
+		goto again;
+	}
+	no_of_queued_req = atomic_inc_return(&pce_dev->no_of_queued_req);
+	if (pce_dev->mode == IN_INTERRUPT_MODE) {
+		if (no_of_queued_req >= MAX_BUNCH_MODE_REQ) {
+			pce_dev->mode = IN_BUNCH_MODE;
+			pr_debug("pcedev %d mode switch to BUNCH\n",
+					pce_dev->dev_no);
+			_qce_set_flag(&pce_sps_data->out_transfer,
+					SPS_IOVEC_FLAG_INT);
+			pce_dev->intr_cadence = 0;
+			atomic_set(&pce_dev->bunch_cmd_seq, 1);
+			atomic_set(&pce_dev->last_intr_seq, 1);
+			mod_timer(&(pce_dev->timer),
+					(jiffies + DELAY_IN_JIFFIES));
+		} else {
+			_qce_set_flag(&pce_sps_data->out_transfer,
+					SPS_IOVEC_FLAG_INT);
+		}
+	} else {
+		pce_dev->intr_cadence++;
+		cadence = (preq_info->req_len >> 7) + 1;
+		if (cadence > SET_INTR_AT_REQ)
+			cadence = SET_INTR_AT_REQ;
+		if (pce_dev->intr_cadence < cadence || ((pce_dev->intr_cadence
+					== cadence) && pce_dev->cadence_flag))
+			atomic_inc(&pce_dev->bunch_cmd_seq);
+		else {
+			_qce_set_flag(&pce_sps_data->out_transfer,
+					SPS_IOVEC_FLAG_INT);
+			pce_dev->intr_cadence = 0;
+			atomic_set(&pce_dev->bunch_cmd_seq, 0);
+			atomic_set(&pce_dev->last_intr_seq, 0);
+			pce_dev->cadence_flag = ~pce_dev->cadence_flag;
+		}
+	}
+
+	return 0;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static int _qce_aead_ccm_req(void *handle, struct qce_req *q_req)
 {
 	struct qce_device *pce_dev = (struct qce_device *) handle;
@@ -4056,6 +4457,7 @@ static int _qce_aead_ccm_req(void *handle, struct qce_req *q_req)
 	pce_dev->areq = q_req->areq;
 	pce_dev->qce_cb = q_req->qce_cb;
 
+<<<<<<< HEAD
 	
 	pce_dev->ce_sps.producer.event.callback = _aead_sps_producer_callback;
 	pce_dev->ce_sps.producer.event.options = SPS_O_DESC_DONE;
@@ -4066,6 +4468,13 @@ static int _qce_aead_ccm_req(void *handle, struct qce_req *q_req)
 		goto bad;
 	}
 	_qce_sps_iovec_count_init(pce_dev);
+=======
+	/* setup xfer type for producer callback handling */
+	preq_info->xfer_type = QCE_XFER_AEAD;
+	preq_info->req_len = totallen_in;
+
+	_qce_sps_iovec_count_init(pce_dev, req_info);
+>>>>>>> 0e91d2a... Nougat
 
 	if (pce_dev->support_cmd_dscr)
 		_qce_sps_add_cmd(pce_dev, SPS_IOVEC_FLAG_LOCK, cmdlistinfo,
@@ -4099,6 +4508,7 @@ static int _qce_aead_ccm_req(void *handle, struct qce_req *q_req)
 							SPS_IOVEC_FLAG_INT);
 			pce_dev->ce_sps.producer_state = QCE_PIPE_STATE_COMP;
 		}
+		rc = _qce_sps_transfer(pce_dev, req_info);
 	} else {
 		if (_qce_sps_add_sg_data(pce_dev, areq->assoc, areq->assoclen,
 					 &pce_dev->ce_sps.in_transfer))
@@ -4137,8 +4547,18 @@ static int _qce_aead_ccm_req(void *handle, struct qce_req *q_req)
 							SPS_IOVEC_FLAG_INT);
 			pce_dev->ce_sps.producer_state = QCE_PIPE_STATE_COMP;
 		}
+<<<<<<< HEAD
 	}
 	rc = _qce_sps_transfer(pce_dev);
+=======
+
+		_qce_ccm_get_around_output(pce_dev, preq_info, q_req->dir);
+
+		select_mode(pce_dev, preq_info);
+		rc = _qce_sps_transfer(pce_dev, req_info);
+		cmpxchg(&pce_dev->owner, QCE_OWNER_CLIENT, QCE_OWNER_NONE);
+	}
+>>>>>>> 0e91d2a... Nougat
 	if (rc)
 		goto bad;
 	return 0;
@@ -4304,6 +4724,7 @@ int qce_aead_req(void *handle, struct qce_req *q_req)
 	pce_dev->areq = q_req->areq;
 	pce_dev->qce_cb = q_req->qce_cb;
 
+<<<<<<< HEAD
 	
 	pce_dev->ce_sps.producer.event.callback = _aead_sps_producer_callback;
 	pce_dev->ce_sps.producer.event.options = SPS_O_DESC_DONE;
@@ -4314,6 +4735,13 @@ int qce_aead_req(void *handle, struct qce_req *q_req)
 		goto bad;
 	}
 	_qce_sps_iovec_count_init(pce_dev);
+=======
+	/* setup xfer type for producer callback handling */
+	preq_info->xfer_type = QCE_XFER_AEAD;
+	preq_info->req_len = totallen;
+
+	_qce_sps_iovec_count_init(pce_dev, req_info);
+>>>>>>> 0e91d2a... Nougat
 
 	if (pce_dev->support_cmd_dscr) {
 		_qce_sps_add_cmd(pce_dev, SPS_IOVEC_FLAG_LOCK, cmdlistinfo,
@@ -4352,6 +4780,7 @@ int qce_aead_req(void *handle, struct qce_req *q_req)
 							SPS_IOVEC_FLAG_INT);
 			pce_dev->ce_sps.producer_state = QCE_PIPE_STATE_COMP;
 		}
+	rc = _qce_sps_transfer(pce_dev, req_info);
 	} else {
 		if (_qce_sps_add_sg_data(pce_dev, areq->assoc, areq->assoclen,
 					 &pce_dev->ce_sps.in_transfer))
@@ -4389,8 +4818,15 @@ int qce_aead_req(void *handle, struct qce_req *q_req)
 							SPS_IOVEC_FLAG_INT);
 			pce_dev->ce_sps.producer_state = QCE_PIPE_STATE_COMP;
 		}
+<<<<<<< HEAD
 	}
 	rc = _qce_sps_transfer(pce_dev);
+=======
+		select_mode(pce_dev, preq_info);
+		rc = _qce_sps_transfer(pce_dev, req_info);
+		cmpxchg(&pce_dev->owner, QCE_OWNER_CLIENT, QCE_OWNER_NONE);
+	}
+>>>>>>> 0e91d2a... Nougat
 	if (rc)
 		goto bad;
 	return 0;
@@ -4467,9 +4903,21 @@ int qce_ablk_cipher_req(void *handle, struct qce_req *c_req)
 	if (rc < 0)
 		goto bad;
 
+<<<<<<< HEAD
 	
 	pce_dev->areq = areq;
 	pce_dev->qce_cb = c_req->qce_cb;
+=======
+	preq_info->mode = c_req->mode;
+
+	/* setup for client callback, and issue command to BAM */
+	preq_info->areq = areq;
+	preq_info->qce_cb = c_req->qce_cb;
+
+	/* setup xfer type for producer callback handling */
+	preq_info->xfer_type = QCE_XFER_CIPHERING;
+	preq_info->req_len = areq->nbytes;
+>>>>>>> 0e91d2a... Nougat
 
 	
 	pce_dev->ce_sps.producer.event.callback =
@@ -4508,7 +4956,14 @@ int qce_ablk_cipher_req(void *handle, struct qce_req *c_req)
 		_qce_set_flag(&pce_dev->ce_sps.out_transfer,
 							SPS_IOVEC_FLAG_INT);
 	}
+<<<<<<< HEAD
 	rc = _qce_sps_transfer(pce_dev);
+=======
+
+	select_mode(pce_dev, preq_info);
+	rc = _qce_sps_transfer(pce_dev, req_info);
+	cmpxchg(&pce_dev->owner, QCE_OWNER_CLIENT, QCE_OWNER_NONE);
+>>>>>>> 0e91d2a... Nougat
 	if (rc)
 		goto bad;
 		return 0;
@@ -4557,6 +5012,7 @@ int qce_process_sha_req(void *handle, struct qce_sha_req *sreq)
 	pce_dev->areq = areq;
 	pce_dev->qce_cb = sreq->qce_cb;
 
+<<<<<<< HEAD
 	
 	pce_dev->ce_sps.producer.event.callback = _sha_sps_producer_callback;
 	pce_dev->ce_sps.producer.event.options = SPS_O_DESC_DONE;
@@ -4567,6 +5023,13 @@ int qce_process_sha_req(void *handle, struct qce_sha_req *sreq)
 		goto bad;
 	}
 	_qce_sps_iovec_count_init(pce_dev);
+=======
+	/* setup xfer type for producer callback handling */
+	preq_info->xfer_type = QCE_XFER_HASHING;
+	preq_info->req_len = sreq->size;
+
+	_qce_sps_iovec_count_init(pce_dev, req_info);
+>>>>>>> 0e91d2a... Nougat
 
 	if (pce_dev->support_cmd_dscr)
 		_qce_sps_add_cmd(pce_dev, SPS_IOVEC_FLAG_LOCK, cmdlistinfo,
@@ -4581,8 +5044,20 @@ int qce_process_sha_req(void *handle, struct qce_sha_req *sreq)
 					CRYPTO_RESULT_DUMP_SIZE,
 					  &pce_dev->ce_sps.out_transfer))
 		goto bad;
+<<<<<<< HEAD
 	_qce_set_flag(&pce_dev->ce_sps.out_transfer, SPS_IOVEC_FLAG_INT);
 	rc = _qce_sps_transfer(pce_dev);
+=======
+
+	if (is_dummy) {
+		_qce_set_flag(&pce_sps_data->out_transfer, SPS_IOVEC_FLAG_INT);
+		rc = _qce_sps_transfer(pce_dev, req_info);
+	} else {
+		select_mode(pce_dev, preq_info);
+		rc = _qce_sps_transfer(pce_dev, req_info);
+		cmpxchg(&pce_dev->owner, QCE_OWNER_CLIENT, QCE_OWNER_NONE);
+	}
+>>>>>>> 0e91d2a... Nougat
 	if (rc)
 		goto bad;
 		return 0;
@@ -4654,9 +5129,19 @@ int qce_f8_req(void *handle, struct qce_f8_req *req,
 	if (rc < 0)
 		goto bad;
 
+<<<<<<< HEAD
 	
 	pce_dev->areq = cookie;
 	pce_dev->qce_cb = qce_cb;
+=======
+	/* setup for callback, and issue command to sps */
+	preq_info->areq = cookie;
+	preq_info->qce_cb = qce_cb;
+
+	/* setup xfer type for producer callback handling */
+	preq_info->xfer_type = QCE_XFER_F8;
+	preq_info->req_len = req->data_len;
+>>>>>>> 0e91d2a... Nougat
 
 	
 	pce_dev->ce_sps.producer.event.callback =
@@ -4692,11 +5177,19 @@ int qce_f8_req(void *handle, struct qce_f8_req *req,
 		pce_dev->ce_sps.producer_state = QCE_PIPE_STATE_COMP;
 		_qce_sps_add_data(GET_PHYS_ADDR(pce_dev->ce_sps.result_dump),
 					CRYPTO_RESULT_DUMP_SIZE,
+<<<<<<< HEAD
 					  &pce_dev->ce_sps.out_transfer);
 		_qce_set_flag(&pce_dev->ce_sps.out_transfer,
 							SPS_IOVEC_FLAG_INT);
 	}
 	rc = _qce_sps_transfer(pce_dev);
+=======
+					  &pce_sps_data->out_transfer);
+
+	select_mode(pce_dev, preq_info);
+	rc = _qce_sps_transfer(pce_dev, req_info);
+	cmpxchg(&pce_dev->owner, QCE_OWNER_CLIENT, QCE_OWNER_NONE);
+>>>>>>> 0e91d2a... Nougat
 	if (rc)
 		goto bad;
 	return 0;
@@ -4772,6 +5265,7 @@ int qce_f8_multi_pkt_req(void *handle, struct qce_f8_multi_pkt_req *mreq,
 	pce_dev->areq = cookie;
 	pce_dev->qce_cb = qce_cb;
 
+<<<<<<< HEAD
 	
 	pce_dev->ce_sps.producer.event.callback =
 				_f8_sps_producer_callback;
@@ -4783,6 +5277,13 @@ int qce_f8_multi_pkt_req(void *handle, struct qce_f8_multi_pkt_req *mreq,
 		goto bad;
 	}
 	_qce_sps_iovec_count_init(pce_dev);
+=======
+	/* setup xfer type for producer callback handling */
+	preq_info->xfer_type = QCE_XFER_F8;
+	preq_info->req_len = total;
+
+	_qce_sps_iovec_count_init(pce_dev, req_info);
+>>>>>>> 0e91d2a... Nougat
 
 	if (pce_dev->support_cmd_dscr)
 		_qce_sps_add_cmd(pce_dev, SPS_IOVEC_FLAG_LOCK, cmdlistinfo,
@@ -4804,11 +5305,19 @@ int qce_f8_multi_pkt_req(void *handle, struct qce_f8_multi_pkt_req *mreq,
 		pce_dev->ce_sps.producer_state = QCE_PIPE_STATE_COMP;
 		_qce_sps_add_data(GET_PHYS_ADDR(pce_dev->ce_sps.result_dump),
 					CRYPTO_RESULT_DUMP_SIZE,
+<<<<<<< HEAD
 					  &pce_dev->ce_sps.out_transfer);
 		_qce_set_flag(&pce_dev->ce_sps.out_transfer,
 							SPS_IOVEC_FLAG_INT);
 	}
 	rc = _qce_sps_transfer(pce_dev);
+=======
+					  &pce_sps_data->out_transfer);
+
+	select_mode(pce_dev, preq_info);
+	rc = _qce_sps_transfer(pce_dev, req_info);
+	cmpxchg(&pce_dev->owner, QCE_OWNER_CLIENT, QCE_OWNER_NONE);
+>>>>>>> 0e91d2a... Nougat
 
 	if (rc == 0)
 		return 0;
@@ -4857,6 +5366,7 @@ int qce_f9_req(void *handle, struct qce_f9_req *req, void *cookie,
 	pce_dev->areq = cookie;
 	pce_dev->qce_cb = qce_cb;
 
+<<<<<<< HEAD
 	
 	pce_dev->ce_sps.producer.event.callback = _f9_sps_producer_callback;
 	pce_dev->ce_sps.producer.event.options = SPS_O_DESC_DONE;
@@ -4866,6 +5376,11 @@ int qce_f9_req(void *handle, struct qce_f9_req *req, void *cookie,
 		pr_err("Producer callback registration failed rc = %d\n", rc);
 		goto bad;
 	}
+=======
+	/* setup xfer type for producer callback handling */
+	preq_info->xfer_type = QCE_XFER_F9;
+	preq_info->req_len = req->msize;
+>>>>>>> 0e91d2a... Nougat
 
 	_qce_sps_iovec_count_init(pce_dev);
 	if (pce_dev->support_cmd_dscr)
@@ -4878,9 +5393,17 @@ int qce_f9_req(void *handle, struct qce_f9_req *req, void *cookie,
 
 	_qce_sps_add_data(GET_PHYS_ADDR(pce_dev->ce_sps.result_dump),
 					CRYPTO_RESULT_DUMP_SIZE,
+<<<<<<< HEAD
 					  &pce_dev->ce_sps.out_transfer);
 	_qce_set_flag(&pce_dev->ce_sps.out_transfer, SPS_IOVEC_FLAG_INT);
 	rc = _qce_sps_transfer(pce_dev);
+=======
+					  &pce_sps_data->out_transfer);
+
+	select_mode(pce_dev, preq_info);
+	rc = _qce_sps_transfer(pce_dev, req_info);
+	cmpxchg(&pce_dev->owner, QCE_OWNER_CLIENT, QCE_OWNER_NONE);
+>>>>>>> 0e91d2a... Nougat
 	if (rc)
 		goto bad;
 	return 0;
@@ -5164,11 +5687,18 @@ void *qce_open(struct platform_device *pdev, int *rc)
 	pce_dev->memsize = 10 * PAGE_SIZE;
 	pce_dev->coh_vmem = dma_alloc_coherent(pce_dev->pdev,
 			pce_dev->memsize, &pce_dev->coh_pmem, GFP_KERNEL);
+
 	if (pce_dev->coh_vmem == NULL) {
 		*rc = -ENOMEM;
 		pr_err("Can not allocate coherent memory for sps data\n");
 		goto err_iobase;
 	}
+
+	pce_dev->iovec_memsize = TOTAL_IOVEC_SPACE_PER_PIPE *
+						MAX_QCE_ALLOC_BAM_REQ * 2;
+	pce_dev->iovec_vmem = kzalloc(pce_dev->iovec_memsize, GFP_KERNEL);
+	if (pce_dev->iovec_vmem == NULL)
+		goto err_mem;
 
 	*rc = __qce_init_clk(pce_dev);
 	if (*rc)
@@ -5190,6 +5720,20 @@ void *qce_open(struct platform_device *pdev, int *rc)
 		goto err;
 	qce_setup_ce_sps_data(pce_dev);
 	qce_disable_clk(pce_dev);
+<<<<<<< HEAD
+=======
+	setup_dummy_req(pce_dev);
+	atomic_set(&pce_dev->no_of_queued_req, 0);
+	pce_dev->mode = IN_INTERRUPT_MODE;
+	init_timer(&(pce_dev->timer));
+	pce_dev->timer.function = qce_multireq_timeout;
+	pce_dev->timer.data = (unsigned long)pce_dev;
+	pce_dev->timer.expires = jiffies + DELAY_IN_JIFFIES;
+	pce_dev->intr_cadence = 0;
+	pce_dev->dev_no = pcedev_no;
+	pcedev_no++;
+	pce_dev->owner = QCE_OWNER_NONE;
+>>>>>>> 0e91d2a... Nougat
 	mutex_unlock(&qce_iomap_mutex);
 	return pce_dev;
 err:
@@ -5199,6 +5743,7 @@ err_enable_clk:
 	__qce_deinit_clk(pce_dev);
 
 err_mem:
+	kfree(pce_dev->iovec_vmem);
 	if (pce_dev->coh_vmem)
 		dma_free_coherent(pce_dev->pdev, pce_dev->memsize,
 			pce_dev->coh_vmem, pce_dev->coh_pmem);
@@ -5228,6 +5773,7 @@ int qce_close(void *handle)
 	if (pce_dev->coh_vmem)
 		dma_free_coherent(pce_dev->pdev, pce_dev->memsize,
 				pce_dev->coh_vmem, pce_dev->coh_pmem);
+	kfree(pce_dev->iovec_vmem);
 
 	qce_disable_clk(pce_dev);
 	__qce_deinit_clk(pce_dev);

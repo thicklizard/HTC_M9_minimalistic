@@ -49,7 +49,11 @@ static int mmap_is_legacy(void)
 
 static unsigned long mmap_rnd(void)
 {
+<<<<<<< HEAD
 	unsigned long rnd = 0;
+=======
+	unsigned long rnd;
+>>>>>>> 0e91d2a... Nougat
 
 	if (current->flags & PF_RANDOMIZE) {
 #ifdef CONFIG_COMPAT

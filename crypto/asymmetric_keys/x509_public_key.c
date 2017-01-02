@@ -148,7 +148,18 @@ static int x509_key_preparse(struct key_preparsed_payload *prep)
 
 	/* Propose a description */
 	sulen = strlen(cert->subject);
+<<<<<<< HEAD
 	srlen = strlen(cert->fingerprint);
+=======
+	if (cert->raw_skid) {
+		srlen = cert->raw_skid_size;
+		q = cert->raw_skid;
+	} else {
+		srlen = cert->raw_serial_size;
+		q = cert->raw_serial;
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	ret = -ENOMEM;
 	desc = kmalloc(sulen + 2 + srlen + 1, GFP_KERNEL);
 	if (!desc)

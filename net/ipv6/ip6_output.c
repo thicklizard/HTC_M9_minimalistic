@@ -374,6 +374,15 @@ int ip6_forward(struct sk_buff *skb)
 	if (net->ipv6.devconf_all->forwarding == 0)
 		goto error;
 
+<<<<<<< HEAD
+=======
+	if (skb->pkt_type != PACKET_HOST)
+		goto drop;
+
+	if (unlikely(skb->sk))
+		goto drop;
+
+>>>>>>> 0e91d2a... Nougat
 	if (skb_warn_if_lro(skb))
 		goto drop;
 

@@ -1537,6 +1537,7 @@ static void bch_btree_gc(struct closure *cl)
 
 	btree_gc_start(c);
 
+<<<<<<< HEAD
 	ret = btree_root(gc_root, c, &op, &writes, &stats);
 	closure_sync(&op.cl);
 	closure_sync(&writes);
@@ -1547,6 +1548,12 @@ static void bch_btree_gc(struct closure *cl)
 
 		continue_at(cl, bch_btree_gc, bch_gc_wq);
 	}
+=======
+	do {
+		ret = btree_root(gc_root, c, &op, &writes, &stats);
+		closure_sync(&writes);
+		cond_resched();
+>>>>>>> 0e91d2a... Nougat
 
 	/* Possibly wait for new UUIDs or whatever to hit disk */
 	bch_journal_meta(c, &op.cl);
@@ -2099,8 +2106,16 @@ static int bch_btree_insert_recurse(struct btree *b, struct btree_op *op,
 
 		BUG_ON(write_block(b) != b->sets[b->nsets].data);
 
+<<<<<<< HEAD
 		if (bch_btree_insert_keys(b, op))
 			bch_btree_write(b, false, op);
+=======
+		if (b->key.ptr[0] != btree_ptr ||
+                   b->seq != seq + 1) {
+                       op->lock = b->level;
+			goto out;
+               }
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	return 0;

@@ -1,4 +1,4 @@
-/* Copyright (c) 2014 - 2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -28,8 +28,16 @@ static inline int msm_dcvs_get_mbs_per_frame(struct msm_vidc_inst *inst)
 {
 	int height, width;
 
-	height = inst->prop.height[CAPTURE_PORT];
-	width = inst->prop.width[CAPTURE_PORT];
+	if (!inst->in_reconfig) {
+		height = max(inst->prop.height[CAPTURE_PORT],
+				inst->prop.height[OUTPUT_PORT]);
+		width = max(inst->prop.width[CAPTURE_PORT],
+				inst->prop.width[OUTPUT_PORT]);
+	} else {
+		height = inst->reconfig_height;
+		width = inst->reconfig_width;
+	}
+
 	return NUM_MBS_PER_FRAME(height, width);
 }
 
@@ -39,7 +47,7 @@ static inline int msm_dcvs_count_active_instances(struct msm_vidc_core *core)
 	struct msm_vidc_inst *inst = NULL;
 
 	if (!core) {
-		dprintk(VIDC_ERR, "%s: Invalid args: %p\n", __func__, core);
+		dprintk(VIDC_ERR, "%s: Invalid args: %pK\n", __func__, core);
 		return -EINVAL;
 	}
 
@@ -53,6 +61,56 @@ static inline int msm_dcvs_count_active_instances(struct msm_vidc_core *core)
 	return active_instances;
 }
 
+<<<<<<< HEAD
+=======
+static bool msm_dcvs_check_codec_supported(int fourcc,
+		unsigned long codecs_supported, enum session_type type)
+{
+	int codec_bit, session_type_bit;
+	bool codec_type, session_type;
+	unsigned long session;
+
+	session = VIDC_VOTE_DATA_SESSION_VAL(get_hal_codec(fourcc),
+		get_hal_domain(type));
+
+	if (!codecs_supported || !session)
+		return false;
+
+	
+	codec_bit = ffs(session) - 1;
+	session_type_bit = codec_bit + 1;
+
+	codec_type =
+		test_bit(codec_bit, &codecs_supported) ==
+		test_bit(codec_bit, &session);
+	session_type =
+		test_bit(session_type_bit, &codecs_supported) ==
+		test_bit(session_type_bit, &session);
+
+	return codec_type && session_type;
+}
+
+static void msm_dcvs_update_dcvs_params(int idx, struct msm_vidc_inst *inst)
+{
+	struct dcvs_stats *dcvs = NULL;
+	struct msm_vidc_platform_resources *res = NULL;
+	struct dcvs_table *table = NULL;
+
+	if (!inst || !inst->core) {
+		dprintk(VIDC_ERR, "%s Invalid args: %pK\n", __func__, inst);
+		return;
+	}
+
+	dcvs = &inst->dcvs;
+	res = &inst->core->resources;
+	table = res->dcvs_tbl;
+
+	dcvs->load_low = table[idx].load_low;
+	dcvs->load_high = table[idx].load_high;
+	dcvs->supported_codecs = table[idx].supported_codecs;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static void msm_dcvs_enc_check_and_scale_clocks(struct msm_vidc_inst *inst)
 {
 	int rc = 0;
@@ -115,7 +173,7 @@ static void msm_dcvs_dec_check_and_scale_clocks(struct msm_vidc_inst *inst)
 void msm_dcvs_check_and_scale_clocks(struct msm_vidc_inst *inst, bool is_etb)
 {
 	if (!inst) {
-		dprintk(VIDC_ERR, "%s Invalid args: %p\n", __func__, inst);
+		dprintk(VIDC_ERR, "%s Invalid args: %pK\n", __func__, inst);
 		return;
 	}
 
@@ -167,7 +225,7 @@ void msm_dcvs_init_load(struct msm_vidc_inst *inst)
 	dprintk(VIDC_DBG, "Init DCVS Load\n");
 
 	if (!inst || !inst->core) {
-		dprintk(VIDC_ERR, "%s Invalid args: %p\n", __func__, inst);
+		dprintk(VIDC_ERR, "%s Invalid args: %pK\n", __func__, inst);
 		return;
 	}
 
@@ -210,7 +268,7 @@ void msm_dcvs_init_load(struct msm_vidc_inst *inst)
 
 	dcvs->transition_turbo = false;
 
-	/* calculating the min and max threshold */
+	
 	if (output_buf_req->buffer_count_actual) {
 		dcvs->min_threshold = DCVS_MIN_DISPLAY_BUFF;
 		dcvs->max_threshold = output_buf_req->buffer_count_actual;
@@ -230,7 +288,7 @@ void msm_dcvs_init(struct msm_vidc_inst *inst)
 	dprintk(VIDC_DBG, "Init DCVS Struct\n");
 
 	if (!inst) {
-		dprintk(VIDC_ERR, "%s Invalid args: %p\n", __func__, inst);
+		dprintk(VIDC_ERR, "%s Invalid args: %pK\n", __func__, inst);
 		return;
 	}
 
@@ -247,7 +305,7 @@ void msm_dcvs_monitor_buffer(struct msm_vidc_inst *inst)
 	struct hal_buffer_requirements *output_buf_req;
 
 	if (!inst) {
-		dprintk(VIDC_ERR, "%s Invalid args: %p\n", __func__, inst);
+		dprintk(VIDC_ERR, "%s Invalid args: %pK\n", __func__, inst);
 		return;
 	}
 	dcvs = &inst->dcvs;
@@ -256,7 +314,7 @@ void msm_dcvs_monitor_buffer(struct msm_vidc_inst *inst)
 	output_buf_req = get_buff_req_buffer(inst,
 				msm_comm_get_hal_output_buffer(inst));
 	if (!output_buf_req) {
-		dprintk(VIDC_ERR, "%s : Get output buffer req failed %p\n",
+		dprintk(VIDC_ERR, "%s : Get output buffer req failed %pK\n",
 			__func__, inst);
 		mutex_unlock(&inst->lock);
 		return;
@@ -385,12 +443,6 @@ static int msm_dcvs_enc_scale_clocks(struct msm_vidc_inst *inst)
 }
 
 
-/*
- * In DCVS scale_clocks will be done both in qbuf and FBD
- * 1 indicates call made from fbd that lowers clock
- * 0 indicates call made from qbuf that increases clock
- * based on DCVS algorithm
- */
 
 static int msm_dcvs_dec_scale_clocks(struct msm_vidc_inst *inst, bool fbd)
 {
@@ -422,10 +474,10 @@ static int msm_dcvs_dec_scale_clocks(struct msm_vidc_inst *inst, bool fbd)
 		return -EINVAL;
 	}
 
-	/* Total number of output buffers */
+	
 	total_output_buf = output_buf_req->buffer_count_actual;
 
-	/* Buffers outside FW are with display */
+	
 	buffers_outside_fw = total_output_buf - fw_pending_bufs;
 
 	if (buffers_outside_fw >= dcvs->threshold_disp_buf_high &&
@@ -516,6 +568,7 @@ static int msm_dcvs_check_supported(struct msm_vidc_inst *inst)
 			msm_comm_get_hal_output_buffer(inst));
 
 		is_codec_supported =
+<<<<<<< HEAD
 			(inst->fmts[OUTPUT_PORT]->fourcc ==
 				V4L2_PIX_FMT_H264) ||
 			(inst->fmts[OUTPUT_PORT]->fourcc ==
@@ -552,6 +605,18 @@ static int msm_dcvs_check_supported(struct msm_vidc_inst *inst)
 
 		if (dcvs_2k || dcvs_4k)
 			return -ENOTSUPP;
+=======
+			msm_dcvs_check_codec_supported(
+					inst->fmts[OUTPUT_PORT]->fourcc,
+					inst->dcvs.supported_codecs,
+					inst->session_type);
+		if (!is_codec_supported ||
+			!IS_VALID_DCVS_SESSION(num_mbs_per_frame,
+				res->dcvs_limit[inst->session_type].min_mbpf) ||
+			!IS_VALID_DCVS_SESSION(instance_load, dcvs_limit) ||
+			inst->seqchanged_count > 1)
+			return false;
+>>>>>>> 0e91d2a... Nougat
 
 		if (!output_buf_req) {
 			dprintk(VIDC_ERR,
@@ -566,6 +631,7 @@ static int msm_dcvs_check_supported(struct msm_vidc_inst *inst)
 			!inst->dcvs.is_additional_buff_added)
 			return -ENOTSUPP;
 	} else {
+<<<<<<< HEAD
 		rc = -ENOTSUPP;
 		/*
 		* For multiple instance use case with 4K, clocks will be scaled
@@ -573,6 +639,8 @@ static int msm_dcvs_check_supported(struct msm_vidc_inst *inst)
 		* down as DCVS is running for first playback instance
 		* Rescaling the core clock for multiple instance use case
 		*/
+=======
+>>>>>>> 0e91d2a... Nougat
 		if (!dcvs->is_clock_scaled) {
 			if (!msm_comm_scale_clocks(core)) {
 				dcvs->is_clock_scaled = true;
@@ -585,10 +653,6 @@ static int msm_dcvs_check_supported(struct msm_vidc_inst *inst)
 					__func__);
 			}
 		}
-		/*
-		* For multiple instance use case turn OFF DCVS algorithm
-		* immediately
-		*/
 		if (instance_count > 1) {
 			mutex_lock(&core->lock);
 			list_for_each_entry(temp, &core->instances, list)

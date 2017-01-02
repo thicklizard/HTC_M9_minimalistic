@@ -391,6 +391,50 @@ static struct msm_rpm_driver_data msm_rpm_data = {
 	.smd_open = COMPLETION_INITIALIZER(msm_rpm_data.smd_open),
 };
 
+<<<<<<< HEAD
+=======
+static int msm_rpm_glink_rx_poll(void *glink_handle)
+{
+	int ret;
+
+	ret = glink_rpm_rx_poll(glink_handle);
+	if (ret >= 0)
+		udelay(50);
+	else
+		pr_err("Not receieve an ACK from RPM. ret = %d\n", ret);
+
+	return ret;
+}
+
+static int msm_rpm_read_sleep_ack(void)
+{
+	int ret;
+	char buf[MAX_ERR_BUFFER_SIZE] = {0};
+
+	if (glink_enabled)
+		ret = msm_rpm_glink_rx_poll(glink_data->glink_handle);
+	else {
+		int timeout = 10;
+
+		while (timeout) {
+			if (smd_is_pkt_avail(msm_rpm_data.ch_info))
+				break;
+			udelay(50);
+			timeout--;
+		}
+
+
+		if (!timeout)
+			return -EAGAIN;
+
+		ret = msm_rpm_read_smd_data(buf);
+		if (!ret)
+			ret = smd_is_pkt_avail(msm_rpm_data.ch_info);
+	}
+	return ret;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static int msm_rpm_flush_requests(bool print)
 {
 	struct rb_node *t;
@@ -439,9 +483,18 @@ static int msm_rpm_flush_requests(bool print)
 				return -EAGAIN;
 			}
 
+<<<<<<< HEAD
 			pkt_sz = smd_cur_packet_size(msm_rpm_data.ch_info);
 			len = smd_read(msm_rpm_data.ch_info, buf, pkt_sz);
 			count--;
+=======
+			if (ret >= 0)
+				count--;
+			else {
+				pr_err("Timed out waiting for RPM ACK\n");
+				return ret;
+			}
+>>>>>>> 0e91d2a... Nougat
 		}
 	}
 	return 0;
@@ -1033,6 +1086,40 @@ static int msm_rpm_send_smd_buffer(char *buf, uint32_t size, bool noirq)
 	spin_unlock_irqrestore(&msm_rpm_data.smd_lock_write, flags);
 	return ret;
 
+<<<<<<< HEAD
+=======
+static int msm_rpm_glink_send_buffer(char *buf, uint32_t size, bool noirq)
+{
+	int ret;
+	unsigned long flags;
+	int timeout = 5;
+
+	spin_lock_irqsave(&msm_rpm_data.smd_lock_write, flags);
+	do {
+		ret = glink_tx(glink_data->glink_handle, buf, buf,
+					size, GLINK_TX_SINGLE_THREADED);
+		if (ret == -EBUSY || ret == -ENOSPC) {
+			if (!noirq) {
+				spin_unlock_irqrestore(
+					&msm_rpm_data.smd_lock_write, flags);
+				cpu_relax();
+				spin_lock_irqsave(
+					&msm_rpm_data.smd_lock_write, flags);
+			} else {
+				udelay(100);
+			}
+			timeout--;
+		} else {
+			ret = 0;
+		}
+	} while (ret && timeout);
+	spin_unlock_irqrestore(&msm_rpm_data.smd_lock_write, flags);
+
+	if (!timeout)
+		return 0;
+	else
+		return size;
+>>>>>>> 0e91d2a... Nougat
 }
 static int msm_rpm_send_data(struct msm_rpm_request *cdata,
 		int msg_type, bool noirq)

@@ -6168,6 +6168,14 @@ F:	Documentation/PCI/
 F:	drivers/pci/
 F:	include/linux/pci*
 
+PCI MSI DRIVER FOR APPLIEDMICRO XGENE
+M:	Duc Dang <dhdang@apm.com>
+L:	linux-pci@vger.kernel.org
+L:	linux-arm-kernel@lists.infradead.org
+S:	Maintained
+F:	Documentation/devicetree/bindings/pci/xgene-pci-msi.txt
+F:	drivers/pci/host/pci-xgene-msi.c
+
 PCMCIA SUBSYSTEM
 P:	Linux PCMCIA Team
 L:	linux-pcmcia@lists.infradead.org
@@ -7838,12 +7846,21 @@ F:	arch/m68k/include/asm/sun3*
 F:	drivers/net/ethernet/i825xx/sun3*
 
 SUPERH
+<<<<<<< HEAD
 M:	Paul Mundt <lethal@linux-sh.org>
 L:	linux-sh@vger.kernel.org
 W:	http://www.linux-sh.org
 Q:	http://patchwork.kernel.org/project/linux-sh/list/
 T:	git git://github.com/pmundt/linux-sh.git sh-latest
 S:	Supported
+=======
+M:	Yoshinori Sato <ysato@users.sourceforge.jp>
+M:	Rich Felker <dalias@libc.org>
+L:	linux-sh@vger.kernel.org
+W:	http://www.linux-sh.org
+Q:	http://patchwork.kernel.org/project/linux-sh/list/
+S:	Maintained
+>>>>>>> 0e91d2a... Nougat
 F:	Documentation/sh/
 F:	arch/sh/
 F:	drivers/sh/
@@ -9224,6 +9241,18 @@ M:	"Maciej W. Rozycki" <macro@linux-mips.org>
 S:	Maintained
 F:	drivers/tty/serial/zs.*
 
+<<<<<<< HEAD
+=======
+ZSMALLOC COMPRESSED SLAB MEMORY ALLOCATOR
+M:	Minchan Kim <minchan@kernel.org>
+M:	Nitin Gupta <ngupta@vflare.org>
+L:	linux-mm@kvack.org
+S:	Maintained
+F:	mm/zsmalloc.c
+F:	include/linux/zsmalloc.h
+F:	Documentation/vm/zsmalloc.txt
+
+>>>>>>> 0e91d2a... Nougat
 ZSWAP COMPRESSED SWAP CACHING
 M:	Seth Jennings <sjenning@linux.vnet.ibm.com>
 L:	linux-mm@kvack.org

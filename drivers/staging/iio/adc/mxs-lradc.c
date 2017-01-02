@@ -335,6 +335,7 @@ static int32_t mxs_lradc_ts_sample(struct mxs_lradc *lradc,
 	const uint8_t slot = 7;
 	uint32_t val;
 
+<<<<<<< HEAD
 	/*
 	 * There are three correct configurations of the controller sampling
 	 * the touchscreen, each of these configuration provides different
@@ -372,6 +373,29 @@ static int32_t mxs_lradc_ts_sample(struct mxs_lradc *lradc,
 	case LRADC_SAMPLE_PRESSURE:
 		ctrl0 = LRADC_CTRL0_YPPSW | LRADC_CTRL0_XNNSW;
 		chan = 5;
+=======
+		*val = lradc->vref_mv[chan->channel];
+		*val2 = chan->scan_type.realbits -
+			test_bit(chan->channel, &lradc->is_divided);
+		return IIO_VAL_FRACTIONAL_LOG2;
+
+	case IIO_CHAN_INFO_OFFSET:
+		if (chan->type == IIO_TEMP) {
+			/* The calculated value from the ADC is in Kelvin, we
+			 * want Celsius for hwmon so the offset is -273.15
+			 * The offset is applied before scaling so it is
+			 * actually -213.15 * 4 / 1.012 = -1079.644268
+			 */
+			*val = -1079;
+			*val2 = 644268;
+
+			return IIO_VAL_INT_PLUS_MICRO;
+		}
+
+		return -EINVAL;
+
+	default:
+>>>>>>> 0e91d2a... Nougat
 		break;
 	}
 

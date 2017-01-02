@@ -2775,6 +2775,179 @@ static void igb_ethtool_complete(struct net_device *netdev)
 	pm_runtime_put(&adapter->pdev->dev);
 }
 
+<<<<<<< HEAD
+=======
+static u32 igb_get_rxfh_indir_size(struct net_device *netdev)
+{
+	return IGB_RETA_SIZE;
+}
+
+static int igb_get_rxfh(struct net_device *netdev, u32 *indir, u8 *key)
+{
+	struct igb_adapter *adapter = netdev_priv(netdev);
+	int i;
+
+	for (i = 0; i < IGB_RETA_SIZE; i++)
+		indir[i] = adapter->rss_indir_tbl[i];
+
+	return 0;
+}
+
+void igb_write_rss_indir_tbl(struct igb_adapter *adapter)
+{
+	struct e1000_hw *hw = &adapter->hw;
+	u32 reg = E1000_RETA(0);
+	u32 shift = 0;
+	int i = 0;
+
+	switch (hw->mac.type) {
+	case e1000_82575:
+		shift = 6;
+		break;
+	case e1000_82576:
+		/* 82576 supports 2 RSS queues for SR-IOV */
+		if (adapter->vfs_allocated_count)
+			shift = 3;
+		break;
+	default:
+		break;
+	}
+
+	while (i < IGB_RETA_SIZE) {
+		u32 val = 0;
+		int j;
+
+		for (j = 3; j >= 0; j--) {
+			val <<= 8;
+			val |= adapter->rss_indir_tbl[i + j];
+		}
+
+		wr32(reg, val << shift);
+		reg += 4;
+		i += 4;
+	}
+}
+
+static int igb_set_rxfh(struct net_device *netdev, const u32 *indir,
+			const u8 *key)
+{
+	struct igb_adapter *adapter = netdev_priv(netdev);
+	struct e1000_hw *hw = &adapter->hw;
+	int i;
+	u32 num_queues;
+
+	num_queues = adapter->rss_queues;
+
+	switch (hw->mac.type) {
+	case e1000_82576:
+		/* 82576 supports 2 RSS queues for SR-IOV */
+		if (adapter->vfs_allocated_count)
+			num_queues = 2;
+		break;
+	default:
+		break;
+	}
+
+	/* Verify user input. */
+	for (i = 0; i < IGB_RETA_SIZE; i++)
+		if (indir[i] >= num_queues)
+			return -EINVAL;
+
+
+	for (i = 0; i < IGB_RETA_SIZE; i++)
+		adapter->rss_indir_tbl[i] = indir[i];
+
+	igb_write_rss_indir_tbl(adapter);
+
+	return 0;
+}
+
+static unsigned int igb_max_channels(struct igb_adapter *adapter)
+{
+	struct e1000_hw *hw = &adapter->hw;
+	unsigned int max_combined = 0;
+
+	switch (hw->mac.type) {
+	case e1000_i211:
+		max_combined = IGB_MAX_RX_QUEUES_I211;
+		break;
+	case e1000_82575:
+	case e1000_i210:
+		max_combined = IGB_MAX_RX_QUEUES_82575;
+		break;
+	case e1000_i350:
+		if (!!adapter->vfs_allocated_count) {
+			max_combined = 1;
+			break;
+		}
+		/* fall through */
+	case e1000_82576:
+		if (!!adapter->vfs_allocated_count) {
+			max_combined = 2;
+			break;
+		}
+		/* fall through */
+	case e1000_82580:
+	case e1000_i354:
+	default:
+		max_combined = IGB_MAX_RX_QUEUES;
+		break;
+	}
+
+	return max_combined;
+}
+
+static void igb_get_channels(struct net_device *netdev,
+			     struct ethtool_channels *ch)
+{
+	struct igb_adapter *adapter = netdev_priv(netdev);
+
+	/* Report maximum channels */
+	ch->max_combined = igb_max_channels(adapter);
+
+	/* Report info for other vector */
+	if (adapter->flags & IGB_FLAG_HAS_MSIX) {
+		ch->max_other = NON_Q_VECTORS;
+		ch->other_count = NON_Q_VECTORS;
+	}
+
+	ch->combined_count = adapter->rss_queues;
+}
+
+static int igb_set_channels(struct net_device *netdev,
+			    struct ethtool_channels *ch)
+{
+	struct igb_adapter *adapter = netdev_priv(netdev);
+	unsigned int count = ch->combined_count;
+	unsigned int max_combined = 0;
+
+	/* Verify they are not requesting separate vectors */
+	if (!count || ch->rx_count || ch->tx_count)
+		return -EINVAL;
+
+	/* Verify other_count is valid and has not been changed */
+	if (ch->other_count != NON_Q_VECTORS)
+		return -EINVAL;
+
+	/* Verify the number of channels doesn't exceed hw limits */
+	max_combined = igb_max_channels(adapter);
+	if (count > max_combined)
+		return -EINVAL;
+
+	if (count != adapter->rss_queues) {
+		adapter->rss_queues = count;
+		igb_set_flag_queue_pairs(adapter, max_combined);
+
+		/* Hardware has to reinitialize queues and interrupts to
+		 * match the new configuration.
+		 */
+		return igb_reinit_queues(adapter);
+	}
+
+	return 0;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static const struct ethtool_ops igb_ethtool_ops = {
 	.get_settings		= igb_get_settings,
 	.set_settings		= igb_set_settings,

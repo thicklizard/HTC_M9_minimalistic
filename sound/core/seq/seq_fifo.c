@@ -33,10 +33,13 @@ struct snd_seq_fifo *snd_seq_fifo_new(int poolsize)
 	struct snd_seq_fifo *f;
 
 	f = kzalloc(sizeof(*f), GFP_KERNEL);
+<<<<<<< HEAD
 	if (f == NULL) {
 		snd_printd("malloc failed for snd_seq_fifo_new() \n");
+=======
+	if (!f)
+>>>>>>> 0e91d2a... Nougat
 		return NULL;
-	}
 
 	f->pool = snd_seq_pool_new(poolsize);
 	if (f->pool == NULL) {

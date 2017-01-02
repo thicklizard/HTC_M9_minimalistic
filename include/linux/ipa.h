@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -71,8 +71,8 @@ enum ipa_aggr_type {
  * enum ipa_aggr_mode - global aggregation mode
  */
 enum ipa_aggr_mode {
-	IPA_MBIM,
-	IPA_QCNCM,
+	IPA_MBIM_AGGR,
+	IPA_QCNCM_AGGR,
 };
 
 /**
@@ -229,6 +229,20 @@ struct ipa_ep_cfg_mode {
  *			aggregation closure. Valid for Output Pipes only (IPA
  *			Producer). EOF affects only Pipes configured for
  *			generic aggregation.
+ * @aggr_hard_byte_limit_en: If set to 1, byte-limit aggregation for this
+ *			pipe will apply a hard-limit behavior which will not
+ *			allow frames to be closed with more than byte-limit
+ *			bytes. If set to 0, previous byte-limit behavior
+ *			will apply - frames close once a packet causes the
+ *			accumulated byte-count to cross the byte-limit
+ *			threshold (closed frame will contain that packet).
+ * @aggr_sw_eof_active: 0: EOF does not close aggregation. HW closes aggregation
+ *			(sends EOT) only based on its aggregation config
+ *			(byte/time limit, etc).
+ *			1: EOF closes aggregation in addition to HW based
+ *			aggregation closure. Valid for Output Pipes only (IPA
+ *			Producer). EOF affects only Pipes configured for generic
+ *			aggregation.
  */
 struct ipa_ep_cfg_aggr {
 	enum ipa_aggr_en_type aggr_en;
@@ -236,6 +250,8 @@ struct ipa_ep_cfg_aggr {
 	u32 aggr_byte_limit;
 	u32 aggr_time_limit;
 	u32 aggr_pkt_limit;
+	u32 aggr_hard_byte_limit_en;
+	bool aggr_sw_eof_active;
 };
 
 /**
@@ -313,11 +329,16 @@ enum ipa_cs_offload {
  *	checksum meta info header (4 bytes) starts (UL). Values are 0-15, which
  *	mean 0 - 60 byte checksum header offset. Valid for input
  *	pipes only (IPA consumer)
+ * @gen_qmb_master_sel: Select bit for ENDP GEN-QMB master. This is used to
+ *	separate DDR & PCIe transactions in-order to limit them as
+ *	a group (using MAX_WRITES/READS limiation). Valid for input and
+ *	output pipes (IPA consumer+producer)
  */
 struct ipa_ep_cfg_cfg {
 	bool frag_offload_en;
 	enum ipa_cs_offload cs_offload_en;
 	u8 cs_metadata_hdr_offset;
+	u8 gen_qmb_master_sel;
 };
 
 /**
@@ -341,6 +362,17 @@ struct ipa_ep_cfg_metadata {
 };
 
 /**
+ * struct ipa_ep_cfg_seq - HPS/DPS sequencer type configuration in IPA end-point
+ * @set_dynamic:  0 - HPS/DPS seq type is configured statically,
+ *		   1 - HPS/DPS seq type is set to seq_type
+ * @seq_type: HPS/DPS sequencer type configuration
+ */
+struct ipa_ep_cfg_seq {
+	bool set_dynamic;
+	int seq_type;
+};
+
+/**
  * struct ipa_ep_cfg - configuration of IPA end-point
  * @nat:		NAT parmeters
  * @hdr:		Header parameters
@@ -352,6 +384,7 @@ struct ipa_ep_cfg_metadata {
  * @cfg:		Configuration register data
  * @metadata_mask:	Hdr metadata mask
  * @meta:		Meta Data
+ * @seq:		HPS/DPS sequencers configuration
  */
 struct ipa_ep_cfg {
 	struct ipa_ep_cfg_nat nat;
@@ -364,6 +397,7 @@ struct ipa_ep_cfg {
 	struct ipa_ep_cfg_cfg cfg;
 	struct ipa_ep_cfg_metadata_mask metadata_mask;
 	struct ipa_ep_cfg_metadata meta;
+	struct ipa_ep_cfg_seq seq;
 };
 
 /**
@@ -480,7 +514,11 @@ struct ipa_ext_intf {
  * in system-BAM mode
  * @ipa_ep_cfg:	IPA EP configuration
  * @client:	the type of client who "owns" the EP
- * @desc_fifo_sz:	size of desc FIFO
+ * @desc_fifo_sz: size of desc FIFO. This number is used to allocate the desc
+ *		fifo for BAM. For GSI, this size is used by IPA driver as a
+ *		baseline to calculate the GSI ring size in the following way:
+ *		For PROD pipes, GSI ring is 4 * desc_fifo_sz.
+		For PROD pipes, GSI ring is 2 * desc_fifo_sz.
  * @priv:	callback cookie
  * @notify:	callback
  *		priv - callback cookie
@@ -848,15 +886,45 @@ struct IpaHwStatsWDIInfoData_t {
  * Rx buffers)
  * @rdy_ring_size: size of the Rx ring in bytes
  * @rdy_ring_rp_pa: physical address of the location through which IPA uc is
+ * reading (WDI-1.0)
+ * @rdy_comp_ring_base_pa: physical address of the base of the Rx completion
+ * ring (WDI-2.0)
+ * @rdy_comp_ring_wp_pa: physical address of the location through which IPA
+ * uc is writing (WDI-2.0)
+ * @rdy_comp_ring_size: size of the Rx_completion ring in bytes
  * expected to communicate about the Read pointer into the Rx Ring
  */
 struct ipa_wdi_ul_params {
 	phys_addr_t rdy_ring_base_pa;
 	u32 rdy_ring_size;
 	phys_addr_t rdy_ring_rp_pa;
+	phys_addr_t rdy_comp_ring_base_pa;
+	phys_addr_t rdy_comp_ring_wp_pa;
+	u32 rdy_comp_ring_size;
+	u32 *rdy_ring_rp_va;
+	u32 *rdy_comp_ring_wp_va;
 };
 
 /**
+<<<<<<< HEAD
+=======
+ * struct  ipa_wdi_ul_params_smmu - WDI_RX configuration (with WLAN SMMU)
+ * @rdy_ring: SG table describing the Rx ring (containing Rx buffers)
+ * @rdy_ring_size: size of the Rx ring in bytes
+ * @rdy_ring_rp_pa: physical address of the location through which IPA uc is
+ * expected to communicate about the Read pointer into the Rx Ring
+ */
+struct ipa_wdi_ul_params_smmu {
+	struct sg_table rdy_ring;
+	u32 rdy_ring_size;
+	phys_addr_t rdy_ring_rp_pa;
+	struct sg_table rdy_comp_ring;
+	phys_addr_t rdy_comp_ring_wp_pa;
+	u32 rdy_comp_ring_size;
+};
+
+/**
+>>>>>>> 0e91d2a... Nougat
  * struct  ipa_wdi_dl_params - WDI_TX configuration
  * @comp_ring_base_pa: physical address of the base of the Tx completion ring
  * @comp_ring_size: size of the Tx completion ring in bytes
@@ -901,6 +969,7 @@ struct ipa_wdi_out_params {
 };
 
 /**
+<<<<<<< HEAD
  * struct odu_bridge_params - parameters for odu bridge initialization API
  *
  * @netdev_name: network interface name
@@ -999,6 +1068,65 @@ struct ipa_mhi_connect_params {
 };
 
 #ifdef CONFIG_IPA
+=======
+ * struct ipa_wdi_db_params - information provided to retrieve
+ *       physical address of uC doorbell
+ * @client:	type of "client" (IPA_CLIENT_WLAN#_PROD/CONS)
+ * @uc_door_bell_pa: physical address of IPA uc doorbell
+ */
+struct ipa_wdi_db_params {
+	enum ipa_client_type client;
+	phys_addr_t uc_door_bell_pa;
+};
+
+/**
+ * struct  ipa_wdi_uc_ready_params - uC ready CB parameters
+ * @is_uC_ready: uC loaded or not
+ * @priv : callback cookie
+ * @notify:	callback
+ */
+typedef void (*ipa_uc_ready_cb)(void *priv);
+struct ipa_wdi_uc_ready_params {
+	bool is_uC_ready;
+	void *priv;
+	ipa_uc_ready_cb notify;
+};
+
+/**
+ * struct  ipa_wdi_buffer_info - address info of a WLAN allocated buffer
+ * @pa: physical address of the buffer
+ * @iova: IOVA of the buffer as embedded inside the WDI descriptors
+ * @size: size in bytes of the buffer
+ * @result: result of map or unmap operations (out param)
+ *
+ * IPA driver will create/release IOMMU mapping in IPA SMMU from iova->pa
+ */
+struct ipa_wdi_buffer_info {
+	phys_addr_t pa;
+	unsigned long iova;
+	size_t size;
+	int result;
+};
+
+/**
+ * struct ipa_gsi_ep_config - IPA GSI endpoint configurations
+ *
+ * @ipa_ep_num: IPA EP pipe number
+ * @ipa_gsi_chan_num: GSI channel number
+ * @ipa_if_tlv: number of IPA_IF TLV
+ * @ipa_if_aos: number of IPA_IF AOS
+ * @ee: Execution environment
+ */
+struct ipa_gsi_ep_config {
+	int ipa_ep_num;
+	int ipa_gsi_chan_num;
+	int ipa_if_tlv;
+	int ipa_if_aos;
+	int ee;
+};
+
+#if defined CONFIG_IPA || defined CONFIG_IPA3
+>>>>>>> 0e91d2a... Nougat
 
 /*
  * Connect / Disconnect
@@ -1013,6 +1141,19 @@ int ipa_disconnect(u32 clnt_hdl);
 int ipa_reset_endpoint(u32 clnt_hdl);
 
 /*
+<<<<<<< HEAD
+=======
+ * Remove ep delay
+ */
+int ipa_clear_endpoint_delay(u32 clnt_hdl);
+
+/*
+ * Disable ep
+ */
+int ipa_disable_endpoint(u32 clnt_hdl);
+
+/*
+>>>>>>> 0e91d2a... Nougat
  * Configuration
  */
 int ipa_cfg_ep(u32 clnt_hdl, const struct ipa_ep_cfg *ipa_ep_cfg);
@@ -1171,6 +1312,28 @@ int ipa_resume_wdi_pipe(u32 clnt_hdl);
 int ipa_suspend_wdi_pipe(u32 clnt_hdl);
 int ipa_get_wdi_stats(struct IpaHwStatsWDIInfoData_t *stats);
 u16 ipa_get_smem_restr_bytes(void);
+<<<<<<< HEAD
+=======
+/*
+ * To retrieve doorbell physical address of
+ * wlan pipes
+ */
+int ipa_uc_wdi_get_dbpa(struct ipa_wdi_db_params *out);
+
+/*
+ * To register uC ready callback if uC not ready
+ * and also check uC readiness
+ * if uC not ready only, register callback
+ */
+int ipa_uc_reg_rdyCB(struct ipa_wdi_uc_ready_params *param);
+/*
+ * To de-register uC ready callback
+ */
+int ipa_uc_dereg_rdyCB(void);
+
+int ipa_create_wdi_mapping(u32 num_buffers, struct ipa_wdi_buffer_info *info);
+int ipa_release_wdi_mapping(u32 num_buffers, struct ipa_wdi_buffer_info *info);
+>>>>>>> 0e91d2a... Nougat
 
 /*
  * Resource manager
@@ -1222,6 +1385,7 @@ int teth_bridge_disconnect(enum ipa_client_type client);
 int teth_bridge_connect(struct teth_bridge_connect_params *connect_params);
 
 /*
+<<<<<<< HEAD
  * ODU bridge
  */
 
@@ -1234,6 +1398,15 @@ int odu_bridge_disconnect(void);
 int odu_bridge_tx_dp(struct sk_buff *skb, struct ipa_tx_meta *metadata);
 
 int odu_bridge_cleanup(void);
+=======
+ * Tethering client info
+ */
+void ipa_set_client(int index, enum ipacm_client_enum client, bool uplink);
+
+enum ipacm_client_enum ipa_get_client(int pipe_idx);
+
+bool ipa_get_client_uplink(int pipe_idx);
+>>>>>>> 0e91d2a... Nougat
 
 /*
  * IPADMA
@@ -1254,6 +1427,7 @@ int ipa_dma_uc_memcpy(phys_addr_t dest, phys_addr_t src, int len);
 void ipa_dma_destroy(void);
 
 /*
+<<<<<<< HEAD
  * MHI
  */
 int ipa_mhi_init(struct ipa_mhi_init_params *params);
@@ -1271,6 +1445,8 @@ int ipa_mhi_resume(void);
 int ipa_mhi_destroy(void);
 
 /*
+=======
+>>>>>>> 0e91d2a... Nougat
  * mux id
  */
 int ipa_write_qmap_id(struct ipa_ioc_write_qmapid *param_in);
@@ -1332,6 +1508,25 @@ static inline int ipa_reset_endpoint(u32 clnt_hdl)
 }
 
 /*
+<<<<<<< HEAD
+=======
+ * Remove ep delay
+ */
+static inline int ipa_clear_endpoint_delay(u32 clnt_hdl)
+{
+	return -EPERM;
+}
+
+/*
+ * Disable ep
+ */
+static inline int ipa_disable_endpoint(u32 clnt_hdl)
+{
+	return -EPERM;
+}
+
+/*
+>>>>>>> 0e91d2a... Nougat
  * Configuration
  */
 static inline int ipa_cfg_ep(u32 clnt_hdl,
@@ -1689,6 +1884,27 @@ static inline int ipa_suspend_wdi_pipe(u32 clnt_hdl)
 	return -EPERM;
 }
 
+<<<<<<< HEAD
+=======
+static inline int ipa_uc_wdi_get_dbpa(
+	struct ipa_wdi_db_params *out)
+{
+	return -EPERM;
+}
+
+static inline int ipa_uc_reg_rdyCB(
+	struct ipa_wdi_uc_ready_params *param)
+{
+	return -EPERM;
+}
+
+static inline int ipa_uc_dereg_rdyCB(void)
+{
+	return -EPERM;
+}
+
+
+>>>>>>> 0e91d2a... Nougat
 /*
  * Resource manager
  */
@@ -1800,6 +2016,7 @@ static inline int teth_bridge_connect(struct teth_bridge_connect_params
 }
 
 /*
+<<<<<<< HEAD
  * ODU bridge
  */
 static inline int odu_bridge_init(struct odu_bridge_params *params)
@@ -1819,11 +2036,26 @@ static inline int odu_bridge_connect(void)
 
 static inline int odu_bridge_tx_dp(struct sk_buff *skb,
 						struct ipa_tx_meta *metadata)
+=======
+ * Tethering client info
+ */
+static inline void ipa_set_client(int index, enum ipacm_client_enum client,
+	bool uplink)
+{
+	return;
+}
+
+static inline enum ipacm_client_enum ipa_get_client(int pipe_idx)
+>>>>>>> 0e91d2a... Nougat
 {
 	return -EPERM;
 }
 
+<<<<<<< HEAD
 static inline int odu_bridge_cleanup(void)
+=======
+static inline bool ipa_get_client_uplink(int pipe_idx)
+>>>>>>> 0e91d2a... Nougat
 {
 	return -EPERM;
 }
@@ -1870,6 +2102,7 @@ static inline void ipa_dma_destroy(void)
 }
 
 /*
+<<<<<<< HEAD
  * MHI
  */
 static inline int ipa_mhi_init(struct ipa_mhi_init_params *params)
@@ -1909,6 +2142,8 @@ static inline int ipa_mhi_destroy(void)
 }
 
 /*
+=======
+>>>>>>> 0e91d2a... Nougat
  * mux id
  */
 static inline int ipa_write_qmap_id(struct ipa_ioc_write_qmapid *param_in)

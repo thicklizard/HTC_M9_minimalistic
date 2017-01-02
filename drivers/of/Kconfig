@@ -7,6 +7,7 @@ config OF
 menu "Device Tree and Open Firmware support"
 	depends on OF
 
+<<<<<<< HEAD
 config PROC_DEVICETREE
 	bool "Support for device tree in /proc"
 	depends on PROC_FS && !SPARC
@@ -17,6 +18,12 @@ config PROC_DEVICETREE
 
 config OF_SELFTEST
 	bool "Device Tree Runtime self tests"
+=======
+config OF_UNITTEST
+	bool "Device Tree runtime unit tests"
+	depends on OF_IRQ && OF_EARLY_FLATTREE
+	select OF_RESOLVE
+>>>>>>> 0e91d2a... Nougat
 	help
 	  This option builds in test cases for the device tree infrastructure
 	  that are executed one at boot time, and the results dumped to the
@@ -108,10 +115,17 @@ config OF_BATTERYDATA
 	help
 	  OpenFirmware BatteryData accessors
 
+<<<<<<< HEAD
 config OF_RESERVED_MEM
 	depends on OF_EARLY_FLATTREE
 	bool
 	help
 	  Helpers to allow for reservation of memory regions
+=======
+config OF_OVERLAY
+	bool "Device Tree overlays"
+	select OF_DYNAMIC
+	select OF_RESOLVE
+>>>>>>> 0e91d2a... Nougat
 
 endmenu # OF

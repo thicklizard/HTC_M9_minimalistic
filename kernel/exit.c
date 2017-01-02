@@ -59,6 +59,9 @@
 #include <asm/pgtable.h>
 #include <asm/mmu_context.h>
 #include <htc_debug/stability/htc_process_debug.h>
+#ifdef CONFIG_MSM_APP_SETTINGS
+#include <asm/app_api.h>
+#endif
 
 static void exit_mm(struct task_struct * tsk);
 
@@ -118,6 +121,22 @@ static void __exit_signal(struct task_struct *tsk)
 		sig->sum_sched_runtime += tsk->se.sum_exec_runtime;
 	}
 
+<<<<<<< HEAD
+=======
+	task_cputime(tsk, &utime, &stime);
+	write_seqlock(&sig->stats_lock);
+	sig->utime += utime;
+	sig->stime += stime;
+	sig->gtime += task_gtime(tsk);
+	sig->min_flt += tsk->min_flt;
+	sig->maj_flt += tsk->maj_flt;
+	sig->nvcsw += tsk->nvcsw;
+	sig->nivcsw += tsk->nivcsw;
+	sig->inblock += task_io_get_inblock(tsk);
+	sig->oublock += task_io_get_oublock(tsk);
+	task_io_accounting_add(&sig->ioac, &tsk->ioac);
+	sig->sum_sched_runtime += tsk->se.sum_exec_runtime;
+>>>>>>> 0e91d2a... Nougat
 	sig->nr_threads--;
 	__unhash_process(tsk, group_dead);
 
@@ -160,7 +179,12 @@ repeat:
 
 	zap_leader = 0;
 	leader = p->group_leader;
+<<<<<<< HEAD
 	if (leader != p && thread_group_empty(leader) && leader->exit_state == EXIT_ZOMBIE) {
+=======
+	if (leader != p && thread_group_empty(leader)
+			&& leader->exit_state == EXIT_ZOMBIE) {
+>>>>>>> 0e91d2a... Nougat
 		zap_leader = do_notify_parent(leader, leader->exit_signal);
 		if (zap_leader)
 			leader->exit_state = EXIT_DEAD;
@@ -189,7 +213,12 @@ struct pid *session_of_pgrp(struct pid *pgrp)
 	return sid;
 }
 
+<<<<<<< HEAD
 static int will_become_orphaned_pgrp(struct pid *pgrp, struct task_struct *ignored_task)
+=======
+static int will_become_orphaned_pgrp(struct pid *pgrp,
+					struct task_struct *ignored_task)
+>>>>>>> 0e91d2a... Nougat
 {
 	struct task_struct *p;
 
@@ -250,6 +279,7 @@ kill_orphaned_pgrp(struct task_struct *tsk, struct task_struct *parent)
 	}
 }
 
+<<<<<<< HEAD
 void __set_special_pids(struct pid *pid)
 {
 	struct task_struct *curr = current->group_leader;
@@ -292,6 +322,9 @@ int disallow_signal(int sig)
 EXPORT_SYMBOL(disallow_signal);
 
 #ifdef CONFIG_MM_OWNER
+=======
+#ifdef CONFIG_MEMCG
+>>>>>>> 0e91d2a... Nougat
 void mm_update_next_owner(struct mm_struct *mm)
 {
 	struct task_struct *c, *g, *p = current;
@@ -315,11 +348,24 @@ retry:
 			goto assign_new_owner;
 	}
 
+<<<<<<< HEAD
 	do_each_thread(g, c) {
 		if (c->mm == mm)
 			goto assign_new_owner;
 	} while_each_thread(g, c);
 
+=======
+	for_each_process(g) {
+		if (g->flags & PF_KTHREAD)
+			continue;
+		for_each_thread(g, c) {
+			if (c->mm == mm)
+				goto assign_new_owner;
+			if (c->mm)
+				break;
+		}
+	}
+>>>>>>> 0e91d2a... Nougat
 	read_unlock(&tasklist_lock);
 	mm->owner = NULL;
 	return;
@@ -340,7 +386,11 @@ assign_new_owner:
 }
 #endif 
 
+<<<<<<< HEAD
 static void exit_mm(struct task_struct * tsk)
+=======
+static void exit_mm(struct task_struct *tsk)
+>>>>>>> 0e91d2a... Nougat
 {
 	struct mm_struct *mm = tsk->mm;
 	struct core_state *core_state;
@@ -374,7 +424,17 @@ static void exit_mm(struct task_struct * tsk)
 	BUG_ON(mm != tsk->active_mm);
 	
 	task_lock(tsk);
+#ifdef CONFIG_MSM_APP_SETTINGS
+	preempt_disable();
+	if (tsk->mm && unlikely(tsk->mm->app_setting))
+	{
+		clear_app_setting_bit(APP_SETTING_BIT);
+	}
 	tsk->mm = NULL;
+	preempt_enable();
+#else
+	tsk->mm = NULL;
+#endif
 	up_read(&mm->mmap_sem);
 	enter_lazy_tlb(mm, current);
 	task_unlock(tsk);
@@ -436,6 +496,7 @@ static void reparent_leader(struct task_struct *father, struct task_struct *p,
 				struct list_head *dead)
 {
 	list_move_tail(&p->sibling, &p->real_parent->children);
+<<<<<<< HEAD
 	if (same_thread_group(p->real_parent, father))
 		return;
 
@@ -444,6 +505,17 @@ static void reparent_leader(struct task_struct *father, struct task_struct *p,
 	if (p->exit_state == EXIT_DEAD)
 		return;
 
+=======
+
+	if (p->exit_state == EXIT_DEAD)
+		return;
+	if (same_thread_group(p->real_parent, father))
+		return;
+
+	
+	p->exit_signal = SIGCHLD;
+
+>>>>>>> 0e91d2a... Nougat
 	
 	if (!p->ptrace &&
 	    p->exit_state == EXIT_ZOMBIE && thread_group_empty(p)) {
@@ -649,8 +721,12 @@ void do_exit(long code)
 
 	module_put(task_thread_info(tsk)->exec_domain->module);
 
+<<<<<<< HEAD
 	proc_exit_connector(tsk);
 	ptrace_put_breakpoints(tsk);
+=======
+	flush_ptrace_hw_breakpoint(tsk);
+>>>>>>> 0e91d2a... Nougat
 
 	exit_notify(tsk, group_dead);
 #ifdef CONFIG_NUMA
@@ -681,6 +757,10 @@ void do_exit(long code)
 	if (tsk->nr_dirtied)
 		__this_cpu_add(dirty_throttle_leaks, tsk->nr_dirtied);
 	exit_rcu();
+<<<<<<< HEAD
+=======
+	TASKS_RCU(__srcu_read_unlock(&tasks_rcu_exit_srcu, tasks_rcu_i));
+>>>>>>> 0e91d2a... Nougat
 
 	smp_mb();
 	raw_spin_unlock_wait(&tsk->pi_lock);
@@ -841,6 +921,7 @@ static int wait_task_zombie(struct wait_opts *wo, struct task_struct *p)
 		return wait_noreap_copyout(wo, p, pid, uid, why, status);
 	}
 
+<<<<<<< HEAD
 	state = xchg(&p->exit_state, EXIT_DEAD);
 	if (state != EXIT_ZOMBIE) {
 		BUG_ON(state != EXIT_DEAD);
@@ -848,6 +929,12 @@ static int wait_task_zombie(struct wait_opts *wo, struct task_struct *p)
 	}
 
 	traced = ptrace_reparented(p);
+=======
+	traced = ptrace_reparented(p);
+	state = traced && thread_group_leader(p) ? EXIT_TRACE : EXIT_DEAD;
+	if (cmpxchg(&p->exit_state, EXIT_ZOMBIE, state) != EXIT_ZOMBIE)
+		return 0;
+>>>>>>> 0e91d2a... Nougat
 	if (likely(!traced) && thread_group_leader(p)) {
 		struct signal_struct *psig;
 		struct signal_struct *sig;
@@ -922,11 +1009,20 @@ static int wait_task_zombie(struct wait_opts *wo, struct task_struct *p)
 		write_lock_irq(&tasklist_lock);
 		
 		ptrace_unlink(p);
+<<<<<<< HEAD
 		if (thread_group_leader(p) &&
 		    !do_notify_parent(p, p->exit_signal)) {
 			p->exit_state = EXIT_ZOMBIE;
 			p = NULL;
 		}
+=======
+
+		
+		state = EXIT_ZOMBIE;
+		if (do_notify_parent(p, p->exit_signal))
+			state = EXIT_DEAD;
+		p->exit_state = state;
+>>>>>>> 0e91d2a... Nougat
 		write_unlock_irq(&tasklist_lock);
 	}
 	if (p != NULL)
@@ -1063,7 +1159,17 @@ static int wait_task_continued(struct wait_opts *wo, struct task_struct *p)
 static int wait_consider_task(struct wait_opts *wo, int ptrace,
 				struct task_struct *p)
 {
+<<<<<<< HEAD
 	int ret = eligible_child(wo, p);
+=======
+	int exit_state = ACCESS_ONCE(p->exit_state);
+	int ret;
+
+	if (unlikely(exit_state == EXIT_DEAD))
+		return 0;
+
+	ret = eligible_child(wo, p);
+>>>>>>> 0e91d2a... Nougat
 	if (!ret)
 		return ret;
 
@@ -1074,13 +1180,19 @@ static int wait_consider_task(struct wait_opts *wo, int ptrace,
 		return 0;
 	}
 
+<<<<<<< HEAD
 	
 	if (unlikely(p->exit_state == EXIT_DEAD)) {
 		if (likely(!ptrace) && unlikely(ptrace_reparented(p)))
+=======
+	if (unlikely(exit_state == EXIT_TRACE)) {
+		if (likely(!ptrace))
+>>>>>>> 0e91d2a... Nougat
 			wo->notask_error = 0;
 		return 0;
 	}
 
+<<<<<<< HEAD
 	
 	if (p->exit_state == EXIT_ZOMBIE) {
 		if (likely(!ptrace) && unlikely(p->ptrace)) {
@@ -1099,6 +1211,24 @@ static int wait_consider_task(struct wait_opts *wo, int ptrace,
 		if (likely(!ptrace) && p->ptrace && !ptrace_reparented(p))
 			return 0;
 
+=======
+	if (likely(!ptrace) && unlikely(p->ptrace)) {
+		if (!ptrace_reparented(p))
+			ptrace = 1;
+	}
+
+	
+	if (exit_state == EXIT_ZOMBIE) {
+		
+		if (!delay_group_leader(p)) {
+			if (unlikely(ptrace) || likely(!p->ptrace))
+				return wait_task_zombie(wo, p);
+		}
+
+		if (likely(!ptrace) || (wo->wo_flags & (WCONTINUED | WEXITED)))
+			wo->notask_error = 0;
+	} else {
+>>>>>>> 0e91d2a... Nougat
 		wo->notask_error = 0;
 	}
 

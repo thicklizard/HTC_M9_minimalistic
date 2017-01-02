@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -20,6 +20,7 @@
 #define LPASS_BE_HDMI "HDMI"
 #define LPASS_BE_INT_BT_SCO_RX "INT_BT_SCO_RX"
 #define LPASS_BE_INT_BT_SCO_TX "INT_BT_SCO_TX"
+#define LPASS_BE_INT_BT_A2DP_RX "INT_BT_A2DP_RX"
 #define LPASS_BE_INT_FM_RX "INT_FM_RX"
 #define LPASS_BE_INT_FM_TX "INT_FM_TX"
 #define LPASS_BE_AFE_PCM_RX "RT_PROXY_DAI_001_RX"
@@ -150,6 +151,78 @@ enum {
 	MSM_BACKEND_DAI_SLIMBUS_6_TX,
 	MSM_BACKEND_DAI_SPDIF_RX,
 	MSM_BACKEND_DAI_SECONDARY_MI2S_RX_SD1,
+<<<<<<< HEAD
+=======
+	MSM_BACKEND_DAI_SLIMBUS_5_RX,
+	MSM_BACKEND_DAI_QUINARY_MI2S_RX,
+	MSM_BACKEND_DAI_QUINARY_MI2S_TX,
+	MSM_BACKEND_DAI_SENARY_MI2S_TX,
+	MSM_BACKEND_DAI_PRI_TDM_RX_0,
+	MSM_BACKEND_DAI_PRI_TDM_TX_0,
+	MSM_BACKEND_DAI_PRI_TDM_RX_1,
+	MSM_BACKEND_DAI_PRI_TDM_TX_1,
+	MSM_BACKEND_DAI_PRI_TDM_RX_2,
+	MSM_BACKEND_DAI_PRI_TDM_TX_2,
+	MSM_BACKEND_DAI_PRI_TDM_RX_3,
+	MSM_BACKEND_DAI_PRI_TDM_TX_3,
+	MSM_BACKEND_DAI_PRI_TDM_RX_4,
+	MSM_BACKEND_DAI_PRI_TDM_TX_4,
+	MSM_BACKEND_DAI_PRI_TDM_RX_5,
+	MSM_BACKEND_DAI_PRI_TDM_TX_5,
+	MSM_BACKEND_DAI_PRI_TDM_RX_6,
+	MSM_BACKEND_DAI_PRI_TDM_TX_6,
+	MSM_BACKEND_DAI_PRI_TDM_RX_7,
+	MSM_BACKEND_DAI_PRI_TDM_TX_7,
+	MSM_BACKEND_DAI_SEC_TDM_RX_0,
+	MSM_BACKEND_DAI_SEC_TDM_TX_0,
+	MSM_BACKEND_DAI_SEC_TDM_RX_1,
+	MSM_BACKEND_DAI_SEC_TDM_TX_1,
+	MSM_BACKEND_DAI_SEC_TDM_RX_2,
+	MSM_BACKEND_DAI_SEC_TDM_TX_2,
+	MSM_BACKEND_DAI_SEC_TDM_RX_3,
+	MSM_BACKEND_DAI_SEC_TDM_TX_3,
+	MSM_BACKEND_DAI_SEC_TDM_RX_4,
+	MSM_BACKEND_DAI_SEC_TDM_TX_4,
+	MSM_BACKEND_DAI_SEC_TDM_RX_5,
+	MSM_BACKEND_DAI_SEC_TDM_TX_5,
+	MSM_BACKEND_DAI_SEC_TDM_RX_6,
+	MSM_BACKEND_DAI_SEC_TDM_TX_6,
+	MSM_BACKEND_DAI_SEC_TDM_RX_7,
+	MSM_BACKEND_DAI_SEC_TDM_TX_7,
+	MSM_BACKEND_DAI_TERT_TDM_RX_0,
+	MSM_BACKEND_DAI_TERT_TDM_TX_0,
+	MSM_BACKEND_DAI_TERT_TDM_RX_1,
+	MSM_BACKEND_DAI_TERT_TDM_TX_1,
+	MSM_BACKEND_DAI_TERT_TDM_RX_2,
+	MSM_BACKEND_DAI_TERT_TDM_TX_2,
+	MSM_BACKEND_DAI_TERT_TDM_RX_3,
+	MSM_BACKEND_DAI_TERT_TDM_TX_3,
+	MSM_BACKEND_DAI_TERT_TDM_RX_4,
+	MSM_BACKEND_DAI_TERT_TDM_TX_4,
+	MSM_BACKEND_DAI_TERT_TDM_RX_5,
+	MSM_BACKEND_DAI_TERT_TDM_TX_5,
+	MSM_BACKEND_DAI_TERT_TDM_RX_6,
+	MSM_BACKEND_DAI_TERT_TDM_TX_6,
+	MSM_BACKEND_DAI_TERT_TDM_RX_7,
+	MSM_BACKEND_DAI_TERT_TDM_TX_7,
+	MSM_BACKEND_DAI_QUAT_TDM_RX_0,
+	MSM_BACKEND_DAI_QUAT_TDM_TX_0,
+	MSM_BACKEND_DAI_QUAT_TDM_RX_1,
+	MSM_BACKEND_DAI_QUAT_TDM_TX_1,
+	MSM_BACKEND_DAI_QUAT_TDM_RX_2,
+	MSM_BACKEND_DAI_QUAT_TDM_TX_2,
+	MSM_BACKEND_DAI_QUAT_TDM_RX_3,
+	MSM_BACKEND_DAI_QUAT_TDM_TX_3,
+	MSM_BACKEND_DAI_QUAT_TDM_RX_4,
+	MSM_BACKEND_DAI_QUAT_TDM_TX_4,
+	MSM_BACKEND_DAI_QUAT_TDM_RX_5,
+	MSM_BACKEND_DAI_QUAT_TDM_TX_5,
+	MSM_BACKEND_DAI_QUAT_TDM_RX_6,
+	MSM_BACKEND_DAI_QUAT_TDM_TX_6,
+	MSM_BACKEND_DAI_QUAT_TDM_RX_7,
+	MSM_BACKEND_DAI_QUAT_TDM_TX_7,
+	MSM_BACKEND_DAI_INT_BT_A2DP_RX,
+>>>>>>> 0e91d2a... Nougat
 	MSM_BACKEND_DAI_MAX,
 };
 
@@ -157,6 +230,16 @@ enum msm_pcm_routing_event {
 	MSM_PCM_RT_EVT_BUF_RECFG,
 	MSM_PCM_RT_EVT_DEVSWITCH,
 	MSM_PCM_RT_EVT_MAX,
+};
+
+enum {
+	EXT_EC_REF_NONE = 0,
+	EXT_EC_REF_PRI_MI2S_TX,
+	EXT_EC_REF_SEC_MI2S_TX,
+	EXT_EC_REF_TERT_MI2S_TX,
+	EXT_EC_REF_QUAT_MI2S_TX,
+	EXT_EC_REF_QUIN_MI2S_TX,
+	EXT_EC_REF_SLIM_1_TX,
 };
 
 #define INVALID_SESSION -1
@@ -252,6 +335,7 @@ void msm_pcm_routing_acquire_lock(void);
 void msm_pcm_routing_release_lock(void);
 
 void msm_pcm_routing_reg_stream_app_type_cfg(int fedai_id, int app_type,
+<<<<<<< HEAD
 					int acdb_dev_id, int sample_rate);
 
 int msm_pcm_routing_channel_mixer(int fedai_id, bool perf_mode,
@@ -260,4 +344,12 @@ int msm_pcm_routing_channel_mixer(int fedai_id, bool perf_mode,
 int msm_pcm_routing_get_port(struct snd_pcm_substream *substream, u16 *port_id);
 int htc_adm_effect_control(enum HTC_ADM_EFFECT_ID effect_id, u16 port_id, uint32_t copp_id, uint32_t param_id,
 		uint32_t payload_size, void *payload );
+=======
+			int acdb_dev_id, int sample_rate, int session_type);
+int msm_pcm_routing_get_stream_app_type_cfg(int fedai_id, int session_type,
+			int *app_type, int *acdb_dev_id, int *sample_rate);
+int htc_adm_effect_control(enum HTC_ADM_EFFECT_ID effect_id, u16 port_id, uint32_t copp_id,
+					uint32_t payload_size, void *payload);
+ushort get_adm_custom_effect_status(void);
+>>>>>>> 0e91d2a... Nougat
 #endif 

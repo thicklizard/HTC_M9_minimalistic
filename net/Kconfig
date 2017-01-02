@@ -43,6 +43,16 @@ config COMPAT_NETLINK_MESSAGES
 	  Newly written code should NEVER need this option but do
 	  compat-independent messages instead!
 
+config DISABLE_NET_SKB_FRAG_CACHE
+	bool "Disable skb fragment cache"
+	help
+	  Enabling this option ensures that when allocating skbs the network
+	  skb fragment cache is not used.
+	  Disabling use of the fragment cache can be useful on some low end
+	  targets because it reduces memory pressure.
+
+	  If you are unsure how to answer this question, answer N.
+
 menu "Networking options"
 
 source "net/packet/Kconfig"
@@ -329,11 +339,18 @@ config NET_DROP_MONITOR
 	drop statistics, say N here.
 
 config HTC_NETWORK_MODIFY
+<<<<<<< HEAD
 	bool "Enable HTC_NETWORK_MODIFY config"
 	default y
 	---help---
         Enable HTC_NETWORK_MODIFY
 
+=======
+    bool "Enable HTC_NETWORK_MODIFY config"
+    default y
+    ---help---
+        Enable HTC_NETWORK_MODIFY
+>>>>>>> 0e91d2a... Nougat
 endmenu
 
 endmenu

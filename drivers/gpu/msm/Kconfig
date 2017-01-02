@@ -40,6 +40,7 @@ config MSM_ADRENO_DEFAULT_GOVERNOR
 	default "simple_ondemand"
 	depends on MSM_KGSL
 
+<<<<<<< HEAD
 config MSM_KGSL_DRM
 	bool "Build a DRM interface for the MSM_KGSL driver"
 	depends on MSM_KGSL && DRM
@@ -50,6 +51,11 @@ config KGSL_PER_PROCESS_PAGE_TABLE
 	depends on !MSM_KGSL_DRM
 	---help---
 	  The MMU will use per process pagetables when enabled.
+=======
+config MSM_KGSL_IOMMU
+	bool
+	default y if MSM_KGSL && (MSM_IOMMU || ARM_SMMU)
+>>>>>>> 0e91d2a... Nougat
 
 config MSM_KGSL_DEFAULT_GPU_HUNG_NO_PANIC
 	int "Bypass HTC change for GPU hung, go QCT origin flow"

@@ -514,6 +514,7 @@ static pageout_t pageout(struct page *page, struct address_space *mapping,
 		if (!PageWriteback(page)) {
 			/* synchronous write or broken a_ops? */
 			ClearPageReclaim(page);
+<<<<<<< HEAD
 			if (PageError(page) && PageSwapCache(page)) {
 				ClearPageError(page);
 				/*
@@ -526,6 +527,8 @@ static pageout_t pageout(struct page *page, struct address_space *mapping,
 				__set_page_locked(page);
 				return PAGE_ACTIVATE;
 			}
+=======
+>>>>>>> 0e91d2a... Nougat
 		}
 		trace_mm_vmscan_writepage(page, trace_reclaim_flags(page));
 		inc_zone_page_state(page, NR_VMSCAN_WRITE);
@@ -919,6 +922,7 @@ static unsigned long shrink_page_list(struct list_head *page_list,
 
 			/* Case 2 above */
 			} else if (global_reclaim(sc) ||
+<<<<<<< HEAD
 			    !PageReclaim(page) || !(sc->gfp_mask & __GFP_IO)) {
 				/*
 				 * This is slightly racy - end_page_writeback()
@@ -931,6 +935,9 @@ static unsigned long shrink_page_list(struct list_head *page_list,
 				 * then wait_on_page_writeback() to avoid OOM;
 				 * and it's also appropriate in global reclaim.
 				 */
+=======
+			    !PageReclaim(page) || !may_enter_fs) {
+>>>>>>> 0e91d2a... Nougat
 				SetPageReclaim(page);
 				nr_writeback++;
 

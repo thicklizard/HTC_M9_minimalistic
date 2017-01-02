@@ -19,13 +19,22 @@
 static struct list_head nf_loggers_l[NFPROTO_NUMPROTO] __read_mostly;
 static DEFINE_MUTEX(nf_log_mutex);
 
+#define nft_log_dereference(logger) \
+	rcu_dereference_protected(logger, lockdep_is_held(&nf_log_mutex))
+
 static struct nf_logger *__find_logger(int pf, const char *str_logger)
 {
 	struct nf_logger *t;
 
+<<<<<<< HEAD
 	list_for_each_entry(t, &nf_loggers_l[pf], list[pf]) {
 		if (!strnicmp(str_logger, t->name, strlen(t->name)))
 			return t;
+=======
+		log = nft_log_dereference(loggers[pf][i]);
+		if (!strncasecmp(str_logger, log->name, strlen(log->name)))
+			return log;
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	return NULL;
@@ -39,8 +48,7 @@ void nf_log_set(struct net *net, u_int8_t pf, const struct nf_logger *logger)
 		return;
 
 	mutex_lock(&nf_log_mutex);
-	log = rcu_dereference_protected(net->nf.nf_loggers[pf],
-					lockdep_is_held(&nf_log_mutex));
+	log = nft_log_dereference(net->nf.nf_loggers[pf]);
 	if (log == NULL)
 		rcu_assign_pointer(net->nf.nf_loggers[pf], logger);
 
@@ -55,8 +63,7 @@ void nf_log_unset(struct net *net, const struct nf_logger *logger)
 
 	mutex_lock(&nf_log_mutex);
 	for (i = 0; i < NFPROTO_NUMPROTO; i++) {
-		log = rcu_dereference_protected(net->nf.nf_loggers[i],
-				lockdep_is_held(&nf_log_mutex));
+		log = nft_log_dereference(net->nf.nf_loggers[i]);
 		if (log == logger)
 			RCU_INIT_POINTER(net->nf.nf_loggers[i], NULL);
 	}
@@ -94,12 +101,22 @@ EXPORT_SYMBOL(nf_log_register);
 
 void nf_log_unregister(struct nf_logger *logger)
 {
+	const struct nf_logger *log;
 	int i;
 
 	mutex_lock(&nf_log_mutex);
+<<<<<<< HEAD
 	for (i = 0; i < NFPROTO_NUMPROTO; i++)
 		list_del(&logger->list[i]);
+=======
+	for (i = 0; i < NFPROTO_NUMPROTO; i++) {
+		log = nft_log_dereference(loggers[i][logger->type]);
+		if (log == logger)
+			RCU_INIT_POINTER(loggers[i][logger->type], NULL);
+	}
+>>>>>>> 0e91d2a... Nougat
 	mutex_unlock(&nf_log_mutex);
+	synchronize_rcu();
 }
 EXPORT_SYMBOL(nf_log_unregister);
 
@@ -192,8 +209,7 @@ static int seq_show(struct seq_file *s, void *v)
 	int ret;
 	struct net *net = seq_file_net(s);
 
-	logger = rcu_dereference_protected(net->nf.nf_loggers[*pos],
-					   lockdep_is_held(&nf_log_mutex));
+	logger = nft_log_dereference(net->nf.nf_loggers[*pos]);
 
 	if (!logger)
 		ret = seq_printf(s, "%2lld NONE (", *pos);
@@ -203,8 +219,17 @@ static int seq_show(struct seq_file *s, void *v)
 	if (ret < 0)
 		return ret;
 
+<<<<<<< HEAD
 	list_for_each_entry(t, &nf_loggers_l[*pos], list[*pos]) {
 		ret = seq_printf(s, "%s", t->name);
+=======
+	for (i = 0; i < NF_LOG_TYPE_MAX; i++) {
+		if (loggers[*pos][i] == NULL)
+			continue;
+
+		logger = nft_log_dereference(loggers[*pos][i]);
+		ret = seq_printf(s, "%s", logger->name);
+>>>>>>> 0e91d2a... Nougat
 		if (ret < 0)
 			return ret;
 		if (&t->list[*pos] != nf_loggers_l[*pos].prev) {
@@ -275,8 +300,7 @@ static int nf_log_proc_dostring(ctl_table *table, int write,
 		mutex_unlock(&nf_log_mutex);
 	} else {
 		mutex_lock(&nf_log_mutex);
-		logger = rcu_dereference_protected(net->nf.nf_loggers[tindex],
-						   lockdep_is_held(&nf_log_mutex));
+		logger = nft_log_dereference(net->nf.nf_loggers[tindex]);
 		if (!logger)
 			table->data = "NONE";
 		else

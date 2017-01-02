@@ -36,6 +36,7 @@
 		interrupt-controller;
 		reg = <0x00a01000 0x1000>,
 		      <0x00a00100 0x100>;
+		interrupt-parent = <&intc>;
 	};
 
 	clocks {
@@ -62,7 +63,7 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		compatible = "simple-bus";
-		interrupt-parent = <&intc>;
+		interrupt-parent = <&gpc>;
 		ranges;
 
 		dma_apbh: dma-apbh@00110000 {
@@ -97,7 +98,12 @@
 			compatible = "arm,cortex-a9-twd-timer";
 			reg = <0x00a00600 0x20>;
 			interrupts = <1 13 0xf01>;
+<<<<<<< HEAD
 			clocks = <&clks 15>;
+=======
+			interrupt-parent = <&intc>;
+			clocks = <&clks IMX6QDL_CLK_TWD>;
+>>>>>>> 0e91d2a... Nougat
 		};
 
 		L2: l2-cache@00a02000 {
@@ -106,6 +112,38 @@
 			interrupts = <0 92 0x04>;
 			cache-unified;
 			cache-level = <2>;
+<<<<<<< HEAD
+=======
+			arm,tag-latency = <4 2 3>;
+			arm,data-latency = <4 2 3>;
+		};
+
+		pcie: pcie@0x01000000 {
+			compatible = "fsl,imx6q-pcie", "snps,dw-pcie";
+			reg = <0x01ffc000 0x04000>,
+			      <0x01f00000 0x80000>;
+			reg-names = "dbi", "config";
+			#address-cells = <3>;
+			#size-cells = <2>;
+			device_type = "pci";
+			ranges = <0x00000800 0 0x01f00000 0x01f00000 0 0x00080000 /* configuration space */
+				  0x81000000 0 0          0x01f80000 0 0x00010000 /* downstream I/O */
+				  0x82000000 0 0x01000000 0x01000000 0 0x00f00000>; /* non-prefetchable memory */
+			num-lanes = <1>;
+			interrupts = <GIC_SPI 120 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "msi";
+			#interrupt-cells = <1>;
+			interrupt-map-mask = <0 0 0 0x7>;
+			interrupt-map = <0 0 0 1 &gpc GIC_SPI 123 IRQ_TYPE_LEVEL_HIGH>,
+			                <0 0 0 2 &gpc GIC_SPI 122 IRQ_TYPE_LEVEL_HIGH>,
+			                <0 0 0 3 &gpc GIC_SPI 121 IRQ_TYPE_LEVEL_HIGH>,
+			                <0 0 0 4 &gpc GIC_SPI 120 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&clks IMX6QDL_CLK_PCIE_AXI>,
+				 <&clks IMX6QDL_CLK_LVDS1_GATE>,
+				 <&clks IMX6QDL_CLK_PCIE_REF_125M>;
+			clock-names = "pcie", "pcie_bus", "pcie_phy";
+			status = "disabled";
+>>>>>>> 0e91d2a... Nougat
 		};
 
 		pmu {
@@ -536,7 +574,15 @@
 			gpc: gpc@020dc000 {
 				compatible = "fsl,imx6q-gpc";
 				reg = <0x020dc000 0x4000>;
+<<<<<<< HEAD
 				interrupts = <0 89 0x04 0 90 0x04>;
+=======
+				interrupt-controller;
+				#interrupt-cells = <3>;
+				interrupts = <0 89 IRQ_TYPE_LEVEL_HIGH>,
+					     <0 90 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-parent = <&intc>;
+>>>>>>> 0e91d2a... Nougat
 			};
 
 			gpr: iomuxc-gpr@020e0000 {

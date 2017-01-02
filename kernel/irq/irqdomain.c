@@ -275,6 +275,7 @@ struct irq_domain *irq_domain_add_legacy(struct device_node *of_node,
 EXPORT_SYMBOL_GPL(irq_domain_add_legacy);
 
 /**
+<<<<<<< HEAD
  * irq_domain_add_linear() - Allocate and register a linear revmap irq_domain.
  * @of_node: pointer to interrupt controller's device tree node.
  * @size: Number of interrupts in the domain.
@@ -345,9 +346,14 @@ EXPORT_SYMBOL_GPL(irq_domain_add_tree);
 
 /**
  * irq_find_host() - Locates a domain for a given device node
+=======
+ * irq_find_matching_host() - Locates a domain for a given device node
+>>>>>>> 0e91d2a... Nougat
  * @node: device-tree node of the interrupt controller
+ * @bus_token: domain-specific data
  */
-struct irq_domain *irq_find_host(struct device_node *node)
+struct irq_domain *irq_find_matching_host(struct device_node *node,
+					  enum irq_domain_bus_token bus_token)
 {
 	struct irq_domain *h, *found = NULL;
 	int rc;
@@ -356,13 +362,19 @@ struct irq_domain *irq_find_host(struct device_node *node)
 	 * it might potentially be set to match all interrupts in
 	 * the absence of a device node. This isn't a problem so far
 	 * yet though...
+	 *
+	 * bus_token == DOMAIN_BUS_ANY matches any domain, any other
+	 * values must generate an exact match for the domain to be
+	 * selected.
 	 */
 	mutex_lock(&irq_domain_mutex);
 	list_for_each_entry(h, &irq_domain_list, link) {
 		if (h->ops->match)
-			rc = h->ops->match(h, node);
+			rc = h->ops->match(h, node, bus_token);
 		else
-			rc = (h->of_node != NULL) && (h->of_node == node);
+			rc = ((h->of_node != NULL) && (h->of_node == node) &&
+			      ((bus_token == DOMAIN_BUS_ANY) ||
+			       (h->bus_token == bus_token)));
 
 		if (rc) {
 			found = h;
@@ -372,7 +384,7 @@ struct irq_domain *irq_find_host(struct device_node *node)
 	mutex_unlock(&irq_domain_mutex);
 	return found;
 }
-EXPORT_SYMBOL_GPL(irq_find_host);
+EXPORT_SYMBOL_GPL(irq_find_matching_host);
 
 /**
  * irq_set_default_host() - Set a "default" irq domain

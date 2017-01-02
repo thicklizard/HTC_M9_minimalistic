@@ -453,7 +453,13 @@ struct se_cmd {
 	struct kref		cmd_kref;
 	struct target_core_fabric_ops *se_tfo;
 	sense_reason_t		(*execute_cmd)(struct se_cmd *);
+<<<<<<< HEAD
 	void (*transport_complete_callback)(struct se_cmd *);
+=======
+	sense_reason_t		(*execute_rw)(struct se_cmd *, struct scatterlist *,
+					      u32, enum dma_data_direction);
+	sense_reason_t (*transport_complete_callback)(struct se_cmd *, bool, int *);
+>>>>>>> 0e91d2a... Nougat
 
 	unsigned char		*t_task_cdb;
 	unsigned char		__t_task_cdb[TCM_MAX_COMMAND_SIZE];
@@ -465,12 +471,20 @@ struct se_cmd {
 #define CMD_T_COMPLETE		(1 << 2)
 #define CMD_T_SENT		(1 << 4)
 #define CMD_T_STOP		(1 << 5)
+<<<<<<< HEAD
 #define CMD_T_FAILED		(1 << 6)
 #define CMD_T_LUN_STOP		(1 << 7)
 #define CMD_T_LUN_FE_STOP	(1 << 8)
 #define CMD_T_DEV_ACTIVE	(1 << 9)
 #define CMD_T_REQUEST_STOP	(1 << 10)
 #define CMD_T_BUSY		(1 << 11)
+=======
+#define CMD_T_DEV_ACTIVE	(1 << 7)
+#define CMD_T_REQUEST_STOP	(1 << 8)
+#define CMD_T_BUSY		(1 << 9)
+#define CMD_T_TAS		(1 << 10)
+#define CMD_T_FABRIC_STOP	(1 << 11)
+>>>>>>> 0e91d2a... Nougat
 	spinlock_t		t_state_lock;
 	struct completion	t_transport_stop_comp;
 	struct completion	transport_lun_fe_stop_comp;

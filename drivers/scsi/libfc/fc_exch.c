@@ -669,6 +669,62 @@ static int fc_seq_exch_abort(const struct fc_seq *req_sp,
 }
 
 /**
+<<<<<<< HEAD
+=======
+ * fc_invoke_resp() - invoke ep->resp()
+ *
+ * Notes:
+ * It is assumed that after initialization finished (this means the
+ * first unlock of ex_lock after fc_exch_alloc()) ep->resp and ep->arg are
+ * modified only via fc_seq_set_resp(). This guarantees that none of these
+ * two variables changes if ep->resp_active > 0.
+ *
+ * If an fc_seq_set_resp() call is busy modifying ep->resp and ep->arg when
+ * this function is invoked, the first spin_lock_bh() call in this function
+ * will wait until fc_seq_set_resp() has finished modifying these variables.
+ *
+ * Since fc_exch_done() invokes fc_seq_set_resp() it is guaranteed that that
+ * ep->resp() won't be invoked after fc_exch_done() has returned.
+ *
+ * The response handler itself may invoke fc_exch_done(), which will clear the
+ * ep->resp pointer.
+ *
+ * Return value:
+ * Returns true if and only if ep->resp has been invoked.
+ */
+static bool fc_invoke_resp(struct fc_exch *ep, struct fc_seq *sp,
+			   struct fc_frame *fp)
+{
+	void (*resp)(struct fc_seq *, struct fc_frame *fp, void *arg);
+	void *arg;
+	bool res = false;
+
+	spin_lock_bh(&ep->ex_lock);
+	ep->resp_active++;
+	if (ep->resp_task != current)
+		ep->resp_task = !ep->resp_task ? current : NULL;
+	resp = ep->resp;
+	arg = ep->arg;
+	spin_unlock_bh(&ep->ex_lock);
+
+	if (resp) {
+		resp(sp, fp, arg);
+		res = true;
+	}
+
+	spin_lock_bh(&ep->ex_lock);
+	if (--ep->resp_active == 0)
+		ep->resp_task = NULL;
+	spin_unlock_bh(&ep->ex_lock);
+
+	if (ep->resp_active == 0)
+		wake_up(&ep->resp_wq);
+
+	return res;
+}
+
+/**
+>>>>>>> 0e91d2a... Nougat
  * fc_exch_timeout() - Handle exchange timer expiration
  * @work: The work_struct identifying the exchange that timed out
  */
@@ -1511,10 +1567,16 @@ static void fc_exch_recv_seq_resp(struct fc_exch_mgr *mp, struct fc_frame *fp)
 	 * If new exch resp handler is valid then call that
 	 * first.
 	 */
+<<<<<<< HEAD
 	if (resp)
 		resp(sp, fp, ex_resp_arg);
 	else
 		fc_frame_free(fp);
+=======
+	if (!fc_invoke_resp(ep, sp, fp))
+		fc_frame_free(fp);
+
+>>>>>>> 0e91d2a... Nougat
 	fc_exch_release(ep);
 	return;
 rel:
@@ -1615,12 +1677,17 @@ static void fc_exch_abts_resp(struct fc_exch *ep, struct fc_frame *fp)
 	spin_unlock_bh(&ep->ex_lock);
 	if (!rc)
 		fc_exch_delete(ep);
+<<<<<<< HEAD
 
 	if (resp)
 		resp(sp, fp, ex_resp_arg);
 	else
 		fc_frame_free(fp);
 
+=======
+	if (!fc_invoke_resp(ep, sp, fp))
+		fc_frame_free(fp);
+>>>>>>> 0e91d2a... Nougat
 	if (has_rec)
 		fc_exch_timer_set(ep, ep->r_a_tov);
 

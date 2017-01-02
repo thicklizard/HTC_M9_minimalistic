@@ -26,7 +26,14 @@
 
 #define check_pgt_cache()		do { } while (0)
 
+<<<<<<< HEAD
 #ifndef CONFIG_ARM64_64K_PAGES
+=======
+#define PGALLOC_GFP	(GFP_KERNEL | __GFP_NOTRACK | __GFP_REPEAT | __GFP_ZERO)
+#define PGD_SIZE	(PTRS_PER_PGD * sizeof(pgd_t))
+
+#if CONFIG_ARM64_PGTABLE_LEVELS > 2
+>>>>>>> 0e91d2a... Nougat
 
 static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long addr)
 {

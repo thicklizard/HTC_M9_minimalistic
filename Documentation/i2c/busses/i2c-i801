@@ -27,6 +27,11 @@ Supported adapters:
   * Intel Coleto Creek (PCH)
   * Intel Wildcat Point-LP (PCH)
   * Intel BayTrail (SOC)
+<<<<<<< HEAD
+=======
+  * Intel Sunrise Point-H (PCH)
+  * Intel Sunrise Point-LP (PCH)
+>>>>>>> 0e91d2a... Nougat
    Datasheets: Publicly available at the Intel website
 
 On Intel Patsburg and later chipsets, both the normal host SMBus controller

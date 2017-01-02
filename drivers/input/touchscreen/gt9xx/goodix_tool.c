@@ -1,7 +1,11 @@
 /* drivers/input/touchscreen/goodix_tool.c
  *
  * 2010 - 2012 Goodix Technology.
+<<<<<<< HEAD
  * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+=======
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,6 +71,7 @@ static void tool_set_proc_name(char *procname)
 	"Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 	char date[20] = {0};
 	char month[4] = {0};
+<<<<<<< HEAD
 	int i = 0, n_month = 1, n_day = 0, n_year = 0;
 	snprintf(date, 20, "%s", __DATE__);
 
@@ -74,6 +79,13 @@ static void tool_set_proc_name(char *procname)
 
 	sscanf(date, "%s %d %d", month, &n_day, &n_year);
 
+=======
+	int i = 0, n_month = 1, n_day = 0, n_year = 0, ret;
+
+	ret = sscanf(date, "%s %d %d", month, &n_day, &n_year);
+	if (!ret)
+		return;
+>>>>>>> 0e91d2a... Nougat
 	for (i = 0; i < 12; ++i) {
 		if (!memcmp(months[i], month, 3)) {
 			n_month = i+1;

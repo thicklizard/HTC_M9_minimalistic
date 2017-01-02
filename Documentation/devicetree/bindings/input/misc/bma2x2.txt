@@ -37,6 +37,13 @@ Optional properties:
 				If this property is defined, data ready, fifo full and
 				other event will trigger level change on interrupt pin2
 				instead of interrupt pin1.
+<<<<<<< HEAD
+=======
+ - bosch,use-smd	: enable signification motion detection(SMD). Enable this
+				will create a new sensor which triggers an event each time
+				significant motion is detected.
+ - bosch,use-hrtimer	: Use hrtimer to report data. Hrtimer can report data more timely.
+>>>>>>> 0e91d2a... Nougat
 
 Example:
 &i2c_0 { /* BLSP1 QUP2 */
@@ -54,4 +61,8 @@ Example:
 		bosch,gpio-int1 = <&msm_gpio 112 0x2002>;
 		bosch,gpio-int2 = <&msm_gpio 114 0x2002>;
 	};
+<<<<<<< HEAD
 };
+=======
+};
+>>>>>>> 0e91d2a... Nougat

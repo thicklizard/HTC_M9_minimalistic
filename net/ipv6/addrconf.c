@@ -175,7 +175,11 @@ static struct ipv6_devconf ipv6_devconf __read_mostly = {
 	.disable_ipv6		= 0,
 	.accept_dad		= 1,
 	.accept_ra_prefix_route = 1,
+<<<<<<< HEAD
 	.accept_ra_mtu		= 1,
+=======
+	.use_oif_addrs_only	= 0,
+>>>>>>> 0e91d2a... Nougat
 };
 
 static struct ipv6_devconf ipv6_devconf_dflt __read_mostly = {
@@ -212,7 +216,11 @@ static struct ipv6_devconf ipv6_devconf_dflt __read_mostly = {
 	.disable_ipv6		= 0,
 	.accept_dad		= 1,
 	.accept_ra_prefix_route = 1,
+<<<<<<< HEAD
 	.accept_ra_mtu		= 1,
+=======
+	.use_oif_addrs_only	= 0,
+>>>>>>> 0e91d2a... Nougat
 };
 
 const struct in6_addr in6addr_any = IN6ADDR_ANY_INIT;
@@ -398,7 +406,17 @@ static struct inet6_dev *ipv6_add_dev(struct net_device *dev)
 
 	ipv6_mc_init_dev(ndev);
 	ndev->tstamp = jiffies;
+<<<<<<< HEAD
 	addrconf_sysctl_register(ndev);
+=======
+	err = addrconf_sysctl_register(ndev);
+	if (err) {
+		ipv6_mc_destroy_dev(ndev);
+		del_timer(&ndev->regen_timer);
+		snmp6_unregister_dev(ndev);
+		goto err_release;
+	}
+>>>>>>> 0e91d2a... Nougat
 	
 	rcu_assign_pointer(dev->ip6_ptr, ndev);
 
@@ -1229,15 +1247,78 @@ out:
 	return ret;
 }
 
+static int __ipv6_dev_get_saddr(struct net *net,
+				struct ipv6_saddr_dst *dst,
+				struct inet6_dev *idev,
+				struct ipv6_saddr_score *scores,
+				int hiscore_idx)
+{
+	struct ipv6_saddr_score *score = &scores[1 - hiscore_idx], *hiscore = &scores[hiscore_idx];
+
+	read_lock_bh(&idev->lock);
+	list_for_each_entry(score->ifa, &idev->addr_list, if_list) {
+		int i;
+
+		if ((score->ifa->flags & IFA_F_TENTATIVE) &&
+		    (!(score->ifa->flags & IFA_F_OPTIMISTIC)))
+			continue;
+
+		score->addr_type = __ipv6_addr_type(&score->ifa->addr);
+
+		if (unlikely(score->addr_type == IPV6_ADDR_ANY ||
+			     score->addr_type & IPV6_ADDR_MULTICAST)) {
+			net_dbg_ratelimited("ADDRCONF: unspecified / multicast address assigned as unicast address on %s",
+					    idev->dev->name);
+			continue;
+		}
+
+		score->rule = -1;
+		bitmap_zero(score->scorebits, IPV6_SADDR_RULE_MAX);
+
+		for (i = 0; i < IPV6_SADDR_RULE_MAX; i++) {
+			int minihiscore, miniscore;
+
+			minihiscore = ipv6_get_saddr_eval(net, hiscore, dst, i);
+			miniscore = ipv6_get_saddr_eval(net, score, dst, i);
+
+			if (minihiscore > miniscore) {
+				if (i == IPV6_SADDR_RULE_SCOPE &&
+				    score->scopedist > 0) {
+					goto out;
+				}
+				break;
+			} else if (minihiscore < miniscore) {
+				if (hiscore->ifa)
+					in6_ifa_put(hiscore->ifa);
+
+				in6_ifa_hold(score->ifa);
+
+				swap(hiscore, score);
+				hiscore_idx = 1 - hiscore_idx;
+
+				
+				score->ifa = hiscore->ifa;
+
+				break;
+			}
+		}
+	}
+out:
+	read_unlock_bh(&idev->lock);
+	return hiscore_idx;
+}
+
 int ipv6_dev_get_saddr(struct net *net, const struct net_device *dst_dev,
 		       const struct in6_addr *daddr, unsigned int prefs,
 		       struct in6_addr *saddr)
 {
-	struct ipv6_saddr_score scores[2],
-				*score = &scores[0], *hiscore = &scores[1];
+	struct ipv6_saddr_score scores[2], *hiscore;
 	struct ipv6_saddr_dst dst;
+	struct inet6_dev *idev;
 	struct net_device *dev;
 	int dst_type;
+	bool use_oif_addr = false;
+	int hiscore_idx = 0;
 
 	dst_type = __ipv6_addr_type(daddr);
 	dst.addr = daddr;
@@ -1246,77 +1327,34 @@ int ipv6_dev_get_saddr(struct net *net, const struct net_device *dst_dev,
 	dst.label = ipv6_addr_label(net, daddr, dst_type, dst.ifindex);
 	dst.prefs = prefs;
 
-	hiscore->rule = -1;
-	hiscore->ifa = NULL;
+	scores[hiscore_idx].rule = -1;
+	scores[hiscore_idx].ifa = NULL;
 
 	rcu_read_lock();
 
-	for_each_netdev_rcu(net, dev) {
-		struct inet6_dev *idev;
-
-		if (((dst_type & IPV6_ADDR_MULTICAST) ||
-		     dst.scope <= IPV6_ADDR_SCOPE_LINKLOCAL) &&
-		    dst.ifindex && dev->ifindex != dst.ifindex)
-			continue;
-
-		idev = __in6_dev_get(dev);
-		if (!idev)
-			continue;
-
-		read_lock_bh(&idev->lock);
-		list_for_each_entry(score->ifa, &idev->addr_list, if_list) {
-			int i;
-
-			if ((score->ifa->flags & IFA_F_TENTATIVE) &&
-			    (!(score->ifa->flags & IFA_F_OPTIMISTIC)))
-				continue;
-
-			score->addr_type = __ipv6_addr_type(&score->ifa->addr);
-
-			if (unlikely(score->addr_type == IPV6_ADDR_ANY ||
-				     score->addr_type & IPV6_ADDR_MULTICAST)) {
-				LIMIT_NETDEBUG(KERN_DEBUG
-					       "ADDRCONF: unspecified / multicast address "
-					       "assigned as unicast address on %s",
-					       dev->name);
-				continue;
-			}
-
-			score->rule = -1;
-			bitmap_zero(score->scorebits, IPV6_SADDR_RULE_MAX);
-
-			for (i = 0; i < IPV6_SADDR_RULE_MAX; i++) {
-				int minihiscore, miniscore;
-
-				minihiscore = ipv6_get_saddr_eval(net, hiscore, &dst, i);
-				miniscore = ipv6_get_saddr_eval(net, score, &dst, i);
-
-				if (minihiscore > miniscore) {
-					if (i == IPV6_SADDR_RULE_SCOPE &&
-					    score->scopedist > 0) {
-						goto try_nextdev;
-					}
-					break;
-				} else if (minihiscore < miniscore) {
-					if (hiscore->ifa)
-						in6_ifa_put(hiscore->ifa);
-
-					in6_ifa_hold(score->ifa);
-
-					swap(hiscore, score);
-
-					
-					score->ifa = hiscore->ifa;
-
-					break;
-				}
-			}
+	if (dst_dev) {
+		idev = __in6_dev_get(dst_dev);
+		if ((dst_type & IPV6_ADDR_MULTICAST) ||
+		    dst.scope <= IPV6_ADDR_SCOPE_LINKLOCAL ||
+		    (idev && idev->cnf.use_oif_addrs_only)) {
+			use_oif_addr = true;
 		}
-try_nextdev:
-		read_unlock_bh(&idev->lock);
+	}
+
+	if (use_oif_addr) {
+		if (idev)
+			hiscore_idx = __ipv6_dev_get_saddr(net, &dst, idev, scores, hiscore_idx);
+	} else {
+		for_each_netdev_rcu(net, dev) {
+			idev = __in6_dev_get(dev);
+			if (!idev)
+				continue;
+			hiscore_idx = __ipv6_dev_get_saddr(net, &dst, idev, scores, hiscore_idx);
+		}
 	}
 	rcu_read_unlock();
 
+	hiscore = &scores[hiscore_idx];
 	if (!hiscore->ifa)
 		return -EADDRNOTAVAIL;
 
@@ -1375,15 +1413,31 @@ static int ipv6_count_addresses(struct inet6_dev *idev)
 int ipv6_chk_addr(struct net *net, const struct in6_addr *addr,
 		  const struct net_device *dev, int strict)
 {
+	return ipv6_chk_addr_and_flags(net, addr, dev, strict, IFA_F_TENTATIVE);
+}
+EXPORT_SYMBOL(ipv6_chk_addr);
+
+int ipv6_chk_addr_and_flags(struct net *net, const struct in6_addr *addr,
+			    const struct net_device *dev, int strict,
+			    u32 banned_flags)
+{
 	struct inet6_ifaddr *ifp;
 	unsigned int hash = inet6_addr_hash(addr);
+	u32 ifp_flags;
 
 	rcu_read_lock_bh();
 	hlist_for_each_entry_rcu(ifp, &inet6_addr_lst[hash], addr_lst) {
 		if (!net_eq(dev_net(ifp->idev->dev), net))
 			continue;
+		ifp_flags = (ifp->flags&IFA_F_OPTIMISTIC)
+			    ? (ifp->flags&~IFA_F_TENTATIVE)
+			    : ifp->flags;
 		if (ipv6_addr_equal(&ifp->addr, addr) &&
+<<<<<<< HEAD
 		    !(ifp->flags&IFA_F_TENTATIVE) &&
+=======
+		    !(ifp_flags&banned_flags) &&
+>>>>>>> 0e91d2a... Nougat
 		    (dev == NULL || ifp->idev->dev == dev ||
 		     !(ifp->scope&(IFA_LINK|IFA_HOST) || strict))) {
 			rcu_read_unlock_bh();
@@ -1394,7 +1448,7 @@ int ipv6_chk_addr(struct net *net, const struct in6_addr *addr,
 	rcu_read_unlock_bh();
 	return 0;
 }
-EXPORT_SYMBOL(ipv6_chk_addr);
+EXPORT_SYMBOL(ipv6_chk_addr_and_flags);
 
 static bool ipv6_chk_same_addr(struct net *net, const struct in6_addr *addr,
 			       struct net_device *dev)
@@ -3940,7 +3994,13 @@ static inline void ipv6_store_devconf(struct ipv6_devconf *cnf,
 	array[DEVCONF_ACCEPT_DAD] = cnf->accept_dad;
 	array[DEVCONF_FORCE_TLLAO] = cnf->force_tllao;
 	array[DEVCONF_NDISC_NOTIFY] = cnf->ndisc_notify;
+<<<<<<< HEAD
 	array[DEVCONF_ACCEPT_RA_MTU] = cnf->accept_ra_mtu;
+=======
+	array[DEVCONF_SUPPRESS_FRAG_NDISC] = cnf->suppress_frag_ndisc;
+	array[DEVCONF_ACCEPT_RA_FROM_LOCAL] = cnf->accept_ra_from_local;
+	array[DEVCONF_USE_OIF_ADDRS_ONLY] = cnf->use_oif_addrs_only;
+>>>>>>> 0e91d2a... Nougat
 }
 
 static inline size_t inet6_ifla6_size(void)
@@ -4376,6 +4436,21 @@ int addrconf_sysctl_forward(ctl_table *ctl, int write,
 	return ret;
 }
 
+static
+int addrconf_sysctl_mtu(struct ctl_table *ctl, int write,
+			void __user *buffer, size_t *lenp, loff_t *ppos)
+{
+	struct inet6_dev *idev = ctl->extra1;
+	int min_mtu = IPV6_MIN_MTU;
+	struct ctl_table lctl;
+
+	lctl = *ctl;
+	lctl.extra1 = &min_mtu;
+	lctl.extra2 = idev ? &idev->dev->mtu : NULL;
+
+	return proc_dointvec_minmax(&lctl, write, buffer, lenp, ppos);
+}
+
 static void dev_disable_change(struct inet6_dev *idev)
 {
 	if (!idev || !idev->dev)
@@ -4480,7 +4555,7 @@ static struct addrconf_sysctl_table
 			.data		= &ipv6_devconf.mtu6,
 			.maxlen		= sizeof(int),
 			.mode		= 0644,
-			.proc_handler	= proc_dointvec,
+			.proc_handler	= addrconf_sysctl_mtu,
 		},
 		{
 			.procname	= "accept_ra",
@@ -4702,6 +4777,13 @@ static struct addrconf_sysctl_table
 			.maxlen		= sizeof(int),
 			.mode		= 0644,
 			.proc_handler	= proc_dointvec,
+		},
+		{
+			.procname       = "use_oif_addrs_only",
+			.data           = &ipv6_devconf.use_oif_addrs_only,
+			.maxlen         = sizeof(int),
+			.mode           = 0644,
+			.proc_handler   = proc_dointvec,
 		},
 		{
 			

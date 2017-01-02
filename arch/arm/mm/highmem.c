@@ -70,7 +70,11 @@ void *kmap_atomic(struct page *page)
 	 * With debugging enabled, kunmap_atomic forces that entry to 0.
 	 * Make sure it was indeed properly unmapped.
 	 */
+<<<<<<< HEAD
 	BUG_ON(!pte_none(get_top_pte(vaddr)));
+=======
+	BUG_ON(!pte_none(get_fixmap_pte(vaddr)));
+>>>>>>> 0e91d2a... Nougat
 #endif
 	/*
 	 * When debugging is off, kunmap_atomic leaves the previous mapping
@@ -120,7 +124,11 @@ void *kmap_atomic_pfn(unsigned long pfn)
 	idx = type + KM_TYPE_NR * smp_processor_id();
 	vaddr = __fix_to_virt(FIX_KMAP_BEGIN + idx);
 #ifdef CONFIG_DEBUG_HIGHMEM
+<<<<<<< HEAD
 	BUG_ON(!pte_none(get_top_pte(vaddr)));
+=======
+	BUG_ON(!pte_none(get_fixmap_pte(vaddr)));
+>>>>>>> 0e91d2a... Nougat
 #endif
 	set_top_pte(vaddr, pfn_pte(pfn, kmap_prot));
 

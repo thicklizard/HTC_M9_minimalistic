@@ -466,6 +466,33 @@ out:
 	return rc;
 }
 
+<<<<<<< HEAD
+=======
+static void init_ecryption_parameters(bool *hw_crypt, bool *cipher_supported,
+				struct ecryptfs_crypt_stat *crypt_stat)
+{
+	if (!hw_crypt || !cipher_supported)
+		return;
+
+	*cipher_supported = false;
+	*hw_crypt = false;
+
+	if (get_events() && get_events()->is_cipher_supported_cb) {
+		*cipher_supported =
+			get_events()->is_cipher_supported_cb(crypt_stat);
+		if (*cipher_supported) {
+
+			/**
+			 * we should apply external algorythm
+			 * assume that is_hw_crypt() cbck is supplied
+			 */
+			if (get_events()->is_hw_crypt_cb)
+				*hw_crypt = get_events()->is_hw_crypt_cb();
+		}
+	}
+}
+
+>>>>>>> 0e91d2a... Nougat
 /**
  * ecryptfs_encrypt_page
  * @page: Page mapped from the eCryptfs inode for the file; contains
@@ -907,6 +934,34 @@ static void ecryptfs_generate_new_key(struct ecryptfs_crypt_stat *crypt_stat)
 	}
 }
 
+<<<<<<< HEAD
+=======
+static int ecryptfs_generate_new_salt(struct ecryptfs_crypt_stat *crypt_stat)
+{
+	size_t salt_size = 0;
+
+	salt_size = ecryptfs_get_salt_size_for_cipher(crypt_stat);
+
+	if (0 == salt_size)
+		return 0;
+
+	if (!ecryptfs_check_space_for_salt(crypt_stat->key_size, salt_size)) {
+		ecryptfs_printk(KERN_WARNING, "not enough space for salt\n");
+		crypt_stat->flags |= ECRYPTFS_SECURITY_WARNING;
+		return -EINVAL;
+	}
+
+	get_random_bytes(crypt_stat->key + crypt_stat->key_size, salt_size);
+	if (unlikely(ecryptfs_verbosity > 0)) {
+		ecryptfs_printk(KERN_DEBUG, "Generated new session salt:\n");
+		ecryptfs_dump_hex(crypt_stat->key + crypt_stat->key_size,
+				  salt_size);
+	}
+
+	return 0;
+}
+
+>>>>>>> 0e91d2a... Nougat
 /**
  * ecryptfs_copy_mount_wide_flags_to_inode_flags
  * @crypt_stat: The inode's cryptographic context

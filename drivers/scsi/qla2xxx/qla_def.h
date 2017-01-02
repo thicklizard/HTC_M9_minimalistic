@@ -267,6 +267,7 @@
 #define RESPONSE_ENTRY_CNT_FX00		256     /* Number of response entries.*/
 
 struct req_que;
+struct qla_tgt_sess;
 
 /*
  * (sd.h is not exported, hence local inclusion)
@@ -2014,6 +2015,12 @@ typedef struct fc_port {
 	unsigned long last_ramp_up;
 
 	uint16_t port_id;
+<<<<<<< HEAD
+=======
+
+	unsigned long retry_delay_timestamp;
+	struct qla_tgt_sess *tgt_session;
+>>>>>>> 0e91d2a... Nougat
 } fc_port_t;
 
 #include "qla_mr.h"
@@ -3401,7 +3408,21 @@ typedef struct scsi_qla_host {
 	uint16_t	fcoe_fcf_idx;
 	uint8_t		fcoe_vn_port_mac[6];
 
+<<<<<<< HEAD
 	uint32_t   	vp_abort_cnt;
+=======
+	/* list of commands waiting on workqueue */
+	struct list_head	qla_cmd_list;
+	struct list_head	qla_sess_op_cmd_list;
+	spinlock_t		cmd_list_lock;
+
+	/* Counter to detect races between ELS and RSCN events */
+	atomic_t		generation_tick;
+	/* Time when global fcport update has been scheduled */
+	int			total_fcport_update_gen;
+
+	uint32_t	vp_abort_cnt;
+>>>>>>> 0e91d2a... Nougat
 
 	struct fc_vport	*fc_vport;	/* holds fc_vport * for each vport */
 	uint16_t        vp_idx;		/* vport ID */

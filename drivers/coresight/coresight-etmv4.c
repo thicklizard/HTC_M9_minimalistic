@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -441,6 +445,9 @@ static bool etm_arch_supported(uint8_t arch)
 static int etm_set_mode_exclude(struct etm_drvdata *drvdata, bool exclude)
 {
 	uint8_t idx = drvdata->addr_idx;
+
+	if (idx >= ETM_MAX_SINGLE_ADDR_CMP)
+		return -EINVAL;
 
 	if (BMVAL(drvdata->addr_acctype[idx], 0, 1) == ETM_INSTR_ADDR) {
 		if (idx % 2 != 0)
@@ -1534,6 +1541,12 @@ static ssize_t etm_show_addr_range(struct device *dev,
 		spin_unlock(&drvdata->spinlock);
 		return -EPERM;
 	}
+
+	if (idx >= ETM_MAX_SINGLE_ADDR_CMP) {
+		spin_unlock(&drvdata->spinlock);
+		return -EINVAL;
+	}
+
 	if (!((drvdata->addr_type[idx] == ETM_ADDR_TYPE_NONE &&
 	       drvdata->addr_type[idx + 1] == ETM_ADDR_TYPE_NONE) ||
 	      (drvdata->addr_type[idx] == ETM_ADDR_TYPE_RANGE &&
@@ -1568,6 +1581,12 @@ static ssize_t etm_store_addr_range(struct device *dev,
 		spin_unlock(&drvdata->spinlock);
 		return -EPERM;
 	}
+
+	if (idx >= ETM_MAX_SINGLE_ADDR_CMP) {
+		spin_unlock(&drvdata->spinlock);
+		return -EINVAL;
+	}
+
 	if (!((drvdata->addr_type[idx] == ETM_ADDR_TYPE_NONE &&
 	       drvdata->addr_type[idx + 1] == ETM_ADDR_TYPE_NONE) ||
 	      (drvdata->addr_type[idx] == ETM_ADDR_TYPE_RANGE &&
@@ -1871,6 +1890,12 @@ static ssize_t etm_show_addr_dvalmatch(struct device *dev,
 		spin_unlock(&drvdata->spinlock);
 		return -EINVAL;
 	}
+
+	if (idx >= ETM_MAX_SINGLE_ADDR_CMP) {
+		spin_unlock(&drvdata->spinlock);
+		return -EINVAL;
+	}
+
 	val = BMVAL(drvdata->addr_acctype[idx], 16, 17);
 	len = scnprintf(buf, PAGE_SIZE, "%s\n", val == ETM_DATA_CMP_NONE ?
 			"none" : (val == ETM_DATA_CMP_MATCH ? "match" :
@@ -1903,6 +1928,12 @@ static ssize_t etm_store_addr_dvalmatch(struct device *dev,
 		spin_unlock(&drvdata->spinlock);
 		return -EINVAL;
 	}
+
+	if (idx >= ETM_MAX_SINGLE_ADDR_CMP) {
+		spin_unlock(&drvdata->spinlock);
+		return -EINVAL;
+	}
+
 	if (!strcmp(str, "none")) {
 		drvdata->addr_acctype[idx] &= ~(BIT(16) | BIT(17));
 	} else if (!strcmp(str, "match")) {
@@ -1930,6 +1961,11 @@ static ssize_t etm_show_addr_dvalsize(struct device *dev,
 		spin_unlock(&drvdata->spinlock);
 		return -EINVAL;
 	}
+	if (idx >= ETM_MAX_SINGLE_ADDR_CMP) {
+		spin_unlock(&drvdata->spinlock);
+		return -EINVAL;
+	}
+
 	val = BMVAL(drvdata->addr_acctype[idx], 18, 19);
 	len = scnprintf(buf, PAGE_SIZE, "%s\n", val == ETM_DATA_TYPE_BYTE ?
 			"byte" : (val == ETM_DATA_TYPE_HWORD ? "halfword" :
@@ -1965,6 +2001,12 @@ static ssize_t etm_store_addr_dvalsize(struct device *dev,
 		spin_unlock(&drvdata->spinlock);
 		return -EINVAL;
 	}
+
+	if (idx >= ETM_MAX_SINGLE_ADDR_CMP) {
+		spin_unlock(&drvdata->spinlock);
+		return -EINVAL;
+	}
+
 	if (!strcmp(str, "byte")) {
 		drvdata->addr_acctype[idx] &= ~(BIT(18) | BIT(19));
 	} else if (!strcmp(str, "halfword")) {
@@ -1997,6 +2039,12 @@ static ssize_t etm_show_addr_dvalrange(struct device *dev,
 		spin_unlock(&drvdata->spinlock);
 		return -EINVAL;
 	}
+
+	if (idx >= ETM_MAX_SINGLE_ADDR_CMP) {
+		spin_unlock(&drvdata->spinlock);
+		return -EINVAL;
+	}
+
 	val = BVAL(drvdata->addr_acctype[idx], 20);
 	spin_unlock(&drvdata->spinlock);
 	return scnprintf(buf, PAGE_SIZE, "%#lx\n", val);
@@ -2024,6 +2072,12 @@ static ssize_t etm_store_addr_dvalrange(struct device *dev,
 		spin_unlock(&drvdata->spinlock);
 		return -EINVAL;
 	}
+
+	if (idx >= ETM_MAX_SINGLE_ADDR_CMP) {
+		spin_unlock(&drvdata->spinlock);
+		return -EINVAL;
+	}
+
 	if (val)
 		drvdata->addr_acctype[idx] |= (BIT(20));
 	else
@@ -2051,6 +2105,11 @@ static ssize_t etm_show_data_val(struct device *dev,
 	if (idx >= drvdata->nr_data_cmp) {
 		spin_unlock(&drvdata->spinlock);
 		return -EPERM;
+	}
+
+	if (idx >= ETM_MAX_DATA_VAL_CMP) {
+		spin_unlock(&drvdata->spinlock);
+		return -EINVAL;
 	}
 
 	val = (unsigned long)drvdata->data_val[idx];
@@ -2107,6 +2166,11 @@ static ssize_t etm_show_data_mask(struct device *dev,
 	if (idx >= drvdata->nr_data_cmp) {
 		spin_unlock(&drvdata->spinlock);
 		return -EPERM;
+	}
+
+	if (idx >= ETM_MAX_DATA_VAL_CMP) {
+		spin_unlock(&drvdata->spinlock);
+		return -EINVAL;
 	}
 
 	val = (unsigned long)drvdata->data_mask[idx];
@@ -2937,6 +3001,10 @@ static void etm_init_arch_data(void *info)
 
 	ETM_UNLOCK(drvdata);
 
+	/* check the state of the fuse */
+	if (!coresight_authstatus_enabled(drvdata->base))
+		goto out;
+
 	/* find all capabilities */
 	/* tracing capabilities of trace unit */
 	etmidr0 = etm_readl(drvdata, TRCIDR0);
@@ -3116,7 +3184,7 @@ static void etm_init_arch_data(void *info)
 		drvdata->reduced_cntr_support = true;
 	else
 		drvdata->reduced_cntr_support = false;
-
+out:
 	ETM_LOCK(drvdata);
 }
 
@@ -3356,8 +3424,11 @@ static int etm_cpu_callback(struct notifier_block *nfb, unsigned long action,
 out:
 	return NOTIFY_OK;
 err1:
+<<<<<<< HEAD
 	if (--count == 0)
 		unregister_hotcpu_notifier(&etm_cpu_notifier);
+=======
+>>>>>>> 0e91d2a... Nougat
 	if (clk_disable[cpu]) {
 		clk_disable_unprepare(etmdrvdata[cpu]->clk);
 		clk_disable[cpu] = false;
@@ -3441,9 +3512,12 @@ static int etm_probe(struct platform_device *pdev)
 		goto err0;
 	}
 
+<<<<<<< HEAD
 	if (count++ == 0)
 		register_hotcpu_notifier(&etm_cpu_notifier);
 
+=======
+>>>>>>> 0e91d2a... Nougat
 	ret = clk_set_rate(drvdata->clk, CORESIGHT_CLK_RATE_TRACE);
 	if (ret)
 		goto err0;
@@ -3452,6 +3526,14 @@ static int etm_probe(struct platform_device *pdev)
 	if (ret)
 		goto err0;
 
+<<<<<<< HEAD
+=======
+	if (count++ == 0) {
+		register_hotcpu_notifier(&etm_cpu_notifier);
+		register_hotcpu_notifier(&etm_cpu_dying_notifier);
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	get_online_cpus();
 
 	/*
@@ -3488,6 +3570,9 @@ static int etm_probe(struct platform_device *pdev)
 		drvdata->init = true;
 	}
 	mutex_unlock(&drvdata->mutex);
+
+	/* parse clock gating control DT and disable clock gating */
+	etm_parse_cgc_data(pdev, drvdata);
 
 	return 0;
 err1:

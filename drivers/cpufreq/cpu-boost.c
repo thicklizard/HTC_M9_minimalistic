@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -15,7 +15,6 @@
 
 #include <linux/kernel.h>
 #include <linux/init.h>
-#include <linux/notifier.h>
 #include <linux/cpufreq.h>
 #include <linux/cpu.h>
 #include <linux/sched.h>
@@ -30,16 +29,8 @@
 #include "../../kernel/sched/sched.h"
 
 struct cpu_sync {
-	struct task_struct *thread;
-	wait_queue_head_t sync_wq;
-	struct delayed_work boost_rem;
 	int cpu;
-	spinlock_t lock;
-	bool pending;
-	int src_cpu;
-	unsigned int boost_min;
 	unsigned int input_boost_min;
-	unsigned int task_load;
 	unsigned int input_boost_freq;
 	unsigned int nr_running;
 };
@@ -49,22 +40,20 @@ static DEFINE_PER_CPU(struct cpu_sync, sync_info);
 static struct task_struct * up_task[2];
 static struct workqueue_struct *cpu_boost_wq;
 
+<<<<<<< HEAD
 static unsigned int boost_ms;
 module_param(boost_ms, uint, 0644);
 
 static unsigned int sync_threshold;
 module_param(sync_threshold, uint, 0644);
+=======
+static int wake_bc, wake_lc;
+>>>>>>> 0e91d2a... Nougat
 
 static bool input_boost_enabled;
 
 static unsigned int input_boost_ms = 200;
 module_param(input_boost_ms, uint, 0644);
-
-static unsigned int migration_load_threshold = 15;
-module_param(migration_load_threshold, uint, 0644);
-
-static bool load_based_syncs;
-module_param(load_based_syncs, bool, 0644);
 
 static bool sched_boost_on_input;
 module_param(sched_boost_on_input, bool, 0644);
@@ -163,32 +152,29 @@ static int boost_adjust_notify(struct notifier_block *nb, unsigned long val,
 	struct cpufreq_policy *policy = data;
 	unsigned int cpu = policy->cpu;
 	struct cpu_sync *s = &per_cpu(sync_info, cpu);
-	unsigned int b_min = s->boost_min;
 	unsigned int ib_min = s->input_boost_min;
-	unsigned int min;
 
 	switch (val) {
 	case CPUFREQ_ADJUST:
-		if (!b_min && !ib_min)
+		if (!ib_min)
 			break;
 
+<<<<<<< HEAD
 		min = max(b_min, ib_min);
 
 		if (cpu == 4 && min > 0 && cnt_nr_running == 0)
                         break;
 
+=======
+>>>>>>> 0e91d2a... Nougat
 		pr_debug("CPU%u policy min before boost: %u kHz\n",
 			 cpu, policy->min);
-		pr_debug("CPU%u boost min: %u kHz\n", cpu, min);
+		pr_debug("CPU%u boost min: %u kHz\n", cpu, ib_min);
 
-		cpufreq_verify_within_limits(policy, min, UINT_MAX);
+		cpufreq_verify_within_limits(policy, ib_min, UINT_MAX);
 
 		pr_debug("CPU%u policy min after boost: %u kHz\n",
 			 cpu, policy->min);
-		break;
-
-	case CPUFREQ_START:
-		set_cpus_allowed(s->thread, *cpumask_of(cpu));
 		break;
 	}
 
@@ -199,6 +185,7 @@ static struct notifier_block boost_adjust_nb = {
 	.notifier_call = boost_adjust_notify,
 };
 
+<<<<<<< HEAD
 static void do_boost_rem(struct work_struct *work)
 {
 	struct cpu_sync *s = container_of(work, struct cpu_sync,
@@ -210,6 +197,8 @@ static void do_boost_rem(struct work_struct *work)
 	cpufreq_update_policy(s->cpu);
 }
 
+=======
+>>>>>>> 0e91d2a... Nougat
 static void update_policy_online(void)
 {
 	unsigned int i;
@@ -263,6 +252,7 @@ static void do_input_boost_rem(struct work_struct *work)
 	mutex_unlock(&input_boost_lock);
 }
 
+<<<<<<< HEAD
 static int boost_mig_sync_thread(void *data)
 {
 	int dest_cpu = (long) data;
@@ -375,6 +365,8 @@ static struct notifier_block boost_migration_nb = {
 	.notifier_call = boost_migration_notify,
 };
 
+=======
+>>>>>>> 0e91d2a... Nougat
 static int do_input_boost(void *data)
 {
 	struct cpu_sync *i_sync_info;
@@ -560,12 +552,6 @@ static int cpu_boost_init(void)
 	for_each_possible_cpu(cpu) {
 		s = &per_cpu(sync_info, cpu);
 		s->cpu = cpu;
-		init_waitqueue_head(&s->sync_wq);
-		spin_lock_init(&s->lock);
-		INIT_DELAYED_WORK(&s->boost_rem, do_boost_rem);
-		s->thread = kthread_run(boost_mig_sync_thread,
-				(void *) (long)cpu, "boost_sync/%d", cpu);
-		set_cpus_allowed(s->thread, *cpumask_of(cpu));
 	}
 
 	for (i = 0; i < 2; i++) {
@@ -578,10 +564,8 @@ static int cpu_boost_init(void)
 	}
 
 	cpufreq_register_notifier(&boost_adjust_nb, CPUFREQ_POLICY_NOTIFIER);
-	atomic_notifier_chain_register(&migration_notifier_head,
-					&boost_migration_nb);
 	ret = input_register_handler(&cpuboost_input_handler);
 
-	return 0;
+	return ret;
 }
 late_initcall(cpu_boost_init);

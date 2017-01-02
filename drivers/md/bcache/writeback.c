@@ -369,7 +369,228 @@ err:
 	 * Wait for outstanding writeback IOs to finish (and keybuf slots to be
 	 * freed) before refilling again
 	 */
+<<<<<<< HEAD
 	continue_at(cl, refill_dirty, dirty_wq);
+=======
+	closure_sync(&cl);
+}
+
+/* Scan for dirty data */
+
+void bcache_dev_sectors_dirty_add(struct cache_set *c, unsigned inode,
+				  uint64_t offset, int nr_sectors)
+{
+	struct bcache_device *d = c->devices[inode];
+	unsigned stripe_offset, stripe, sectors_dirty;
+
+	if (!d)
+		return;
+
+	stripe = offset_to_stripe(d, offset);
+	stripe_offset = offset & (d->stripe_size - 1);
+
+	while (nr_sectors) {
+		int s = min_t(unsigned, abs(nr_sectors),
+			      d->stripe_size - stripe_offset);
+
+		if (nr_sectors < 0)
+			s = -s;
+
+		if (stripe >= d->nr_stripes)
+			return;
+
+		sectors_dirty = atomic_add_return(s,
+					d->stripe_sectors_dirty + stripe);
+		if (sectors_dirty == d->stripe_size)
+			set_bit(stripe, d->full_dirty_stripes);
+		else
+			clear_bit(stripe, d->full_dirty_stripes);
+
+		nr_sectors -= s;
+		stripe_offset = 0;
+		stripe++;
+	}
+}
+
+static bool dirty_pred(struct keybuf *buf, struct bkey *k)
+{
+	struct cached_dev *dc = container_of(buf, struct cached_dev, writeback_keys);
+
+	BUG_ON(KEY_INODE(k) != dc->disk.id);
+
+	return KEY_DIRTY(k);
+}
+
+static void refill_full_stripes(struct cached_dev *dc)
+{
+	struct keybuf *buf = &dc->writeback_keys;
+	unsigned start_stripe, stripe, next_stripe;
+	bool wrapped = false;
+
+	stripe = offset_to_stripe(&dc->disk, KEY_OFFSET(&buf->last_scanned));
+
+	if (stripe >= dc->disk.nr_stripes)
+		stripe = 0;
+
+	start_stripe = stripe;
+
+	while (1) {
+		stripe = find_next_bit(dc->disk.full_dirty_stripes,
+				       dc->disk.nr_stripes, stripe);
+
+		if (stripe == dc->disk.nr_stripes)
+			goto next;
+
+		next_stripe = find_next_zero_bit(dc->disk.full_dirty_stripes,
+						 dc->disk.nr_stripes, stripe);
+
+		buf->last_scanned = KEY(dc->disk.id,
+					stripe * dc->disk.stripe_size, 0);
+
+		bch_refill_keybuf(dc->disk.c, buf,
+				  &KEY(dc->disk.id,
+				       next_stripe * dc->disk.stripe_size, 0),
+				  dirty_pred);
+
+		if (array_freelist_empty(&buf->freelist))
+			return;
+
+		stripe = next_stripe;
+next:
+		if (wrapped && stripe > start_stripe)
+			return;
+
+		if (stripe == dc->disk.nr_stripes) {
+			stripe = 0;
+			wrapped = true;
+		}
+	}
+}
+
+/*
+ * Returns true if we scanned the entire disk
+ */
+static bool refill_dirty(struct cached_dev *dc)
+{
+	struct keybuf *buf = &dc->writeback_keys;
+	struct bkey start = KEY(dc->disk.id, 0, 0);
+	struct bkey end = KEY(dc->disk.id, MAX_KEY_OFFSET, 0);
+	struct bkey start_pos;
+
+	/*
+	 * make sure keybuf pos is inside the range for this disk - at bringup
+	 * we might not be attached yet so this disk's inode nr isn't
+	 * initialized then
+	 */
+	if (bkey_cmp(&buf->last_scanned, &start) < 0 ||
+	    bkey_cmp(&buf->last_scanned, &end) > 0)
+		buf->last_scanned = start;
+
+	if (dc->partial_stripes_expensive) {
+		refill_full_stripes(dc);
+		if (array_freelist_empty(&buf->freelist))
+			return false;
+	}
+
+	start_pos = buf->last_scanned;
+	bch_refill_keybuf(dc->disk.c, buf, &end, dirty_pred);
+
+	if (bkey_cmp(&buf->last_scanned, &end) < 0)
+		return false;
+
+	/*
+	 * If we get to the end start scanning again from the beginning, and
+	 * only scan up to where we initially started scanning from:
+	 */
+	buf->last_scanned = start;
+	bch_refill_keybuf(dc->disk.c, buf, &start_pos, dirty_pred);
+
+	return bkey_cmp(&buf->last_scanned, &start_pos) >= 0;
+}
+
+static int bch_writeback_thread(void *arg)
+{
+	struct cached_dev *dc = arg;
+	bool searched_full_index;
+
+	while (!kthread_should_stop()) {
+		down_write(&dc->writeback_lock);
+		if (!atomic_read(&dc->has_dirty) ||
+		    (!test_bit(BCACHE_DEV_DETACHING, &dc->disk.flags) &&
+		     !dc->writeback_running)) {
+			up_write(&dc->writeback_lock);
+			set_current_state(TASK_INTERRUPTIBLE);
+
+			if (kthread_should_stop())
+				return 0;
+
+			try_to_freeze();
+			schedule();
+			continue;
+		}
+
+		searched_full_index = refill_dirty(dc);
+
+		if (searched_full_index &&
+		    RB_EMPTY_ROOT(&dc->writeback_keys.keys)) {
+			atomic_set(&dc->has_dirty, 0);
+			cached_dev_put(dc);
+			SET_BDEV_STATE(&dc->sb, BDEV_STATE_CLEAN);
+			bch_write_bdev_super(dc, NULL);
+		}
+
+		up_write(&dc->writeback_lock);
+
+		bch_ratelimit_reset(&dc->writeback_rate);
+		read_dirty(dc);
+
+		if (searched_full_index) {
+			unsigned delay = dc->writeback_delay * HZ;
+
+			while (delay &&
+			       !kthread_should_stop() &&
+			       !test_bit(BCACHE_DEV_DETACHING, &dc->disk.flags))
+				delay = schedule_timeout_interruptible(delay);
+		}
+	}
+
+	return 0;
+}
+
+/* Init */
+
+struct sectors_dirty_init {
+	struct btree_op	op;
+	unsigned	inode;
+};
+
+static int sectors_dirty_init_fn(struct btree_op *_op, struct btree *b,
+				 struct bkey *k)
+{
+	struct sectors_dirty_init *op = container_of(_op,
+						struct sectors_dirty_init, op);
+	if (KEY_INODE(k) > op->inode)
+		return MAP_DONE;
+
+	if (KEY_DIRTY(k))
+		bcache_dev_sectors_dirty_add(b->c, KEY_INODE(k),
+					     KEY_START(k), KEY_SIZE(k));
+
+	return MAP_CONTINUE;
+}
+
+void bch_sectors_dirty_init(struct cached_dev *dc)
+{
+	struct sectors_dirty_init op;
+
+	bch_btree_op_init(&op.op, -1);
+	op.inode = dc->disk.id;
+
+	bch_btree_map_keys(&op.op, dc->disk.c, &KEY(op.inode, 0, 0),
+			   sectors_dirty_init_fn, 0);
+
+	dc->disk.sectors_dirty_last = bcache_dev_sectors_dirty(&dc->disk);
+>>>>>>> 0e91d2a... Nougat
 }
 
 void bch_cached_dev_writeback_init(struct cached_dev *dc)

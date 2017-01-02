@@ -1103,7 +1103,31 @@ dec_hmp_sched_stats_rt(struct rq *rq, struct task_struct *p)
 	dec_cumulative_runnable_avg(&rq->hmp_stats, p);
 }
 
+<<<<<<< HEAD
 #else	/* CONFIG_SCHED_HMP */
+=======
+#ifdef CONFIG_SCHED_QHMP
+static void
+fixup_hmp_sched_stats_rt(struct rq *rq, struct task_struct *p,
+			 u32 new_task_load)
+{
+	fixup_cumulative_runnable_avg(&rq->hmp_stats, p, new_task_load);
+}
+#else
+static void
+fixup_hmp_sched_stats_rt(struct rq *rq, struct task_struct *p,
+			 u32 new_task_load, u32 new_pred_demand)
+{
+	s64 task_load_delta = (s64)new_task_load - task_load(p);
+	s64 pred_demand_delta = PRED_DEMAND_DELTA;
+
+	fixup_cumulative_runnable_avg(&rq->hmp_stats, p, task_load_delta,
+				      pred_demand_delta);
+}
+#endif
+
+#else	
+>>>>>>> 0e91d2a... Nougat
 
 static inline void
 inc_hmp_sched_stats_rt(struct rq *rq, struct task_struct *p) { }
@@ -1559,7 +1583,12 @@ static int find_lowest_rq_hmp(struct task_struct *task)
 	int cpu_cost, min_cost = INT_MAX;
 	int best_cpu = -1;
 	int i;
+<<<<<<< HEAD
 	int boost = sched_boost();
+=======
+	int restrict_cluster = sched_boost() ? 0 :
+				sysctl_sched_restrict_cluster_spill;
+>>>>>>> 0e91d2a... Nougat
 
 	/* Make sure the mask is initialized first */
 	if (unlikely(!lowest_mask))

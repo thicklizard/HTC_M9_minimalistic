@@ -17,6 +17,7 @@
  * 02110-1301, USA
  */
 
+#include <linux/bitops.h>
 #include "main.h"
 #include "translation-table.h"
 #include "soft-interface.h"
@@ -558,6 +559,11 @@ uint16_t batadv_tt_local_remove(struct batadv_priv *bat_priv,
 {
 	struct batadv_tt_local_entry *tt_local_entry;
 	uint16_t flags, curr_flags = BATADV_NO_FLAGS;
+<<<<<<< HEAD
+=======
+	struct batadv_softif_vlan *vlan;
+	void *tt_entry_exists;
+>>>>>>> 0e91d2a... Nougat
 
 	tt_local_entry = batadv_tt_local_hash_find(bat_priv, addr);
 	if (!tt_local_entry)
@@ -584,9 +590,22 @@ uint16_t batadv_tt_local_remove(struct batadv_priv *bat_priv,
 	/* if this client has been added right now, it is possible to
 	 * immediately purge it
 	 */
+<<<<<<< HEAD
 	batadv_tt_local_event(bat_priv, tt_local_entry->common.addr,
 			      curr_flags | BATADV_TT_CLIENT_DEL);
 	hlist_del_rcu(&tt_local_entry->common.hash_entry);
+=======
+	batadv_tt_local_event(bat_priv, tt_local_entry, BATADV_TT_CLIENT_DEL);
+
+	tt_entry_exists = batadv_hash_remove(bat_priv->tt.local_hash,
+					     batadv_compare_tt,
+					     batadv_choose_tt,
+					     &tt_local_entry->common);
+	if (!tt_entry_exists)
+		goto out;
+
+	/* extra call to free the local tt entry */
+>>>>>>> 0e91d2a... Nougat
 	batadv_tt_local_entry_free_ref(tt_local_entry);
 
 out:
@@ -1224,7 +1243,11 @@ void batadv_tt_global_del_orig(struct batadv_priv *bat_priv,
 		}
 		spin_unlock_bh(list_lock);
 	}
+<<<<<<< HEAD
 	orig_node->tt_initialised = false;
+=======
+	clear_bit(BATADV_ORIG_CAPA_HAS_TT, &orig_node->capa_initialized);
+>>>>>>> 0e91d2a... Nougat
 }
 
 static bool batadv_tt_global_to_purge(struct batadv_tt_global_entry *tt_global,
@@ -1984,7 +2007,11 @@ static void _batadv_tt_update_changes(struct batadv_priv *bat_priv,
 				return;
 		}
 	}
+<<<<<<< HEAD
 	orig_node->tt_initialised = true;
+=======
+	set_bit(BATADV_ORIG_CAPA_HAS_TT, &orig_node->capa_initialized);
+>>>>>>> 0e91d2a... Nougat
 }
 
 static void batadv_tt_fill_gtable(struct batadv_priv *bat_priv,
@@ -2448,9 +2475,15 @@ void batadv_tt_update_orig(struct batadv_priv *bat_priv,
 	bool full_table = true;
 	struct batadv_tt_change *tt_change;
 
+<<<<<<< HEAD
 	/* don't care about a backbone gateways updates. */
 	if (batadv_bla_is_backbone_gw_orig(bat_priv, orig_node->orig))
 		return;
+=======
+	tt_vlan = (struct batadv_tvlv_tt_vlan_data *)tt_buff;
+	has_tt_init = test_bit(BATADV_ORIG_CAPA_HAS_TT,
+			       &orig_node->capa_initialized);
+>>>>>>> 0e91d2a... Nougat
 
 	/* orig table not initialised AND first diff is in the OGM OR the ttvn
 	 * increased by one -> we can apply the attached changes

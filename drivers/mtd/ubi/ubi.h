@@ -566,6 +566,11 @@ struct ubi_device {
 	int thread_enabled;
 	char bgt_name[sizeof(UBI_BGT_NAME_PATTERN)+2];
 	bool scrub_in_progress;
+<<<<<<< HEAD
+=======
+	atomic_t scrub_work_count;
+	int wl_is_inited;
+>>>>>>> 0e91d2a... Nougat
 
 	/* I/O sub-system's stuff */
 	long long flash_size;

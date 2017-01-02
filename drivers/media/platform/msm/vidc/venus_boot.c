@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -151,6 +155,7 @@ static void venus_clock_disable_unprepare(struct device *dev)
 
 static int venus_register_domain(u32 fw_max_sz)
 {
+<<<<<<< HEAD
 	struct msm_iova_partition venus_fw_partition = {
 		.start = 0,
 		.size = fw_max_sz,
@@ -163,6 +168,22 @@ static int venus_register_domain(u32 fw_max_sz)
 	};
 
 	return msm_register_domain(&venus_fw_layout);
+=======
+	dma_addr_t va_start = 0x0;
+	size_t va_size = size;
+
+	venus_data->mapping = arm_iommu_create_mapping(
+		msm_iommu_get_bus(dev), va_start, va_size);
+	if (IS_ERR_OR_NULL(venus_data->mapping)) {
+		dprintk(VIDC_ERR, "%s: failed to create mapping for %s\n",
+		__func__, dev_name(dev));
+		return -ENODEV;
+	}
+	dprintk(VIDC_DBG,
+		"%s Attached device %pK and created mapping %pK for %s\n",
+		__func__, dev, venus_data->mapping, dev_name(dev));
+	return 0;
+>>>>>>> 0e91d2a... Nougat
 }
 
 static int pil_venus_mem_setup(struct platform_device *pdev, size_t size)

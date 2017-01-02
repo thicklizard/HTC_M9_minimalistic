@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -16,6 +20,7 @@
 #include <linux/qcom_iommu.h>
 #include "kgsl.h"
 
+<<<<<<< HEAD
 /* Pagetable virtual base */
 #define KGSL_IOMMU_CTX_OFFSET_V0	0
 #define KGSL_IOMMU_CTX_OFFSET_V1	0x8000
@@ -62,6 +67,33 @@
 #else
 #define KGSL_IOMMU_CTX_TTBR0_ADDR_MASK		0xFFFFC000
 #endif
+=======
+/*
+ * These defines control the address range for allocations that
+ * are mapped into all pagetables.
+ */
+#define KGSL_IOMMU_GLOBAL_MEM_SIZE	SZ_8M
+#define KGSL_IOMMU_GLOBAL_MEM_BASE	0xf8000000
+
+#define KGSL_IOMMU_SECURE_SIZE SZ_256M
+#define KGSL_IOMMU_SECURE_END KGSL_IOMMU_GLOBAL_MEM_BASE
+#define KGSL_IOMMU_SECURE_BASE	\
+	(KGSL_IOMMU_GLOBAL_MEM_BASE - KGSL_IOMMU_SECURE_SIZE)
+
+#define KGSL_IOMMU_SVM_BASE32		0x300000
+#define KGSL_IOMMU_SVM_END32		(0xC0000000 - SZ_16M)
+
+#define KGSL_IOMMU_VA_BASE64		0x500000000ULL
+#define KGSL_IOMMU_VA_END64		0x600000000ULL
+/*
+ * Note: currently we only support 36 bit addresses,
+ * but the CPU supports 39. Eventually this range
+ * should change to high part of the 39 bit address
+ * space just like the CPU.
+ */
+#define KGSL_IOMMU_SVM_BASE64		0x700000000ULL
+#define KGSL_IOMMU_SVM_END64		0x800000000ULL
+>>>>>>> 0e91d2a... Nougat
 
 /* TLBSTATUS register fields */
 #define KGSL_IOMMU_CTX_TLBSTATUS_SACTIVE BIT(0)
@@ -117,6 +149,7 @@ enum kgsl_iommu_context_id {
 	KGSL_IOMMU_CONTEXT_MAX = 3,
 };
 
+<<<<<<< HEAD
 /**
  * struct kgsl_iommu_ctx - Struct holding context name and id
  * @iommu_ctx_name:     Context name
@@ -176,6 +209,9 @@ struct kgsl_device_iommu_data {
 	(pt_val & ~(KGSL_IOMMU_CTX_TTBR0_ADDR_MASK))
 
 /* offset at which a nop command is placed in setstate_memory */
+=======
+/* offset at which a nop command is placed in setstate */
+>>>>>>> 0e91d2a... Nougat
 #define KGSL_IOMMU_SETSTATE_NOP_OFFSET	1024
 
 /*
@@ -201,6 +237,7 @@ struct kgsl_iommu_device {
 };
 
 /*
+<<<<<<< HEAD
  * struct kgsl_iommu_unit - Structure holding data about iommu units. An IOMMU
  * units is basically a separte IOMMU h/w block with it's own IOMMU contexts
  * @dev: Pointer to array of struct kgsl_iommu_device which has information
@@ -260,6 +297,35 @@ struct kgsl_iommu {
 	unsigned int sync_lock_offset;
 	bool sync_lock_initialized;
 	struct clk *gtcu_iface_clk;
+=======
+ * struct kgsl_iommu - Structure holding iommu data for kgsl driver
+ * @ctx: Array of kgsl_iommu_context structs
+ * @regbase: Virtual address of the IOMMU register base
+ * @regstart: Physical address of the iommu registers
+ * @regsize: Length of the iommu register region.
+ * @setstate: Scratch GPU memory for IOMMU operations
+ * @clk_enable_count: The ref count of clock enable calls
+ * @clks: Array of pointers to IOMMU clocks
+ * @micro_mmu_ctrl: GPU register offset of this glob al register
+ * @smmu_info: smmu info used in a5xx preemption
+ * @protect: register protection settings for the iommu.
+ * @pagefault_suppression_count: Total number of pagefaults
+ *				 suppressed since boot.
+ */
+struct kgsl_iommu {
+	struct kgsl_iommu_context ctx[KGSL_IOMMU_CONTEXT_MAX];
+	void __iomem *regbase;
+	unsigned long regstart;
+	unsigned int regsize;
+	struct kgsl_memdesc setstate;
+	atomic_t clk_enable_count;
+	struct clk *clks[KGSL_IOMMU_MAX_CLKS];
+	unsigned int micro_mmu_ctrl;
+	struct kgsl_memdesc smmu_info;
+	unsigned int version;
+	struct kgsl_protected_registers protect;
+	u32 pagefault_suppression_count;
+>>>>>>> 0e91d2a... Nougat
 };
 
 /*

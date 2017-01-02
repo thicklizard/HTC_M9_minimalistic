@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -124,7 +124,6 @@ static bool ocr_nodes_called;
 static bool ocr_probed;
 static bool ocr_reg_init_defer;
 static bool hotplug_enabled;
-static bool interrupt_mode_enable;
 static bool msm_thermal_probed;
 static bool gfx_crit_phase_ctrl_enabled;
 static bool gfx_warm_phase_ctrl_enabled;
@@ -1435,14 +1434,14 @@ static int vdd_restriction_apply_voltage(struct rail *r, int level)
 	
 	if (level == -1) {
 		ret = regulator_set_voltage(r->reg, r->min_level,
-			r->levels[r->num_levels - 1]);
+			INT_MAX);
 		if (!ret)
 			r->curr_level = -1;
 		pr_debug("Requested min level for %s. curr level: %d\n",
 				r->name, r->curr_level);
 	} else if (level >= 0 && level < (r->num_levels)) {
 		ret = regulator_set_voltage(r->reg, r->levels[level],
-			r->levels[r->num_levels - 1]);
+			INT_MAX);
 		if (!ret)
 			r->curr_level = level;
 		pr_debug("Requesting level %d for %s. curr level: %d\n",
@@ -2264,8 +2263,12 @@ static void vdd_mx_notify(struct therm_threshold *trig_thresh)
 			pr_err("Failed to remove vdd mx restriction\n");
 	}
 	mutex_unlock(&vdd_mx_mutex);
-	sensor_mgr_set_threshold(trig_thresh->sensor_id,
+
+	if (trig_thresh->cur_state != trig_thresh->trip_triggered) {
+		sensor_mgr_set_threshold(trig_thresh->sensor_id,
 					trig_thresh->threshold);
+		trig_thresh->cur_state = trig_thresh->trip_triggered;
+	}
 }
 
 static void msm_thermal_bite(int tsens_id, long temp)
@@ -3010,7 +3013,7 @@ static int hotplug_init_cpu_offlined(void)
 	long temp = 0;
 	uint32_t cpu = 0;
 
-	if (!hotplug_enabled)
+	if (!hotplug_enabled || !hotplug_task)
 		return 0;
 
 	mutex_lock(&core_control_mutex);
@@ -3027,8 +3030,7 @@ static int hotplug_init_cpu_offlined(void)
 
 		if (temp >= msm_thermal_info.hotplug_temp_degC)
 			cpus[cpu].offline = 1;
-		else if (temp <= (msm_thermal_info.hotplug_temp_degC -
-			msm_thermal_info.hotplug_temp_hysteresis_degC))
+		else
 			cpus[cpu].offline = 0;
 	}
 	mutex_unlock(&core_control_mutex);
@@ -3250,6 +3252,8 @@ init_freq_thread:
 		pr_err("Failed to create frequency mitigation thread. err:%ld\n",
 				PTR_ERR(freq_mitigation_task));
 		return;
+	} else {
+		complete(&freq_mitigation_complete);
 	}
 }
 
@@ -3538,8 +3542,11 @@ static void cx_phase_ctrl_notify(struct therm_threshold *trig_thresh)
 cx_phase_unlock_exit:
 	mutex_unlock(&cx_mutex);
 cx_phase_ctrl_exit:
-	sensor_mgr_set_threshold(trig_thresh->sensor_id,
+	if (trig_thresh->cur_state != trig_thresh->trip_triggered) {
+		sensor_mgr_set_threshold(trig_thresh->sensor_id,
 					trig_thresh->threshold);
+		trig_thresh->cur_state = trig_thresh->trip_triggered;
+	}
 	return;
 }
 
@@ -3667,8 +3674,11 @@ static void vdd_restriction_notify(struct therm_threshold *trig_thresh)
 unlock_and_exit:
 	mutex_unlock(&vdd_rstr_mutex);
 set_and_exit:
-	sensor_mgr_set_threshold(trig_thresh->sensor_id,
+	if (trig_thresh->cur_state != trig_thresh->trip_triggered) {
+		sensor_mgr_set_threshold(trig_thresh->sensor_id,
 					trig_thresh->threshold);
+		trig_thresh->cur_state = trig_thresh->trip_triggered;
+	}
 	return;
 }
 
@@ -3716,8 +3726,11 @@ static void ocr_notify(struct therm_threshold *trig_thresh)
 unlock_and_exit:
 	mutex_unlock(&ocr_mutex);
 set_and_exit:
-	sensor_mgr_set_threshold(trig_thresh->sensor_id,
-					trig_thresh->threshold);
+	if (trig_thresh->cur_state != trig_thresh->trip_triggered) {
+		sensor_mgr_set_threshold(trig_thresh->sensor_id,
+				trig_thresh->threshold);
+		trig_thresh->cur_state = trig_thresh->trip_triggered;
+	}
 	return;
 }
 
@@ -3904,7 +3917,13 @@ int sensor_mgr_init_threshold(struct device *dev,
 			thresh_ptr[i].notify = callback;
 			thresh_ptr[i].trip_triggered = -1;
 			thresh_ptr[i].parent = thresh_inp;
+<<<<<<< HEAD
 			thresh_ptr[i].threshold[0].temp = high_temp;
+=======
+			thresh_ptr[i].cur_state = -1;
+			thresh_ptr[i].threshold[0].temp =
+				high_temp * tsens_scaling_factor;
+>>>>>>> 0e91d2a... Nougat
 			thresh_ptr[i].threshold[0].trip =
 				THERMAL_TRIP_CONFIGURABLE_HI;
 			thresh_ptr[i].threshold[1].temp = low_temp;
@@ -3922,7 +3941,12 @@ int sensor_mgr_init_threshold(struct device *dev,
 		thresh_ptr->notify = callback;
 		thresh_ptr->trip_triggered = -1;
 		thresh_ptr->parent = thresh_inp;
+<<<<<<< HEAD
 		thresh_ptr->threshold[0].temp = high_temp;
+=======
+		thresh_ptr->cur_state = -1;
+		thresh_ptr->threshold[0].temp = high_temp * tsens_scaling_factor;
+>>>>>>> 0e91d2a... Nougat
 		thresh_ptr->threshold[0].trip =
 			THERMAL_TRIP_CONFIGURABLE_HI;
 		thresh_ptr->threshold[1].temp = low_temp;
@@ -4087,10 +4111,9 @@ static void __ref disable_msm_thermal(void)
 
 static void interrupt_mode_init(void)
 {
-	if (!msm_thermal_probed) {
-		interrupt_mode_enable = true;
+	if (!msm_thermal_probed)
 		return;
-	}
+
 	if (polling_enabled) {
 		pr_info("Interrupt mode init\n");
 		polling_enabled = 0;
@@ -4987,6 +5010,10 @@ static int probe_vdd_mx(struct device_node *node,
 	if (ret)
 		goto read_node_done;
 
+	key = "qcom,mx-restriction-sensor_id";
+	if (of_property_read_u32(node, key, &data->vdd_mx_sensor_id))
+		data->vdd_mx_sensor_id = MONITOR_ALL_TSENS;
+
 	vdd_mx = devm_regulator_get(&pdev->dev, "vdd-mx");
 	if (IS_ERR_OR_NULL(vdd_mx)) {
 		ret = PTR_ERR(vdd_mx);
@@ -4997,9 +5024,29 @@ static int probe_vdd_mx(struct device_node *node,
 		goto read_node_done;
 	}
 
+<<<<<<< HEAD
 	ret = sensor_mgr_init_threshold(&pdev->dev,
 			&thresh[MSM_VDD_MX_RESTRICTION],
 			MONITOR_ALL_TSENS,
+=======
+	key = "qcom,cx-retention-min";
+	ret = of_property_read_u32(node, key, &data->vdd_cx_min);
+	if (!ret) {
+		vdd_cx = devm_regulator_get(&pdev->dev, "vdd-cx");
+		if (IS_ERR_OR_NULL(vdd_cx)) {
+			ret = PTR_ERR(vdd_cx);
+			if (ret != -EPROBE_DEFER) {
+				pr_err(
+				"Could not get regulator: vdd-cx, err:%d\n",
+				ret);
+			}
+			goto read_node_done;
+		}
+	}
+
+	ret = sensor_mgr_init_threshold(&thresh[MSM_VDD_MX_RESTRICTION],
+			data->vdd_mx_sensor_id,
+>>>>>>> 0e91d2a... Nougat
 			data->vdd_mx_temp_degC + data->vdd_mx_temp_hyst_degC,
 			data->vdd_mx_temp_degC, vdd_mx_notify);
 
@@ -5706,6 +5753,312 @@ PROBE_FREQ_EXIT:
 	return ret;
 }
 
+<<<<<<< HEAD
+=======
+static void thermal_boot_config_read(struct seq_file *m, void *data)
+{
+
+	seq_puts(m, "---------Boot Mitigation------------\n");
+	seq_printf(m, "tsens sensor:tsens_tz_sensor%d\n",
+			msm_thermal_info.sensor_id);
+	seq_printf(m, "polling rate:%d ms\n", msm_thermal_info.poll_ms);
+	seq_printf(m, "frequency threshold:%d degC\n",
+			msm_thermal_info.limit_temp_degC);
+	seq_printf(m, "frequency threshold clear:%d degC\n",
+			msm_thermal_info.limit_temp_degC
+			- msm_thermal_info.temp_hysteresis_degC);
+	seq_printf(m, "frequency step:%d\n",
+			msm_thermal_info.bootup_freq_step);
+	seq_printf(m, "frequency mask:0x%x\n",
+			msm_thermal_info.bootup_freq_control_mask);
+	seq_printf(m, "hotplug threshold:%d degC\n",
+			msm_thermal_info.core_limit_temp_degC);
+	seq_printf(m, "hotplug threshold clear:%d degC\n",
+			msm_thermal_info.core_limit_temp_degC
+			- msm_thermal_info.core_temp_hysteresis_degC);
+	seq_printf(m, "hotplug mask:0x%x\n",
+			msm_thermal_info.core_control_mask);
+	seq_printf(m, "reset threshold:%d degC\n",
+			msm_thermal_info.therm_reset_temp_degC);
+}
+
+static void thermal_emergency_config_read(struct seq_file *m, void *data)
+{
+	int cpu = 0;
+
+	seq_puts(m, "\n---------Emergency Mitigation------------\n");
+	for_each_possible_cpu(cpu)
+		seq_printf(m, "cpu%d sensor:%s\n", cpu, cpus[cpu].sensor_type);
+	seq_printf(m, "frequency threshold:%d degC\n",
+			msm_thermal_info.freq_mitig_temp_degc);
+	seq_printf(m, "frequency threshold clr:%d degC\n",
+			msm_thermal_info.freq_mitig_temp_degc
+			- msm_thermal_info.freq_mitig_temp_hysteresis_degc);
+	seq_printf(m, "frequency value:%d KHz\n",
+			msm_thermal_info.freq_limit);
+	seq_printf(m, "frequency mask:0x%x\n",
+			msm_thermal_info.freq_mitig_control_mask);
+	seq_printf(m, "hotplug threshold:%d degC\n",
+			msm_thermal_info.hotplug_temp_degC);
+	seq_printf(m, "hotplug threshold clr:%d degC\n",
+			msm_thermal_info.hotplug_temp_degC
+			- msm_thermal_info.hotplug_temp_hysteresis_degC);
+	seq_printf(m, "hotplug mask:0x%x\n",
+			msm_thermal_info.core_control_mask);
+	seq_printf(m, "online hotplug core:%s\n", online_core
+			? "true" : "false");
+
+}
+
+static void thermal_mx_config_read(struct seq_file *m, void *data)
+{
+	if (vdd_mx_enabled) {
+		seq_puts(m, "\n---------Mx Retention------------\n");
+		seq_printf(m, "threshold:%d degC\n",
+				msm_thermal_info.vdd_mx_temp_degC);
+		seq_printf(m, "threshold clear:%d degC\n",
+				msm_thermal_info.vdd_mx_temp_degC
+				+ msm_thermal_info.vdd_mx_temp_hyst_degC);
+		seq_printf(m, "mx retention value:%d\n",
+				msm_thermal_info.vdd_mx_min);
+		if (vdd_cx)
+			seq_printf(m, "cx retention value:%d\n",
+				msm_thermal_info.vdd_cx_min);
+		if (msm_thermal_info.vdd_mx_sensor_id != MONITOR_ALL_TSENS)
+			seq_printf(m, "tsens sensor:tsens_tz_sensor%d\n",
+				msm_thermal_info.vdd_mx_sensor_id);
+	}
+}
+
+static void thermal_vdd_config_read(struct seq_file *m, void *data)
+{
+	int i = 0;
+
+	if (vdd_rstr_enabled) {
+		seq_puts(m, "\n---------VDD restriction------------\n");
+		seq_printf(m, "threshold:%d degC\n",
+				msm_thermal_info.vdd_rstr_temp_degC);
+		seq_printf(m, "threshold clear:%d degC\n",
+				msm_thermal_info.vdd_rstr_temp_hyst_degC);
+		for (i = 0; i < rails_cnt; i++) {
+			if (!strcmp(rails[i].name, "vdd-dig")
+				&& rails[i].num_levels)
+				seq_printf(m, "vdd_dig restriction value:%d\n",
+					rails[i].levels[0]);
+			if (!strcmp(rails[i].name, "vdd-gfx")
+				&& rails[i].num_levels)
+				seq_printf(m, "vdd_gfx restriction value:%d\n",
+					rails[i].levels[0]);
+			if (!strcmp(rails[i].name, "vdd-apps")
+				&& rails[i].num_levels)
+				seq_printf(m,
+					"vdd_apps restriction value:%d KHz\n",
+					rails[i].levels[0]);
+		}
+	}
+}
+
+static void thermal_psm_config_read(struct seq_file *m, void *data)
+{
+	if (psm_enabled) {
+		seq_puts(m, "\n------PMIC Software Mode(PSM)-------\n");
+		seq_printf(m, "threshold:%d degC\n",
+				msm_thermal_info.psm_temp_degC);
+		seq_printf(m, "threshold clear:%d degC\n",
+				msm_thermal_info.psm_temp_degC
+				- msm_thermal_info.psm_temp_hyst_degC);
+	}
+}
+
+static void thermal_ocr_config_read(struct seq_file *m, void *data)
+{
+	if (ocr_enabled) {
+		seq_puts(m, "\n-----Optimum Current Request(OCR)-----\n");
+		seq_printf(m, "threshold:%d degC\n",
+				msm_thermal_info.ocr_temp_degC);
+		seq_printf(m, "threshold clear:%d degC\n",
+				msm_thermal_info.ocr_temp_degC
+				- msm_thermal_info.ocr_temp_hyst_degC);
+		seq_printf(m, "tsens sensor:tsens_tz_sensor%d\n",
+				msm_thermal_info.ocr_sensor_id);
+	}
+}
+
+static void thermal_phase_ctrl_config_read(struct seq_file *m, void *data)
+{
+	if (cx_phase_ctrl_enabled) {
+		seq_puts(m, "\n---------Phase control------------\n");
+		seq_printf(m, "cx hot critical threshold:%d degC\n",
+				msm_thermal_info.cx_phase_hot_temp_degC);
+		seq_printf(m, "cx hot critical threshold clear:%d degC\n",
+			msm_thermal_info.cx_phase_hot_temp_degC
+			- msm_thermal_info.cx_phase_hot_temp_hyst_degC);
+	}
+	if (gfx_crit_phase_ctrl_enabled) {
+		seq_printf(m, "gfx hot critical threshold:%d degC\n",
+				msm_thermal_info.gfx_phase_hot_temp_degC);
+		seq_printf(m, "gfx hot critical threshold clear:%d degC\n",
+			msm_thermal_info.gfx_phase_hot_temp_degC
+			- msm_thermal_info.gfx_phase_hot_temp_hyst_degC);
+	}
+	if (gfx_warm_phase_ctrl_enabled) {
+		seq_printf(m, "gfx warm threshold:%d degC\n",
+				msm_thermal_info.gfx_phase_warm_temp_degC);
+		seq_printf(m, "gfx warm threshold clear:%d degC\n",
+			msm_thermal_info.gfx_phase_warm_temp_degC
+			- msm_thermal_info.gfx_phase_warm_temp_hyst_degC);
+	}
+	if (gfx_crit_phase_ctrl_enabled || gfx_warm_phase_ctrl_enabled)
+		seq_printf(m, "gfx tsens sensor:tsens_tz_sensor%d\n",
+			msm_thermal_info.gfx_sensor);
+}
+
+static void thermal_disable_all_mitigation(void)
+{
+	thermal_cpu_freq_mit_disable();
+	thermal_cpu_hotplug_mit_disable();
+	thermal_reset_disable();
+	thermal_mx_mit_disable();
+	thermal_vdd_mit_disable();
+	thermal_psm_mit_disable();
+	thermal_ocr_mit_disable();
+	thermal_cx_phase_ctrl_mit_disable();
+	thermal_gfx_phase_warm_ctrl_mit_disable();
+	thermal_gfx_phase_crit_ctrl_mit_disable();
+}
+
+static void enable_config(int config_id)
+{
+	switch (config_id) {
+	case MSM_THERM_RESET:
+		therm_reset_enabled = 1;
+		break;
+	case MSM_VDD_RESTRICTION:
+		vdd_rstr_enabled = 1;
+		break;
+	case MSM_CX_PHASE_CTRL_HOT:
+		cx_phase_ctrl_enabled = 1;
+		break;
+	case MSM_GFX_PHASE_CTRL_WARM:
+		gfx_warm_phase_ctrl_enabled = 1;
+		break;
+	case MSM_GFX_PHASE_CTRL_HOT:
+		gfx_crit_phase_ctrl_enabled = 1;
+		break;
+	case MSM_OCR:
+		ocr_enabled = 1;
+		break;
+	case MSM_VDD_MX_RESTRICTION:
+		vdd_mx_enabled = 1;
+		break;
+	case MSM_LIST_MAX_NR + HOTPLUG_CONFIG:
+		hotplug_enabled = 1;
+		break;
+	case MSM_LIST_MAX_NR + CPUFREQ_CONFIG:
+		freq_mitigation_enabled = 1;
+		break;
+	default:
+		pr_err("Bad config:%d\n", config_id);
+		break;
+	}
+}
+
+static void thermal_update_mit_threshold(
+		struct msm_thermal_debugfs_thresh_config *config, int max_mit)
+{
+	int idx = 0, i = 0;
+
+	for (idx = 0; idx < max_mit; idx++) {
+		if (!config[idx].update)
+			continue;
+		config[idx].disable_config();
+		enable_config(idx);
+		if (idx >= MSM_LIST_MAX_NR) {
+			if (idx == MSM_LIST_MAX_NR + HOTPLUG_CONFIG)
+				UPDATE_CPU_CONFIG_THRESHOLD(
+					msm_thermal_info.core_control_mask,
+					HOTPLUG_THRESHOLD_HIGH,
+					config[idx].thresh,
+					config[idx].thresh_clr);
+			else if (idx == MSM_LIST_MAX_NR + CPUFREQ_CONFIG)
+				UPDATE_CPU_CONFIG_THRESHOLD(
+					msm_thermal_info
+					.freq_mitig_control_mask,
+					FREQ_THRESHOLD_HIGH,
+					config[idx].thresh,
+					config[idx].thresh_clr);
+		} else {
+			for (i = 0; i < thresh[idx].thresh_ct; i++) {
+				thresh[idx].thresh_list[i].threshold[0].temp
+					= config[idx].thresh
+					* tsens_scaling_factor;
+				thresh[idx].thresh_list[i].threshold[1].temp
+					= config[idx].thresh_clr
+					* tsens_scaling_factor;
+				set_and_activate_threshold(
+					thresh[idx].thresh_list[i].sensor_id,
+					&thresh[idx].thresh_list[i]
+					.threshold[0]);
+				set_and_activate_threshold(
+					thresh[idx].thresh_list[i].sensor_id,
+					&thresh[idx].thresh_list[i]
+					.threshold[1]);
+			}
+		}
+		config[idx].update = 0;
+	}
+}
+
+static ssize_t thermal_config_debugfs_write(struct file *file,
+			const char __user *buffer, size_t count, loff_t *ppos)
+{
+	int ret = 0;
+	char config_string[MAX_DEBUGFS_CONFIG_LEN] = { '\0' };
+
+	if (!mitigation || count > (MAX_DEBUGFS_CONFIG_LEN - 1)) {
+		pr_err("Invalid parameters\n");
+		return -EINVAL;
+	}
+
+	if (copy_from_user(config_string, buffer, count)) {
+		pr_err("Error reading debugfs command\n");
+		ret = -EFAULT;
+		goto exit_debugfs_write;
+	}
+	pr_debug("Debugfs config command string: %s\n", config_string);
+	if (!strcmp(config_string, DEBUGFS_DISABLE_ALL_MIT)) {
+		mitigation = 0;
+		pr_err("KTM mitigations disabled via debugfs\n");
+		thermal_disable_all_mitigation();
+	} else if (!strcmp(config_string, DEBUGFS_CONFIG_UPDATE)) {
+		thermal_update_mit_threshold(mit_config, MSM_LIST_MAX_NR
+			+ MAX_CPU_CONFIG);
+	}
+
+exit_debugfs_write:
+	if (!ret)
+		return count;
+	return ret;
+}
+
+static int thermal_config_debugfs_read(struct seq_file *m, void *data)
+{
+	if (!mitigation) {
+		seq_puts(m, "KTM Mitigations Disabled\n");
+		return 0;
+	}
+	thermal_boot_config_read(m, data);
+	thermal_emergency_config_read(m, data);
+	thermal_mx_config_read(m, data);
+	thermal_vdd_config_read(m, data);
+	thermal_psm_config_read(m, data);
+	thermal_ocr_config_read(m, data);
+	thermal_phase_ctrl_config_read(m, data);
+
+	return 0;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static int msm_thermal_dev_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -5800,11 +6153,6 @@ static int msm_thermal_dev_probe(struct platform_device *pdev)
 	msm_thermal_ioctl_init();
 	ret = msm_thermal_init(&data);
 	msm_thermal_probed = true;
-
-	if (interrupt_mode_enable) {
-		interrupt_mode_init();
-		interrupt_mode_enable = false;
-	}
 
 	return ret;
 fail:
@@ -5903,7 +6251,6 @@ int __init msm_thermal_late_init(void)
 		}
 	}
 	msm_thermal_add_mx_nodes();
-	interrupt_mode_init();
 	create_cpu_topology_sysfs();
 	create_thermal_debugfs();
 	msm_thermal_add_bucket_info_nodes();

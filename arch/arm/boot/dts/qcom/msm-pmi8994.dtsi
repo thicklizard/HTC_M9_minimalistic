@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -143,6 +143,10 @@
 			};
 		};
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0e91d2a... Nougat
 		bcl@4200 {
 			compatible = "qcom,msm-bcl";
 			reg = <0x4200 0xFF 0x88E 0x2>;
@@ -200,11 +204,20 @@
 			#size-cells = <1>;
 
 			qcom,iterm-ma = <50>;
+<<<<<<< HEAD
 			qcom,eoc-ibat-thre-ma = <280>;
 			qcom,adjust-fastchg-thr-mv = <4260>;
 			qcom,float-voltage-mv = <4400>;
 			qcom,float-voltage-cmp-mv = <4060>;
 			qcom,iusb-max-ma = <500>;
+=======
+            qcom,high-fastchg-current-ma = <3000>;
+			qcom,fastchg-current-ma = <3000>;
+            /* CONFIG_HTC_BATT_PCN0013++ */
+			qcom,float-voltage-mv = <4400>;
+			qcom,float-voltage-comp = <0x1E>;
+            /* CONFIG_HTC_BATT_PCN0013-- */
+>>>>>>> 0e91d2a... Nougat
 			qcom,charging-timeout-mins = <768>;
 			qcom,precharging-timeout-mins = <24>;
 			qcom,warm-ibatmax = <250>;
@@ -324,12 +337,19 @@
 			#size-cells = <1>;
 			qcom,resume-soc = <95>;
 			status = "okay";
+<<<<<<< HEAD
 			qcom,warm-bat-decidegc = <460>;
+=======
+            /* CONFIG_HTC_BATT_PCN0013++ */
+			qcom,warm-bat-decidegc = <470>;
+>>>>>>> 0e91d2a... Nougat
 			qcom,cool-bat-decidegc = <100>;
 			qcom,hot-bat-decidegc = <550>;
 			qcom,cold-bat-decidegc = <0>;
+            /* CONFIG_HTC_BATT_PCN0013-- */
 			qcom,bcl-lm-threshold-ma = <127>;
 			qcom,bcl-mh-threshold-ma = <405>;
+<<<<<<< HEAD
 			qcom,fg-iterm-ma = <284>;
 			qcom,thermal-coefficients = [97 85 62 49 5A 35];
 			qcom,ext-sense-type = <1>;
@@ -339,11 +359,30 @@
 			qcom,stored-batt-update-time = <(-1)>;
 			qcom,stored-batt-temperature = <271>;
 			qcom,stored-batt-temp-diff = <200>;
+=======
+            /* CONFIG_HTC_BATT_PCN0001++ */
+			qcom,fg-iterm-ma = <300>;
+            /* CONFIG_HTC_BATT_PCN0001-- */
+>>>>>>> 0e91d2a... Nougat
 			qcom,fg-chg-iterm-ma = <50>;
 			qcom,cycle-counter-en;
 			qcom,capacity-learning-on;
+            /* CONFIG_HTC_BATT_WA_PCN0015++ */
 			qcom,fg-cc-cv-threshold-mv = <4390>;
+            /* CONFIG_HTC_BATT_WA_PCN0015-- */
 			qcom,pmic-revid = <&pmi8994_revid>;
+<<<<<<< HEAD
+=======
+            /* CONFIG_HTC_BATT_PCN0013++ */
+			qcom,thermal-coefficients = [97 85 62 49 5A 35];
+            /* CONFIG_HTC_BATT_PCN0013-- */
+			qcom,ext-sense-type = <1>;
+            /* CONFIG_HTC_BATT_PCN0013++ */
+			qcom,cold-hot-jeita-hysteresis = <20 30>;
+            /* CONFIG_HTC_BATT_PCN0013-- */
+			qcom,fg-cutoff-voltage-mv = <3400>;
+			qcom,capacity-learning-feedback;
+>>>>>>> 0e91d2a... Nougat
 
 			qcom,fg-soc@4000 {
 				status = "okay";
@@ -469,6 +508,7 @@
 			compatible = "qcom,qpnp-labibb-regulator";
 			#address-cells = <1>;
 			#size-cells = <1>;
+			qcom,pmic-revid = <&pmi8994_revid>;
 
 			ibb_regulator: qcom,ibb@dc00 {
 				reg = <0xdc00 0x100>;
@@ -530,7 +570,7 @@
 				qcom,qpnp-lab-ps-enable;
 				qcom,qpnp-lab-nfet-size = <100>;
 				qcom,qpnp-lab-pfet-size = <100>;
-				qcom,qpnp-lab-max-precharge-time = <300>;
+				qcom,qpnp-lab-max-precharge-time = <500>;
 			};
 		};
 
@@ -559,12 +599,18 @@
 			qcom,dim-mode = "hybrid";
 			qcom,hyb-thres = <625>;
 			qcom,sync-dly-us = <800>;
+<<<<<<< HEAD
 			//NOTICE: fs-curr-ua should NOT be put here
 			//qcom,fs-curr-ua = <20000>;
 			qcom,en-phase-stag;
 			qcom,ibb-pwrup-dly = <8>;
 			//NOTICE: led-strings-list should NOT be put here
 			//qcom,led-strings-list = [00 01];
+=======
+			qcom,fs-curr-ua = <25000>;
+			qcom,cons-sync-write-delay-us = <1000>;
+			qcom,led-strings-list = [00 01 02 03];
+>>>>>>> 0e91d2a... Nougat
 			qcom,en-ext-pfet-sc-pro;
 		};
 

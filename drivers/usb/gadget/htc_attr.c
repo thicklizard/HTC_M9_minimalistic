@@ -454,6 +454,7 @@ static ssize_t store_usb_modem_enable_setting(struct device *dev,
 	return count;
 }
 
+<<<<<<< HEAD
 static DEVICE_ATTR(usb_ac_cable_status, 0444, show_usb_ac_cable_status, NULL);
 static DEVICE_ATTR(dummy_usb_serial_number, 0644, iSerial_show, store_dummy_usb_serial_number);
 static DEVICE_ATTR(os_type, 0444, show_os_type, NULL);
@@ -463,6 +464,102 @@ static DEVICE_ATTR(usb_cable_connect, 0444, show_usb_cable_connect, NULL);
 static DEVICE_ATTR(usb_denied, 0444, show_is_usb_denied, NULL);
 static DEVICE_ATTR(cdrom_unmount, 0644, show_cdrom_unmount, store_cdrom_unmount);
 static DEVICE_ATTR(usb_modem_enable, 0660,NULL, store_usb_modem_enable_setting);
+=======
+extern ssize_t dump_all_register(char *buf);
+static ssize_t show_typec_dump_reg(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	USB_INFO("%s : dump ANX7418 register\n", __func__);
+	return dump_all_register(buf);
+}
+
+extern int ohio_get_data_value(int data_member);
+static ssize_t show_pd_cap(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int pd_cap;
+	pd_cap = ohio_get_data_value(8);
+	if (pd_cap < 0)
+		pd_cap = 0;
+	USB_INFO("%s : show pd capability = %d\n", __func__, pd_cap);
+	return snprintf(buf, PAGE_SIZE, "%d\n", pd_cap);
+}
+
+static ssize_t show_typec_fw_version(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int typec_fw_version;
+	typec_fw_version = ohio_get_data_value(9);
+	if (typec_fw_version < 0)
+		typec_fw_version = 0;
+	USB_INFO("%s : show typec fw version = %02x\n", __func__, typec_fw_version);
+	return snprintf(buf, PAGE_SIZE, "%02x\n", typec_fw_version);
+}
+
+static ssize_t show_typec_chip_version(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int typec_chip_version;
+	typec_chip_version = ohio_get_data_value(10);
+	if (typec_chip_version < 0)
+		typec_chip_version = 0;
+	USB_INFO("%s : show typec fw version = %02x\n", __func__, typec_chip_version);
+	return snprintf(buf, PAGE_SIZE, "%02x\n", typec_chip_version);
+}
+
+static ssize_t show_typec_fw_update_info(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int typec_fw_update_info;
+	typec_fw_update_info = ohio_get_data_value(11);
+	if (typec_fw_update_info < 0)
+		typec_fw_update_info = 0;
+	USB_INFO("%s : show typec fw update info = %d\n", __func__, typec_fw_update_info);
+	return snprintf(buf, PAGE_SIZE, "%d\n", typec_fw_update_info);
+}
+
+static char *typec_cable_info[] = {
+	"No Cable",
+	"SRC Rd",
+	"SRC Ra",
+	"SNK default (56kohm)",
+	"SNK Power 1.5A (21kohm)",
+	"SNK Power 3.0A (10kohm)",
+	"Unknown status"
+};
+
+static ssize_t show_typec_cable_info(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int val = 0;
+	val = ohio_get_data_value(12);
+	if (val < 0) {
+		val = 6;
+	}
+
+	USB_INFO("%s : show typec cable info = %s\n", __func__, typec_cable_info[val]);
+	return snprintf(buf, PAGE_SIZE, "%s\n", typec_cable_info[val]);
+}
+
+static DEVICE_ATTR(dummy_usb_serial_number, 0664, iSerial_show, store_dummy_usb_serial_number); 
+static DEVICE_ATTR(usb_ac_cable_status, 0444, show_usb_ac_cable_status, NULL); 
+static DEVICE_ATTR(ats, 0664, show_ats, store_ats); 
+static DEVICE_ATTR(usb_disable, 0664,show_usb_disable_setting, store_usb_disable_setting); 
+static DEVICE_ATTR(usb_cable_connect, 0444, show_usb_cable_connect, NULL); 
+static DEVICE_ATTR(os_type, 0444, show_os_type, NULL); 
+static DEVICE_ATTR(usb_modem_enable, S_IWUSR|S_IWGRP,NULL, store_usb_modem_enable_setting);
+static DEVICE_ATTR(speed, 0444, show_speed, NULL); 
+static DEVICE_ATTR(lock_speed, 0664, show_lock_speed, store_lock_speed); 
+static DEVICE_ATTR(lock_host_speed, S_IWUSR, NULL, store_lock_host_speed); 
+static DEVICE_ATTR(typec_dump_reg, 0440, show_typec_dump_reg, NULL); 
+static DEVICE_ATTR(pd_cap, 0444, show_pd_cap, NULL); 
+static DEVICE_ATTR(typec_fw_version, 0444, show_typec_fw_version, NULL);
+static DEVICE_ATTR(typec_chip_version, 0444, show_typec_chip_version, NULL);
+static DEVICE_ATTR(typec_fw_update_info, 0444, show_typec_fw_update_info, NULL);
+static DEVICE_ATTR(typec_cable_info, 0444, show_typec_cable_info, NULL);
+
+
+>>>>>>> 0e91d2a... Nougat
 static __maybe_unused struct attribute *android_htc_usb_attributes[] = {
 	&dev_attr_dummy_usb_serial_number.attr,
 	&dev_attr_os_type.attr,
@@ -473,6 +570,18 @@ static __maybe_unused struct attribute *android_htc_usb_attributes[] = {
 	&dev_attr_usb_denied.attr,
 	&dev_attr_cdrom_unmount.attr,
 	&dev_attr_usb_modem_enable.attr,
+<<<<<<< HEAD
+=======
+	&dev_attr_speed.attr, 
+	&dev_attr_lock_speed.attr, 
+	&dev_attr_lock_host_speed.attr, 
+	&dev_attr_typec_dump_reg.attr, 
+	&dev_attr_pd_cap.attr, 
+	&dev_attr_typec_fw_version.attr,
+	&dev_attr_typec_chip_version.attr,
+	&dev_attr_typec_fw_update_info.attr,
+	&dev_attr_typec_cable_info.attr,
+>>>>>>> 0e91d2a... Nougat
 	NULL
 };
 

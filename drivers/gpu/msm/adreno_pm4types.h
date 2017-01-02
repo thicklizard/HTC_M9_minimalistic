@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2002,2007-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2002,2007-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -14,8 +18,6 @@
 #define __ADRENO_PM4TYPES_H
 
 
-#define CP_PKT_MASK	0xc0000000
-
 #define CP_TYPE0_PKT	((unsigned int)0 << 30)
 #define CP_TYPE1_PKT	((unsigned int)1 << 30)
 #define CP_TYPE2_PKT	((unsigned int)2 << 30)
@@ -24,20 +26,23 @@
 
 /* type3 packets */
 
+<<<<<<< HEAD
 /* copy from ME scratch RAM to a register */
 #define CP_SCRATCH_TO_REG      0x4d
 
 /* Copy from REG to ME scratch RAM */
 #define CP_REG_TO_SCRATCH      0x4a
+=======
+/* Enable preemption flag */
+#define CP_PREEMPT_ENABLE 0x1C
+/* Preemption token command on which preemption occurs */
+#define CP_PREEMPT_TOKEN 0x1E
+/* Bit to set in CP_PREEMPT_TOKEN ordinal for interrupt on preemption */
+#define CP_PREEMPT_ORDINAL_INTERRUPT 24
+>>>>>>> 0e91d2a... Nougat
 
 /* Wait for memory writes to complete */
 #define CP_WAIT_MEM_WRITES     0x12
-
-/* Conditional execution based on register comparison */
-#define CP_COND_REG_EXEC       0x47
-
-/* Memory to REG copy */
-#define CP_MEM_TO_REG          0x42
 
 /* initialize CP's micro-engine */
 #define CP_ME_INIT		0x48
@@ -60,12 +65,6 @@
 /* wait until a register location is >= a specific value */
 #define CP_WAT_REG_GTE		0x53
 
-/* wait until a read completes */
-#define CP_WAIT_UNTIL_READ	0x5c
-
-/* wait until all base/size writes from an IB_PFD packet have completed */
-#define CP_WAIT_IB_PFD_COMPLETE 0x5d
-
 /* register read/modify/write */
 #define CP_REG_RMW		0x21
 
@@ -78,9 +77,6 @@
 /* write N 32-bit words to memory */
 #define CP_MEM_WRITE		0x3d
 
-/* write CP_PROG_COUNTER value to memory */
-#define CP_MEM_WRITE_CNTR	0x4f
-
 /* conditional execution of a sequence of packets */
 #define CP_COND_EXEC		0x44
 
@@ -90,27 +86,8 @@
 /* generate an event that creates a write to memory when completed */
 #define CP_EVENT_WRITE		0x46
 
-/* generate a VS|PS_done event */
-#define CP_EVENT_WRITE_SHD	0x58
-
-/* generate a cache flush done event */
-#define CP_EVENT_WRITE_CFL	0x59
-
-/* generate a z_pass done event */
-#define CP_EVENT_WRITE_ZPD	0x5b
-
-
 /* initiate fetch of index buffer and draw */
 #define CP_DRAW_INDX		0x22
-
-/* draw using supplied indices in packet */
-#define CP_DRAW_INDX_2		0x36
-
-/* initiate fetch of index buffer and binIDs and draw */
-#define CP_DRAW_INDX_BIN	0x34
-
-/* initiate fetch of bin IDs and draw using supplied indices */
-#define CP_DRAW_INDX_2_BIN	0x35
 
 /* New draw packets defined for A4XX */
 #define CP_DRAW_INDX_OFFSET	0x38
@@ -118,15 +95,10 @@
 #define CP_DRAW_INDX_INDIRECT	0x29
 #define CP_DRAW_AUTO		0x24
 
-/* begin/end initiator for viz query extent processing */
-#define CP_VIZ_QUERY		0x23
-
-/* fetch state sub-blocks and initiate shader code DMAs */
-#define CP_SET_STATE		0x25
-
 /* load constant into chip and to memory */
 #define CP_SET_CONSTANT	0x2d
 
+<<<<<<< HEAD
 /* load sequencer instruction memory (pointer-based) */
 #define CP_IM_LOAD		0x27
 
@@ -139,32 +111,14 @@
 /* (A2x) sets binning configuration registers */
 #define CP_SET_BIN_DATA             0x2f
 
+=======
+>>>>>>> 0e91d2a... Nougat
 /* selective invalidation of state pointers */
 #define CP_INVALIDATE_STATE	0x3b
-
-
-/* dynamically changes shader instruction memory partition */
-#define CP_SET_SHADER_BASES	0x4A
-
-/* sets the 64-bit BIN_MASK register in the PFP */
-#define CP_SET_BIN_MASK	0x50
-
-/* sets the 64-bit BIN_SELECT register in the PFP */
-#define CP_SET_BIN_SELECT	0x51
-
-
-/* updates the current context, if needed */
-#define CP_CONTEXT_UPDATE	0x5e
 
 /* generate interrupt from the command stream */
 #define CP_INTERRUPT		0x40
 
-
-/* copy sequencer instruction memory to system memory */
-#define CP_IM_STORE            0x2c
-
-/* test 2 memory locations to dword values specified */
-#define CP_TEST_TWO_MEMS	0x71
 
 /* Write register, ignoring context state for context sensitive registers */
 #define CP_REG_WR_NO_CTXT  0x78
@@ -179,6 +133,7 @@
 /* PFP waits until the FIFO between the PFP and the ME is empty */
 #define CP_WAIT_FOR_ME		0x13
 
+<<<<<<< HEAD
 /* Record the real-time when this packet is processed by PFP */
 #define CP_RECORD_PFP_TIMESTAMP	0x11
 
@@ -195,6 +150,9 @@
  * every draw initiator
  */
 #define CP_SET_DRAW_INIT_FLAGS      0x4B
+=======
+#define CP_SET_PROTECTED_MODE  0x5f /* sets the register protection mode */
+>>>>>>> 0e91d2a... Nougat
 
 #define CP_SET_PROTECTED_MODE  0x5f /* sets the register protection mode */
 

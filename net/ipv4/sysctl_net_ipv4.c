@@ -49,10 +49,17 @@ static int tcp_use_userconfig_max = 1;
 /* Update system visible IP port range */
 static void set_local_port_range(int range[2])
 {
+<<<<<<< HEAD
 	write_seqlock(&sysctl_local_ports.lock);
 	sysctl_local_ports.range[0] = range[0];
 	sysctl_local_ports.range[1] = range[1];
 	write_sequnlock(&sysctl_local_ports.lock);
+=======
+	write_seqlock_bh(&net->ipv4.ip_local_ports.lock);
+	net->ipv4.ip_local_ports.range[0] = range[0];
+	net->ipv4.ip_local_ports.range[1] = range[1];
+	write_sequnlock_bh(&net->ipv4.ip_local_ports.lock);
+>>>>>>> 0e91d2a... Nougat
 }
 
 /* Validate changes from /proc interface. */

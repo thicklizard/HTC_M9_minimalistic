@@ -1,5 +1,9 @@
 /*
+<<<<<<< HEAD
  * Copyright (c) 2014, The Linux Foundation. All rights reserved.
+=======
+ * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -86,7 +90,12 @@ struct msm_slim_dai_data *msm_slim_get_dai_data(
 }
 
 static int msm_dai_slim_ch_ctl(struct msm_slim_dma_data *dma_data,
+<<<<<<< HEAD
 	struct snd_soc_dai *dai, bool enable)
+=======
+	struct snd_soc_dai *dai,
+	enum msm_dai_slim_event event)
+>>>>>>> 0e91d2a... Nougat
 {
 	struct slim_device *sdev;
 	struct msm_dai_slim_drv_data *drv_data;
@@ -111,11 +120,20 @@ static int msm_dai_slim_ch_ctl(struct msm_slim_dma_data *dma_data,
 	}
 
 	dev_dbg(&sdev->dev,
+<<<<<<< HEAD
 		"%s: enable = %s, rate = %u\n", __func__,
 		enable ? "true" : "false",
 		dai_data->rate);
 
 	if (enable) {
+=======
+		"%s: event = 0x%x, rate = %u\n", __func__,
+		event, dai_data->rate);
+
+	switch (event) {
+	case MSM_DAI_SLIM_ENABLE:
+
+>>>>>>> 0e91d2a... Nougat
 		if (!(dai_data->status & DAI_STATE_PREPARED)) {
 			dev_err(&sdev->dev,
 				"%s: dai id (%d) has invalid state 0x%x\n",
@@ -176,6 +194,11 @@ static int msm_dai_slim_ch_ctl(struct msm_slim_dma_data *dma_data,
 			goto done;
 		}
 
+<<<<<<< HEAD
+=======
+	case MSM_DAI_SLIM_DISABLE:
+
+>>>>>>> 0e91d2a... Nougat
 		rc = slim_dealloc_mgrports(sdev,
 					   &dma_data->ph, 1);
 		if (IS_ERR_VALUE(rc)) {
@@ -446,7 +469,9 @@ static void msm_dai_slim_remove_dai_data(
 		dai_data_t = &drv_data->slim_dai_data[i];
 
 		kfree(dai_data_t->chan_h);
+		dai_data_t->chan_h = NULL;
 		kfree(dai_data_t->sh_ch);
+		dai_data_t->sh_ch = NULL;
 	}
 }
 

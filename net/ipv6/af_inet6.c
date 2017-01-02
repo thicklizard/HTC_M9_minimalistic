@@ -126,10 +126,15 @@ static int inet6_create(struct net *net, struct socket *sock, int protocol,
 	if (!current_has_network())
 		return -EACCES;
 
+<<<<<<< HEAD
 	if (sock->type != SOCK_RAW &&
 	    sock->type != SOCK_DGRAM &&
 	    !inet_ehash_secret)
 		build_ehash_secret();
+=======
+	if (protocol < 0 || protocol >= IPPROTO_MAX)
+		return -EINVAL;
+>>>>>>> 0e91d2a... Nougat
 
 	/* Look for the requested type/protocol pair. */
 lookup_protocol:

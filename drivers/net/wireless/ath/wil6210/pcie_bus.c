@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014 Qualcomm Atheros, Inc.
+ * Copyright (c) 2012-2016 Qualcomm Atheros, Inc.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -18,7 +18,7 @@
 #include <linux/pci.h>
 #include <linux/moduleparam.h>
 #include <linux/interrupt.h>
-
+#include <linux/suspend.h>
 #include "wil6210.h"
 
 static int use_msi = 1;
@@ -30,6 +30,13 @@ MODULE_PARM_DESC(use_msi,
 static bool debug_fw; /* = false; */
 module_param(debug_fw, bool, S_IRUGO);
 MODULE_PARM_DESC(debug_fw, " load driver if FW not ready. For FW debug");
+
+#ifdef CONFIG_PM
+#ifdef CONFIG_PM_SLEEP
+static int wil6210_pm_notify(struct notifier_block *notify_block,
+			     unsigned long mode, void *unused);
+#endif /* CONFIG_PM_SLEEP */
+#endif /* CONFIG_PM */
 
 static
 void wil_set_capabilities(struct wil6210_priv *wil)
@@ -186,12 +193,38 @@ static int wil_if_pcie_disable(struct wil6210_priv *wil)
 	return 0;
 }
 
+static int wil_platform_rop_ramdump(void *wil_handle, void *buf, uint32_t size)
+{
+	struct wil6210_priv *wil = wil_handle;
+
+	if (!wil)
+		return -EINVAL;
+
+	return wil_fw_copy_crash_dump(wil, buf, size);
+}
+
+static int wil_platform_rop_fw_recovery(void *wil_handle)
+{
+	struct wil6210_priv *wil = wil_handle;
+
+	if (!wil)
+		return -EINVAL;
+
+	wil_fw_error_recovery(wil);
+
+	return 0;
+}
+
 static int wil_pcie_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 {
 	struct wil6210_priv *wil;
 	struct device *dev = &pdev->dev;
 	void __iomem *csr;
 	int rc;
+	const struct wil_platform_rops rops = {
+		.ramdump = wil_platform_rop_ramdump,
+		.fw_recovery = wil_platform_rop_fw_recovery,
+	};
 
 	/* check HW */
 	dev_info(&pdev->dev, WIL_NAME
@@ -205,6 +238,28 @@ static int wil_pcie_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		return -ENODEV;
 	}
 
+<<<<<<< HEAD
+=======
+	wil = wil_if_alloc(dev);
+	if (IS_ERR(wil)) {
+		rc = (int)PTR_ERR(wil);
+		dev_err(dev, "wil_if_alloc failed: %d\n", rc);
+		return rc;
+	}
+	wil->pdev = pdev;
+	pci_set_drvdata(pdev, wil);
+	/* rollback to if_free */
+
+	wil->platform_handle =
+		wil_platform_init(&pdev->dev, &wil->platform_ops, &rops, wil);
+	if (!wil->platform_handle) {
+		rc = -ENODEV;
+		wil_err(wil, "wil_platform_init failed\n");
+		goto if_free;
+	}
+	/* rollback to err_plat */
+
+>>>>>>> 0e91d2a... Nougat
 	rc = pci_enable_device(pdev);
 	if (rc) {
 		dev_err(&pdev->dev,
@@ -265,6 +320,18 @@ static int wil_pcie_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		goto bus_disable;
 	}
 
+#ifdef CONFIG_PM
+#ifdef CONFIG_PM_SLEEP
+	wil->pm_notify.notifier_call = wil6210_pm_notify;
+	rc = register_pm_notifier(&wil->pm_notify);
+	if (rc)
+		/* Do not fail the driver initialization, as suspend can
+		 * be prevented in a later phase if needed
+		 */
+		wil_err(wil, "register_pm_notifier failed: %d\n", rc);
+#endif /* CONFIG_PM_SLEEP */
+#endif /* CONFIG_PM */
+
 	wil6210_debugfs_init(wil);
 
 	/* check FW is alive */
@@ -295,11 +362,18 @@ static void wil_pcie_remove(struct pci_dev *pdev)
 
 	wil_dbg_misc(wil, "%s()\n", __func__);
 
+#ifdef CONFIG_PM
+#ifdef CONFIG_PM_SLEEP
+	unregister_pm_notifier(&wil->pm_notify);
+#endif /* CONFIG_PM_SLEEP */
+#endif /* CONFIG_PM */
+
 	wil6210_debugfs_remove(wil);
 	wil_if_remove(wil);
 	wil_if_pcie_disable(wil);
 	if (wil->platform_ops.uninit)
 		wil->platform_ops.uninit(wil->platform_handle);
+	wil_p2p_wdev_free(wil);
 	wil_if_free(wil);
 	pci_iounmap(pdev, csr);
 	pci_release_region(pdev, 0);
@@ -314,6 +388,114 @@ static const struct pci_device_id wil6210_pcie_ids[] = {
 };
 MODULE_DEVICE_TABLE(pci, wil6210_pcie_ids);
 
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_PM
+#ifdef CONFIG_PM_SLEEP
+
+static int wil6210_suspend(struct device *dev, bool is_runtime)
+{
+	int rc = 0;
+	struct pci_dev *pdev = to_pci_dev(dev);
+	struct wil6210_priv *wil = pci_get_drvdata(pdev);
+
+	wil_dbg_pm(wil, "%s(%s)\n", __func__,
+		   is_runtime ? "runtime" : "system");
+
+	rc = wil_can_suspend(wil, is_runtime);
+	if (rc)
+		goto out;
+
+	rc = wil_suspend(wil, is_runtime);
+	if (rc)
+		goto out;
+
+	/* TODO: how do I bring card in low power state? */
+
+	/* disable bus mastering */
+	pci_clear_master(pdev);
+	/* PCI will call pci_save_state(pdev) and pci_prepare_to_sleep(pdev) */
+
+out:
+	return rc;
+}
+
+static int wil6210_resume(struct device *dev, bool is_runtime)
+{
+	int rc = 0;
+	struct pci_dev *pdev = to_pci_dev(dev);
+	struct wil6210_priv *wil = pci_get_drvdata(pdev);
+
+	wil_dbg_pm(wil, "%s(%s)\n", __func__,
+		   is_runtime ? "runtime" : "system");
+
+	/* allow master */
+	pci_set_master(pdev);
+
+	rc = wil_resume(wil, is_runtime);
+	if (rc)
+		pci_clear_master(pdev);
+
+	return rc;
+}
+
+static int wil6210_pm_notify(struct notifier_block *notify_block,
+			     unsigned long mode, void *unused)
+{
+	struct wil6210_priv *wil = container_of(
+		notify_block, struct wil6210_priv, pm_notify);
+	int rc = 0;
+	enum wil_platform_event evt;
+
+	wil_dbg_pm(wil, "%s: mode (%ld)\n", __func__, mode);
+
+	switch (mode) {
+	case PM_HIBERNATION_PREPARE:
+	case PM_SUSPEND_PREPARE:
+	case PM_RESTORE_PREPARE:
+		rc = wil_can_suspend(wil, false);
+		if (rc)
+			break;
+		evt = WIL_PLATFORM_EVT_PRE_SUSPEND;
+		if (wil->platform_ops.notify)
+			rc = wil->platform_ops.notify(wil->platform_handle,
+						      evt);
+		break;
+	case PM_POST_SUSPEND:
+	case PM_POST_HIBERNATION:
+	case PM_POST_RESTORE:
+		evt = WIL_PLATFORM_EVT_POST_SUSPEND;
+		if (wil->platform_ops.notify)
+			rc = wil->platform_ops.notify(wil->platform_handle,
+						      evt);
+		break;
+	default:
+		wil_dbg_pm(wil, "unhandled notify mode %ld\n", mode);
+		break;
+	}
+
+	wil_dbg_pm(wil, "notification mode %ld: rc (%d)\n", mode, rc);
+	return rc;
+}
+
+static int wil6210_pm_suspend(struct device *dev)
+{
+	return wil6210_suspend(dev, false);
+}
+
+static int wil6210_pm_resume(struct device *dev)
+{
+	return wil6210_resume(dev, false);
+}
+#endif /* CONFIG_PM_SLEEP */
+
+#endif /* CONFIG_PM */
+
+static const struct dev_pm_ops wil6210_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(wil6210_pm_suspend, wil6210_pm_resume)
+};
+
+>>>>>>> 0e91d2a... Nougat
 static struct pci_driver wil6210_driver = {
 	.probe		= wil_pcie_probe,
 	.remove		= wil_pcie_remove,

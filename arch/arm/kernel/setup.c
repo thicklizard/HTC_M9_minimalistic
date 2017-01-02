@@ -365,27 +365,63 @@ void __init early_print(const char *str, ...)
 
 static void __init cpuid_init_hwcaps(void)
 {
+<<<<<<< HEAD
 	unsigned int divide_instrs;
+=======
+	int block;
+	u32 isar5;
+>>>>>>> 0e91d2a... Nougat
 
 	if (cpu_architecture() < CPU_ARCH_ARMv7)
 		return;
 
-	divide_instrs = (read_cpuid_ext(CPUID_EXT_ISAR0) & 0x0f000000) >> 24;
-
-	switch (divide_instrs) {
-	case 2:
+	block = cpuid_feature_extract(CPUID_EXT_ISAR0, 24);
+	if (block >= 2)
 		elf_hwcap |= HWCAP_IDIVA;
-	case 1:
+	if (block >= 1)
 		elf_hwcap |= HWCAP_IDIVT;
+<<<<<<< HEAD
 	}
+=======
+
+	/* LPAE implies atomic ldrd/strd instructions */
+	block = cpuid_feature_extract(CPUID_EXT_MMFR0, 0);
+	if (block >= 5)
+		elf_hwcap |= HWCAP_LPAE;
+
+	/* check for supported v8 Crypto instructions */
+	isar5 = read_cpuid_ext(CPUID_EXT_ISAR5);
+
+	block = cpuid_feature_extract_field(isar5, 4);
+	if (block >= 2)
+		elf_hwcap2 |= HWCAP2_PMULL;
+	if (block >= 1)
+		elf_hwcap2 |= HWCAP2_AES;
+
+	block = cpuid_feature_extract_field(isar5, 8);
+	if (block >= 1)
+		elf_hwcap2 |= HWCAP2_SHA1;
+
+	block = cpuid_feature_extract_field(isar5, 12);
+	if (block >= 1)
+		elf_hwcap2 |= HWCAP2_SHA2;
+
+	block = cpuid_feature_extract_field(isar5, 16);
+	if (block >= 1)
+		elf_hwcap2 |= HWCAP2_CRC32;
+>>>>>>> 0e91d2a... Nougat
 }
 
 static void __init feat_v6_fixup(void)
 {
+<<<<<<< HEAD
 	int id = read_cpuid_id();
 
 	if ((id & 0xff0f0000) != 0x41070000)
 		return;
+=======
+	unsigned id = read_cpuid_id();
+>>>>>>> 0e91d2a... Nougat
 
 	/*
 	 * HWCAP_TLS is available only on 1136 r1p0 and later,
@@ -393,6 +429,25 @@ static void __init feat_v6_fixup(void)
 	 */
 	if ((((id >> 4) & 0xfff) == 0xb36) && (((id >> 20) & 3) == 0))
 		elf_hwcap &= ~HWCAP_TLS;
+<<<<<<< HEAD
+=======
+		return;
+	}
+
+	/* Verify if CPUID scheme is implemented */
+	if ((id & 0x000f0000) != 0x000f0000)
+		return;
+
+	/*
+	 * If the CPU supports LDREX/STREX and LDREXB/STREXB,
+	 * avoid advertising SWP; it may not be atomic with
+	 * multiprocessing cores.
+	 */
+	if (cpuid_feature_extract(CPUID_EXT_ISAR3, 12) > 1 ||
+	    (cpuid_feature_extract(CPUID_EXT_ISAR3, 12) == 1 &&
+	     cpuid_feature_extract(CPUID_EXT_ISAR4, 20) >= 3))
+		elf_hwcap &= ~HWCAP_SWP;
+>>>>>>> 0e91d2a... Nougat
 }
 
 /*

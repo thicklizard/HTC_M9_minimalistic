@@ -63,6 +63,10 @@ static void radio_hci_rx_task(unsigned long arg);
 static struct video_device *video_get_dev(void);
 static DEFINE_RWLOCK(hci_task_lock);
 
+typedef int (*radio_hci_request_func)(struct radio_hci_dev *hdev,
+		int (*req)(struct radio_hci_dev *hdev, unsigned long param),
+		unsigned long param, unsigned long timeout_msecs);
+
 struct iris_device {
 	struct device *dev;
 	struct kfifo data_buf[IRIS_BUF_MAX];
@@ -73,6 +77,7 @@ struct iris_device {
 	struct completion sync_xfr_start;
 	int tune_req;
 	unsigned int mode;
+	bool is_fm_closing;
 
 	__u16 pi;
 	__u8 pty;
@@ -499,6 +504,7 @@ static void iris_q_event(struct iris_device *radio,
 {
 	struct kfifo *data_b;
 	unsigned char evt = event;
+	FMDBG("radio %pK event %d", radio, event);
 
 	if (unlikely(radio == NULL)) {
 		FMDERR(":radio is null");
@@ -513,6 +519,7 @@ static void iris_q_event(struct iris_device *radio,
 static int hci_send_frame(struct sk_buff *skb)
 {
 	struct radio_hci_dev *hdev;
+	FMDBG("skb %pK", skb);
 
 	if (unlikely(skb == NULL)) {
 		FMDERR("%s, socket buffer is null\n", __func__);
@@ -534,6 +541,7 @@ static void radio_hci_cmd_task(unsigned long arg)
 {
 	struct radio_hci_dev *hdev = (struct radio_hci_dev *) arg;
 	struct sk_buff *skb;
+	FMDBG("hdev %pK", hdev);
 
 	if (unlikely(hdev == NULL)) {
 		FMDERR("%s, HCI Device is null\n", __func__);
@@ -565,6 +573,7 @@ static void radio_hci_rx_task(unsigned long arg)
 {
 	struct radio_hci_dev *hdev = (struct radio_hci_dev *) arg;
 	struct sk_buff *skb;
+	FMDBG("hdev %pK", hdev);
 
 	if (unlikely(hdev == NULL)) {
 		FMDERR("%s, HCI Device is null\n", __func__);
@@ -581,6 +590,11 @@ static void radio_hci_rx_task(unsigned long arg)
 int radio_hci_register_dev(struct radio_hci_dev *hdev)
 {
 	struct iris_device *radio = video_get_drvdata(video_get_dev());
+<<<<<<< HEAD
+=======
+	FMDBG("radio %pK", radio);
+
+>>>>>>> 0e91d2a... Nougat
 	if (!radio) {
 		FMDERR(":radio is null");
 		return -EINVAL;
@@ -611,22 +625,29 @@ int radio_hci_register_dev(struct radio_hci_dev *hdev)
 }
 EXPORT_SYMBOL(radio_hci_register_dev);
 
-int radio_hci_unregister_dev(struct radio_hci_dev *hdev)
+int radio_hci_unregister_dev(void)
 {
 	struct iris_device *radio = video_get_drvdata(video_get_dev());
+<<<<<<< HEAD
 	if (!radio) {
 		FMDERR(":radio is null");
+=======
+	struct radio_hci_dev *hdev = NULL;
+
+	if (!radio && !radio->fm_hdev) {
+		FMDERR("radio/hdev is null");
+>>>>>>> 0e91d2a... Nougat
 		return -EINVAL;
 	}
+	hdev = radio->fm_hdev;
 
 	tasklet_kill(&hdev->rx_task);
 	tasklet_kill(&hdev->cmd_task);
 	skb_queue_purge(&hdev->rx_q);
 	skb_queue_purge(&hdev->cmd_q);
 	skb_queue_purge(&hdev->raw_q);
-	kfree(radio->fm_hdev);
-	kfree(radio->videodev);
 
+	radio->fm_hdev = NULL;
 	return 0;
 }
 EXPORT_SYMBOL(radio_hci_unregister_dev);
@@ -634,6 +655,7 @@ EXPORT_SYMBOL(radio_hci_unregister_dev);
 int radio_hci_recv_frame(struct sk_buff *skb)
 {
 	struct radio_hci_dev *hdev;
+	FMDBG("hdev %pK", skb);
 
 	if (unlikely(skb == NULL)) {
 		FMDERR("%s, socket buffer is null\n", __func__);
@@ -661,6 +683,7 @@ int radio_hci_send_cmd(struct radio_hci_dev *hdev, __u16 opcode, __u32 plen,
 	struct radio_hci_command_hdr *hdr;
 	struct sk_buff *skb;
 	int ret = 0;
+	FMDBG("hdev %pK opcode %u len %u", hdev, opcode, plen);
 
 	if (unlikely(hdev == NULL)) {
 		FMDERR("%s, hci device is null\n", __func__);
@@ -1302,7 +1325,8 @@ static int radio_hci_err(__u32 code)
 static int __radio_hci_request(struct radio_hci_dev *hdev,
 		int (*req)(struct radio_hci_dev *hdev,
 			unsigned long param),
-			unsigned long param, __u32 timeout)
+			unsigned long param, unsigned long timeout_msecs,
+			bool interruptible)
 {
 	int err = 0;
 	DECLARE_WAITQUEUE(wait, current);
@@ -1316,15 +1340,22 @@ static int __radio_hci_request(struct radio_hci_dev *hdev,
 	hdev->req_status = HCI_REQ_PEND;
 
 	add_wait_queue(&hdev->req_wait_q, &wait);
-	set_current_state(TASK_INTERRUPTIBLE);
+	if (interruptible)
+		set_current_state(TASK_INTERRUPTIBLE);
+	else
+		set_current_state(TASK_UNINTERRUPTIBLE);
 
 	err = req(hdev, param);
 
+<<<<<<< HEAD
 	schedule_timeout(timeout);
+=======
+	schedule_timeout(msecs_to_jiffies(timeout_msecs));
+>>>>>>> 0e91d2a... Nougat
 
 	remove_wait_queue(&hdev->req_wait_q, &wait);
 
-	if (signal_pending(current)) {
+	if (interruptible && signal_pending(current)) {
 		mutex_unlock(&iris_fm);
 		return -EINTR;
 	}
@@ -1345,16 +1376,36 @@ static int __radio_hci_request(struct radio_hci_dev *hdev,
 	return err;
 }
 
-static inline int radio_hci_request(struct radio_hci_dev *hdev,
+static inline int radio_hci_request_interruptible(struct radio_hci_dev *hdev,
 		int (*req)(struct
 		radio_hci_dev * hdev, unsigned long param),
-		unsigned long param, __u32 timeout)
+		unsigned long param, unsigned long timeout_msecs)
 {
 	int ret = 0;
 
-	ret = __radio_hci_request(hdev, req, param, timeout);
+	ret = __radio_hci_request(hdev, req, param, timeout_msecs, true);
 
 	return ret;
+}
+
+static inline int radio_hci_request_uninterruptible(struct radio_hci_dev *hdev,
+		int (*req)(struct
+		radio_hci_dev * hdev, unsigned long param),
+		unsigned long param, unsigned long timeout_msecs)
+{
+	int ret = 0;
+
+	ret = __radio_hci_request(hdev, req, param, timeout_msecs, false);
+
+	return ret;
+}
+
+static inline int radio_hci_request(struct radio_hci_dev *hdev,
+		int (*req)(struct
+		radio_hci_dev * hdev, unsigned long param),
+		unsigned long param, unsigned long timeout_msecs)
+{
+	return radio_hci_request_interruptible(hdev, req, param, timeout_msecs);
 }
 
 static inline int hci_conf_event_mask(__u8 *arg,
@@ -1727,13 +1778,19 @@ static int hci_set_blend_tbl_req(struct hci_fm_blend_table *arg,
 	return ret;
 }
 
-static int hci_cmd(unsigned int cmd, struct radio_hci_dev *hdev)
+static int hci_cmd_internal(unsigned int cmd, struct radio_hci_dev *hdev,
+						bool interruptible)
 {
 	int ret = 0;
 	unsigned long arg = 0;
+	radio_hci_request_func radio_hci_request;
+	FMDBG("hdev %pK cmd 0x%x", hdev, cmd);
 
 	if (!hdev)
 		return -ENODEV;
+
+	radio_hci_request = interruptible ? radio_hci_request_interruptible :
+			radio_hci_request_uninterruptible;
 
 	switch (cmd) {
 	case HCI_FM_ENABLE_RECV_CMD:
@@ -1831,6 +1888,17 @@ static int hci_cmd(unsigned int cmd, struct radio_hci_dev *hdev)
 	return ret;
 }
 
+
+static int hci_cmd(unsigned int cmd, struct radio_hci_dev *hdev)
+{
+	return hci_cmd_internal(cmd, hdev, true);
+}
+
+static int hci_cmd_uninterruptible(unsigned int cmd, struct radio_hci_dev *hdev)
+{
+	return hci_cmd_internal(cmd, hdev, false);
+}
+
 static void radio_hci_req_complete(struct radio_hci_dev *hdev, int result)
 {
 
@@ -1840,7 +1908,7 @@ static void radio_hci_req_complete(struct radio_hci_dev *hdev, int result)
 	}
 	hdev->req_result = result;
 	hdev->req_status = HCI_REQ_DONE;
-	wake_up_interruptible(&hdev->req_wait_q);
+	wake_up(&hdev->req_wait_q);
 }
 
 static void radio_hci_status_complete(struct radio_hci_dev *hdev, int result)
@@ -1851,7 +1919,7 @@ static void radio_hci_status_complete(struct radio_hci_dev *hdev, int result)
 	}
 	hdev->req_result = result;
 	hdev->req_status = HCI_REQ_STATUS;
-	wake_up_interruptible(&hdev->req_wait_q);
+	wake_up(&hdev->req_wait_q);
 }
 
 static void hci_cc_rsp(struct radio_hci_dev *hdev, struct sk_buff *skb)
@@ -1872,6 +1940,7 @@ static void hci_cc_fm_disable_rsp(struct radio_hci_dev *hdev,
 {
 	__u8 status;
 	struct iris_device *radio = video_get_drvdata(video_get_dev());
+	FMDBG("hdev %pK skb %p", hdev, skb);
 
 	if (unlikely(radio == NULL)) {
 		FMDERR(":radio is null");
@@ -1885,7 +1954,8 @@ static void hci_cc_fm_disable_rsp(struct radio_hci_dev *hdev,
 
 	status = *((__u8 *) skb->data);
 	if ((radio->mode == FM_TURNING_OFF) && (status == 0)) {
-		iris_q_event(radio, IRIS_EVT_RADIO_DISABLED);
+		if (!radio->is_fm_closing)
+			iris_q_event(radio, IRIS_EVT_RADIO_DISABLED);
 		radio_hci_req_complete(hdev, status);
 		radio->mode = FM_OFF;
 	} else if (radio->mode == FM_CALIB) {
@@ -1946,6 +2016,7 @@ static void hci_cc_fm_enable_rsp(struct radio_hci_dev *hdev,
 {
 	struct hci_fm_conf_rsp  *rsp;
 	struct iris_device *radio = video_get_drvdata(video_get_dev());
+	FMDBG("hdev %pK skb %p", hdev, skb);
 
 	if (unlikely(radio == NULL)) {
 		FMDERR(":radio is null");
@@ -2125,6 +2196,7 @@ static void iris_q_evt_data(struct iris_device *radio,
 				char *data, int len, int event)
 {
 	struct kfifo *data_b;
+	FMDBG("radio %pK data %p len %d event %d", radio, data, len, event);
 
 	if (unlikely(radio == NULL)) {
 		FMDERR(":radio is null");
@@ -2353,6 +2425,7 @@ static inline void hci_cmd_complete_event(struct radio_hci_dev *hdev,
 
 	opcode = __le16_to_cpu(cmd_compl_ev->cmd_opcode);
 
+	FMDBG("opcode 0x%x", opcode);
 	switch (opcode) {
 	case hci_recv_ctrl_cmd_op_pack(HCI_OCF_FM_ENABLE_RECV_REQ):
 	case hci_trans_ctrl_cmd_op_pack(HCI_OCF_FM_ENABLE_TRANS_REQ):
@@ -2970,6 +3043,7 @@ void radio_hci_event_packet(struct radio_hci_dev *hdev, struct sk_buff *skb)
 
 	skb_pull(skb, RADIO_HCI_EVENT_HDR_SIZE);
 
+	FMDBG("event 0x%x", event);
 	switch (event) {
 	case HCI_EV_TUNE_STATUS:
 		hci_ev_tune_status(hdev, skb);
@@ -3095,6 +3169,7 @@ static int set_low_power_mode(struct iris_device *radio, int power_mode)
 		return -EINVAL;
 	}
 
+	FMDBG("power mode old 0x%x new 0x%x", radio->power_mode, power_mode);
 	if (radio->power_mode != power_mode) {
 
 		if (power_mode) {
@@ -3217,6 +3292,7 @@ static int iris_do_calibration(struct iris_device *radio)
 {
 	char cal_mode = 0x00;
 	int retval = 0x00;
+	FMDBG("radio %pK", radio);
 
 	if (unlikely(radio == NULL)) {
 		FMDERR(":radio is null");
@@ -3268,6 +3344,8 @@ static int iris_vidioc_g_ctrl(struct file *file, void *priv,
 		retval = -EINVAL;
 		goto END;
 	}
+
+	FMDBG("id 0x%x", ctrl->id);
 	switch (ctrl->id) {
 	case V4L2_CID_AUDIO_VOLUME:
 		break;
@@ -3624,6 +3702,8 @@ static int iris_vidioc_g_ext_ctrls(struct file *file, void *priv,
 		retval = -EINVAL;
 		goto END;
 	}
+
+	FMDBG("0x%x", ctrl->controls[0].id);
 	switch ((ctrl->controls[0]).id) {
 	case V4L2_CID_PRIVATE_IRIS_READ_DEFAULT:
 		data = (ctrl->controls[0]).string;
@@ -3675,6 +3755,7 @@ static int iris_vidioc_s_ext_ctrls(struct file *file, void *priv,
 		goto END;
 	}
 
+	FMDBG("0x%x", ctrl->controls[0].id);
 	switch ((ctrl->controls[0]).id) {
 	case V4L2_CID_RDS_TX_PS_NAME:
 		FMDBG("In V4L2_CID_RDS_TX_PS_NAME\n");
@@ -3755,9 +3836,8 @@ static int iris_vidioc_s_ext_ctrls(struct file *file, void *priv,
 			retval = -EFAULT;
 			goto END;
 		}
-		FMDBG("%s: XFR Mode\t: 0x%x\n", __func__, default_data.mode);
-		FMDBG("%s: XFR Data Length\t: %d\n", __func__,
-			default_data.length);
+		FMDBG("XFR Mode\t: 0x%x", default_data.mode);
+		FMDBG("XFR Data Length\t: %d\n", default_data.length);
 		/*
 		 * Check if the 'length' of the actual XFR data to be configured
 		 * is valid or not. Length of actual XFR data should be always
@@ -3888,6 +3968,8 @@ static int iris_vidioc_s_ctrl(struct file *file, void *priv,
 		retval = -EINVAL;
 		goto END;
 	}
+
+	FMDBG("id 0x%x", ctrl->id);
 	switch (ctrl->id) {
 	case V4L2_CID_PRIVATE_IRIS_TX_TONE:
 		if (!is_valid_tone(ctrl->value)) {
@@ -3949,7 +4031,7 @@ static int iris_vidioc_s_ctrl(struct file *file, void *priv,
 		switch (ctrl->value) {
 		case FM_RECV:
 			if (radio->mode != FM_OFF) {
-				FMDERR("FM is not in proper state\n");
+				FMDERR("FM mode is not off %d\n", radio->mode);
 				retval = -EINVAL;
 				goto END;
 			}
@@ -4157,7 +4239,7 @@ static int iris_vidioc_s_ctrl(struct file *file, void *priv,
 			break;
 		default:
 			retval = -EINVAL;
-			FMDERR("%s, FM is not in proper state\n", __func__);
+			FMDERR("FM mode is unknown %d\n", radio->mode);
 			goto END;
 			break;
 		}
@@ -5130,26 +5212,60 @@ static int iris_fops_release(struct file *file)
 {
 	struct iris_device *radio = video_get_drvdata(video_devdata(file));
 	int retval = 0;
+	FMDBG("radio %pK", radio);
 
-	FMDBG("Enter %s ", __func__);
 	if (radio == NULL)
 		return -EINVAL;
+
+	FMDBG("state %d", radio->mode);
+	mutex_lock(&radio->lock);
 
 	if (radio->mode == FM_OFF)
 		return 0;
 
 	if (radio->mode == FM_RECV) {
+		radio->is_fm_closing = true;
+		radio->mode = FM_TURNING_OFF;
+		retval = hci_cmd_uninterruptible(HCI_FM_DISABLE_RECV_CMD,
+				radio->fm_hdev);
 		radio->mode = FM_OFF;
+<<<<<<< HEAD
 		retval = hci_cmd(HCI_FM_DISABLE_RECV_CMD,
 						radio->fm_hdev);
+=======
+		radio->is_fm_closing = false;
+>>>>>>> 0e91d2a... Nougat
 	} else if (radio->mode == FM_TRANS) {
+		radio->is_fm_closing = true;
+		radio->mode = FM_TURNING_OFF;
+		retval = hci_cmd_uninterruptible(HCI_FM_DISABLE_TRANS_CMD,
+				radio->fm_hdev);
 		radio->mode = FM_OFF;
+<<<<<<< HEAD
 		retval = hci_cmd(HCI_FM_DISABLE_TRANS_CMD,
 					radio->fm_hdev);
 	}
+=======
+		radio->is_fm_closing = false;
+	} else if (radio->mode == FM_CALIB) {
+		radio->mode = FM_OFF;
+		mutex_unlock(&radio->lock);
+		return retval;
+	}
+END:
+	FMDBG("mode %d", radio->mode);
+	mutex_lock(&fm_smd_enable);
+	if (radio->fm_hdev != NULL)
+		radio->fm_hdev->close_smd();
+	mutex_unlock(&fm_smd_enable);
+
+	mutex_unlock(&radio->lock);
+
+>>>>>>> 0e91d2a... Nougat
 	if (retval < 0)
 		FMDERR("Err on disable FM %d\n", retval);
 
+	FMDBG("ret %d", retval);
 	return retval;
 }
 
@@ -5162,6 +5278,7 @@ static int iris_vidioc_dqbuf(struct file *file, void *priv,
 	struct kfifo *data_fifo = NULL;
 	unsigned char *buf = NULL;
 	unsigned int len = 0, retval = -1;
+	FMDBG("buffer %pK", buffer);
 
 	if ((radio == NULL) || (buffer == NULL)) {
 		FMDERR("radio/buffer is NULL\n");
@@ -5225,6 +5342,11 @@ static int iris_vidioc_querycap(struct file *file, void *priv,
 	struct v4l2_capability *capability)
 {
 	struct iris_device *radio;
+<<<<<<< HEAD
+=======
+	FMDBG("caps %pK", capability);
+
+>>>>>>> 0e91d2a... Nougat
 	radio = video_get_drvdata(video_devdata(file));
 
 	if (unlikely(radio == NULL)) {
@@ -5249,6 +5371,7 @@ static int iris_vidioc_querycap(struct file *file, void *priv,
 static int initialise_recv(struct iris_device *radio)
 {
 	int retval;
+	FMDBG("radio %pK", radio);
 
 	if (unlikely(radio == NULL)) {
 		FMDERR(":radio is null");
@@ -5374,6 +5497,7 @@ static int __init iris_probe(struct platform_device *pdev)
 	int retval;
 	int radio_nr = -1;
 	int i;
+	FMDBG("pdev %pK", pdev);
 
 	if (!pdev) {
 		FMDERR(": pdev is null\n");
@@ -5428,6 +5552,7 @@ static int __init iris_probe(struct platform_device *pdev)
 	init_completion(&radio->sync_xfr_start);
 	radio->tune_req = 0;
 	radio->prev_trans_rds = 2;
+	radio->is_fm_closing = false;
 	init_waitqueue_head(&radio->event_queue);
 	init_waitqueue_head(&radio->read_queue);
 

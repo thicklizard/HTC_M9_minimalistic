@@ -1205,6 +1205,9 @@ static int pirq_enable_irq(struct pci_dev *dev)
 			int irq;
 			struct io_apic_irq_attr irq_attr;
 
+			if (dev->irq_managed && dev->irq > 0)
+				return 0;
+
 			irq = IO_APIC_get_PCI_irq_vector(dev->bus->number,
 						PCI_SLOT(dev->devfn),
 						pin - 1, &irq_attr);
@@ -1231,8 +1234,12 @@ static int pirq_enable_irq(struct pci_dev *dev)
 			}
 			dev = temp_dev;
 			if (irq >= 0) {
+<<<<<<< HEAD
 				io_apic_set_pci_routing(&dev->dev, irq,
 							 &irq_attr);
+=======
+				dev->irq_managed = 1;
+>>>>>>> 0e91d2a... Nougat
 				dev->irq = irq;
 				dev_info(&dev->dev, "PCI->APIC IRQ transform: "
 					 "INT %c -> IRQ %d\n", 'A' + pin - 1, irq);
@@ -1258,3 +1265,16 @@ static int pirq_enable_irq(struct pci_dev *dev)
 	}
 	return 0;
 }
+<<<<<<< HEAD
+=======
+
+static void pirq_disable_irq(struct pci_dev *dev)
+{
+	if (io_apic_assign_pci_irqs && !mp_should_keep_irq(&dev->dev) &&
+	    dev->irq_managed && dev->irq) {
+		mp_unmap_irq(dev->irq);
+		dev->irq = 0;
+		dev->irq_managed = 0;
+	}
+}
+>>>>>>> 0e91d2a... Nougat

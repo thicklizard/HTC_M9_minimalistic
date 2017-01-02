@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -16,6 +16,7 @@
 #include <linux/stat.h>
 #include <linux/slab.h>
 #include <linux/device.h>
+#include <linux/input.h>
 
 #include "mdss_hdmi_cec.h"
 
@@ -40,10 +41,19 @@ struct hdmi_cec_msg_node {
 	struct list_head list;
 };
 
+#define CEC_OP_SET_STREAM_PATH  0x86
+#define CEC_OP_KEY_PRESS        0x44
+#define CEC_OP_STANDBY          0x36
+
 struct hdmi_cec_ctrl {
 	bool cec_enabled;
+<<<<<<< HEAD
 	bool compliance_response_enabled;
 	bool cec_engine_configed;
+=======
+	bool cec_wakeup_en;
+	bool cec_device_suspend;
+>>>>>>> 0e91d2a... Nougat
 
 	u8 cec_logical_addr;
 	u32 cec_msg_wr_status;
@@ -53,6 +63,7 @@ struct hdmi_cec_ctrl {
 	struct work_struct cec_read_work;
 	struct completion cec_msg_wr_done;
 	struct hdmi_cec_init_data init_data;
+	struct input_dev *input;
 };
 
 static int hdmi_cec_msg_send(struct hdmi_cec_ctrl *cec_ctrl,
@@ -386,6 +397,46 @@ static int hdmi_cec_msg_send(struct hdmi_cec_ctrl *cec_ctrl,
 	return rc;
 } 
 
+static void hdmi_cec_init_input_event(struct hdmi_cec_ctrl *cec_ctrl)
+{
+	int rc = 0;
+
+	if (!cec_ctrl) {
+		DEV_ERR("%s: Invalid input\n", __func__);
+		return;
+	}
+
+	/* Initialize CEC input events */
+	if (!cec_ctrl->input)
+		cec_ctrl->input = input_allocate_device();
+	if (!cec_ctrl->input) {
+		DEV_ERR("%s: hdmi input device allocation failed\n", __func__);
+		return;
+	}
+
+	cec_ctrl->input->name = "HDMI CEC User or Deck Control";
+	cec_ctrl->input->phys = "hdmi/input0";
+	cec_ctrl->input->id.bustype = BUS_VIRTUAL;
+
+	input_set_capability(cec_ctrl->input, EV_KEY, KEY_POWER);
+
+	rc = input_register_device(cec_ctrl->input);
+	if (rc) {
+		DEV_ERR("%s: cec input device registeration failed\n",
+				__func__);
+		input_free_device(cec_ctrl->input);
+		cec_ctrl->input = NULL;
+		return;
+	}
+}
+
+static void hdmi_cec_deinit_input_event(struct hdmi_cec_ctrl *cec_ctrl)
+{
+	if (cec_ctrl->input)
+		input_unregister_device(cec_ctrl->input);
+	cec_ctrl->input = NULL;
+}
+
 static void hdmi_cec_msg_recv(struct work_struct *work)
 {
 	int i;
@@ -443,6 +494,7 @@ static void hdmi_cec_msg_recv(struct work_struct *work)
 	for (; i < 14; i++)
 		msg_node->msg.operand[i] = 0;
 
+<<<<<<< HEAD
 	DEV_DBG("%s: CEC read frame done\n", __func__);
 	hdmi_cec_dump_msg(cec_ctrl, &msg_node->msg);
 
@@ -782,6 +834,36 @@ static struct attribute_group hdmi_cec_fs_attr_group = {
 	.name = "cec",
 	.attrs = hdmi_cec_fs_attrs,
 };
+=======
+	DEV_DBG("%s: opcode 0x%x, wakup_en %d, device_suspend %d\n", __func__,
+		msg.opcode, cec_ctrl->cec_wakeup_en,
+		cec_ctrl->cec_device_suspend);
+
+	if ((msg.opcode == CEC_OP_SET_STREAM_PATH ||
+		msg.opcode == CEC_OP_KEY_PRESS) &&
+		cec_ctrl->input && cec_ctrl->cec_wakeup_en &&
+		cec_ctrl->cec_device_suspend) {
+		DEV_DBG("%s: Sending power on at wakeup\n", __func__);
+		input_report_key(cec_ctrl->input, KEY_POWER, 1);
+		input_sync(cec_ctrl->input);
+		input_report_key(cec_ctrl->input, KEY_POWER, 0);
+		input_sync(cec_ctrl->input);
+	}
+
+	if ((msg.opcode == CEC_OP_STANDBY) &&
+		cec_ctrl->input && cec_ctrl->cec_wakeup_en &&
+		!cec_ctrl->cec_device_suspend) {
+		DEV_DBG("%s: Sending power off on standby\n", __func__);
+		input_report_key(cec_ctrl->input, KEY_POWER, 1);
+		input_sync(cec_ctrl->input);
+		input_report_key(cec_ctrl->input, KEY_POWER, 0);
+		input_sync(cec_ctrl->input);
+	}
+
+	if (cbs && cbs->msg_recv_notify)
+		cbs->msg_recv_notify(cbs->data, &msg);
+}
+>>>>>>> 0e91d2a... Nougat
 
 int hdmi_cec_isr(void *input)
 {
@@ -796,14 +878,14 @@ int hdmi_cec_isr(void *input)
 		return -EPERM;
 	}
 
+	if (!cec_ctrl->cec_enabled) {
+		DEV_DBG("%s: CEC feature not enabled\n", __func__);
+		return 0;
+	}
+
 	io = cec_ctrl->init_data.io;
 
 	cec_intr = DSS_REG_R_ND(io, HDMI_CEC_INT);
-
-	if (!cec_ctrl->cec_enabled) {
-		DSS_REG_W(io, HDMI_CEC_INT, cec_intr);
-		return 0;
-	}
 
 	cec_status = DSS_REG_R_ND(io, HDMI_CEC_STATUS);
 
@@ -841,7 +923,47 @@ int hdmi_cec_isr(void *input)
 	return rc;
 } 
 
+<<<<<<< HEAD
 int hdmi_cec_deconfig(void *input)
+=======
+void hdmi_cec_device_suspend(void *input, bool suspend)
+{
+	struct hdmi_cec_ctrl *cec_ctrl = (struct hdmi_cec_ctrl *)input;
+
+	if (!cec_ctrl) {
+		DEV_WARN("%s: HDMI CEC HW module not initialized.\n", __func__);
+		return;
+	}
+
+	cec_ctrl->cec_device_suspend = suspend;
+}
+
+bool hdmi_cec_is_wakeup_en(void *input)
+{
+	struct hdmi_cec_ctrl *cec_ctrl = (struct hdmi_cec_ctrl *)input;
+
+	if (!cec_ctrl) {
+		DEV_WARN("%s: HDMI CEC HW module not initialized.\n", __func__);
+		return 0;
+	}
+
+	return cec_ctrl->cec_wakeup_en;
+}
+
+static void hdmi_cec_wakeup_en(void *input, bool enable)
+{
+	struct hdmi_cec_ctrl *cec_ctrl = (struct hdmi_cec_ctrl *)input;
+
+	if (!cec_ctrl) {
+		DEV_ERR("%s: Invalid input\n", __func__);
+		return;
+	}
+
+	cec_ctrl->cec_wakeup_en = enable;
+}
+
+static void hdmi_cec_write_logical_addr(void *input, u8 addr)
+>>>>>>> 0e91d2a... Nougat
 {
 	unsigned long flags;
 	struct hdmi_cec_ctrl *cec_ctrl = (struct hdmi_cec_ctrl *)input;
@@ -955,9 +1077,41 @@ void *hdmi_cec_init(struct hdmi_cec_init_data *init_data)
 	INIT_WORK(&cec_ctrl->cec_read_work, hdmi_cec_msg_recv);
 	init_completion(&cec_ctrl->cec_msg_wr_done);
 
+<<<<<<< HEAD
 	goto exit;
+=======
+	/* populate hardware specific operations to client */
+	ops->send_msg = hdmi_cec_msg_send;
+	ops->wt_logical_addr = hdmi_cec_write_logical_addr;
+	ops->enable = hdmi_cec_enable;
+	ops->data = cec_ctrl;
+	ops->wakeup_en = hdmi_cec_wakeup_en;
+	ops->is_wakeup_en = hdmi_cec_is_wakeup_en;
+	ops->device_suspend = hdmi_cec_device_suspend;
+
+	hdmi_cec_init_input_event(cec_ctrl);
+>>>>>>> 0e91d2a... Nougat
 
 error:
+<<<<<<< HEAD
+=======
+	return ERR_PTR(ret);
+}
+
+/**
+ * hdmi_cec_deinit() - de-initialize CEC HW module
+ * @data: CEC HW module data
+ *
+ * This API release all resources allocated.
+ */
+void hdmi_cec_deinit(void *data)
+{
+	struct hdmi_cec_ctrl *cec_ctrl = (struct hdmi_cec_ctrl *)data;
+
+	if (cec_ctrl)
+		hdmi_cec_deinit_input_event(cec_ctrl);
+
+>>>>>>> 0e91d2a... Nougat
 	kfree(cec_ctrl);
 	cec_ctrl = NULL;
 exit:

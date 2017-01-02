@@ -142,6 +142,7 @@ struct input_keymap_entry {
 #define EVIOCGLED(len)		_IOC(_IOC_READ, 'E', 0x19, len)		/* get all LEDs */
 #define EVIOCGSND(len)		_IOC(_IOC_READ, 'E', 0x1a, len)		/* get all sounds status */
 #define EVIOCGSW(len)		_IOC(_IOC_READ, 'E', 0x1b, len)		/* get all switch states */
+<<<<<<< HEAD
 
 #define EVIOCGBIT(ev,len)	_IOC(_IOC_READ, 'E', 0x20 + (ev), len)	/* get event bits */
 #define EVIOCGABS(abs)		_IOR('E', 0x40 + (abs), struct input_absinfo)	/* get abs value/limits */
@@ -152,6 +153,21 @@ struct input_keymap_entry {
 #define EVIOCGEFFECTS		_IOR('E', 0x84, int)			/* Report number of effects playable at the same time */
 
 #define EVIOCGRAB		_IOW('E', 0x90, int)			/* Grab/Release device */
+=======
+
+#define EVIOCGBIT(ev,len)	_IOC(_IOC_READ, 'E', 0x20 + (ev), len)	/* get event bits */
+#define EVIOCGABS(abs)		_IOR('E', 0x40 + (abs), struct input_absinfo)	/* get abs value/limits */
+#define EVIOCSABS(abs)		_IOW('E', 0xc0 + (abs), struct input_absinfo)	/* set abs value/limits */
+
+#define EVIOCSFF		_IOC(_IOC_WRITE, 'E', 0x80, sizeof(struct ff_effect))	/* send a force effect to a force feedback device */
+#define EVIOCRMFF		_IOW('E', 0x81, int)			/* Erase a force effect */
+#define EVIOCGEFFECTS		_IOR('E', 0x84, int)			/* Report number of effects playable at the same time */
+
+#define EVIOCGRAB		_IOW('E', 0x90, int)			/* Grab/Release device */
+
+/* HACK: disable conflicting EVIOCREVOKE until Android userspace stops using EVIOCSSUSPENDBLOCK */
+/*#define EVIOCREVOKE		_IOW('E', 0x91, int)*/			/* Revoke device access */
+>>>>>>> 0e91d2a... Nougat
 
 #define EVIOCGSUSPENDBLOCK	_IOR('E', 0x91, int)			/* get suspend block enable */
 #define EVIOCSSUSPENDBLOCK	_IOW('E', 0x91, int)			/* set suspend block enable */
@@ -166,7 +182,13 @@ struct input_keymap_entry {
 #define INPUT_PROP_DIRECT		0x01	/* direct input devices */
 #define INPUT_PROP_BUTTONPAD		0x02	/* has button(s) under pad */
 #define INPUT_PROP_SEMI_MT		0x03	/* touch rectangle only */
+<<<<<<< HEAD
 #define INPUT_PROP_NO_DUMMY_RELEASE	0x04	/* no dummy event */
+=======
+#define INPUT_PROP_TOPBUTTONPAD		0x04	/* softbuttons at top of pad */
+#define INPUT_PROP_POINTING_STICK	0x05	/* is a pointing stick */
+#define INPUT_PROP_NO_DUMMY_RELEASE	0x06	/* no dummy event */
+>>>>>>> 0e91d2a... Nougat
 
 #define INPUT_PROP_MAX			0x1f
 #define INPUT_PROP_CNT			(INPUT_PROP_MAX + 1)
@@ -473,13 +495,22 @@ struct input_keymap_entry {
 #define KEY_WWAN		246	/* Wireless WAN (LTE, UMTS, GSM, etc.) */
 #define KEY_WIMAX		KEY_WWAN
 #define KEY_RFKILL		247	/* Key that controls all radios */
+<<<<<<< HEAD
 
 #define KEY_MICMUTE		248	/* Mute / unmute the microphone */
 #define KEY_APP_SWITCH		249	/* key for list app*/
 
 #define HALL_N_POLE             251     /* HALL Sen    sor N pole*/
 #define HALL_S_POLE             252     /* HALL Sen    sor S pole*/
+=======
 
+#define KEY_MICMUTE		248	/* Mute / unmute the microphone */
+#define KEY_APP_SWITCH		249	/* key for list app*/
+#define HALL_N_POLE             251     /* HALL Sensor N pole*/
+#define HALL_S_POLE             252     /* HALL Sensor S pole*/
+>>>>>>> 0e91d2a... Nougat
+
+/* Code 255 is reserved for special needs of AT keyboard driver */
 
 /* Code 255 is reserved for special needs of AT keyboard driver */
 
@@ -734,6 +765,7 @@ struct input_keymap_entry {
 #define BTN_DPAD_RIGHT		0x223
 
 #define KEY_ALS_TOGGLE		0x230	/* Ambient light sensor */
+<<<<<<< HEAD
 
 #define KEY_BUTTONCONFIG		0x240	/* AL Button Configuration */
 #define KEY_TASKMANAGER		0x241	/* AL Task/Project Manager */
@@ -742,6 +774,19 @@ struct input_keymap_entry {
 #define KEY_APPSELECT		0x244	/* AL Select Task/Application */
 #define KEY_SCREENSAVER		0x245	/* AL Screen Saver */
 #define KEY_VOICECOMMAND		0x246	/* Listening Voice Command */
+=======
+
+#define KEY_BUTTONCONFIG		0x240	/* AL Button Configuration */
+#define KEY_TASKMANAGER		0x241	/* AL Task/Project Manager */
+#define KEY_JOURNAL		0x242	/* AL Log/Journal/Timecard */
+#define KEY_CONTROLPANEL		0x243	/* AL Control Panel */
+#define KEY_APPSELECT		0x244	/* AL Select Task/Application */
+#define KEY_SCREENSAVER		0x245	/* AL Screen Saver */
+#define KEY_VOICECOMMAND		0x246	/* Listening Voice Command */
+
+#define KEY_BRIGHTNESS_MIN		0x250	/* Set Brightness to Minimum */
+#define KEY_BRIGHTNESS_MAX		0x251	/* Set Brightness to Maximum */
+>>>>>>> 0e91d2a... Nougat
 
 #define KEY_BRIGHTNESS_MIN		0x250	/* Set Brightness to Minimum */
 #define KEY_BRIGHTNESS_MAX		0x251	/* Set Brightness to Maximum */
@@ -843,8 +888,13 @@ struct input_keymap_entry {
 
 #define ABS_MISC		0x28
 
+<<<<<<< HEAD
 #define ABS_MT_POSITION		0x2a    /* Group a set of X and Y */
 #define ABS_MT_AMPLITUDE	0x2b    /* Group a set of Z and W */
+=======
+#define ABS_MT_POSITION     0x2a    /* Group a set of X and Y */
+#define ABS_MT_AMPLITUDE    0x2b    /* Group a set of Z and W */
+>>>>>>> 0e91d2a... Nougat
 #define ABS_MT_SLOT		0x2f	/* MT slot being modified */
 #define ABS_MT_TOUCH_MAJOR	0x30	/* Major axis of touching ellipse */
 #define ABS_MT_TOUCH_MINOR	0x31	/* Minor axis (omit if circular) */

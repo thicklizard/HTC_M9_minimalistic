@@ -876,8 +876,46 @@ static void bond_mc_swap(struct bonding *bond, struct slave *new_active,
 	}
 }
 
+<<<<<<< HEAD
 /*
  * bond_do_fail_over_mac
+=======
+/**
+ * bond_set_dev_addr - clone slave's address to bond
+ * @bond_dev: bond net device
+ * @slave_dev: slave net device
+ *
+ * Should be called with RTNL held.
+ */
+static void bond_set_dev_addr(struct net_device *bond_dev,
+			      struct net_device *slave_dev)
+{
+	netdev_dbg(bond_dev, "bond_dev=%p slave_dev=%p slave_dev->addr_len=%d\n",
+		   bond_dev, slave_dev, slave_dev->addr_len);
+	memcpy(bond_dev->dev_addr, slave_dev->dev_addr, slave_dev->addr_len);
+	bond_dev->addr_assign_type = NET_ADDR_STOLEN;
+	call_netdevice_notifiers(NETDEV_CHANGEADDR, bond_dev);
+}
+
+static struct slave *bond_get_old_active(struct bonding *bond,
+					 struct slave *new_active)
+{
+	struct slave *slave;
+	struct list_head *iter;
+
+	bond_for_each_slave(bond, slave, iter) {
+		if (slave == new_active)
+			continue;
+
+		if (ether_addr_equal(bond->dev->dev_addr, slave->dev->dev_addr))
+			return slave;
+	}
+
+	return NULL;
+}
+
+/* bond_do_fail_over_mac
+>>>>>>> 0e91d2a... Nougat
  *
  * Perform special MAC address swapping for fail_over_mac settings
  *
@@ -916,8 +954,13 @@ static void bond_do_fail_over_mac(struct bonding *bond,
 		if (!new_active)
 			return;
 
+<<<<<<< HEAD
 		write_unlock_bh(&bond->curr_slave_lock);
 		read_unlock(&bond->lock);
+=======
+		if (!old_active)
+			old_active = bond_get_old_active(bond, new_active);
+>>>>>>> 0e91d2a... Nougat
 
 		if (old_active) {
 			memcpy(tmp_mac, new_active->dev->dev_addr, ETH_ALEN);
@@ -1514,8 +1557,12 @@ static int bond_master_upper_dev_link(struct net_device *bond_dev,
 	err = netdev_master_upper_dev_link(slave_dev, bond_dev);
 	if (err)
 		return err;
+<<<<<<< HEAD
 	slave_dev->flags |= IFF_SLAVE;
 	rtmsg_ifinfo(RTM_NEWLINK, slave_dev, IFF_SLAVE);
+=======
+	rtmsg_ifinfo(RTM_NEWLINK, slave_dev, IFF_SLAVE, GFP_KERNEL);
+>>>>>>> 0e91d2a... Nougat
 	return 0;
 }
 
@@ -1687,11 +1734,16 @@ int bond_enslave(struct net_device *bond_dev, struct net_device *slave_dev)
 		}
 	}
 
+<<<<<<< HEAD
 	res = bond_master_upper_dev_link(bond_dev, slave_dev);
 	if (res) {
 		pr_debug("Error %d calling bond_master_upper_dev_link\n", res);
 		goto err_restore_mac;
 	}
+=======
+	/* set slave flag before open to prevent IPv6 addrconf */
+	slave_dev->flags |= IFF_SLAVE;
+>>>>>>> 0e91d2a... Nougat
 
 	/* open the slave since the application closed it */
 	res = dev_open(slave_dev);
@@ -1946,7 +1998,13 @@ err_unset_master:
 	bond_upper_dev_unlink(bond_dev, slave_dev);
 
 err_restore_mac:
+<<<<<<< HEAD
 	if (!bond->params.fail_over_mac) {
+=======
+	slave_dev->flags &= ~IFF_SLAVE;
+	if (!bond->params.fail_over_mac ||
+	    BOND_MODE(bond) != BOND_MODE_ACTIVEBACKUP) {
+>>>>>>> 0e91d2a... Nougat
 		/* XXX TODO - fom follow mode needs to change master's
 		 * MAC if this slave's MAC is in use by the bond, or at
 		 * least print a warning.
@@ -2184,6 +2242,7 @@ static int  bond_release_and_destroy(struct net_device *bond_dev,
 	int ret;
 
 	ret = bond_release(bond_dev, slave_dev);
+<<<<<<< HEAD
 	if ((ret == 0) && (bond->slave_cnt == 0)) {
 		bond_dev->priv_flags |= IFF_DISABLE_NETPOLL;
 		pr_info("%s: destroying bond %s.\n",
@@ -2233,6 +2292,14 @@ static int bond_ioctl_change_active(struct net_device *bond_dev, struct net_devi
 	if (new_active && (new_active == old_active)) {
 		read_unlock(&bond->lock);
 		return 0;
+=======
+	if (ret == 0 && !bond_has_slaves(bond)) {
+		bond_dev->priv_flags |= IFF_DISABLE_NETPOLL;
+		netdev_info(bond_dev, "Destroying bond %s\n",
+			    bond_dev->name);
+		bond_remove_proc_entry(bond);
+		unregister_netdevice(bond_dev);
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	if ((new_active) &&

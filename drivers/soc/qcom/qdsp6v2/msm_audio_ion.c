@@ -99,11 +99,11 @@ int msm_audio_ion_alloc(const char *name, struct ion_client **client,
 		pr_err("%s: ION memory mapping for AUDIO failed\n", __func__);
 		goto err_ion_handle;
 	}
-	pr_debug("%s: mapped address = %p, size=%zd\n", __func__,
+	pr_debug("%s: mapped address = %pK, size=%zd\n", __func__,
 		*vaddr, bufsz);
 
 	if (bufsz != 0) {
-		pr_debug("%s: memset to 0 %p %zd\n", __func__, *vaddr, bufsz);
+		pr_debug("%s: memset to 0 %pK %zd\n", __func__, *vaddr, bufsz);
 		memset((void *)*vaddr, 0, bufsz);
 	}
 
@@ -148,7 +148,7 @@ int msm_audio_ion_import(const char *name, struct ion_client **client,
 	bufsz should be 0 and fd shouldn't be 0 as of now
 	*/
 	*handle = ion_import_dma_buf(*client, fd);
-	pr_debug("%s: DMA Buf name=%s, fd=%d handle=%p\n", __func__,
+	pr_debug("%s: DMA Buf name=%s, fd=%d handle=%pK\n", __func__,
 							name, fd, *handle);
 	if (IS_ERR_OR_NULL((void *) (*handle))) {
 		pr_err("%s: ion import dma buffer failed\n",
@@ -179,7 +179,7 @@ int msm_audio_ion_import(const char *name, struct ion_client **client,
 		rc = -ENOMEM;
 		goto err_ion_handle;
 	}
-	pr_debug("%s: mapped address = %p, size=%zd\n", __func__,
+	pr_debug("%s: mapped address = %pK, size=%zd\n", __func__,
 		*vaddr, bufsz);
 
 	return 0;
@@ -267,7 +267,7 @@ int msm_audio_ion_mmap(struct audio_buffer *ab,
 				offset = 0;
 			}
 			len = min(len, remainder);
-			pr_debug("vma=%p, addr=%x len=%ld vm_start=%x vm_end=%x vm_page_prot=%ld\n",
+			pr_debug("vma=%pK, addr=%x len=%ld vm_start=%x vm_end=%x vm_page_prot=%ld\n",
 				vma, (unsigned int)addr, len,
 				(unsigned int)vma->vm_start,
 				(unsigned int)vma->vm_end,
@@ -290,8 +290,8 @@ int msm_audio_ion_mmap(struct audio_buffer *ab,
 				, __func__ , ret);
 			return ret;
 		}
-		pr_debug("phys=%pa len=%zd\n", &phys_addr, phys_len);
-		pr_debug("vma=%p, vm_start=%x vm_end=%x vm_pgoff=%ld vm_page_prot=%ld\n",
+		pr_debug("phys=%pK len=%zd\n", &phys_addr, phys_len);
+		pr_debug("vma=%pK, vm_start=%x vm_end=%x vm_pgoff=%ld vm_page_prot=%ld\n",
 			vma, (unsigned int)vma->vm_start,
 			(unsigned int)vma->vm_end, vma->vm_pgoff,
 			(unsigned long int)vma->vm_page_prot);
@@ -327,7 +327,7 @@ struct ion_client *msm_audio_ion_client_create(const char *name)
 
 void msm_audio_ion_client_destroy(struct ion_client *client)
 {
-	pr_debug("%s: client = %p smmu_enabled = %d\n", __func__,
+	pr_debug("%s: client = %pK smmu_enabled = %d\n", __func__,
 		client, msm_audio_ion_data.smmu_enabled);
 
 	ion_client_destroy(client);
@@ -349,7 +349,7 @@ int msm_audio_ion_import_legacy(const char *name, struct ion_client *client,
 	bufsz should be 0 and fd shouldn't be 0 as of now
 	*/
 	*handle = ion_import_dma_buf(client, fd);
-	pr_debug("%s: DMA Buf name=%s, fd=%d handle=%p\n", __func__,
+	pr_debug("%s: DMA Buf name=%s, fd=%d handle=%pK\n", __func__,
 							name, fd, *handle);
 	if (IS_ERR_OR_NULL((void *)(*handle))) {
 		pr_err("%s: ion import dma buffer failed\n",
@@ -415,7 +415,7 @@ int msm_audio_ion_cache_operations(struct audio_buffer *abuff, int cache_op)
 	int msm_cache_ops = 0;
 
 	if (!abuff) {
-		pr_err("Invalid params: %p, %p\n", __func__, abuff);
+		pr_err("%s: Invalid params: %pK\n", __func__, abuff);
 		return -EINVAL;
 	}
 	rc = ion_handle_get_flags(abuff->client, abuff->handle,
@@ -444,6 +444,150 @@ cache_op_failed:
 }
 
 
+<<<<<<< HEAD
+=======
+static int msm_audio_dma_buf_map(struct ion_client *client,
+		struct ion_handle *handle,
+		ion_phys_addr_t *addr, size_t *len)
+{
+
+	struct msm_audio_alloc_data *alloc_data;
+	struct device *cb_dev;
+	int rc = 0;
+
+	cb_dev = msm_audio_ion_data.cb_dev;
+
+	
+	alloc_data = kzalloc(sizeof(*alloc_data), GFP_KERNEL);
+	if (!alloc_data) {
+		pr_err("%s: No memory for alloc_data\n", __func__);
+		return -ENOMEM;
+	}
+
+	
+	ion_handle_get_size(client, handle, len);
+
+	alloc_data->client = client;
+	alloc_data->handle = handle;
+	alloc_data->len = *len;
+
+	
+	alloc_data->dma_buf = ion_share_dma_buf(client, handle);
+	if (IS_ERR(alloc_data->dma_buf)) {
+		rc = PTR_ERR(alloc_data->dma_buf);
+		dev_err(cb_dev,
+			"%s: Fail to get dma_buf handle, rc = %d\n",
+			__func__, rc);
+		goto err_dma_buf;
+	}
+
+	
+	alloc_data->attach = dma_buf_attach(alloc_data->dma_buf,
+					    cb_dev);
+	if (IS_ERR(alloc_data->attach)) {
+		rc = PTR_ERR(alloc_data->attach);
+		dev_err(cb_dev,
+			"%s: Fail to attach dma_buf to CB, rc = %d\n",
+			__func__, rc);
+		goto err_attach;
+	}
+
+	alloc_data->table = dma_buf_map_attachment(alloc_data->attach,
+				DMA_BIDIRECTIONAL);
+	if (IS_ERR(alloc_data->table)) {
+		rc = PTR_ERR(alloc_data->table);
+		dev_err(cb_dev,
+			"%s: Fail to map attachment, rc = %d\n",
+			__func__, rc);
+		goto err_map_attach;
+	}
+
+	rc = dma_map_sg(cb_dev, alloc_data->table->sgl,
+			alloc_data->table->nents,
+			DMA_BIDIRECTIONAL);
+	if (rc != alloc_data->table->nents) {
+		dev_err(cb_dev,
+			"%s: Fail to map SG, rc = %d, nents = %d\n",
+			__func__, rc, alloc_data->table->nents);
+		goto err_map_sg;
+	}
+	
+	rc = 0;
+
+	
+	*addr = MSM_AUDIO_ION_PHYS_ADDR(alloc_data);
+
+	msm_audio_ion_add_allocation(&msm_audio_ion_data,
+				     alloc_data);
+	return rc;
+
+err_map_sg:
+	dma_buf_unmap_attachment(alloc_data->attach,
+				 alloc_data->table,
+				 DMA_BIDIRECTIONAL);
+err_map_attach:
+	dma_buf_detach(alloc_data->dma_buf,
+		       alloc_data->attach);
+err_attach:
+	dma_buf_put(alloc_data->dma_buf);
+
+err_dma_buf:
+	kfree(alloc_data);
+
+	return rc;
+}
+
+static int msm_audio_dma_buf_unmap(struct ion_client *client,
+				   struct ion_handle *handle)
+{
+	int rc = 0;
+	struct msm_audio_alloc_data *alloc_data = NULL;
+	struct list_head *ptr, *next;
+	struct device *cb_dev = msm_audio_ion_data.cb_dev;
+	bool found = false;
+
+	mutex_lock(&(msm_audio_ion_data.list_mutex));
+	list_for_each_safe(ptr, next,
+			    &(msm_audio_ion_data.alloc_list)) {
+
+		alloc_data = list_entry(ptr, struct msm_audio_alloc_data,
+					list);
+
+		if (alloc_data->handle == handle &&
+		    alloc_data->client == client) {
+			found = true;
+			dma_unmap_sg(cb_dev,
+				    alloc_data->table->sgl,
+				    alloc_data->table->nents,
+				    DMA_BIDIRECTIONAL);
+
+			dma_buf_unmap_attachment(alloc_data->attach,
+						 alloc_data->table,
+						 DMA_BIDIRECTIONAL);
+
+			dma_buf_detach(alloc_data->dma_buf,
+				       alloc_data->attach);
+
+			dma_buf_put(alloc_data->dma_buf);
+
+			list_del(&(alloc_data->list));
+			kfree(alloc_data);
+			break;
+		}
+	}
+	mutex_unlock(&(msm_audio_ion_data.list_mutex));
+
+	if (!found) {
+		dev_err(cb_dev,
+			"%s: cannot find allocation, ion_handle %pK, ion_client %pK",
+			__func__, handle, client);
+		rc = -EINVAL;
+	}
+
+	return rc;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static int msm_audio_ion_get_phys(struct ion_client *client,
 		struct ion_handle *handle,
 		ion_phys_addr_t *addr, size_t *len)
@@ -468,7 +612,13 @@ static int msm_audio_ion_get_phys(struct ion_client *client,
 		/* SMMU is disabled*/
 		rc = ion_phys(client, handle, addr, len);
 	}
+<<<<<<< HEAD
 	pr_debug("phys=%pa, len=%zd, rc=%d\n", &(*addr), *len, rc);
+=======
+
+	pr_debug("phys=%pK, len=%zd, rc=%d\n", &(*addr), *len, rc);
+err:
+>>>>>>> 0e91d2a... Nougat
 	return rc;
 }
 

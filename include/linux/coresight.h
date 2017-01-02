@@ -14,6 +14,7 @@
 #define _LINUX_CORESIGHT_H
 
 #include <linux/device.h>
+#include <linux/sched.h>
 
 /* Peripheral id registers (0xFD0-0xFEC) */
 #define CORESIGHT_PERIPHIDR4	(0xFD0)
@@ -36,6 +37,13 @@
 #define ETM_ARCH_V3_5		(0x25)
 #define PFT_ARCH_MAJOR		(0x30)
 #define PFT_ARCH_V1_1		(0x31)
+
+enum coresight_clk_rate {
+	CORESIGHT_CLK_RATE_OFF,
+	CORESIGHT_CLK_RATE_TRACE = 1000,
+	CORESIGHT_CLK_RATE_HSTRACE = 2000,
+	CORESIGHT_CLK_RATE_FIXED = 3000,
+};
 
 enum coresight_clk_rate {
 	CORESIGHT_CLK_RATE_OFF,
@@ -78,14 +86,39 @@ struct coresight_dev_subtype {
 	enum coresight_dev_subtype_source source_subtype;
 };
 
+<<<<<<< HEAD
+=======
+/**
+ * struct coresight_platform_data - data harvested from the DT specification
+ * @cpu:	the CPU a source belongs to. Only applicable for ETM/PTMs.
+ * @name:	name of the component as shown under sysfs.
+ * @nr_inport:	number of input ports for this component.
+ * @outports:	list of remote enpoint port number.
+ * @child_names:name of all child components connected to this device.
+ * @child_ports:child component port number the current component is
+		connected  to.
+ * @nr_outport:	number of output ports for this component.
+ * @clk:	The clock this component is associated to.
+ * @default_sink: Flag to set default sink
+ */
+>>>>>>> 0e91d2a... Nougat
 struct coresight_platform_data {
 	int id;
 	const char *name;
+<<<<<<< HEAD
 	int nr_inports;
 	const int *outports;
 	const int *child_ids;
 	const int *child_ports;
 	int nr_outports;
+=======
+	int nr_inport;
+	int *outports;
+	const char **child_names;
+	int *child_ports;
+	int nr_outport;
+	struct clk *clk;
+>>>>>>> 0e91d2a... Nougat
 	bool default_sink;
 };
 
@@ -141,6 +174,17 @@ struct coresight_ops_link {
 	void (*disable)(struct coresight_device *csdev, int iport, int oport);
 };
 
+<<<<<<< HEAD
+=======
+/**
+ * struct coresight_ops_source - basic operations for a source
+ * Operations available for sources.
+ * @trace_id:	returns the value of the component's trace ID as known
+		to the HW.
+ * @enable:	enables tracing for a source.
+ * @disable:	disables tracing for a source.
+ */
+>>>>>>> 0e91d2a... Nougat
 struct coresight_ops_source {
 	int (*enable)(struct coresight_device *csdev);
 	void (*disable)(struct coresight_device *csdev);
@@ -166,7 +210,42 @@ static inline void coresight_unregister(struct coresight_device *csdev) {}
 static inline int
 coresight_enable(struct coresight_device *csdev) { return -ENOSYS; }
 static inline void coresight_disable(struct coresight_device *csdev) {}
+<<<<<<< HEAD
 static inline void coresight_abort(void) {}
+=======
+static inline int coresight_timeout(void __iomem *addr, u32 offset,
+				     int position, int value) { return 1; }
+#endif
+
+#ifdef CONFIG_OF
+extern struct coresight_platform_data *of_get_coresight_platform_data(
+				struct device *dev, struct device_node *node);
+#else
+static inline struct coresight_platform_data *of_get_coresight_platform_data(
+	struct device *dev, struct device_node *node) { return NULL; }
+#endif
+
+#ifdef CONFIG_PID_NS
+static inline unsigned long
+coresight_vpid_to_pid(unsigned long vpid)
+{
+	struct task_struct *task = NULL;
+	unsigned long pid = 0;
+
+	rcu_read_lock();
+	task = find_task_by_vpid(vpid);
+	if (task)
+		pid = task_pid_nr(task);
+	rcu_read_unlock();
+
+	return pid;
+}
+#else
+static inline unsigned long
+coresight_vpid_to_pid(unsigned long vpid) { return vpid; }
+#endif
+
+>>>>>>> 0e91d2a... Nougat
 #endif
 
 #endif

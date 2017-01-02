@@ -45,7 +45,12 @@ static LIST_HEAD(shutdown_files);
 
 static const struct file_operations snd_shutdown_f_ops;
 
+<<<<<<< HEAD
 static unsigned int snd_cards_lock;	/* locked for registering/using */
+=======
+/* locked for registering/using */
+static DECLARE_BITMAP(snd_cards_lock, SNDRV_CARDS);
+>>>>>>> 0e91d2a... Nougat
 struct snd_card *snd_cards[SNDRV_CARDS];
 EXPORT_SYMBOL(snd_cards);
 
@@ -179,8 +184,47 @@ static inline int init_info_for_card(struct snd_card *card)
 #define init_info_for_card(card)
 #endif
 
+<<<<<<< HEAD
 /**
  *  snd_card_create - create and initialize a soundcard structure
+=======
+static int check_empty_slot(struct module *module, int slot)
+{
+	return !slots[slot] || !*slots[slot];
+}
+
+/* return an empty slot number (>= 0) found in the given bitmask @mask.
+ * @mask == -1 == 0xffffffff means: take any free slot up to 32
+ * when no slot is available, return the original @mask as is.
+ */
+static int get_slot_from_bitmask(int mask, int (*check)(struct module *, int),
+				 struct module *module)
+{
+	int slot;
+
+	for (slot = 0; slot < SNDRV_CARDS; slot++) {
+		if (slot < 32 && !(mask & (1U << slot)))
+			continue;
+		if (!test_bit(slot, snd_cards_lock)) {
+			if (check(module, slot))
+				return slot; /* found */
+		}
+	}
+	return mask; /* unchanged */
+}
+
+static int snd_card_do_free(struct snd_card *card);
+static const struct attribute_group *card_dev_attr_groups[];
+
+static void release_card_device(struct device *dev)
+{
+	snd_card_do_free(dev_to_snd_card(dev));
+}
+
+/**
+ *  snd_card_new - create and initialize a soundcard structure
+ *  @parent: the parent device object
+>>>>>>> 0e91d2a... Nougat
  *  @idx: card index (address) [0 ... (SNDRV_CARDS-1)]
  *  @xid: card identification (ASCII string)
  *  @module: top level module for locking
@@ -195,7 +239,11 @@ static inline int init_info_for_card(struct snd_card *card)
  *
  *  Return: Zero if successful or a negative error code.
  */
+<<<<<<< HEAD
 int snd_card_create(int idx, const char *xid,
+=======
+int snd_card_new(struct device *parent, int idx, const char *xid,
+>>>>>>> 0e91d2a... Nougat
 		    struct module *module, int extra_size,
 		    struct snd_card **card_ret)
 {
@@ -215,6 +263,7 @@ int snd_card_create(int idx, const char *xid,
 		strlcpy(card->id, xid, sizeof(card->id));
 	err = 0;
 	mutex_lock(&snd_card_mutex);
+<<<<<<< HEAD
 	if (idx < 0) {
 		for (idx2 = 0; idx2 < SNDRV_CARDS; idx2++)
 			/* idx == -1 == 0xffff means: take any free slot */
@@ -239,6 +288,16 @@ int snd_card_create(int idx, const char *xid,
 		err = -ENODEV;
 	else if (idx < snd_ecards_limit) {
 		if (snd_cards_lock & (1 << idx))
+=======
+	if (idx < 0) /* first check the matching module-name slot */
+		idx = get_slot_from_bitmask(idx, module_slot_match, module);
+	if (idx < 0) /* if not matched, assign an empty slot */
+		idx = get_slot_from_bitmask(idx, check_empty_slot, module);
+	if (idx < 0)
+		err = -ENODEV;
+	else if (idx < snd_ecards_limit) {
+		if (test_bit(idx, snd_cards_lock))
+>>>>>>> 0e91d2a... Nougat
 			err = -EBUSY;	/* invalid */
 	} else if (idx >= SNDRV_CARDS)
 		err = -ENODEV;
@@ -248,7 +307,11 @@ int snd_card_create(int idx, const char *xid,
 			 idx, snd_ecards_limit - 1, err);
 		goto __error;
 	}
+<<<<<<< HEAD
 	snd_cards_lock |= 1 << idx;		/* lock it */
+=======
+	set_bit(idx, snd_cards_lock);		/* lock it */
+>>>>>>> 0e91d2a... Nougat
 	if (idx >= snd_ecards_limit)
 		snd_ecards_limit = idx + 1; /* increase the limit */
 	mutex_unlock(&snd_card_mutex);
@@ -269,6 +332,18 @@ int snd_card_create(int idx, const char *xid,
 	init_waitqueue_head(&card->power_sleep);
 #endif
 	init_waitqueue_head(&card->offline_poll_wait);
+<<<<<<< HEAD
+=======
+	device_initialize(&card->card_dev);
+	card->card_dev.parent = parent;
+	card->card_dev.class = sound_class;
+	card->card_dev.release = release_card_device;
+	card->card_dev.groups = card_dev_attr_groups;
+	err = kobject_set_name(&card->card_dev.kobj, "card%d", idx);
+	if (err < 0)
+		goto __error;
+
+>>>>>>> 0e91d2a... Nougat
 	/* the control interface cannot be accessed from the user space until */
 	/* snd_cards_bitmask and snd_cards are set with snd_card_register */
 	err = snd_ctl_create(card);
@@ -289,7 +364,12 @@ int snd_card_create(int idx, const char *xid,
       __error_ctl:
 	snd_device_free_all(card, SNDRV_DEV_CMD_PRE);
       __error:
+<<<<<<< HEAD
 	kfree(card);
+=======
+	put_device(&card->card_dev);
+	kfree(card); //HTC_AUD klockwork ID: 4127
+>>>>>>> 0e91d2a... Nougat
   	return err;
 }
 EXPORT_SYMBOL(snd_card_create);
@@ -491,7 +571,11 @@ static int snd_card_do_free(struct snd_card *card)
 		card->private_free(card);
 	snd_info_free_entry(card->proc_id);
 	if (snd_info_card_free(card) < 0) {
+<<<<<<< HEAD
 		snd_printk(KERN_WARNING "unable to free card info\n");
+=======
+		dev_warn(card->dev, "unable to free card info\n");
+>>>>>>> 0e91d2a... Nougat
 		/* Not fatal error */
 	}
 	kfree(card);
@@ -524,8 +608,27 @@ int snd_card_free_when_closed(struct snd_card *card)
 	if (ret) {
 		atomic_dec(&card->refcount);
 		return ret;
+<<<<<<< HEAD
+=======
+	/* wait, until all devices are ready for the free operation */
+	wait_for_completion(&released);
+	return 0;
+}
+EXPORT_SYMBOL(snd_card_free);
+
+/* retrieve the last word of shortname or longname */
+static const char *retrieve_id_from_card_name(const char *name)
+{
+	const char *spos = name;
+
+	while (*name) {
+		if (isspace(*name) && isalnum(name[1]))
+			spos = name + 1;
+		name++;
+>>>>>>> 0e91d2a... Nougat
 	}
 
+<<<<<<< HEAD
 	card->free_on_last_close = 1;
 	if (atomic_dec_and_test(&card->refcount))
 		snd_card_do_free(card);
@@ -535,6 +638,25 @@ int snd_card_free_when_closed(struct snd_card *card)
 EXPORT_SYMBOL(snd_card_free_when_closed);
 
 int snd_card_free(struct snd_card *card)
+=======
+/* return true if the given id string doesn't conflict any other card ids */
+static bool card_id_ok(struct snd_card *card, const char *id)
+{
+	int i;
+	if (!snd_info_check_reserved_words(id))
+		return false;
+	for (i = 0; i < snd_ecards_limit; i++) {
+		if (snd_cards[i] && snd_cards[i] != card &&
+		    !strcmp(snd_cards[i]->id, id))
+			return false;
+	}
+	return true;
+}
+
+/* copy to card->id only with valid letters from nid */
+static void copy_valid_id_string(struct snd_card *card, const char *src,
+				 const char *nid)
+>>>>>>> 0e91d2a... Nougat
 {
 	int ret = snd_card_disconnect(card);
 	if (ret)
@@ -546,9 +668,17 @@ int snd_card_free(struct snd_card *card)
 	return 0;
 }
 
+<<<<<<< HEAD
 EXPORT_SYMBOL(snd_card_free);
 
 static void snd_card_set_id_no_lock(struct snd_card *card, const char *nid)
+=======
+/* Set card->id from the given string
+ * If the string conflicts with other ids, add a suffix to make it unique.
+ */
+static void snd_card_set_id_no_lock(struct snd_card *card, const char *src,
+				    const char *nid)
+>>>>>>> 0e91d2a... Nougat
 {
 	int i, len, idx_flag = 0, loops = SNDRV_CARDS;
 	const char *spos, *src;
@@ -566,6 +696,7 @@ static void snd_card_set_id_no_lock(struct snd_card *card, const char *nid)
 		spos = src = nid;
 	}
 	id = card->id;
+<<<<<<< HEAD
 	while (*spos != '\0' && !isalnum(*spos))
 		spos++;
 	if (isdigit(*spos))
@@ -574,9 +705,20 @@ static void snd_card_set_id_no_lock(struct snd_card *card, const char *nid)
 		if (isalnum(*spos))
 			*id++ = *spos;
 		spos++;
+=======
+
+ again:
+	/* use "Default" for obviously invalid strings
+	 * ("card" conflicts with proc directories)
+	 */
+	if (!*id || !strncmp(id, "card", 4)) {
+		strcpy(id, "Default");
+		is_default = true;
+>>>>>>> 0e91d2a... Nougat
 	}
 	*id = '\0';
 
+<<<<<<< HEAD
 	id = card->id;
 	
 	if (*id == '\0')
@@ -616,6 +758,35 @@ static void snd_card_set_id_no_lock(struct snd_card *card, const char *nid)
 			idx_flag++;
 		}
 	}
+=======
+	len = strlen(id);
+	for (loops = 0; loops < SNDRV_CARDS; loops++) {
+		char *spos;
+		char sfxstr[5]; /* "_012" */
+		int sfxlen;
+
+		if (card_id_ok(card, id))
+			return; /* OK */
+
+		/* Add _XYZ suffix */
+		sprintf(sfxstr, "_%X", loops + 1);
+		sfxlen = strlen(sfxstr);
+		if (len + sfxlen >= sizeof(card->id))
+			spos = id + sizeof(card->id) - sfxlen - 1;
+		else
+			spos = id + len;
+		strcpy(spos, sfxstr);
+	}
+	/* fallback to the default id */
+	if (!is_default) {
+		*id = 0;
+		goto again;
+	}
+	/* last resort... */
+	dev_err(card->dev, "unable to set card id (%s)\n", id);
+	if (card->proc_root->name)
+		strlcpy(card->id, card->proc_root->name, sizeof(card->id));
+>>>>>>> 0e91d2a... Nougat
 }
 
 /**
@@ -733,7 +904,22 @@ int snd_card_register(struct snd_card *card)
 		mutex_unlock(&snd_card_mutex);
 		return 0;
 	}
+<<<<<<< HEAD
 	snd_card_set_id_no_lock(card, card->id[0] == '\0' ? NULL : card->id);
+=======
+	if (*card->id) {
+		/* make a unique id name from the given string */
+		char tmpid[sizeof(card->id)];
+		memcpy(tmpid, card->id, sizeof(card->id));
+		snd_card_set_id_no_lock(card, tmpid, tmpid);
+	} else {
+		/* create an id from either shortname or longname */
+		const char *src;
+		src = *card->shortname ? card->shortname : card->longname;
+		snd_card_set_id_no_lock(card, src,
+					retrieve_id_from_card_name(src));
+	}
+>>>>>>> 0e91d2a... Nougat
 	snd_cards[card->number] = card;
 	mutex_unlock(&snd_card_mutex);
 	init_info_for_card(card);

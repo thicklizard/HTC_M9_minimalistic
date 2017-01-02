@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -67,7 +71,7 @@
 #define SLIM_MSG_ASM_FIRST_WORD(l, mt, mc, dt, ad) \
 		((l) | ((mt) << 5) | ((mc) << 8) | ((dt) << 15) | ((ad) << 16))
 
-#define INIT_MX_RETRIES 10
+#define INIT_MX_RETRIES 3
 #define DEF_RETRY_MS	10
 #define MSM_CONCUR_MSG	8
 #define SAT_CONCUR_MSG	8
@@ -257,7 +261,12 @@ struct msm_slim_ctrl {
 	struct clk		*rclk;
 	struct clk		*hclk;
 	struct mutex		tx_lock;
+<<<<<<< HEAD
 	struct mutex		tx_buf_lock;
+=======
+	struct mutex		ssr_lock;
+	spinlock_t		tx_buf_lock;
+>>>>>>> 0e91d2a... Nougat
 	u8			pgdla;
 	enum msm_slim_msgq	use_rx_msgqs;
 	enum msm_slim_msgq	use_tx_msgqs;
@@ -277,6 +286,13 @@ struct msm_slim_ctrl {
 	int			ipc_log_mask;
 	bool			sysfs_created;
 	void			*ipc_slimbus_log;
+<<<<<<< HEAD
+=======
+	void (*rx_slim)(struct msm_slim_ctrl *dev, u8 *buf);
+	u32			current_rx_buf[10];
+	int			current_count;
+	atomic_t		ssr_in_progress;
+>>>>>>> 0e91d2a... Nougat
 };
 
 struct msm_sat_chan {

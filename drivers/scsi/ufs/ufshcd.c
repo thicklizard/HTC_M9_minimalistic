@@ -3,7 +3,7 @@
  *
  * This code is based on drivers/scsi/ufs/ufshcd.c
  * Copyright (C) 2011-2013 Samsung India Software Operations
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  *
  * Authors:
  *	Santosh Yaraganavi <santosh.sy@samsung.com>
@@ -68,6 +68,7 @@ inline int ufshcd_tag_req_type(struct request *rq)
 	return rq_type;
 }
 
+<<<<<<< HEAD
 #define UFSHCD_UPDATE_ERROR_STATS(hba, type)	\
 	do {					\
 		if (type < UFS_ERR_MAX)	\
@@ -100,6 +101,43 @@ inline int ufshcd_tag_req_type(struct request *rq)
 #define UFSDBG_ADD_DEBUGFS(hba)		ufsdbg_add_debugfs(hba);
 
 #define UFSDBG_REMOVE_DEBUGFS(hba)	ufsdbg_remove_debugfs(hba);
+=======
+static void ufshcd_update_error_stats(struct ufs_hba *hba, int type)
+{
+	ufsdbg_set_err_state(hba);
+	if (type < UFS_ERR_MAX)
+		hba->ufs_stats.err_stats[type]++;
+}
+
+static void ufshcd_update_tag_stats(struct ufs_hba *hba, int tag)
+{
+	struct request *rq =
+		hba->lrb[tag].cmd ? hba->lrb[tag].cmd->request : NULL;
+	u64 **tag_stats = hba->ufs_stats.tag_stats;
+	int rq_type;
+
+	if (!hba->ufs_stats.enabled)
+		return;
+
+	tag_stats[tag][TS_TAG]++;
+	if (!rq || !(rq->cmd_type & REQ_TYPE_FS))
+		return;
+
+	WARN_ON(hba->ufs_stats.q_depth > hba->nutrs);
+	rq_type = ufshcd_tag_req_type(rq);
+	if (!(rq_type < 0 || rq_type > TS_NUM_STATS))
+		tag_stats[hba->ufs_stats.q_depth++][rq_type]++;
+}
+
+static void ufshcd_update_tag_stats_completion(struct ufs_hba *hba,
+		struct scsi_cmnd *cmd)
+{
+	struct request *rq = cmd ? cmd->request : NULL;
+
+	if (rq && rq->cmd_type & REQ_TYPE_FS)
+		hba->ufs_stats.q_depth--;
+}
+>>>>>>> 0e91d2a... Nougat
 
 static void update_req_stats(struct ufs_hba *hba, struct ufshcd_lrb *lrbp)
 {
@@ -161,15 +199,9 @@ static void update_req_stats(struct ufs_hba *hba, struct ufshcd_lrb *lrbp)
 #define NOP_OUT_TIMEOUT    30 /* msecs */
 
 /* Query request retries */
-#define QUERY_REQ_RETRIES 10
+#define QUERY_REQ_RETRIES 3
 /* Query request timeout */
-#define QUERY_REQ_TIMEOUT 100 /* msec */
-/*
- * Query request timeout for fDeviceInit flag
- * fDeviceInit query response time for some devices is too large that default
- * QUERY_REQ_TIMEOUT may not be enough for such devices.
- */
-#define QUERY_FDEVICEINIT_REQ_TIMEOUT 600 /* msec */
+#define QUERY_REQ_TIMEOUT 1500 /* 1.5 seconds */
 
 /* Task management command timeout */
 #define TM_CMD_TIMEOUT	100 /* msecs */
@@ -352,6 +384,38 @@ static int ufshcd_host_reset_and_restore(struct ufs_hba *hba);
 static void ufshcd_resume_clkscaling(struct ufs_hba *hba);
 static void ufshcd_suspend_clkscaling(struct ufs_hba *hba);
 static void ufshcd_release_all(struct ufs_hba *hba);
+<<<<<<< HEAD
+=======
+static void ufshcd_hba_vreg_set_lpm(struct ufs_hba *hba);
+static void ufshcd_hba_vreg_set_hpm(struct ufs_hba *hba);
+static int ufshcd_devfreq_target(struct device *dev,
+				unsigned long *freq, u32 flags);
+static int ufshcd_devfreq_get_dev_status(struct device *dev,
+		struct devfreq_dev_status *stat);
+
+#if IS_ENABLED(CONFIG_DEVFREQ_GOV_SIMPLE_ONDEMAND)
+static struct devfreq_simple_ondemand_data ufshcd_ondemand_data = {
+	.upthreshold = 35,
+	.downdifferential = 30,
+	.simple_scaling = 1,
+};
+
+static void *gov_data = &ufshcd_ondemand_data;
+#else
+static void *gov_data;
+#endif
+
+static struct devfreq_dev_profile ufs_devfreq_profile = {
+	.polling_ms	= 40,
+	.target		= ufshcd_devfreq_target,
+	.get_dev_status	= ufshcd_devfreq_get_dev_status,
+};
+
+static inline bool ufshcd_valid_tag(struct ufs_hba *hba, int tag)
+{
+	return tag >= 0 && tag < hba->nutrs;
+}
+>>>>>>> 0e91d2a... Nougat
 
 static inline void ufshcd_enable_irq(struct ufs_hba *hba)
 {
@@ -1125,6 +1189,21 @@ int ufshcd_hold(struct ufs_hba *hba, bool async)
 start:
 	switch (hba->clk_gating.state) {
 	case CLKS_ON:
+		/*
+		 * Wait for the ungate work to complete if in progress.
+		 * Though the clocks may be in ON state, the link could
+		 * still be in hibner8 state if hibern8 is allowed
+		 * during clock gating.
+		 * Make sure we exit hibern8 state also in addition to
+		 * clocks being ON.
+		 */
+		if (ufshcd_can_hibern8_during_gating(hba) &&
+		    ufshcd_is_link_hibern8(hba)) {
+			spin_unlock_irqrestore(hba->host->host_lock, flags);
+			flush_work(&hba->clk_gating.ungate_work);
+			spin_lock_irqsave(hba->host->host_lock, flags);
+			goto start;
+		}
 		break;
 	case REQ_CLKS_OFF:
 		if (cancel_delayed_work(&hba->clk_gating.gate_work)) {
@@ -1337,6 +1416,13 @@ out:
 
 static void ufshcd_init_clk_gating(struct ufs_hba *hba)
 {
+<<<<<<< HEAD
+=======
+	struct ufs_clk_gating *gating = &hba->clk_gating;
+
+	hba->clk_gating.state = CLKS_ON;
+
+>>>>>>> 0e91d2a... Nougat
 	if (!ufshcd_is_clkgating_allowed(hba))
 		return;
 
@@ -1902,6 +1988,7 @@ int ufshcd_send_command(struct ufs_hba *hba, unsigned int task_tag)
 {
 	int ret = 0;
 
+<<<<<<< HEAD
 	if (hba->vops && hba->vops->crypto_engine_cfg) {
 		ret = hba->vops->crypto_engine_cfg(hba, task_tag);
 		if (ret) {
@@ -1912,6 +1999,8 @@ int ufshcd_send_command(struct ufs_hba *hba, unsigned int task_tag)
 		}
 	}
 
+=======
+>>>>>>> 0e91d2a... Nougat
 	hba->lrb[task_tag].issue_time_stamp = ktime_get();
 	hba->lrb[task_tag].complete_time_stamp = ktime_set(0, 0);
 	ufshcd_clk_scaling_start_busy(hba);
@@ -2065,6 +2154,9 @@ ufshcd_wait_for_uic_cmd(struct ufs_hba *hba, struct uic_command *uic_cmd)
 		ret = uic_cmd->argument2 & MASK_UIC_COMMAND_RESULT;
 	else
 		ret = -ETIMEDOUT;
+
+	if (ret)
+		ufsdbg_set_err_state(hba);
 
 	spin_lock_irqsave(hba->host->host_lock, flags);
 	hba->active_uic_cmd = NULL;
@@ -2425,6 +2517,13 @@ static int ufshcd_queuecommand(struct Scsi_Host *host, struct scsi_cmnd *cmd)
 	tag = cmd->request->tag;
 
 	spin_lock_irqsave(hba->host->host_lock, flags);
+
+	/* if error handling is in progress, return host busy */
+	if (ufshcd_eh_in_progress(hba)) {
+		err = SCSI_MLQUEUE_HOST_BUSY;
+		goto out_unlock;
+	}
+
 	switch (hba->ufshcd_state) {
 	case UFSHCD_STATE_OPERATIONAL:
 		break;
@@ -2439,13 +2538,6 @@ static int ufshcd_queuecommand(struct Scsi_Host *host, struct scsi_cmnd *cmd)
 		dev_WARN_ONCE(hba->dev, 1, "%s: invalid state %d\n",
 				__func__, hba->ufshcd_state);
 		set_host_byte(cmd, DID_BAD_TARGET);
-		cmd->scsi_done(cmd);
-		goto out_unlock;
-	}
-
-	/* if error handling is in progress, don't issue commands */
-	if (ufshcd_eh_in_progress(hba)) {
-		set_host_byte(cmd, DID_ERROR);
 		cmd->scsi_done(cmd);
 		goto out_unlock;
 	}
@@ -2471,7 +2563,8 @@ static int ufshcd_queuecommand(struct Scsi_Host *host, struct scsi_cmnd *cmd)
 		clear_bit_unlock(tag, &hba->lrb_in_use);
 		goto out;
 	}
-	WARN_ON(hba->clk_gating.state != CLKS_ON);
+	if (ufshcd_is_clkgating_allowed(hba))
+		WARN_ON(hba->clk_gating.state != CLKS_ON);
 
 	err = ufshcd_pm_qos_hold(hba, true);
 	if (err) {
@@ -2489,7 +2582,16 @@ static int ufshcd_queuecommand(struct Scsi_Host *host, struct scsi_cmnd *cmd)
 		ufshcd_release(hba, true);
 		goto out;
 	}
+<<<<<<< HEAD
 	WARN_ON(hba->hibern8_on_idle.state != HIBERN8_EXITED);
+=======
+	if (ufshcd_is_hibern8_on_idle_allowed(hba))
+		WARN_ON(hba->hibern8_on_idle.state != HIBERN8_EXITED);
+
+	/* Vote PM QoS for the request */
+	ufshcd_vops_pm_qos_req_start(hba, cmd->request);
+
+>>>>>>> 0e91d2a... Nougat
 	lrbp = &hba->lrb[tag];
 
 	WARN_ON(lrbp->cmd);
@@ -2512,6 +2614,22 @@ static int ufshcd_queuecommand(struct Scsi_Host *host, struct scsi_cmnd *cmd)
 		goto out;
 	}
 
+	err = ufshcd_vops_crypto_engine_cfg_start(hba, tag);
+	if (err) {
+		if (err != -EAGAIN)
+			dev_err(hba->dev,
+				"%s: failed to configure crypto engine %d\n",
+				__func__, err);
+
+		scsi_dma_unmap(lrbp->cmd);
+		lrbp->cmd = NULL;
+		clear_bit_unlock(tag, &hba->lrb_in_use);
+		ufshcd_release_all(hba);
+		ufshcd_vops_pm_qos_req_end(hba, cmd->request, true);
+
+		goto out;
+	}
+
 	/* Make sure descriptors are ready before ringing the doorbell */
 	wmb();
 	/* issue command to the controller */
@@ -2524,6 +2642,11 @@ static int ufshcd_queuecommand(struct Scsi_Host *host, struct scsi_cmnd *cmd)
 		lrbp->cmd = NULL;
 		clear_bit_unlock(tag, &hba->lrb_in_use);
 		ufshcd_release_all(hba);
+<<<<<<< HEAD
+=======
+		ufshcd_vops_pm_qos_req_end(hba, cmd->request, true);
+		ufshcd_vops_crypto_engine_cfg_end(hba, lrbp, cmd->request);
+>>>>>>> 0e91d2a... Nougat
 		dev_err(hba->dev, "%s: failed sending command, %d\n",
 							__func__, err);
 		err = DID_ERROR;
@@ -2661,6 +2784,9 @@ static int ufshcd_wait_for_dev_cmd(struct ufs_hba *hba,
 		 */
 		ufshcd_outstanding_req_clear(hba, lrbp->task_tag);
 	}
+
+	if (err)
+		ufsdbg_set_err_state(hba);
 
 	return err;
 }
@@ -2826,9 +2952,6 @@ int ufshcd_query_flag(struct ufs_hba *hba, enum query_opcode opcode,
 		err = -EINVAL;
 		goto out_unlock;
 	}
-
-	if (idn == QUERY_FLAG_IDN_FDEVICEINIT)
-		timeout = QUERY_FDEVICEINIT_REQ_TIMEOUT;
 
 	err = ufshcd_exec_dev_cmd(hba, DEV_CMD_TYPE_QUERY, timeout);
 
@@ -3668,6 +3791,9 @@ int ufshcd_uic_pwr_ctrl(struct ufs_hba *hba, struct uic_command *cmd)
 		ret = (status != PWR_OK) ? status : -1;
 	}
 out:
+	if (ret)
+		ufsdbg_set_err_state(hba);
+
 	ufshcd_save_tstamp_of_last_dme_cmd(hba);
 	spin_lock_irqsave(hba->host->host_lock, flags);
 	hba->uic_async_done = NULL;
@@ -3759,25 +3885,53 @@ out:
 
 static int ufshcd_link_recovery(struct ufs_hba *hba)
 {
-	int ret;
+	int ret = 0;
 	unsigned long flags;
 
-	spin_lock_irqsave(hba->host->host_lock, flags);
-	hba->ufshcd_state = UFSHCD_STATE_RESET;
-	ufshcd_set_eh_in_progress(hba);
-	spin_unlock_irqrestore(hba->host->host_lock, flags);
+	/*
+	 * Check if there is any race with fatal error handling.
+	 * If so, wait for it to complete. Even though fatal error
+	 * handling does reset and restore in some cases, don't assume
+	 * anything out of it. We are just avoiding race here.
+	 */
+	do {
+		spin_lock_irqsave(hba->host->host_lock, flags);
+		if (!(work_pending(&hba->eh_work) ||
+				hba->ufshcd_state == UFSHCD_STATE_RESET))
+			break;
+		spin_unlock_irqrestore(hba->host->host_lock, flags);
+		dev_dbg(hba->dev, "%s: reset in progress\n", __func__);
+		flush_work(&hba->eh_work);
+	} while (1);
 
+<<<<<<< HEAD
 	ret = ufshcd_host_reset_and_restore(hba);
+=======
 
-	spin_lock_irqsave(hba->host->host_lock, flags);
-	if (ret)
-		hba->ufshcd_state = UFSHCD_STATE_ERROR;
-	ufshcd_clear_eh_in_progress(hba);
+	/*
+	 * we don't know if previous reset had really reset the host controller
+	 * or not. So let's force reset here to be sure.
+	 */
+	hba->ufshcd_state = UFSHCD_STATE_ERROR;
+	hba->force_host_reset = true;
+	schedule_work(&hba->eh_work);
+>>>>>>> 0e91d2a... Nougat
+
+	/* wait for the reset work to finish */
+	do {
+		if (!(work_pending(&hba->eh_work) ||
+				hba->ufshcd_state == UFSHCD_STATE_RESET))
+			break;
+		spin_unlock_irqrestore(hba->host->host_lock, flags);
+		dev_dbg(hba->dev, "%s: reset in progress\n", __func__);
+		flush_work(&hba->eh_work);
+		spin_lock_irqsave(hba->host->host_lock, flags);
+	} while (1);
+
+	if (!((hba->ufshcd_state == UFSHCD_STATE_OPERATIONAL) &&
+	      ufshcd_is_link_active(hba)))
+		ret = -ENOLINK;
 	spin_unlock_irqrestore(hba->host->host_lock, flags);
-
-	if (ret)
-		dev_err(hba->dev, "%s: link recovery failed, err %d",
-			__func__, ret);
 
 	return ret;
 }
@@ -3801,8 +3955,7 @@ static int __ufshcd_uic_hibern8_enter(struct ufs_hba *hba)
 		 * If link recovery fails then return error so that caller
 		 * don't retry the hibern8 enter again.
 		 */
-		if (ufshcd_link_recovery(hba))
-			ret = -ENOLINK;
+		ret = ufshcd_link_recovery(hba);
 	} else {
 		dev_dbg(hba->dev, "%s: Hibern8 Enter at %lld us", __func__,
 			ktime_to_us(ktime_get()));
@@ -4255,7 +4408,16 @@ static int ufshcd_link_startup(struct ufs_hba *hba)
 {
 	int ret;
 	int retries = DME_LINKSTARTUP_RETRIES;
+	bool link_startup_again = false;
 
+	/*
+	 * If UFS device isn't active then we will have to issue link startup
+	 * 2 times to make sure the device state move to active.
+	 */
+	if (!ufshcd_is_ufs_dev_active(hba))
+		link_startup_again = true;
+
+link_startup:
 	do {
 		if (hba->vops && hba->vops->link_startup_notify)
 			hba->vops->link_startup_notify(hba, PRE_CHANGE);
@@ -4284,6 +4446,12 @@ static int ufshcd_link_startup(struct ufs_hba *hba)
 	if (ret)
 		/* failed to get the link up... retire */
 		goto out;
+
+	if (link_startup_again) {
+		link_startup_again = false;
+		retries = DME_LINKSTARTUP_RETRIES;
+		goto link_startup;
+	}
 
 	/* Mark that link is up in PWM-G1, 1-lane, SLOW-AUTO mode */
 	ufshcd_init_pwr_info(hba);
@@ -4732,6 +4900,11 @@ ufshcd_transfer_rsp_status(struct ufs_hba *hba, struct ufshcd_lrb *lrbp)
 			ocs == OCS_MISMATCH_DATA_BUF_SIZE);
 		ufshcd_print_trs(hba, 1 << lrbp->task_tag, print_prdt);
 	}
+
+	if ((host_byte(result) == DID_ERROR) ||
+	    (host_byte(result) == DID_ABORT))
+		ufsdbg_set_err_state(hba);
+
 	return result;
 }
 
@@ -4785,6 +4958,21 @@ void ufshcd_abort_outstanding_transfer_requests(struct ufs_hba *hba, int result)
 			update_req_stats(hba, lrbp);
 			/* Mark completed command as NULL in LRB */
 			lrbp->cmd = NULL;
+<<<<<<< HEAD
+=======
+			ufshcd_release_all(hba);
+			if (cmd->request) {
+				/*
+				 * As we are accessing the "request" structure,
+				 * this must be called before calling
+				 * ->scsi_done() callback.
+				 */
+				ufshcd_vops_pm_qos_req_end(hba, cmd->request,
+					true);
+				ufshcd_vops_crypto_engine_cfg_end(hba,
+						lrbp, cmd->request);
+			}
+>>>>>>> 0e91d2a... Nougat
 			/* Do not touch lrbp after scsi done */
 			cmd->scsi_done(cmd);
 			ufshcd_release_all(hba);
@@ -4826,6 +5014,23 @@ static void __ufshcd_transfer_req_compl(struct ufs_hba *hba,
 			update_req_stats(hba, lrbp);
 			/* Mark completed command as NULL in LRB */
 			lrbp->cmd = NULL;
+<<<<<<< HEAD
+=======
+			__ufshcd_release(hba, false);
+			__ufshcd_hibern8_release(hba, false);
+			if (cmd->request) {
+				/*
+				 * As we are accessing the "request" structure,
+				 * this must be called before calling
+				 * ->scsi_done() callback.
+				 */
+				ufshcd_vops_pm_qos_req_end(hba, cmd->request,
+					false);
+				ufshcd_vops_crypto_engine_cfg_end(hba,
+					lrbp, cmd->request);
+			}
+
+>>>>>>> 0e91d2a... Nougat
 			/* Do not touch lrbp after scsi done */
 			cmd->scsi_done(cmd);
 			__ufshcd_release(hba, false);
@@ -5257,10 +5462,9 @@ static void ufshcd_err_handler(struct work_struct *work)
 
 	hba = container_of(work, struct ufs_hba, eh_work);
 
-	pm_runtime_get_sync(hba->dev);
-	ufshcd_hold_all(hba);
-
 	spin_lock_irqsave(hba->host->host_lock, flags);
+	ufsdbg_set_err_state(hba);
+
 	if (hba->ufshcd_state == UFSHCD_STATE_RESET)
 		goto out;
 
@@ -5296,10 +5500,15 @@ static void ufshcd_err_handler(struct work_struct *work)
 		}
 	}
 
+<<<<<<< HEAD
 	if (hba->vops && hba->vops->crypto_engine_get_err)
 		crypto_engine_err = hba->vops->crypto_engine_get_err(hba);
 
 	if ((hba->saved_err & INT_FATAL_ERRORS) || crypto_engine_err ||
+=======
+	if ((hba->saved_err & INT_FATAL_ERRORS)
+	    || hba->saved_ce_err || hba->force_host_reset ||
+>>>>>>> 0e91d2a... Nougat
 	    ((hba->saved_err & UIC_ERROR) &&
 	    (hba->saved_uic_err & (UFSHCD_UIC_DL_PA_INIT_ERROR |
 				   UFSHCD_UIC_DL_NAC_RECEIVED_ERROR |
@@ -5384,8 +5593,13 @@ skip_pending_xfer_clear:
 		scsi_report_bus_reset(hba->host, 0);
 		hba->saved_err = 0;
 		hba->saved_uic_err = 0;
+<<<<<<< HEAD
 		if (hba->vops && hba->vops->crypto_engine_reset_err)
 			hba->vops->crypto_engine_reset_err(hba);
+=======
+		hba->saved_ce_err = 0;
+		hba->force_host_reset = false;
+>>>>>>> 0e91d2a... Nougat
 	}
 
 skip_err_handling:
@@ -5397,9 +5611,10 @@ skip_err_handling:
 	}
 
 	hba->silence_err_logs = false;
-	ufshcd_clear_eh_in_progress(hba);
 out:
+	ufshcd_clear_eh_in_progress(hba);
 	spin_unlock_irqrestore(hba->host->host_lock, flags);
+<<<<<<< HEAD
 	scsi_unblock_requests(hba->host);
 	if (!err && needs_reset)
 		/*
@@ -5412,6 +5627,8 @@ out:
 
 	ufshcd_release_all(hba);
 	pm_runtime_put_sync(hba->dev);
+=======
+>>>>>>> 0e91d2a... Nougat
 }
 
 static void ufshcd_update_uic_reg_hist(struct ufs_uic_err_reg_hist *reg_hist,
@@ -5515,8 +5732,16 @@ static void ufshcd_check_errors(struct ufs_hba *hba)
 
 		/* handle fatal errors only when link is functional */
 		if (hba->ufshcd_state == UFSHCD_STATE_OPERATIONAL) {
+<<<<<<< HEAD
 			/* block commands from scsi mid-layer */
 			scsi_block_requests(hba->host);
+=======
+			/*
+			 * Set error handling in progress flag early so that we
+			 * don't issue new requests any more.
+			 */
+			ufshcd_set_eh_in_progress(hba);
+>>>>>>> 0e91d2a... Nougat
 
 			hba->ufshcd_state = UFSHCD_STATE_ERROR;
 
@@ -6003,6 +6228,11 @@ static int ufshcd_reset_and_restore(struct ufs_hba *hba)
 	int retries = MAX_HOST_RESET_RETRIES;
 
 	do {
+		err = ufshcd_vops_full_reset(hba);
+		if (err)
+			dev_warn(hba->dev, "%s: full reset returned %d\n",
+				 __func__, err);
+
 		err = ufshcd_host_reset_and_restore(hba);
 	} while (err && --retries);
 
@@ -6026,13 +6256,12 @@ static int ufshcd_reset_and_restore(struct ufs_hba *hba)
  */
 static int ufshcd_eh_host_reset_handler(struct scsi_cmnd *cmd)
 {
-	int err;
+	int err = SUCCESS;
 	unsigned long flags;
 	struct ufs_hba *hba;
 
 	hba = shost_priv(cmd->device->host);
 
-	ufshcd_hold_all(hba);
 	/*
 	 * Check if there is any race with fatal error handling.
 	 * If so, wait for it to complete. Even though fatal error
@@ -6045,29 +6274,42 @@ static int ufshcd_eh_host_reset_handler(struct scsi_cmnd *cmd)
 				hba->ufshcd_state == UFSHCD_STATE_RESET))
 			break;
 		spin_unlock_irqrestore(hba->host->host_lock, flags);
-		dev_dbg(hba->dev, "%s: reset in progress\n", __func__);
+		dev_err(hba->dev, "%s: reset in progress - 1\n", __func__);
 		flush_work(&hba->eh_work);
 	} while (1);
 
-	hba->ufshcd_state = UFSHCD_STATE_RESET;
-	ufshcd_set_eh_in_progress(hba);
-	spin_unlock_irqrestore(hba->host->host_lock, flags);
+	/*
+	 * we don't know if previous reset had really reset the host controller
+	 * or not. So let's force reset here to be sure.
+	 */
+	hba->ufshcd_state = UFSHCD_STATE_ERROR;
+	hba->force_host_reset = true;
+	schedule_work(&hba->eh_work);
 
+<<<<<<< HEAD
 	UFSHCD_UPDATE_ERROR_STATS(hba, UFS_ERR_EH);
 	err = ufshcd_reset_and_restore(hba);
+=======
+	/* wait for the reset work to finish */
+	do {
+		if (!(work_pending(&hba->eh_work) ||
+				hba->ufshcd_state == UFSHCD_STATE_RESET))
+			break;
+		spin_unlock_irqrestore(hba->host->host_lock, flags);
+		dev_err(hba->dev, "%s: reset in progress - 2\n", __func__);
+		flush_work(&hba->eh_work);
+		spin_lock_irqsave(hba->host->host_lock, flags);
+	} while (1);
+>>>>>>> 0e91d2a... Nougat
 
-	spin_lock_irqsave(hba->host->host_lock, flags);
-	if (!err) {
-		err = SUCCESS;
-		hba->ufshcd_state = UFSHCD_STATE_OPERATIONAL;
-	} else {
+	if (!((hba->ufshcd_state == UFSHCD_STATE_OPERATIONAL) &&
+	      ufshcd_is_link_active(hba))) {
 		err = FAILED;
 		hba->ufshcd_state = UFSHCD_STATE_ERROR;
 	}
-	ufshcd_clear_eh_in_progress(hba);
+
 	spin_unlock_irqrestore(hba->host->host_lock, flags);
 
-	ufshcd_release_all(hba);
 	return err;
 }
 
@@ -6423,6 +6665,7 @@ static int ufshcd_probe_hba(struct ufs_hba *hba)
 		if (!hba->is_init_prefetch)
 			ufshcd_init_icc_levels(hba);
 
+<<<<<<< HEAD
 		scsi_scan_host(hba->host);
 		pm_runtime_put_sync(hba->dev);
 	}
@@ -6431,6 +6674,37 @@ static int ufshcd_probe_hba(struct ufs_hba *hba)
 		ufshcd_resume_clkscaling(hba);
 		hba->clk_scaling.is_allowed = true;
 	}
+=======
+		/* Add required well known logical units to scsi mid layer */
+		if (ufshcd_scsi_add_wlus(hba))
+			goto out;
+
+		/* Initialize devfreq after UFS device is detected */
+		if (ufshcd_is_clkscaling_supported(hba)) {
+			memcpy(&hba->clk_scaling.saved_pwr_info.info,
+			    &hba->pwr_info, sizeof(struct ufs_pa_layer_attr));
+			hba->clk_scaling.saved_pwr_info.is_valid = true;
+			hba->clk_scaling.is_scaled_up = true;
+			if (!hba->devfreq) {
+				hba->devfreq = devfreq_add_device(hba->dev,
+							&ufs_devfreq_profile,
+							"simple_ondemand",
+							gov_data);
+				if (IS_ERR(hba->devfreq)) {
+					ret = PTR_ERR(hba->devfreq);
+					dev_err(hba->dev, "Unable to register with devfreq %d\n",
+						ret);
+					goto out;
+				}
+			}
+			hba->clk_scaling.is_allowed = true;
+		}
+
+		scsi_scan_host(hba->host);
+		pm_runtime_put_sync(hba->dev);
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	if (!hba->is_init_prefetch)
 		hba->is_init_prefetch = true;
 out:
@@ -7195,8 +7469,17 @@ static void ufshcd_hba_exit(struct ufs_hba *hba)
 	if (hba->is_powered) {
 		ufshcd_variant_hba_exit(hba);
 		ufshcd_setup_vreg(hba, false);
+<<<<<<< HEAD
 		ufshcd_suspend_clkscaling(hba);
 		ufshcd_setup_clocks(hba, false);
+=======
+		if (ufshcd_is_clkscaling_supported(hba)) {
+			if (hba->devfreq)
+				ufshcd_suspend_clkscaling(hba);
+			destroy_workqueue(hba->clk_scaling.workq);
+		}
+		ufshcd_disable_clocks(hba, false);
+>>>>>>> 0e91d2a... Nougat
 		ufshcd_setup_hba_vreg(hba, false);
 		hba->is_powered = false;
 	}
@@ -7475,7 +7758,8 @@ static int ufshcd_suspend(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 	if (ret)
 		goto set_dev_active;
 
-	if (ufshcd_is_link_hibern8(hba))
+	if (ufshcd_is_link_hibern8(hba) &&
+	    ufshcd_is_hibern8_on_idle_allowed(hba))
 		hba->hibern8_on_idle.state = HIBERN8_ENTERED;
 
 	ufshcd_vreg_set_lpm(hba);
@@ -7510,9 +7794,17 @@ disable_clks:
 		/* If link is active, device ref_clk can't be switched off */
 		__ufshcd_setup_clocks(hba, false, true);
 
+<<<<<<< HEAD
 	hba->clk_gating.state = CLKS_OFF;
 	trace_ufshcd_clk_gating(dev_name(hba->dev),
 		ufschd_clk_gating_state_to_string(hba->clk_gating.state));
+=======
+	if (ufshcd_is_clkgating_allowed(hba)) {
+		hba->clk_gating.state = CLKS_OFF;
+		trace_ufshcd_clk_gating(dev_name(hba->dev),
+					hba->clk_gating.state);
+	}
+>>>>>>> 0e91d2a... Nougat
 	/*
 	 * Disable the host irq as host controller as there won't be any
 	 * host controller transaction expected till resume.
@@ -7602,7 +7894,8 @@ static int ufshcd_resume(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 		ret = ufshcd_uic_hibern8_exit(hba);
 		if (!ret) {
 			ufshcd_set_link_active(hba);
-			hba->hibern8_on_idle.state = HIBERN8_EXITED;
+			if (ufshcd_is_hibern8_on_idle_allowed(hba))
+				hba->hibern8_on_idle.state = HIBERN8_EXITED;
 		} else {
 			goto vendor_suspend;
 		}
@@ -7615,12 +7908,17 @@ static int ufshcd_resume(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 		if (ret || !ufshcd_is_link_active(hba))
 			goto vendor_suspend;
 		/* mark link state as hibern8 exited */
+<<<<<<< HEAD
 		hba->hibern8_on_idle.state = HIBERN8_EXITED;
 
 		/* Clear UNIT ATTENTION condition on all LUs */
 		ret = ufshcd_send_request_sense_all_lus(hba);
 		if (ret)
 			goto set_old_link_state;
+=======
+		if (ufshcd_is_hibern8_on_idle_allowed(hba))
+			hba->hibern8_on_idle.state = HIBERN8_EXITED;
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	if (!ufshcd_is_ufs_dev_active(hba)) {
@@ -7654,7 +7952,8 @@ static int ufshcd_resume(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 
 set_old_link_state:
 	ufshcd_link_state_transition(hba, old_link_state, 0);
-	if (ufshcd_is_link_hibern8(hba))
+	if (ufshcd_is_link_hibern8(hba) &&
+	    ufshcd_is_hibern8_on_idle_allowed(hba))
 		hba->hibern8_on_idle.state = HIBERN8_ENTERED;
 vendor_suspend:
 	if (hba->vops && hba->vops->suspend)
@@ -7663,8 +7962,16 @@ disable_vreg:
 	ufshcd_vreg_set_lpm(hba);
 disable_irq_and_vops_clks:
 	ufshcd_disable_irq(hba);
+<<<<<<< HEAD
 	ufshcd_suspend_clkscaling(hba);
 	ufshcd_setup_clocks(hba, false);
+=======
+	if (hba->clk_scaling.is_allowed)
+		ufshcd_suspend_clkscaling(hba);
+	ufshcd_disable_clocks(hba, false);
+	if (ufshcd_is_clkgating_allowed(hba))
+		hba->clk_gating.state = CLKS_OFF;
+>>>>>>> 0e91d2a... Nougat
 out:
 	hba->pm_op_in_progress = 0;
 
@@ -8080,6 +8387,7 @@ static int ufshcd_scale_clks(struct ufs_hba *hba, bool scale_up)
 	if (!head || list_empty(head))
 		goto out;
 
+<<<<<<< HEAD
 	list_for_each_entry(clki, head, list) {
 		if (!IS_ERR_OR_NULL(clki->clk)) {
 			if (scale_up && clki->max_freq) {
@@ -8099,11 +8407,27 @@ static int ufshcd_scale_clks(struct ufs_hba *hba, bool scale_up)
 						clki->curr_freq,
 						clki->max_freq);
 				clki->curr_freq = clki->max_freq;
+=======
+	/* let's not get into low power until clock scaling is completed */
+	ufshcd_hold_all(hba);
+
+	ret = ufshcd_clock_scaling_prepare(hba);
+	if (ret)
+		goto out;
+
+	/* scale down the gear before scaling down clocks */
+	if (!scale_up) {
+		ret = ufshcd_scale_gear(hba, false);
+		if (ret)
+			goto clk_scaling_unprepare;
+	}
+>>>>>>> 0e91d2a... Nougat
 
 			} else if (!scale_up && clki->min_freq) {
 				if (clki->curr_freq == clki->min_freq)
 					continue;
 
+<<<<<<< HEAD
 				clk_state_changed = true;
 				ret = clk_set_rate(clki->clk, clki->min_freq);
 				if (ret) {
@@ -8118,11 +8442,20 @@ static int ufshcd_scale_clks(struct ufs_hba *hba, bool scale_up)
 						clki->min_freq);
 				clki->curr_freq = clki->min_freq;
 			}
+=======
+	/* scale up the gear after scaling up clocks */
+	if (scale_up) {
+		ret = ufshcd_scale_gear(hba, true);
+		if (ret) {
+			ufshcd_scale_clks(hba, false);
+			goto clk_scaling_unprepare;
+>>>>>>> 0e91d2a... Nougat
 		}
 		dev_dbg(hba->dev, "%s: clk: %s, rate: %lu\n", __func__,
 				clki->name, clk_get_rate(clki->clk));
 	}
 
+<<<<<<< HEAD
 	/* Suspend PM QoS voting when clocks are scaled down and vise versa */
 	spin_lock_irqsave(hba->host->host_lock, flags);
 	hba->pm_qos.is_suspended = !scale_up;
@@ -8135,6 +8468,27 @@ out:
 		trace_ufshcd_profile_clk_scaling(dev_name(hba->dev),
 			(scale_up ? "up" : "down"),
 			ktime_to_us(ktime_sub(ktime_get(), start)), ret);
+=======
+	if (!ret) {
+		hba->clk_scaling.is_scaled_up = scale_up;
+		if (scale_up)
+			hba->clk_gating.delay_ms =
+				hba->clk_gating.delay_ms_perf;
+		else
+			hba->clk_gating.delay_ms =
+				hba->clk_gating.delay_ms_pwr_save;
+	}
+
+	goto clk_scaling_unprepare;
+
+scale_up_gear:
+	if (!scale_up)
+		ufshcd_scale_gear(hba, true);
+clk_scaling_unprepare:
+	ufshcd_clock_scaling_unprepare(hba);
+out:
+	ufshcd_release_all(hba);
+>>>>>>> 0e91d2a... Nougat
 	return ret;
 }
 
@@ -8249,6 +8603,7 @@ start_window:
 	return 0;
 }
 
+<<<<<<< HEAD
 #if IS_ENABLED(CONFIG_DEVFREQ_GOV_SIMPLE_ONDEMAND)
 static struct devfreq_simple_ondemand_data ufshcd_ondemand_data = {
 	.upthreshold = 35,
@@ -8266,6 +8621,8 @@ static struct devfreq_dev_profile ufs_devfreq_profile = {
 	.target		= ufshcd_devfreq_target,
 	.get_dev_status	= ufshcd_devfreq_get_dev_status,
 };
+=======
+>>>>>>> 0e91d2a... Nougat
 static void ufshcd_clkscaling_init_sysfs(struct ufs_hba *hba)
 {
 	hba->clk_scaling.enable_attr.show = ufshcd_clkscale_enable_show;
@@ -8417,6 +8774,7 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
 	}
 
 	if (ufshcd_is_clkscaling_supported(hba)) {
+<<<<<<< HEAD
 		hba->devfreq = devfreq_add_device(dev, &ufs_devfreq_profile,
 						  "simple_ondemand", gov_data);
 		if (IS_ERR(hba->devfreq)) {
@@ -8426,6 +8784,19 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
 		}
 		/* Suspend devfreq until the UFS device is detected */
 		ufshcd_suspend_clkscaling(hba);
+=======
+		char wq_name[sizeof("ufs_clkscaling_00")];
+
+		INIT_WORK(&hba->clk_scaling.suspend_work,
+			  ufshcd_clk_scaling_suspend_work);
+		INIT_WORK(&hba->clk_scaling.resume_work,
+			  ufshcd_clk_scaling_resume_work);
+
+		snprintf(wq_name, ARRAY_SIZE(wq_name), "ufs_clkscaling_%d",
+			 host->host_no);
+		hba->clk_scaling.workq = create_singlethread_workqueue(wq_name);
+
+>>>>>>> 0e91d2a... Nougat
 		ufshcd_clkscaling_init_sysfs(hba);
 	}
 
@@ -8448,10 +8819,12 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
 	pm_runtime_get_sync(dev);
 
 	/*
-	 * The device-initialize-sequence hasn't been invoked yet.
-	 * Set the device to power-off state
+	 * We are assuming that device wasn't put in sleep/power-down
+	 * state exclusively during the boot stage before kernel.
+	 * This assumption helps avoid doing link startup twice during
+	 * ufshcd_probe_hba().
 	 */
-	ufshcd_set_ufs_dev_poweroff(hba);
+	ufshcd_set_ufs_dev_active(hba);
 
 	async_schedule(ufshcd_async_scan, hba);
 

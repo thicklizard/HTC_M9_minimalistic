@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -46,6 +46,15 @@
 #define FORMAT_EAC3         0x0014
 #define FORMAT_MP2          0x0015
 #define FORMAT_FLAC         0x0016
+<<<<<<< HEAD
+=======
+#define FORMAT_ALAC         0x0017
+#define FORMAT_VORBIS       0x0018
+#define FORMAT_APE          0x0019
+#define FORMAT_G711_ALAW_FS 0x001a
+#define FORMAT_G711_MLAW_FS 0x001b
+#define FORMAT_DTS          0x001c
+>>>>>>> 0e91d2a... Nougat
 
 #define ENCDEC_SBCBITRATE   0x0001
 #define ENCDEC_IMMEDIATE_DECODE 0x0002
@@ -163,6 +172,16 @@ struct audio_port_data {
 	spinlock_t	    dsp_lock;
 };
 
+struct shared_io_config {
+	uint32_t format;
+	uint16_t bits_per_sample;
+	uint32_t rate;
+	uint32_t channels;
+	uint16_t sample_word_size;
+	uint32_t bufsz;
+	uint32_t bufcnt;
+};
+
 struct audio_client {
 	int                    session;
 	app_cb		       cb;
@@ -187,10 +206,22 @@ struct audio_client {
 	int					   stream_id;
 	struct device *dev;
 	int		       topology;
+<<<<<<< HEAD
+=======
+	int		       app_type;
+>>>>>>> 0e91d2a... Nougat
 	/* audio cache operations fptr*/
 	int (*fptr_cache_ops)(struct audio_buffer *abuff, int cache_op);
 	atomic_t               unmap_cb_success;
 	atomic_t               reset;
+<<<<<<< HEAD
+=======
+	/* holds latest DSP pipeline delay */
+	uint32_t               path_delay;
+	/* shared io */
+	struct audio_buffer shared_pos_buf;
+	struct shared_io_config config;
+>>>>>>> 0e91d2a... Nougat
 };
 
 void q6asm_audio_client_free(struct audio_client *ac);
@@ -202,7 +233,7 @@ struct audio_client *q6asm_get_audio_client(int session_id);
 int q6asm_audio_client_buf_alloc(unsigned int dir/* 1:Out,0:In */,
 				struct audio_client *ac,
 				unsigned int bufsz,
-				unsigned int bufcnt);
+				uint32_t bufcnt);
 int q6asm_audio_client_buf_alloc_contiguous(unsigned int dir
 				/* 1:Out,0:In */,
 				struct audio_client *ac,
@@ -218,15 +249,28 @@ int q6asm_open_read(struct audio_client *ac, uint32_t format
 int q6asm_open_read_v2(struct audio_client *ac, uint32_t format,
 			uint16_t bits_per_sample);
 
+int q6asm_open_read_v3(struct audio_client *ac, uint32_t format,
+		       uint16_t bits_per_sample);
+
 int q6asm_open_write(struct audio_client *ac, uint32_t format
 		/*, uint16_t bits_per_sample*/);
 
 int q6asm_open_write_v2(struct audio_client *ac, uint32_t format,
 			uint16_t bits_per_sample);
 
+int q6asm_open_shared_io(struct audio_client *ac,
+			 struct shared_io_config *c, int dir);
+
+int q6asm_open_write_v3(struct audio_client *ac, uint32_t format,
+			uint16_t bits_per_sample);
+
 int q6asm_stream_open_write_v2(struct audio_client *ac, uint32_t format,
-				uint16_t bits_per_sample, int32_t stream_id,
-				bool is_gapless_mode);
+			       uint16_t bits_per_sample, int32_t stream_id,
+			       bool is_gapless_mode);
+
+int q6asm_stream_open_write_v3(struct audio_client *ac, uint32_t format,
+			       uint16_t bits_per_sample, int32_t stream_id,
+			       bool is_gapless_mode);
 
 int q6asm_open_write_compressed(struct audio_client *ac, uint32_t format,
 				uint32_t passthrough_flag);
@@ -263,6 +307,13 @@ int q6asm_memory_map(struct audio_client *ac, phys_addr_t buf_add,
 
 int q6asm_memory_unmap(struct audio_client *ac, phys_addr_t buf_add,
 							int dir);
+
+struct audio_buffer *q6asm_shared_io_buf(struct audio_client *ac, int dir);
+
+int q6asm_shared_io_free(struct audio_client *ac, int dir);
+
+int q6asm_get_shared_pos(struct audio_client *ac, uint32_t *si, uint32_t *msw,
+			 uint32_t *lsw);
 
 int q6asm_map_rtac_block(struct rtac_cal_block_data *cal_block);
 
@@ -306,12 +357,36 @@ int q6asm_enc_cfg_blk_aac(struct audio_client *ac,
 			 uint32_t bit_rate,
 			 uint32_t mode, uint32_t format);
 
+int q6asm_enc_cfg_blk_g711(struct audio_client *ac,
+			 uint32_t frames_per_buf,
+			uint32_t sample_rate);
+
 int q6asm_enc_cfg_blk_pcm(struct audio_client *ac,
 			uint32_t rate, uint32_t channels);
 
+<<<<<<< HEAD
+=======
+int q6asm_enc_cfg_blk_pcm_v2(struct audio_client *ac,
+			uint32_t rate, uint32_t channels,
+			uint16_t bits_per_sample,
+			bool use_default_chmap, bool use_back_flavor,
+			u8 *channel_map);
+
+int q6asm_enc_cfg_blk_pcm_v3(struct audio_client *ac,
+			     uint32_t rate, uint32_t channels,
+			     uint16_t bits_per_sample, bool use_default_chmap,
+			     bool use_back_flavor, u8 *channel_map,
+			     uint16_t sample_word_size);
+
+>>>>>>> 0e91d2a... Nougat
 int q6asm_enc_cfg_blk_pcm_format_support(struct audio_client *ac,
 			uint32_t rate, uint32_t channels,
 			uint16_t bits_per_sample);
+
+int q6asm_enc_cfg_blk_pcm_format_support_v3(struct audio_client *ac,
+					    uint32_t rate, uint32_t channels,
+					    uint16_t bits_per_sample,
+					    uint16_t sample_word_size);
 
 int q6asm_set_encdec_chan_map(struct audio_client *ac,
 		uint32_t num_channels);
@@ -353,6 +428,15 @@ int q6asm_media_format_block_pcm_format_support_v2(struct audio_client *ac,
 				uint16_t bits_per_sample, int stream_id,
 				bool use_default_chmap, char *channel_map);
 
+int q6asm_media_format_block_pcm_format_support_v3(struct audio_client *ac,
+						   uint32_t rate,
+						   uint32_t channels,
+						   uint16_t bits_per_sample,
+						   int stream_id,
+						   bool use_default_chmap,
+						   char *channel_map,
+						   uint16_t sample_word_size);
+
 int q6asm_media_format_block_multi_ch_pcm(struct audio_client *ac,
 			uint32_t rate, uint32_t channels,
 			bool use_default_chmap, char *channel_map);
@@ -362,6 +446,13 @@ int q6asm_media_format_block_multi_ch_pcm_v2(
 			uint32_t rate, uint32_t channels,
 			bool use_default_chmap, char *channel_map,
 			uint16_t bits_per_sample);
+
+int q6asm_media_format_block_multi_ch_pcm_v3(struct audio_client *ac,
+					     uint32_t rate, uint32_t channels,
+					     bool use_default_chmap,
+					     char *channel_map,
+					     uint16_t bits_per_sample,
+					     uint16_t sample_word_size);
 
 int q6asm_media_format_block_aac(struct audio_client *ac,
 			struct asm_aac_cfg *cfg);
@@ -421,10 +512,19 @@ int q6asm_set_softvolume_v2(struct audio_client *ac,
 /* Send left-right channel gain */
 int q6asm_set_lrgain(struct audio_client *ac, int left_gain, int right_gain);
 
+<<<<<<< HEAD
+=======
+/* Send multi channel gain */
+int q6asm_set_multich_gain(struct audio_client *ac, uint32_t channels,
+			   uint32_t *gains, uint8_t *ch_map, bool use_default);
+
+>>>>>>> 0e91d2a... Nougat
 /* Enable Mute/unmute flag */
 int q6asm_set_mute(struct audio_client *ac, int muteflag);
 
 int q6asm_get_session_time(struct audio_client *ac, uint64_t *tstamp);
+
+int q6asm_get_session_time_legacy(struct audio_client *ac, uint64_t *tstamp);
 
 int q6asm_send_audio_effects_params(struct audio_client *ac, char *params,
 				    uint32_t params_length);
@@ -439,6 +539,7 @@ int q6asm_get_apr_service_id(int session_id);
 */
 int q6asm_media_format_block(struct audio_client *ac, uint32_t format);
 
+<<<<<<< HEAD
 //htc audio ++
 /* Enable Q6 Effect Command */
 int q6asm_stream_sample_rate_to_htc_misc_effect(struct audio_client *ac, uint32_t stream_id,
@@ -449,6 +550,8 @@ int q6asm_enable_effect(struct audio_client *ac, uint32_t module_id,
 int q6asm_stream_sample_rate_to_geq(struct audio_client *ac, uint32_t stream_id,
 			uint32_t module_id, uint32_t param_id, uint32_t sample_rate);
 //htc audio --
+=======
+>>>>>>> 0e91d2a... Nougat
 /* Send the meta data to remove initial and trailing silence */
 int q6asm_send_meta_data(struct audio_client *ac, uint32_t initial_samples,
 		uint32_t trailing_samples);
@@ -464,5 +567,16 @@ int q6asm_send_mtmx_strtr_window(struct audio_client *ac,
 		struct asm_session_mtmx_strtr_param_window_v2_t *window_param,
 		uint32_t param_id);
 
+<<<<<<< HEAD
 
+=======
+/* Retrieve the current DSP path delay */
+int q6asm_get_path_delay(struct audio_client *ac);
+
+//HTC_AUD_START
+int q6asm_enable_effect(struct audio_client *ac, uint32_t module_id,
+			uint32_t param_id, uint32_t payload_size,
+			void *payload);
+//HTC_AUD_END
+>>>>>>> 0e91d2a... Nougat
 #endif /* __Q6_ASM_H__ */

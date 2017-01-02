@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -16,6 +16,8 @@
 #include <linux/err.h>
 #include <linux/io.h>
 #include <linux/clk/msm-clk.h>
+#include <linux/iopoll.h>
+#include <linux/kthread.h>
 
 #include "mdss_dsi.h"
 #include "mdss_edp.h"
@@ -40,7 +42,408 @@
 #define SW_RESET_PLL BIT(0)
 #define PWRDN_B BIT(7)
 
+<<<<<<< HEAD
 static struct dsi_clk_desc dsi_pclk;
+=======
+#define DATALANE_OFFSET_FROM_BASE_8996	0x100
+#define DSIPHY_CMN_PLL_CNTRL		0x0048
+#define DATALANE_SIZE_8996			0x80
+
+#define DSIPHY_CMN_GLBL_TEST_CTRL		0x0018
+#define DSIPHY_CMN_CTRL_0			0x001c
+#define DSIPHY_CMN_CTRL_1			0x0020
+#define DSIPHY_CMN_LDO_CNTRL			0x004c
+#define DSIPHY_PLL_CLKBUFLR_EN			0x041c
+#define DSIPHY_PLL_PLL_BANDGAP			0x0508
+
+#define DSIPHY_LANE_STRENGTH_CTRL_1		0x003c
+#define DSIPHY_LANE_VREG_CNTRL			0x0064
+
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL0		0x214
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL1		0x218
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL2		0x21C
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL3		0x220
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL4		0x224
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL5		0x228
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL6		0x22C
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL7		0x230
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL8		0x234
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL9		0x238
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL10		0x23C
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL11		0x240
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL12		0x244
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL13		0x248
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL14		0x24C
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL15		0x250
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL16		0x254
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL17		0x258
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL18		0x25C
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL19		0x260
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL19		0x260
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL20		0x264
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL21		0x268
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL22		0x26C
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL23		0x270
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL24		0x274
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL25		0x278
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL26		0x27C
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL27		0x280
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL28		0x284
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL29		0x288
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL30		0x28C
+#define DSI_DYNAMIC_REFRESH_PLL_CTRL31		0x290
+#define DSI_DYNAMIC_REFRESH_PLL_UPPER_ADDR	0x294
+#define DSI_DYNAMIC_REFRESH_PLL_UPPER_ADDR2	0x298
+
+#define DSIPHY_DLN0_CFG1		0x0104
+#define DSIPHY_DLN0_TIMING_CTRL_4	0x0118
+#define DSIPHY_DLN0_TIMING_CTRL_5	0x011C
+#define DSIPHY_DLN0_TIMING_CTRL_6	0x0120
+#define DSIPHY_DLN0_TIMING_CTRL_7	0x0124
+#define DSIPHY_DLN0_TIMING_CTRL_8	0x0128
+
+#define DSIPHY_DLN1_CFG1		0x0184
+#define DSIPHY_DLN1_TIMING_CTRL_4	0x0198
+#define DSIPHY_DLN1_TIMING_CTRL_5	0x019C
+#define DSIPHY_DLN1_TIMING_CTRL_6	0x01A0
+#define DSIPHY_DLN1_TIMING_CTRL_7	0x01A4
+#define DSIPHY_DLN1_TIMING_CTRL_8	0x01A8
+
+#define DSIPHY_DLN2_CFG1		0x0204
+#define DSIPHY_DLN2_TIMING_CTRL_4	0x0218
+#define DSIPHY_DLN2_TIMING_CTRL_5	0x021C
+#define DSIPHY_DLN2_TIMING_CTRL_6	0x0220
+#define DSIPHY_DLN2_TIMING_CTRL_7	0x0224
+#define DSIPHY_DLN2_TIMING_CTRL_8	0x0228
+
+#define DSIPHY_DLN3_CFG1		0x0284
+#define DSIPHY_DLN3_TIMING_CTRL_4	0x0298
+#define DSIPHY_DLN3_TIMING_CTRL_5	0x029C
+#define DSIPHY_DLN3_TIMING_CTRL_6	0x02A0
+#define DSIPHY_DLN3_TIMING_CTRL_7	0x02A4
+#define DSIPHY_DLN3_TIMING_CTRL_8	0x02A8
+
+#define DSIPHY_CKLN_CFG1		0x0304
+#define DSIPHY_CKLN_TIMING_CTRL_4	0x0318
+#define DSIPHY_CKLN_TIMING_CTRL_5	0x031C
+#define DSIPHY_CKLN_TIMING_CTRL_6	0x0320
+#define DSIPHY_CKLN_TIMING_CTRL_7	0x0324
+#define DSIPHY_CKLN_TIMING_CTRL_8	0x0328
+
+#define DSIPHY_PLL_RESETSM_CNTRL5	0x043c
+
+#define PLL_CALC_DATA(addr0, addr1, data0, data1)      \
+	(((data1) << 24) | ((((addr1)/4) & 0xFF) << 16) | \
+	 ((data0) << 8) | (((addr0)/4) & 0xFF))
+
+#define MDSS_DYN_REF_REG_W(base, offset, addr0, addr1, data0, data1)   \
+	writel_relaxed(PLL_CALC_DATA(addr0, addr1, data0, data1), \
+			(base) + (offset))
+
+void mdss_dsi_dfps_config_8996(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	struct mdss_panel_data *pdata;
+	struct mdss_panel_info *pinfo;
+	struct mdss_dsi_phy_ctrl *pd;
+	int glbl_tst_cntrl =
+		MIPI_INP(ctrl->phy_io.base + DSIPHY_CMN_GLBL_TEST_CTRL);
+
+	pdata = &ctrl->panel_data;
+	if (!pdata) {
+		pr_err("%s: Invalid panel data\n", __func__);
+		return;
+	}
+	pinfo = &pdata->panel_info;
+	pd = &(((ctrl->panel_data).panel_info.mipi).dsi_phy_db);
+
+	if (mdss_dsi_is_ctrl_clk_slave(ctrl)) {
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL0,
+				DSIPHY_DLN0_CFG1, DSIPHY_DLN1_CFG1,
+				0, 0);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL1,
+				DSIPHY_DLN2_CFG1, DSIPHY_DLN3_CFG1,
+				0x0, 0x0);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL2,
+				DSIPHY_CKLN_CFG1, DSIPHY_DLN0_TIMING_CTRL_4,
+				0x0, pd->timing_8996[0]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL3,
+				DSIPHY_DLN1_TIMING_CTRL_4,
+				DSIPHY_DLN2_TIMING_CTRL_4,
+				pd->timing_8996[8],
+				pd->timing_8996[16]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL4,
+				DSIPHY_DLN3_TIMING_CTRL_4,
+				DSIPHY_CKLN_TIMING_CTRL_4,
+				pd->timing_8996[24],
+				pd->timing_8996[32]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL5,
+				DSIPHY_DLN0_TIMING_CTRL_5,
+				DSIPHY_DLN1_TIMING_CTRL_5,
+				pd->timing_8996[1],
+				pd->timing_8996[9]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL6,
+				DSIPHY_DLN2_TIMING_CTRL_5,
+				DSIPHY_DLN3_TIMING_CTRL_5,
+				pd->timing_8996[17],
+				pd->timing_8996[25]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL7,
+				DSIPHY_CKLN_TIMING_CTRL_5,
+				DSIPHY_DLN0_TIMING_CTRL_6,
+				pd->timing_8996[33],
+				pd->timing_8996[2]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL8,
+				DSIPHY_DLN1_TIMING_CTRL_6,
+				DSIPHY_DLN2_TIMING_CTRL_6,
+				pd->timing_8996[10],
+				pd->timing_8996[18]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL9,
+				DSIPHY_DLN3_TIMING_CTRL_6,
+				DSIPHY_CKLN_TIMING_CTRL_6,
+				pd->timing_8996[26],
+				pd->timing_8996[34]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL10,
+				DSIPHY_DLN0_TIMING_CTRL_7,
+				DSIPHY_DLN1_TIMING_CTRL_7,
+				pd->timing_8996[3],
+				pd->timing_8996[11]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL11,
+				DSIPHY_DLN2_TIMING_CTRL_7,
+				DSIPHY_DLN3_TIMING_CTRL_7,
+				pd->timing_8996[19],
+				pd->timing_8996[27]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL12,
+				DSIPHY_CKLN_TIMING_CTRL_7,
+				DSIPHY_DLN0_TIMING_CTRL_8,
+				pd->timing_8996[35],
+				pd->timing_8996[4]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL13,
+				DSIPHY_DLN1_TIMING_CTRL_8,
+				DSIPHY_DLN2_TIMING_CTRL_8,
+				pd->timing_8996[12],
+				pd->timing_8996[20]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL14,
+				DSIPHY_DLN3_TIMING_CTRL_8,
+				DSIPHY_CKLN_TIMING_CTRL_8,
+				pd->timing_8996[28],
+				pd->timing_8996[36]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL15,
+				0x0110, 0x0110,	0, 0);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL16,
+				0x0110, 0x0110,	0, 0);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL17,
+				0x0110, 0x0110, 0, 0);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL18,
+				0x0110, 0x0110,	0, 0);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL19,
+				0x0110, 0x0110,	0, 0);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL20,
+				0x110, 0x110, 0, 0);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL21,
+				0x110, 0x110, 0, 0);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL22,
+				0x110, 0x110, 0, 0);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL23,
+				0x110, 0x110, 0, 0);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL24,
+				0x110, 0x110, 0, 0);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL25,
+				0x110, 0x110, 0, 0);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL26,
+				0x110, 0x110, 0, 0);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL27,
+				0x110, 0x110, 0, 0);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL28,
+				0x110, 0x110, 0, 0);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL29,
+				0x110, 0x110, 0, 0);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL30,
+				0x110, 0x110, 0, 0);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL31,
+				0x110, 0x110, 0, 0);
+		MIPI_OUTP(ctrl->ctrl_base +
+				DSI_DYNAMIC_REFRESH_PLL_UPPER_ADDR, 0x0);
+		MIPI_OUTP(ctrl->ctrl_base +
+				DSI_DYNAMIC_REFRESH_PLL_UPPER_ADDR2, 0x0);
+	} else {
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL0,
+				DSIPHY_CMN_GLBL_TEST_CTRL,
+				DSIPHY_PLL_PLL_BANDGAP,
+				glbl_tst_cntrl | BIT(1), 0x1);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL1,
+				DSIPHY_PLL_RESETSM_CNTRL5,
+				DSIPHY_PLL_PLL_BANDGAP,
+				0x0D, 0x03);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL2,
+				DSIPHY_PLL_RESETSM_CNTRL5,
+				DSIPHY_CMN_PLL_CNTRL,
+				0x1D, 0x00);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL3,
+				DSIPHY_CMN_CTRL_1, DSIPHY_DLN0_CFG1,
+				0x20, 0);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL4,
+				DSIPHY_DLN1_CFG1, DSIPHY_DLN2_CFG1,
+				0, 0);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL5,
+				DSIPHY_DLN3_CFG1, DSIPHY_CKLN_CFG1,
+				0, 0);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL6,
+				DSIPHY_DLN0_TIMING_CTRL_4,
+				DSIPHY_DLN1_TIMING_CTRL_4,
+				pd->timing_8996[0],
+				pd->timing_8996[8]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL7,
+				DSIPHY_DLN2_TIMING_CTRL_4,
+				DSIPHY_DLN3_TIMING_CTRL_4,
+				pd->timing_8996[16],
+				pd->timing_8996[24]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL8,
+				DSIPHY_CKLN_TIMING_CTRL_4,
+				DSIPHY_DLN0_TIMING_CTRL_5,
+				pd->timing_8996[32],
+				pd->timing_8996[1]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL9,
+				DSIPHY_DLN1_TIMING_CTRL_5,
+				DSIPHY_DLN2_TIMING_CTRL_5,
+				pd->timing_8996[9],
+				pd->timing_8996[17]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL10,
+				DSIPHY_DLN3_TIMING_CTRL_5,
+				DSIPHY_CKLN_TIMING_CTRL_5,
+				pd->timing_8996[25],
+				pd->timing_8996[33]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL11,
+				DSIPHY_DLN0_TIMING_CTRL_6,
+				DSIPHY_DLN1_TIMING_CTRL_6,
+				pd->timing_8996[2],
+				pd->timing_8996[10]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL12,
+				DSIPHY_DLN2_TIMING_CTRL_6,
+				DSIPHY_DLN3_TIMING_CTRL_6,
+				pd->timing_8996[18],
+				pd->timing_8996[26]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL13,
+				DSIPHY_CKLN_TIMING_CTRL_6,
+				DSIPHY_DLN0_TIMING_CTRL_7,
+				pd->timing_8996[34],
+				pd->timing_8996[3]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL14,
+				DSIPHY_DLN1_TIMING_CTRL_7,
+				DSIPHY_DLN2_TIMING_CTRL_7,
+				pd->timing_8996[11],
+				pd->timing_8996[19]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL15,
+				DSIPHY_DLN3_TIMING_CTRL_7,
+				DSIPHY_CKLN_TIMING_CTRL_7,
+				pd->timing_8996[27],
+				pd->timing_8996[35]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL16,
+				DSIPHY_DLN0_TIMING_CTRL_8,
+				DSIPHY_DLN1_TIMING_CTRL_8,
+				pd->timing_8996[4],
+				pd->timing_8996[12]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL17,
+				DSIPHY_DLN2_TIMING_CTRL_8,
+				DSIPHY_DLN3_TIMING_CTRL_8,
+				pd->timing_8996[20],
+				pd->timing_8996[28]);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL18,
+				DSIPHY_CKLN_TIMING_CTRL_8,
+				DSIPHY_CMN_CTRL_1,
+				pd->timing_8996[36], 0);
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL30,
+				DSIPHY_CMN_GLBL_TEST_CTRL,
+				DSIPHY_CMN_GLBL_TEST_CTRL,
+				((glbl_tst_cntrl) & (~BIT(2))),
+				((glbl_tst_cntrl) & (~BIT(2))));
+		MDSS_DYN_REF_REG_W(ctrl->ctrl_base,
+				DSI_DYNAMIC_REFRESH_PLL_CTRL31,
+				DSIPHY_CMN_GLBL_TEST_CTRL,
+				DSIPHY_CMN_GLBL_TEST_CTRL,
+				((glbl_tst_cntrl) & (~BIT(2))),
+				((glbl_tst_cntrl) & (~BIT(2))));
+	}
+
+	wmb(); 
+}
+
+static void mdss_dsi_ctrl_phy_reset(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	
+	MIPI_OUTP(ctrl->ctrl_base + 0x12c, 0x0001);
+	udelay(1000);
+	wmb();	
+	
+	MIPI_OUTP(ctrl->ctrl_base + 0x12c, 0x0000);
+	udelay(100);
+	wmb();	
+}
+>>>>>>> 0e91d2a... Nougat
+
+int mdss_dsi_phy_pll_reset_status(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	int rc;
+	u32 val;
+	u32 const sleep_us = 10, timeout_us = 100;
+
+	pr_debug("%s: polling for RESETSM_READY_STATUS.CORE_READY\n",
+		__func__);
+	rc = readl_poll_timeout(ctrl->phy_io.base + 0x4cc, val,
+		(val & 0x1), sleep_us, timeout_us);
+
+	return rc;
+}
 
 void mdss_dsi_phy_sw_reset(struct mdss_dsi_ctrl_pdata *ctrl)
 {
@@ -333,7 +736,259 @@ static void mdss_dsi_20nm_phy_config(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 	MIPI_OUTP((ctrl_pdata->phy_io.base) + MDSS_DSI_DSIPHY_CTRL_0, 0x7f);
 }
 
+<<<<<<< HEAD
 static void mdss_dsi_20nm_phy_init(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
+=======
+static void mdss_dsi_8996_pll_source_standalone(
+				struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	u32 data;
+
+	MIPI_OUTP((ctrl->phy_io.base) + DSIPHY_PLL_CLKBUFLR_EN, 0x01);
+	data = MIPI_INP((ctrl->phy_io.base) + DSIPHY_CMN_GLBL_TEST_CTRL);
+	data &= ~BIT(2);
+	MIPI_OUTP((ctrl->phy_io.base) + DSIPHY_CMN_GLBL_TEST_CTRL, data);
+}
+
+static void mdss_dsi_8996_pll_source_from_right(
+				struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	u32 data;
+
+	MIPI_OUTP((ctrl->phy_io.base) + DSIPHY_PLL_CLKBUFLR_EN, 0x00);
+	data = MIPI_INP((ctrl->phy_io.base) + DSIPHY_CMN_GLBL_TEST_CTRL);
+	data |= BIT(2);
+	MIPI_OUTP((ctrl->phy_io.base) + DSIPHY_CMN_GLBL_TEST_CTRL, data);
+
+	
+	MIPI_OUTP((ctrl->phy_io.base) + DSIPHY_PLL_PLL_BANDGAP, 0x3);
+}
+
+static void mdss_dsi_8996_pll_source_from_left(
+				struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	u32 data;
+
+	MIPI_OUTP((ctrl->phy_io.base) + DSIPHY_PLL_CLKBUFLR_EN, 0x03);
+	data = MIPI_INP((ctrl->phy_io.base) + DSIPHY_CMN_GLBL_TEST_CTRL);
+	data &= ~BIT(2);
+	MIPI_OUTP((ctrl->phy_io.base) + DSIPHY_CMN_GLBL_TEST_CTRL, data);
+}
+
+static void mdss_dsi_8996_phy_regulator_enable(
+	struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	struct mdss_dsi_phy_ctrl *pd;
+	int j, off, ln, cnt, ln_off;
+	char *ip;
+	void __iomem *base;
+
+	pd = &(((ctrl->panel_data).panel_info.mipi).dsi_phy_db);
+	
+	for (ln = 0; ln < 5; ln++) {
+		base = ctrl->phy_io.base +
+				DATALANE_OFFSET_FROM_BASE_8996;
+		base += (ln * DATALANE_SIZE_8996); 
+
+		
+		cnt = 1;
+		ln_off = cnt * ln;
+		ip = &pd->regulator[ln_off];
+		off = 0x64;
+		for (j = 0; j < cnt; j++, off += 4)
+			MIPI_OUTP(base + off, *ip++);
+	}
+
+	wmb(); 
+
+}
+
+static void mdss_dsi_8996_phy_power_off(
+	struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	int ln;
+	void __iomem *base;
+
+	MIPI_OUTP(ctrl->phy_io.base + DSIPHY_CMN_CTRL_0, 0x7f);
+
+	
+	for (ln = 0; ln < 5; ln++) {
+		base = ctrl->phy_io.base +
+				DATALANE_OFFSET_FROM_BASE_8996;
+		base += (ln * DATALANE_SIZE_8996); 
+
+		
+		MIPI_OUTP(base + DSIPHY_LANE_VREG_CNTRL, 0x1c);
+	}
+	MIPI_OUTP((ctrl->phy_io.base) + DSIPHY_CMN_LDO_CNTRL, 0x1c);
+
+	
+	for (ln = 0; ln < 5; ln++) {
+		base = ctrl->phy_io.base +
+				DATALANE_OFFSET_FROM_BASE_8996;
+		base += (ln * DATALANE_SIZE_8996); 
+
+		MIPI_OUTP(base + DSIPHY_LANE_STRENGTH_CTRL_1, 0x0);
+	}
+
+	wmb(); 
+}
+
+static void mdss_dsi_phy_power_off(
+	struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	struct mdss_panel_info *pinfo;
+
+	if (ctrl->phy_power_off)
+		return;
+
+	pinfo = &ctrl->panel_data.panel_info;
+
+	if ((ctrl->shared_data->phy_rev != DSI_PHY_REV_20) ||
+		!pinfo->allow_phy_power_off) {
+		pr_debug("%s: ctrl%d phy rev:%d panel support for phy off:%d\n",
+			__func__, ctrl->ndx, ctrl->shared_data->phy_rev,
+			pinfo->allow_phy_power_off);
+		return;
+	}
+
+	
+	mdss_dsi_8996_phy_power_off(ctrl);
+
+	ctrl->phy_power_off = true;
+}
+
+static void mdss_dsi_8996_phy_power_on(
+	struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	int j, off, ln, cnt, ln_off;
+	void __iomem *base;
+	struct mdss_dsi_phy_ctrl *pd;
+	char *ip;
+
+	pd = &(((ctrl->panel_data).panel_info.mipi).dsi_phy_db);
+
+	
+	for (ln = 0; ln < 5; ln++) {
+		base = ctrl->phy_io.base +
+				DATALANE_OFFSET_FROM_BASE_8996;
+		base += (ln * DATALANE_SIZE_8996); 
+
+		
+		cnt = 2;
+		ln_off = cnt * ln;
+		ip = &pd->strength[ln_off];
+		off = 0x38;
+		for (j = 0; j < cnt; j++, off += 4)
+			MIPI_OUTP(base + off, *ip++);
+	}
+
+	mdss_dsi_8996_phy_regulator_enable(ctrl);
+}
+
+static void mdss_dsi_phy_power_on(
+	struct mdss_dsi_ctrl_pdata *ctrl, bool mmss_clamp)
+{
+	if (mmss_clamp && !ctrl->phy_power_off)
+		mdss_dsi_phy_init(ctrl);
+	else if ((ctrl->shared_data->phy_rev == DSI_PHY_REV_20) &&
+	    ctrl->phy_power_off)
+		mdss_dsi_8996_phy_power_on(ctrl);
+
+	ctrl->phy_power_off = false;
+}
+
+static void mdss_dsi_8996_phy_config(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	struct mdss_dsi_phy_ctrl *pd;
+	int j, off, ln, cnt, ln_off;
+	char *ip;
+	void __iomem *base;
+
+	pd = &(((ctrl->panel_data).panel_info.mipi).dsi_phy_db);
+
+	MIPI_OUTP((ctrl->phy_io.base) + DSIPHY_CMN_LDO_CNTRL, 0x1c);
+
+	
+	MIPI_OUTP((ctrl->phy_io.base) + DSIPHY_CMN_GLBL_TEST_CTRL, 0x1);
+
+	if (pd->lanecfg_len != 20) {
+		pr_err("%s: wrong lane cfg\n", __func__);
+		return;
+	}
+
+	if (pd->strength_len != 10) {
+		pr_err("%s: wrong strength ctrl\n", __func__);
+		return;
+	}
+
+	if (pd->regulator_len != 5) {
+		pr_err("%s: wrong regulator setting\n", __func__);
+		return;
+	}
+
+	
+	for (ln = 0; ln < 5; ln++) {
+		base = ctrl->phy_io.base +
+				DATALANE_OFFSET_FROM_BASE_8996;
+		base += (ln * DATALANE_SIZE_8996); 
+
+		
+		cnt = 4;
+		ln_off = cnt * ln;
+		ip = &pd->lanecfg[ln_off];
+		off = 0x0;
+		for (j = 0; j < cnt; j++) {
+			MIPI_OUTP(base + off, *ip++);
+			off += 4;
+		}
+
+		
+		MIPI_OUTP(base + 0x14, 0x0088);	
+
+		
+		cnt = 8;
+		ln_off = cnt * ln;
+		ip = &pd->timing_8996[ln_off];
+		off = 0x18;
+		for (j = 0; j < cnt; j++, off += 4)
+			MIPI_OUTP(base + off, *ip++);
+
+		
+		cnt = 2;
+		ln_off = cnt * ln;
+		ip = &pd->strength[ln_off];
+		off = 0x38;
+		for (j = 0; j < cnt; j++, off += 4)
+			MIPI_OUTP(base + off, *ip++);
+	}
+
+	wmb(); 
+
+	
+	MIPI_OUTP((ctrl->phy_io.base) + DSIPHY_CMN_CTRL_1, 0x80);
+	udelay(100);
+	MIPI_OUTP((ctrl->phy_io.base) + DSIPHY_CMN_CTRL_1, 0x00);
+
+	if (mdss_dsi_is_hw_config_split(ctrl->shared_data)) {
+		if (mdss_dsi_is_left_ctrl(ctrl))
+			mdss_dsi_8996_pll_source_from_left(ctrl);
+		else
+			mdss_dsi_8996_pll_source_from_right(ctrl);
+	} else {
+		if (mdss_dsi_is_right_ctrl(ctrl) &&
+			mdss_dsi_is_pll_src_pll0(ctrl->shared_data))
+			mdss_dsi_8996_pll_source_from_left(ctrl);
+		else
+			mdss_dsi_8996_pll_source_standalone(ctrl);
+	}
+
+	wmb(); 
+}
+
+static void mdss_dsi_phy_regulator_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
+	bool enable)
+>>>>>>> 0e91d2a... Nougat
 {
 	if (!ctrl_pdata) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -361,13 +1016,29 @@ void mdss_dsi_phy_init(struct mdss_dsi_ctrl_pdata *ctrl)
 		mdss_dsi_28nm_phy_init(ctrl);
 }
 
-int mdss_dsi_clk_refresh(struct mdss_panel_data *pdata)
+int mdss_dsi_clk_refresh(struct mdss_panel_data *pdata, bool update_phy)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	int rc = 0;
 
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 							panel_data);
+<<<<<<< HEAD
+=======
+	pinfo = &pdata->panel_info;
+
+	if (!ctrl_pdata || !pinfo) {
+		pr_err("%s: invalid ctrl data\n", __func__);
+		return -EINVAL;
+	}
+
+	if (update_phy) {
+		pinfo->mipi.frame_rate = mdss_panel_calc_frame_rate(pinfo);
+		pr_debug("%s: new frame rate %d\n",
+				__func__, pinfo->mipi.frame_rate);
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	rc = mdss_dsi_clk_div_config(&pdata->panel_info,
 			pdata->panel_info.mipi.frame_rate);
 	if (rc) {
@@ -380,6 +1051,40 @@ int mdss_dsi_clk_refresh(struct mdss_panel_data *pdata)
 	ctrl_pdata->byte_clk_rate = pdata->panel_info.clk_rate / 8;
 	pr_debug("%s ctrl_pdata->byte_clk_rate=%d ctrl_pdata->pclk_rate=%d\n",
 		__func__, ctrl_pdata->byte_clk_rate, ctrl_pdata->pclk_rate);
+<<<<<<< HEAD
+=======
+
+	rc = mdss_dsi_clk_set_link_rate(ctrl_pdata->dsi_clk_handle,
+			MDSS_DSI_LINK_BYTE_CLK, ctrl_pdata->byte_clk_rate,
+			MDSS_DSI_CLK_UPDATE_CLK_RATE_AT_ON);
+	if (rc) {
+		pr_err("%s: dsi_byte_clk - clk_set_rate failed\n",
+				__func__);
+		return rc;
+	}
+
+	rc = mdss_dsi_clk_set_link_rate(ctrl_pdata->dsi_clk_handle,
+			MDSS_DSI_LINK_PIX_CLK, ctrl_pdata->pclk_rate,
+			MDSS_DSI_CLK_UPDATE_CLK_RATE_AT_ON);
+	if (rc) {
+		pr_err("%s: dsi_pixel_clk - clk_set_rate failed\n",
+				__func__);
+		return rc;
+	}
+
+	if (update_phy) {
+		
+		rc = mdss_dsi_phy_calc_timing_param(pinfo,
+				ctrl_pdata->shared_data->phy_rev,
+				pinfo->mipi.frame_rate);
+		if (rc) {
+			pr_err("Error in calculating phy timings\n");
+			return rc;
+		}
+		ctrl_pdata->update_phy_timing = false;
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	return rc;
 }
 
@@ -1211,13 +1916,23 @@ static int mdss_dsi_core_power_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
 	int enable)
 {
 	int rc = 0;
+<<<<<<< HEAD
 	struct mdss_panel_data *pdata = NULL;
+=======
+	struct mdss_dsi_ctrl_pdata *mctrl = NULL;
+	int i, *vote_cnt;
+
+	void *m_clk_handle;
+	bool is_ecg = false;
+	int state = MDSS_DSI_CLK_OFF;
+>>>>>>> 0e91d2a... Nougat
 
 	if (!ctrl) {
 		pr_err("%s: invalid input\n", __func__);
 		return -EINVAL;
 	}
 
+<<<<<<< HEAD
 	pdata = &ctrl->panel_data;
 	if (!pdata) {
 		pr_err("%s: Invalid panel data\n", __func__);
@@ -1231,6 +1946,61 @@ static int mdss_dsi_core_power_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
 			rc = msm_dss_enable_vreg(
 				ctrl->power_data[DSI_CORE_PM].vreg_config,
 				ctrl->power_data[DSI_CORE_PM].num_vreg, 1);
+=======
+	mutex_lock(&dsi_clk_mutex);
+	if (mdss_dsi_sync_wait_trigger(ctrl)) {
+		mctrl = mdss_dsi_get_other_ctrl(ctrl);
+		if (!mctrl)
+			pr_warn("%s: Unable to get other control\n", __func__);
+	} else if (mdss_dsi_is_ctrl_clk_slave(ctrl)) {
+		mctrl = mdss_dsi_get_ctrl_clk_master();
+		if (!mctrl)
+			pr_warn("%s: Unable to get clk master control\n",
+				__func__);
+	}
+
+	if (mctrl && (clk_handle == ctrl->dsi_clk_handle)) {
+		m_clk_handle = mctrl->dsi_clk_handle;
+		vote_cnt = &mctrl->m_dsi_vote_cnt;
+	} else if (mctrl) {
+		m_clk_handle = mctrl->mdp_clk_handle;
+		vote_cnt = &mctrl->m_mdp_vote_cnt;
+	}
+
+	pr_debug("%s: DSI_%d: clk = %d, state = %d, caller = %pS, mctrl=%d\n",
+		 __func__, ctrl->ndx, clk_type, clk_state,
+		 __builtin_return_address(0), mctrl ? 1 : 0);
+	if (mctrl && (clk_type & MDSS_DSI_LINK_CLK)) {
+		if (clk_state != MDSS_DSI_CLK_ON) {
+			
+			is_ecg = is_dsi_clk_in_ecg_state(m_clk_handle);
+			if (is_ecg)
+				state = MDSS_DSI_CLK_EARLY_GATE;
+		}
+
+		rc = mdss_dsi_clk_req_state(m_clk_handle,
+			MDSS_DSI_ALL_CLKS, MDSS_DSI_CLK_ON, mctrl->ndx);
+		if (rc) {
+			pr_err("%s: failed to turn on mctrl clocks, rc=%d\n",
+				 __func__, rc);
+			goto error;
+		}
+		(*vote_cnt)++;
+	}
+
+	rc = mdss_dsi_clk_req_state(clk_handle, clk_type, clk_state, ctrl->ndx);
+	if (rc) {
+		pr_err("%s: failed set clk state, rc = %d\n", __func__, rc);
+		goto error;
+	}
+
+	if (mctrl && (clk_type & MDSS_DSI_LINK_CLK) &&
+			clk_state != MDSS_DSI_CLK_ON) {
+
+		for (i = 0; (i < *vote_cnt && i < 2); i++) {
+			rc = mdss_dsi_clk_req_state(m_clk_handle,
+				MDSS_DSI_ALL_CLKS, state, mctrl->ndx);
+>>>>>>> 0e91d2a... Nougat
 			if (rc) {
 				pr_err("%s: failed to enable vregs for %s\n",
 					__func__,
@@ -1239,6 +2009,7 @@ static int mdss_dsi_core_power_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
 			}
 			ctrl->core_power = true;
 		}
+<<<<<<< HEAD
 
 		rc = mdss_dsi_bus_clk_start(ctrl);
 		if (rc) {
@@ -1253,8 +2024,76 @@ static int mdss_dsi_core_power_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
 		 */
 		if (ctrl->mmss_clamp) {
 			mdss_dsi_phy_init(ctrl);
-			mdss_dsi_ctrl_setup(ctrl);
+=======
+		(*vote_cnt) -= i;
+		pr_debug("%s: ctrl=%d, vote_cnt=%d dsi_vote_cnt=%d mdp_vote_cnt:%d\n",
+			__func__, ctrl->ndx, *vote_cnt, mctrl->m_dsi_vote_cnt,
+			mctrl->m_mdp_vote_cnt);
+	}
+
+error:
+	mutex_unlock(&dsi_clk_mutex);
+	return rc;
+}
+
+int mdss_dsi_pre_clkoff_cb(void *priv,
+			   enum mdss_dsi_clk_type clk,
+			   enum mdss_dsi_clk_state new_state)
+{
+	int rc = 0;
+	struct mdss_dsi_ctrl_pdata *ctrl = priv;
+	struct mdss_panel_data *pdata = NULL;
+
+	pdata = &ctrl->panel_data;
+
+	if ((clk & MDSS_DSI_LINK_CLK) && (new_state == MDSS_DSI_CLK_OFF)) {
+		if (!(ctrl->ctrl_state & CTRL_STATE_PANEL_INIT)) {
+			if (pdata->panel_info.ulps_suspend_enabled)
+				mdss_dsi_ulps_config(ctrl, 1);
+		} else if (mdss_dsi_ulps_feature_enabled(pdata)) {
+			rc = mdss_dsi_ulps_config(ctrl, 1);
 		}
+		if (rc) {
+			pr_err("%s: failed enable ulps, rc = %d\n",
+			       __func__, rc);
+		}
+	}
+
+	if ((clk & MDSS_DSI_CORE_CLK) && (new_state == MDSS_DSI_CLK_OFF)) {
+		if ((ctrl->ctrl_state & CTRL_STATE_DSI_ACTIVE) ||
+			pdata->panel_info.ulps_suspend_enabled) {
+			mdss_dsi_phy_power_off(ctrl);
+			rc = mdss_dsi_clamp_ctrl(ctrl, 1);
+			if (rc)
+				pr_err("%s: Failed to enable dsi clamps. rc=%d\n",
+					__func__, rc);
+		} else {
+			rc = mdss_dsi_ulps_config(ctrl, 0);
+			if (rc)
+				pr_err("%s: failed to disable ulps. rc=%d\n",
+					__func__, rc);
+		}
+	}
+
+	return rc;
+}
+
+int mdss_dsi_post_clkon_cb(void *priv,
+			   enum mdss_dsi_clk_type clk,
+			   enum mdss_dsi_clk_state curr_state)
+{
+	int rc = 0;
+	struct mdss_panel_data *pdata = NULL;
+	struct mdss_dsi_ctrl_pdata *ctrl = priv;
+	bool mmss_clamp;
+
+	pdata = &ctrl->panel_data;
+
+	if (clk & MDSS_DSI_CORE_CLK) {
+		mmss_clamp = ctrl->mmss_clamp;
+		if (mmss_clamp)
+>>>>>>> 0e91d2a... Nougat
+			mdss_dsi_ctrl_setup(ctrl);
 
 		if (ctrl->ulps) {
 			/*
@@ -1286,6 +2125,7 @@ static int mdss_dsi_core_power_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
 				__func__, rc);
 			goto error_ulps;
 		}
+<<<<<<< HEAD
 	} else {
 		/*
 		 * Enable DSI clamps only if entering idle power collapse or
@@ -1313,6 +2153,15 @@ static int mdss_dsi_core_power_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
 			rc = msm_dss_enable_vreg(
 				ctrl->power_data[DSI_CORE_PM].vreg_config,
 				ctrl->power_data[DSI_CORE_PM].num_vreg, 0);
+=======
+
+		if (ctrl->phy_power_off || mmss_clamp)
+			mdss_dsi_phy_power_on(ctrl, mmss_clamp);
+	}
+	if (clk & MDSS_DSI_LINK_CLK) {
+		if (ctrl->ulps) {
+			rc = mdss_dsi_ulps_config(ctrl, 0);
+>>>>>>> 0e91d2a... Nougat
 			if (rc) {
 				pr_warn("%s: failed to disable vregs for %s\n",
 					__func__,
@@ -1372,12 +2221,22 @@ static int mdss_dsi_clk_ctrl_sub(struct mdss_dsi_ctrl_pdata *ctrl,
 
 	pdata = &ctrl->panel_data;
 
+<<<<<<< HEAD
 	pr_debug("%s: ndx=%d clk_type=%08x enable=%d\n", __func__,
 		ctrl->ndx, clk_type, enable);
 
 	if (enable) {
 		if (clk_type & DSI_BUS_CLKS) {
 			rc = mdss_dsi_core_power_ctrl(ctrl, enable);
+=======
+		for (i = DSI_MAX_PM - 1; i >= DSI_CORE_PM; i--) {
+			if ((ctrl->ctrl_state & CTRL_STATE_DSI_ACTIVE) &&
+				(i != DSI_CORE_PM))
+				continue;
+			rc = msm_dss_enable_vreg(
+				sdata->power_data[i].vreg_config,
+				sdata->power_data[i].num_vreg, 0);
+>>>>>>> 0e91d2a... Nougat
 			if (rc) {
 				pr_err("%s: Failed to enable core power. rc=%d\n",
 					__func__, rc);
@@ -1471,6 +2330,7 @@ int mdss_dsi_clk_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
 		return -EINVAL;
 	}
 
+<<<<<<< HEAD
 	/*
 	 * In sync_wait_broadcast mode, we need to enable clocks
 	 * for the other controller as well when enabling clocks
@@ -1510,6 +2370,28 @@ int mdss_dsi_clk_ctrl(struct mdss_dsi_ctrl_pdata *ctrl,
 			m_bus_changed = __mdss_dsi_update_clk_cnt(
 				&mctrl->bus_clk_cnt, enable);
 	}
+=======
+	if ((clk_type & MDSS_DSI_CORE_CLK) && (new_state == MDSS_DSI_CLK_ON) &&
+	    (ctrl->core_power == false)) {
+		sdata = ctrl->shared_data;
+		pdata = &ctrl->panel_data;
+		pr_debug("%s: Enable DSI core power\n", __func__);
+		for (i = DSI_CORE_PM; i < DSI_MAX_PM; i++) {
+			if ((ctrl->ctrl_state & CTRL_STATE_DSI_ACTIVE) &&
+				(!pdata->panel_info.cont_splash_enabled) &&
+				(i != DSI_CORE_PM))
+				continue;
+			rc = msm_dss_enable_vreg(
+				sdata->power_data[i].vreg_config,
+				sdata->power_data[i].num_vreg, 1);
+			if (rc) {
+				pr_err("%s: failed to enable vregs for %s\n",
+					__func__,
+					__mdss_dsi_pm_name(i));
+			} else {
+				ctrl->core_power = true;
+			}
+>>>>>>> 0e91d2a... Nougat
 
 	if (clk_type & DSI_LINK_CLKS) {
 		link_changed = __mdss_dsi_update_clk_cnt(&ctrl->link_clk_cnt,
@@ -1625,6 +2507,10 @@ no_error:
 		__func__, mctrl ? "yes" : "no", mctrl ? mctrl->bus_clk_cnt : -1,
 		mctrl ? mctrl->link_clk_cnt : -1,
 		m_link_changed && m_bus_changed, enable);
+
+	
+	if (ctrl->mdss_util->dyn_clk_gating_ctrl)
+		ctrl->mdss_util->dyn_clk_gating_ctrl(0);
 
 	return rc;
 }

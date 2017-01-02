@@ -123,7 +123,85 @@ DEFINE_EVENT(set, cpufreq_freq_synced,
 	TP_ARGS(cpu_id, currfreq, load)
 );
 
+<<<<<<< HEAD
 TRACE_EVENT(machine_suspend,
+=======
+TRACE_EVENT(cpu_frequency_limits,
+
+	TP_PROTO(unsigned int max_freq, unsigned int min_freq,
+		unsigned int cpu_id),
+
+	TP_ARGS(max_freq, min_freq, cpu_id),
+
+	TP_STRUCT__entry(
+		__field(	u32,		min_freq	)
+		__field(	u32,		max_freq	)
+		__field(	u32,		cpu_id		)
+	),
+
+	TP_fast_assign(
+		__entry->min_freq = min_freq;
+		__entry->max_freq = max_freq;
+		__entry->cpu_id = cpu_id;
+	),
+
+	TP_printk("min=%lu max=%lu cpu_id=%lu",
+		  (unsigned long)__entry->min_freq,
+		  (unsigned long)__entry->max_freq,
+		  (unsigned long)__entry->cpu_id)
+);
+
+TRACE_EVENT(device_pm_callback_start,
+	TP_PROTO(struct device *dev, const char *pm_ops, int event),
+
+	TP_ARGS(dev, pm_ops, event),
+
+	TP_STRUCT__entry(
+		__string(device, dev_name(dev))
+		__string(driver, dev_driver_string(dev))
+		__string(parent, dev->parent ? dev_name(dev->parent) : "none")
+		__string(pm_ops, pm_ops ? pm_ops : "none ")
+		__field(int, event)
+	),
+
+	TP_fast_assign(
+		__assign_str(device, dev_name(dev));
+		__assign_str(driver, dev_driver_string(dev));
+		__assign_str(parent,
+			dev->parent ? dev_name(dev->parent) : "none");
+		__assign_str(pm_ops, pm_ops ? pm_ops : "none ");
+		__entry->event = event;
+	),
+
+	TP_printk("%s %s, parent: %s, %s[%s]", __get_str(driver),
+		__get_str(device), __get_str(parent), __get_str(pm_ops),
+		pm_verb_symbolic(__entry->event))
+);
+
+TRACE_EVENT(device_pm_callback_end,
+
+	TP_PROTO(struct device *dev, int error),
+
+	TP_ARGS(dev, error),
+
+	TP_STRUCT__entry(
+		__string(device, dev_name(dev))
+		__string(driver, dev_driver_string(dev))
+		__field(int, error)
+	),
+
+	TP_fast_assign(
+		__assign_str(device, dev_name(dev));
+		__assign_str(driver, dev_driver_string(dev));
+		__entry->error = error;
+	),
+
+	TP_printk("%s %s, err=%d",
+		__get_str(driver), __get_str(device), __entry->error)
+);
+
+TRACE_EVENT(suspend_resume,
+>>>>>>> 0e91d2a... Nougat
 
 	TP_PROTO(unsigned int state),
 
@@ -320,6 +398,7 @@ DEFINE_EVENT(kpm_module, reevaluate_hotplug,
 	TP_ARGS(managed_cpus, max_cpus)
 );
 
+<<<<<<< HEAD
 TRACE_EVENT(core_ctl_eval_need,
 
 	TP_PROTO(unsigned int cpu, unsigned int old_need,
@@ -361,6 +440,36 @@ TRACE_EVENT(core_ctl_set_busy,
 	TP_printk("cpu=%u, busy=%u, old_is_busy=%u, new_is_busy=%u",
 		  __entry->cpu, __entry->busy, __entry->old_is_busy,
 		  __entry->is_busy)
+=======
+DECLARE_EVENT_CLASS(kpm_module,
+
+	TP_PROTO(unsigned int managed_cpus, unsigned int max_cpus),
+
+	TP_ARGS(managed_cpus, max_cpus),
+
+	TP_STRUCT__entry(
+		__field(u32, managed_cpus)
+		__field(u32, max_cpus)
+	),
+
+	TP_fast_assign(
+		__entry->managed_cpus = managed_cpus;
+		__entry->max_cpus = max_cpus;
+	),
+
+	TP_printk("managed:%x max_cpus=%u", (unsigned int)__entry->managed_cpus,
+					(unsigned int)__entry->max_cpus)
+);
+
+DEFINE_EVENT(kpm_module, set_max_cpus,
+	TP_PROTO(unsigned int managed_cpus, unsigned int max_cpus),
+	TP_ARGS(managed_cpus, max_cpus)
+);
+
+DEFINE_EVENT(kpm_module, reevaluate_hotplug,
+	TP_PROTO(unsigned int managed_cpus, unsigned int max_cpus),
+	TP_ARGS(managed_cpus, max_cpus)
+>>>>>>> 0e91d2a... Nougat
 );
 
 DECLARE_EVENT_CLASS(kpm_module2,
@@ -407,11 +516,15 @@ DECLARE_EVENT_CLASS(cpu_modes,
 		unsigned int single_enter_cycle_cnt,
 		unsigned int single_exit_cycle_cnt,
 		unsigned int total_load, unsigned int multi_enter_cycle_cnt,
-		unsigned int multi_exit_cycle_cnt, unsigned int mode,
+		unsigned int multi_exit_cycle_cnt,
+		unsigned int perf_cl_peak_enter_cycle_cnt,
+		unsigned int perf_cl_peak_exit_cycle_cnt,
+		unsigned int mode,
 		unsigned int cpu_cnt),
 
 	TP_ARGS(cpu, max_load, single_enter_cycle_cnt, single_exit_cycle_cnt,
-		total_load, multi_enter_cycle_cnt, multi_exit_cycle_cnt, mode,
+		total_load, multi_enter_cycle_cnt, multi_exit_cycle_cnt,
+		perf_cl_peak_enter_cycle_cnt, perf_cl_peak_exit_cycle_cnt, mode,
 		cpu_cnt),
 
 	TP_STRUCT__entry(
@@ -422,6 +535,8 @@ DECLARE_EVENT_CLASS(cpu_modes,
 		__field(u32, total_load)
 		__field(u32, multi_enter_cycle_cnt)
 		__field(u32, multi_exit_cycle_cnt)
+		__field(u32, perf_cl_peak_enter_cycle_cnt)
+		__field(u32, perf_cl_peak_exit_cycle_cnt)
 		__field(u32, mode)
 		__field(u32, cpu_cnt)
 	),
@@ -434,17 +549,23 @@ DECLARE_EVENT_CLASS(cpu_modes,
 		__entry->total_load = total_load;
 		__entry->multi_enter_cycle_cnt = multi_enter_cycle_cnt;
 		__entry->multi_exit_cycle_cnt = multi_exit_cycle_cnt;
+		__entry->perf_cl_peak_enter_cycle_cnt =
+				perf_cl_peak_enter_cycle_cnt;
+		__entry->perf_cl_peak_exit_cycle_cnt =
+				perf_cl_peak_exit_cycle_cnt;
 		__entry->mode = mode;
 		__entry->cpu_cnt = cpu_cnt;
 	),
 
-	TP_printk("%u:%4u:%4u:%4u:%4u:%4u:%4u:%4u:%u",
+	TP_printk("%u:%4u:%4u:%4u:%4u:%4u:%4u:%4u:%4u:%4u:%u",
 		(unsigned int)__entry->cpu, (unsigned int)__entry->max_load,
 		(unsigned int)__entry->single_enter_cycle_cnt,
 		(unsigned int)__entry->single_exit_cycle_cnt,
 		(unsigned int)__entry->total_load,
 		(unsigned int)__entry->multi_enter_cycle_cnt,
 		(unsigned int)__entry->multi_exit_cycle_cnt,
+		(unsigned int)__entry->perf_cl_peak_enter_cycle_cnt,
+		(unsigned int)__entry->perf_cl_peak_exit_cycle_cnt,
 		(unsigned int)__entry->mode,
 		(unsigned int)__entry->cpu_cnt)
 );
@@ -454,10 +575,14 @@ DEFINE_EVENT(cpu_modes, cpu_mode_detect,
 		unsigned int single_enter_cycle_cnt,
 		unsigned int single_exit_cycle_cnt,
 		unsigned int total_load, unsigned int multi_enter_cycle_cnt,
-		unsigned int multi_exit_cycle_cnt, unsigned int mode,
+		unsigned int multi_exit_cycle_cnt,
+		unsigned int perf_cl_peak_enter_cycle_cnt,
+		unsigned int perf_cl_peak_exit_cycle_cnt,
+		unsigned int mode,
 		unsigned int cpu_cnt),
 	TP_ARGS(cpu, max_load, single_enter_cycle_cnt, single_exit_cycle_cnt,
 		total_load, multi_enter_cycle_cnt, multi_exit_cycle_cnt,
+		perf_cl_peak_enter_cycle_cnt, perf_cl_peak_exit_cycle_cnt,
 		mode, cpu_cnt)
 );
 
@@ -566,6 +691,271 @@ DEFINE_EVENT(timer_status, single_cycle_exit_timer_stop,
 		timer_rate, mode)
 );
 
+<<<<<<< HEAD
 #endif 
+=======
+
+DECLARE_EVENT_CLASS(perf_cl_peak_timer_status,
+	TP_PROTO(unsigned int cpu, unsigned int perf_cl_peak_enter_cycles,
+		unsigned int perf_cl_peak_enter_cycle_cnt,
+		unsigned int perf_cl_peak_exit_cycles,
+		unsigned int perf_cl_peak_exit_cycle_cnt,
+		unsigned int timer_rate,
+		unsigned int mode),
+	TP_ARGS(cpu, perf_cl_peak_enter_cycles, perf_cl_peak_enter_cycle_cnt,
+		perf_cl_peak_exit_cycles, perf_cl_peak_exit_cycle_cnt,
+		timer_rate, mode),
+
+	TP_STRUCT__entry(
+		__field(unsigned int, cpu)
+		__field(unsigned int, perf_cl_peak_enter_cycles)
+		__field(unsigned int, perf_cl_peak_enter_cycle_cnt)
+		__field(unsigned int, perf_cl_peak_exit_cycles)
+		__field(unsigned int, perf_cl_peak_exit_cycle_cnt)
+		__field(unsigned int, timer_rate)
+		__field(unsigned int, mode)
+	),
+
+	TP_fast_assign(
+		__entry->cpu = cpu;
+		__entry->perf_cl_peak_enter_cycles = perf_cl_peak_enter_cycles;
+		__entry->perf_cl_peak_enter_cycle_cnt =
+				perf_cl_peak_enter_cycle_cnt;
+		__entry->perf_cl_peak_exit_cycles = perf_cl_peak_exit_cycles;
+		__entry->perf_cl_peak_exit_cycle_cnt =
+				perf_cl_peak_exit_cycle_cnt;
+		__entry->timer_rate = timer_rate;
+		__entry->mode = mode;
+	),
+
+	TP_printk("%u:%4u:%4u:%4u:%4u:%4u:%4u",
+		(unsigned int) __entry->cpu,
+		(unsigned int) __entry->perf_cl_peak_enter_cycles,
+		(unsigned int) __entry->perf_cl_peak_enter_cycle_cnt,
+		(unsigned int) __entry->perf_cl_peak_exit_cycles,
+		(unsigned int) __entry->perf_cl_peak_exit_cycle_cnt,
+		(unsigned int) __entry->timer_rate,
+		(unsigned int) __entry->mode)
+);
+
+DEFINE_EVENT(perf_cl_peak_timer_status, perf_cl_peak_exit_timer_start,
+	TP_PROTO(unsigned int cpu, unsigned int perf_cl_peak_enter_cycles,
+		unsigned int perf_cl_peak_enter_cycle_cnt,
+		unsigned int perf_cl_peak_exit_cycles,
+		unsigned int perf_cl_peak_exit_cycle_cnt,
+		unsigned int timer_rate,
+		unsigned int mode),
+	TP_ARGS(cpu, perf_cl_peak_enter_cycles, perf_cl_peak_enter_cycle_cnt,
+		perf_cl_peak_exit_cycles, perf_cl_peak_exit_cycle_cnt,
+		timer_rate, mode)
+);
+
+
+DEFINE_EVENT(perf_cl_peak_timer_status, perf_cl_peak_exit_timer_stop,
+	TP_PROTO(unsigned int cpu, unsigned int perf_cl_peak_enter_cycles,
+		unsigned int perf_cl_peak_enter_cycle_cnt,
+		unsigned int perf_cl_peak_exit_cycles,
+		unsigned int perf_cl_peak_exit_cycle_cnt,
+		unsigned int timer_rate,
+		unsigned int mode),
+	TP_ARGS(cpu, perf_cl_peak_enter_cycles, perf_cl_peak_enter_cycle_cnt,
+		perf_cl_peak_exit_cycles, perf_cl_peak_exit_cycle_cnt,
+		timer_rate, mode)
+);
+
+
+TRACE_EVENT(bw_hwmon_meas,
+
+	TP_PROTO(const char *name, unsigned long mbps,
+		 unsigned long us, int wake),
+
+	TP_ARGS(name, mbps, us, wake),
+
+	TP_STRUCT__entry(
+		__string(	name,			name	)
+		__field(	unsigned long,		mbps	)
+		__field(	unsigned long,		us	)
+		__field(	int,			wake	)
+	),
+
+	TP_fast_assign(
+		__assign_str(name, name);
+		__entry->mbps = mbps;
+		__entry->us = us;
+		__entry->wake = wake;
+	),
+
+	TP_printk("dev: %s, mbps = %lu, us = %lu, wake = %d",
+		__get_str(name),
+		__entry->mbps,
+		__entry->us,
+		__entry->wake)
+);
+
+TRACE_EVENT(bw_hwmon_update,
+
+	TP_PROTO(const char *name, unsigned long mbps, unsigned long freq,
+		 unsigned long up_thres, unsigned long down_thres),
+
+	TP_ARGS(name, mbps, freq, up_thres, down_thres),
+
+	TP_STRUCT__entry(
+		__string(	name,			name		)
+		__field(	unsigned long,		mbps		)
+		__field(	unsigned long,		freq		)
+		__field(	unsigned long,		up_thres	)
+		__field(	unsigned long,		down_thres	)
+	),
+
+	TP_fast_assign(
+		__assign_str(name, name);
+		__entry->mbps = mbps;
+		__entry->freq = freq;
+		__entry->up_thres = up_thres;
+		__entry->down_thres = down_thres;
+	),
+
+	TP_printk("dev: %s, mbps = %lu, freq = %lu, up = %lu, down = %lu",
+		__get_str(name),
+		__entry->mbps,
+		__entry->freq,
+		__entry->up_thres,
+		__entry->down_thres)
+);
+
+TRACE_EVENT(cache_hwmon_meas,
+	TP_PROTO(const char *name, unsigned long high_mrps,
+		 unsigned long med_mrps, unsigned long low_mrps,
+		 unsigned int busy_percent, unsigned int us),
+	TP_ARGS(name, high_mrps, med_mrps, low_mrps, busy_percent, us),
+	TP_STRUCT__entry(
+		__string(name, name)
+		__field(unsigned long, high_mrps)
+		__field(unsigned long, med_mrps)
+		__field(unsigned long, low_mrps)
+		__field(unsigned long, total_mrps)
+		__field(unsigned int, busy_percent)
+		__field(unsigned int, us)
+	),
+	TP_fast_assign(
+		__assign_str(name, name);
+		__entry->high_mrps = high_mrps;
+		__entry->med_mrps = med_mrps;
+		__entry->low_mrps = low_mrps;
+		__entry->total_mrps = high_mrps + med_mrps + low_mrps;
+		__entry->busy_percent = busy_percent;
+		__entry->us = us;
+	),
+	TP_printk("dev=%s H=%lu M=%lu L=%lu T=%lu busy_pct=%u period=%u",
+		  __get_str(name), __entry->high_mrps, __entry->med_mrps,
+		  __entry->low_mrps, __entry->total_mrps,
+		  __entry->busy_percent, __entry->us)
+);
+
+TRACE_EVENT(cache_hwmon_update,
+	TP_PROTO(const char *name, unsigned long freq_mhz),
+	TP_ARGS(name, freq_mhz),
+	TP_STRUCT__entry(
+		__string(name, name)
+		__field(unsigned long, freq)
+	),
+	TP_fast_assign(
+		__assign_str(name, name);
+		__entry->freq = freq_mhz;
+	),
+	TP_printk("dev=%s freq=%lu", __get_str(name), __entry->freq)
+);
+
+TRACE_EVENT(memlat_dev_meas,
+
+	TP_PROTO(const char *name, unsigned int dev_id, unsigned long inst,
+		 unsigned long mem, unsigned long freq, unsigned int ratio),
+
+	TP_ARGS(name, dev_id, inst, mem, freq, ratio),
+
+	TP_STRUCT__entry(
+		__string(name, name)
+		__field(unsigned int, dev_id)
+		__field(unsigned long, inst)
+		__field(unsigned long, mem)
+		__field(unsigned long, freq)
+		__field(unsigned int, ratio)
+	),
+
+	TP_fast_assign(
+		__assign_str(name, name);
+		__entry->dev_id = dev_id;
+		__entry->inst = inst;
+		__entry->mem = mem;
+		__entry->freq = freq;
+		__entry->ratio = ratio;
+	),
+
+	TP_printk("dev: %s, id=%u, inst=%lu, mem=%lu, freq=%lu, ratio=%u",
+		__get_str(name),
+		__entry->dev_id,
+		__entry->inst,
+		__entry->mem,
+		__entry->freq,
+		__entry->ratio)
+);
+
+TRACE_EVENT(memlat_dev_update,
+
+	TP_PROTO(const char *name, unsigned int dev_id, unsigned long inst,
+		 unsigned long mem, unsigned long freq, unsigned long vote),
+
+	TP_ARGS(name, dev_id, inst, mem, freq, vote),
+
+	TP_STRUCT__entry(
+		__string(name, name)
+		__field(unsigned int, dev_id)
+		__field(unsigned long, inst)
+		__field(unsigned long, mem)
+		__field(unsigned long, freq)
+		__field(unsigned long, vote)
+	),
+
+	TP_fast_assign(
+		__assign_str(name, name);
+		__entry->dev_id = dev_id;
+		__entry->inst = inst;
+		__entry->mem = mem;
+		__entry->freq = freq;
+		__entry->vote = vote;
+	),
+
+	TP_printk("dev: %s, id=%u, inst=%lu, mem=%lu, freq=%lu, vote=%lu",
+		__get_str(name),
+		__entry->dev_id,
+		__entry->inst,
+		__entry->mem,
+		__entry->freq,
+		__entry->vote)
+);
+
+TRACE_EVENT(msmpower_max_ddr,
+
+	TP_PROTO(unsigned int prev_max_ddr, unsigned int curr_max_ddr),
+
+	TP_ARGS(prev_max_ddr, curr_max_ddr),
+
+	TP_STRUCT__entry(
+		__field(unsigned int, prev_max_ddr)
+		__field(unsigned int, curr_max_ddr)
+	),
+
+	TP_fast_assign(
+		__entry->prev_max_ddr = prev_max_ddr;
+		__entry->curr_max_ddr = curr_max_ddr;
+	),
+
+	TP_printk("prev_max_ddr = %u, curr_max_ddr = %u",
+		__entry->prev_max_ddr,
+		__entry->curr_max_ddr)
+);
+
+#endif /* _TRACE_POWER_H */
+>>>>>>> 0e91d2a... Nougat
 
 #include <trace/define_trace.h>

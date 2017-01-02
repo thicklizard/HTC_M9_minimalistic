@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -50,6 +54,16 @@ struct mem_blocks {
 	/* Virtual address for the physical address allocated
 	*/
 	void *virtual_addr;
+<<<<<<< HEAD
+=======
+	/* Release memory only when XPU is released*/
+	uint8_t free_memory;
+	/* Need Hypervisor mapping*/
+	uint8_t hyp_mapping;
+	/* Status flag which checks if ramdump file is created*/
+	int file_created;
+
+>>>>>>> 0e91d2a... Nougat
 };
 
 int memshare_alloc(struct device *dev,

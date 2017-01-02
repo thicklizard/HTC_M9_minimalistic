@@ -1,5 +1,9 @@
 /*
+<<<<<<< HEAD
  * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+=======
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -20,6 +24,11 @@
 #include <linux/qdsp6v2/dsp_debug.h>
 
 #define DEST_ID APR_DEST_MODEM
+
+enum apr_subsys_state apr_get_subsys_state(void)
+{
+	return apr_get_modem_state();
+}
 
 void apr_set_subsys_state(void)
 {

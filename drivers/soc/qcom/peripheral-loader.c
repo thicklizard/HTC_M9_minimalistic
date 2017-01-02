@@ -65,6 +65,10 @@ static void __iomem *pil_info_base;
 static int proxy_timeout_ms = -1;
 module_param(proxy_timeout_ms, int, S_IRUGO | S_IWUSR);
 
+<<<<<<< HEAD
+=======
+static bool disable_timeouts;
+>>>>>>> 0e91d2a... Nougat
 /**
  * struct pil_mdt - Representation of <name>.mdt file in memory
  * @hdr: ELF32 header
@@ -99,8 +103,13 @@ struct pil_seg {
 /**
  * struct pil_priv - Private state for a pil_desc
  * @proxy: work item used to run the proxy unvoting routine
+<<<<<<< HEAD
  * @wlock: wakelock to prevent suspend during pil_boot
  * @wname: name of @wlock
+=======
+ * @ws: wakeup source to prevent suspend during pil_boot
+ * @wname: name of @ws
+>>>>>>> 0e91d2a... Nougat
  * @desc: pointer to pil_desc this is private data for
  * @seg: list of segments sorted by physical address
  * @entry_addr: physical address where processor starts booting at
@@ -170,6 +179,79 @@ int pil_do_ramdump(struct pil_desc *desc, void *ramdump_dev)
 }
 EXPORT_SYMBOL(pil_do_ramdump);
 
+<<<<<<< HEAD
+=======
+int pil_assign_mem_to_subsys(struct pil_desc *desc, phys_addr_t addr,
+							size_t size)
+{
+	int ret;
+	int srcVM[1] = {VMID_HLOS};
+	int destVM[1] = {desc->subsys_vmid};
+	int destVMperm[1] = {PERM_READ | PERM_WRITE};
+
+	ret = hyp_assign_phys(addr, size, srcVM, 1, destVM, destVMperm, 1);
+	if (ret)
+		pil_err(desc, "%s: failed for %pa address of size %zx - subsys VMid %d\n",
+				__func__, &addr, size, desc->subsys_vmid);
+	return ret;
+}
+EXPORT_SYMBOL(pil_assign_mem_to_subsys);
+
+int pil_assign_mem_to_linux(struct pil_desc *desc, phys_addr_t addr,
+							size_t size)
+{
+	int ret;
+	int srcVM[1] = {desc->subsys_vmid};
+	int destVM[1] = {VMID_HLOS};
+	int destVMperm[1] = {PERM_READ | PERM_WRITE | PERM_EXEC};
+
+	ret = hyp_assign_phys(addr, size, srcVM, 1, destVM, destVMperm, 1);
+	if (ret)
+		panic("%s: failed for %pa address of size %zx - subsys VMid %d. Fatal error.\n",
+				__func__, &addr, size, desc->subsys_vmid);
+
+	return ret;
+}
+EXPORT_SYMBOL(pil_assign_mem_to_linux);
+
+int pil_assign_mem_to_subsys_and_linux(struct pil_desc *desc,
+						phys_addr_t addr, size_t size)
+{
+	int ret;
+	int srcVM[1] = {VMID_HLOS};
+	int destVM[2] = {VMID_HLOS, desc->subsys_vmid};
+	int destVMperm[2] = {PERM_READ | PERM_WRITE, PERM_READ | PERM_WRITE};
+
+	ret = hyp_assign_phys(addr, size, srcVM, 1, destVM, destVMperm, 2);
+	if (ret)
+		pil_err(desc, "%s: failed for %pa address of size %zx - subsys VMid %d\n",
+				__func__, &addr, size, desc->subsys_vmid);
+
+	return ret;
+}
+EXPORT_SYMBOL(pil_assign_mem_to_subsys_and_linux);
+
+int pil_reclaim_mem(struct pil_desc *desc, phys_addr_t addr, size_t size,
+						int VMid)
+{
+	int ret;
+	int srcVM[2] = {VMID_HLOS, desc->subsys_vmid};
+	int destVM[1] = {VMid};
+	int destVMperm[1] = {PERM_READ | PERM_WRITE};
+
+	if (VMid == VMID_HLOS)
+		destVMperm[0] = PERM_READ | PERM_WRITE | PERM_EXEC;
+
+	ret = hyp_assign_phys(addr, size, srcVM, 2, destVM, destVMperm, 1);
+	if (ret)
+		panic("%s: failed for %pa address of size %zx - subsys VMid %d. Fatal error.\n",
+				__func__, &addr, size, desc->subsys_vmid);
+
+	return ret;
+}
+EXPORT_SYMBOL(pil_reclaim_mem);
+
+>>>>>>> 0e91d2a... Nougat
 /**
  * pil_get_entry_addr() - Retrieve the entry address of a peripheral image
  * @desc: descriptor from pil_desc_init()
@@ -722,6 +804,32 @@ int pil_boot(struct pil_desc *desc)
 		goto err_deinit_image;
 	}
 
+<<<<<<< HEAD
+=======
+	if (desc->subsys_vmid > 0) {
+		/* In case of modem ssr, we need to assign memory back to linux.
+		 * This is not true after cold boot since linux already owns it.
+		 * Also for secure boot devices, modem memory has to be released
+		 * after MBA is booted. */
+		if (desc->modem_ssr) {
+			ret = pil_assign_mem_to_linux(desc, priv->region_start,
+				(priv->region_end - priv->region_start));
+			if (ret)
+				pil_err(desc, "Failed to assign to linux, ret- %d\n",
+								ret);
+		}
+		ret = pil_assign_mem_to_subsys_and_linux(desc,
+				priv->region_start,
+				(priv->region_end - priv->region_start));
+		if (ret) {
+			pil_err(desc, "Failed to assign memory, ret - %d\n",
+								ret);
+			goto err_deinit_image;
+		}
+		hyp_assign = true;
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	list_for_each_entry(seg, &desc->priv->segs, list) {
 		ret = pil_load_seg(desc, seg);
 		if (ret)
@@ -734,6 +842,16 @@ int pil_boot(struct pil_desc *desc)
 		goto err_deinit_image;
 	}
 	pil_info(desc, "Brought out of reset\n");
+<<<<<<< HEAD
+=======
+	desc->modem_ssr = false;
+err_auth_and_reset:
+	if (ret && desc->subsys_vmid > 0) {
+		pil_assign_mem_to_linux(desc, priv->region_start,
+				(priv->region_end - priv->region_start));
+		mem_protect = true;
+	}
+>>>>>>> 0e91d2a... Nougat
 err_deinit_image:
 	if (ret && desc->ops->deinit_image)
 		desc->ops->deinit_image(desc);
@@ -781,6 +899,7 @@ void pil_shutdown(struct pil_desc *desc)
 		pil_proxy_unvote(desc, 1);
 	else
 		flush_delayed_work(&priv->proxy);
+	desc->modem_ssr = true;
 }
 EXPORT_SYMBOL(pil_shutdown);
 
@@ -802,6 +921,13 @@ EXPORT_SYMBOL(pil_free_memory);
 
 static DEFINE_IDA(pil_ida);
 
+<<<<<<< HEAD
+=======
+bool is_timeout_disabled(void)
+{
+	return disable_timeouts;
+}
+>>>>>>> 0e91d2a... Nougat
 /**
  * pil_desc_init() - Initialize a pil descriptor
  * @desc: descriptor to intialize
@@ -940,6 +1066,10 @@ static int __init msm_pil_init(void)
 	if (!pil_info_base) {
 		pr_warn("pil: could not map imem region\n");
 		goto out;
+	}
+	if (__raw_readl(pil_info_base) == 0x53444247) {
+		pr_info("pil: pil-imem set to disable pil timeouts\n");
+		disable_timeouts = true;
 	}
 	for (i = 0; i < resource_size(&res)/sizeof(u32); i++)
 		writel_relaxed(0, pil_info_base + (i * sizeof(u32)));

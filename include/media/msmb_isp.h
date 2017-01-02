@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -12,6 +16,7 @@
 #ifndef __MSMB_ISP__
 #define __MSMB_ISP__
 
+<<<<<<< HEAD
 #include <linux/videodev2.h>
 
 #define MAX_PLANES_PER_STREAM 3
@@ -586,3 +591,25 @@ struct msm_isp_event_data {
 	_IOWR('V', BASE_VIDIOC_PRIVATE+20, struct msm_vfe_fetch_eng_start)
 
 #endif 
+=======
+#include <uapi/media/msmb_isp.h>
+
+#ifdef CONFIG_COMPAT
+struct msm_isp_event_data32 {
+	struct compat_timeval timestamp;
+	struct compat_timeval mono_timestamp;
+	uint32_t frame_id;
+	union {
+		struct msm_isp_stats_event stats;
+		struct msm_isp_buf_event buf_done;
+		struct msm_isp_fetch_eng_event fetch_done;
+		struct msm_isp_error_info error_info;
+		struct msm_isp_output_info output_info;
+		struct msm_isp_sof_info sof_info;
+	} u;
+};
+#endif
+
+#endif
+
+>>>>>>> 0e91d2a... Nougat

@@ -10,6 +10,7 @@
  * GNU General Public License for more details.
  */
 #include <linux/delay.h>
+#include <linux/interrupt.h>
 #include <linux/kernel.h>
 #include <linux/list.h>
 #include <linux/module.h>
@@ -21,6 +22,7 @@
 #include <linux/srcu.h>
 #include <linux/termios.h>
 #include <linux/workqueue.h>
+#include <linux/completion.h>
 #include <soc/qcom/smd.h>
 #include <soc/qcom/glink.h>
 #include "glink_core_if.h"
@@ -34,13 +36,6 @@
 #define SMD_CD_SIG BIT(29)
 #define SMD_RI_SIG BIT(28)
 
-/**
- * enum command_types - commands send/received from remote system
- * @CMD_OPEN:		Channel open request
- * @CMD_OPEN_ACK:	Response to @CMD_OPEN
- * @CMD_CLOSE:		Channel close request
- * @CMD_CLOSE_ACK:	Response to @CMD_CLOSE
- */
 enum command_types {
 	CMD_OPEN,
 	CMD_OPEN_ACK,
@@ -48,16 +43,13 @@ enum command_types {
 	CMD_CLOSE_ACK,
 };
 
-/*
- * Max of 64 channels, the 128 offset puts the rcid out of the
- * range the remote might use
- */
 #define LEGACY_RCID_CHANNEL_OFFSET	128
 
 #define SMDXPRT_ERR(x...) GLINK_ERR("<SMDXPRT> " x)
 #define SMDXPRT_INFO(x...) GLINK_INFO("<SMDXPRT> " x)
 #define SMDXPRT_DBG(x...) GLINK_DBG("<SMDXPRT> " x)
 
+<<<<<<< HEAD
 /**
  * struct edge_info() - local information for managing an edge
  * @xprt_if:		The transport interface registered with the glink code
@@ -82,6 +74,8 @@ enum command_types {
  * Each transport registered with the core is represented by a single instance
  * of this structure which allows for complete management of the transport.
  */
+=======
+>>>>>>> 0e91d2a... Nougat
 struct edge_info {
 	struct glink_transport_if xprt_if;
 	struct glink_core_transport_cfg xprt_cfg;
@@ -97,6 +91,7 @@ struct edge_info {
 	struct work_struct work;
 };
 
+<<<<<<< HEAD
 /**
  * struct channel() - local information for managing a channel
  * @node:		For chaining this channel on list for its edge.
@@ -121,11 +116,18 @@ struct edge_info {
  * @remote_legacy:	The remote side of the channel is in legacy mode.
  * @rx_data_lock:	Used to serialize RX data processing.
  */
+=======
+>>>>>>> 0e91d2a... Nougat
 struct channel {
 	struct list_head node;
 	char name[GLINK_NAME_SIZE];
 	uint32_t lcid;
 	uint32_t rcid;
+<<<<<<< HEAD
+=======
+	struct mutex ch_probe_lock;
+	struct mutex ch_tasklet_lock;
+>>>>>>> 0e91d2a... Nougat
 	bool wait_for_probe;
 	bool had_probed;
 	struct edge_info *edge;
@@ -135,44 +137,34 @@ struct channel {
 	spinlock_t intents_lock;
 	uint32_t next_intent_id;
 	struct workqueue_struct *wq;
-	struct work_struct work;
+	struct tasklet_struct data_tasklet;
 	struct intent_info *cur_intent;
 	bool intent_req;
 	bool is_closing;
 	bool local_legacy;
 	bool remote_legacy;
 	spinlock_t rx_data_lock;
+<<<<<<< HEAD
+=======
+	bool streaming_ch;
+	bool tx_resume_needed;
+	bool is_tasklet_enabled;
+	struct completion open_notifier;
+>>>>>>> 0e91d2a... Nougat
 };
 
-/**
- * struct intent_info() - information for managing an intent
- * @node:	Used for putting this intent in a list for its channel.
- * @llid:	The local intent id the core uses to identify this intent.
- * @size:	The size of the intent in bytes.
- */
 struct intent_info {
 	struct list_head node;
 	uint32_t liid;
 	size_t size;
 };
 
-/**
- * struct channel_work() - a task to be processed for a specific channel
- * @ch:		The channel associated with this task.
- * @iid:	Intent id associated with this task, may not always be valid.
- * @work:	The task to be processed.
- */
 struct channel_work {
 	struct channel *ch;
 	uint32_t iid;
 	struct work_struct work;
 };
 
-/**
- * struct pdrvs - Tracks a platform driver and its use among channels
- * @node:	For tracking in the pdrv_list.
- * @pdrv:	The platform driver to track.
- */
 struct pdrvs {
 	struct list_head node;
 	struct platform_driver pdrv;
@@ -213,14 +205,35 @@ static struct glink_core_version versions[] = {
 static LIST_HEAD(pdrv_list);
 static DEFINE_MUTEX(pdrv_list_mutex);
 
-static void process_data_event(struct work_struct *work);
+static void process_data_event(unsigned long param);
 static int add_platform_driver(struct channel *ch);
 static void smd_data_ch_close(struct channel *ch);
 
+<<<<<<< HEAD
 /**
  * process_ctl_event() - process a control channel event task
  * @work:	The migration task to process.
  */
+=======
+static int check_write_avail(int (*check_fn)(smd_channel_t *),
+			     struct channel *ch)
+{
+	int rc = check_fn(ch->smd_ch);
+
+	if (rc == 0) {
+		ch->tx_resume_needed = true;
+		smd_enable_read_intr(ch->smd_ch);
+		rc = check_fn(ch->smd_ch);
+		if (rc > 0) {
+			ch->tx_resume_needed = false;
+			smd_disable_read_intr(ch->smd_ch);
+		}
+	}
+
+	return rc;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static void process_ctl_event(struct work_struct *work)
 {
 	struct command {
@@ -267,11 +280,22 @@ static void process_ctl_event(struct work_struct *work)
 				}
 				strlcpy(ch->name, name, GLINK_NAME_SIZE);
 				ch->edge = einfo;
+<<<<<<< HEAD
+=======
+				mutex_init(&ch->ch_probe_lock);
+				mutex_init(&ch->ch_tasklet_lock);
+				init_completion(&ch->open_notifier);
+>>>>>>> 0e91d2a... Nougat
 				INIT_LIST_HEAD(&ch->intents);
 				INIT_LIST_HEAD(&ch->used_intents);
 				spin_lock_init(&ch->intents_lock);
 				spin_lock_init(&ch->rx_data_lock);
-				INIT_WORK(&ch->work, process_data_event);
+				mutex_lock(&ch->ch_tasklet_lock);
+				tasklet_init(&ch->data_tasklet,
+				process_data_event, (unsigned long)ch);
+				tasklet_disable(&ch->data_tasklet);
+				ch->is_tasklet_enabled = false;
+				mutex_unlock(&ch->ch_tasklet_lock);
 				ch->wq = create_singlethread_workqueue(
 								ch->name);
 				if (!ch->wq) {
@@ -280,7 +304,32 @@ static void process_ctl_event(struct work_struct *work)
 					kfree(ch);
 					continue;
 				}
+<<<<<<< HEAD
 				list_add_tail(&ch->node, &einfo->channels);
+=======
+
+				temp_ch = ch;
+				spin_lock_irqsave(&einfo->channels_lock, flags);
+				list_for_each_entry(ch, &einfo->channels, node)
+					if (!strcmp(name, ch->name)) {
+						found = true;
+						break;
+					}
+
+				if (!found) {
+					ch = temp_ch;
+					list_add_tail(&ch->node,
+							&einfo->channels);
+					spin_unlock_irqrestore(
+						&einfo->channels_lock, flags);
+				} else {
+					spin_unlock_irqrestore(
+						&einfo->channels_lock, flags);
+					tasklet_kill(&temp_ch->data_tasklet);
+					destroy_workqueue(temp_ch->wq);
+					kfree(temp_ch);
+				}
+>>>>>>> 0e91d2a... Nougat
 			}
 
 			if (ch->remote_legacy) {
@@ -320,12 +369,17 @@ static void process_ctl_event(struct work_struct *work)
 						__func__, cmd.id);
 				continue;
 			}
-
+			reinit_completion(&ch->open_notifier);
 			add_platform_driver(ch);
 			einfo->xprt_if.glink_core_if_ptr->rx_cmd_ch_open_ack(
 								&einfo->xprt_if,
 								cmd.id,
 								cmd.priority);
+<<<<<<< HEAD
+=======
+			mutex_unlock(&einfo->rx_cmd_lock);
+			complete_all(&ch->open_notifier);
+>>>>>>> 0e91d2a... Nougat
 		} else if (cmd.cmd == CMD_CLOSE) {
 			SMDXPRT_INFO("%s RX REMOTE CLOSE rcid %u\n", __func__,
 					cmd.id);
@@ -345,8 +399,14 @@ static void process_ctl_event(struct work_struct *work)
 								&einfo->xprt_if,
 								cmd.id);
 			} else {
+<<<<<<< HEAD
 				/* not found or a legacy channel */
 				SMDXPRT_INFO("%s Sim RX CLOSE ACK lcid %u\n",
+=======
+				
+				SMDXPRT_INFO(einfo,
+						"%s Sim RX CLOSE ACK lcid %u\n",
+>>>>>>> 0e91d2a... Nougat
 						__func__, cmd.id);
 				cmd.cmd = CMD_CLOSE_ACK;
 				mutex_lock(&einfo->smd_lock);
@@ -384,11 +444,6 @@ static void process_ctl_event(struct work_struct *work)
 	}
 }
 
-/**
- * ctl_ch_notify() - process an event from the smd channel for ch migration
- * @priv:	The edge the event occurred on.
- * @event:	The event to process
- */
 static void ctl_ch_notify(void *priv, unsigned event)
 {
 	struct edge_info *einfo = priv;
@@ -425,10 +480,6 @@ static int ctl_ch_probe(struct platform_device *pdev)
 	return ret;
 }
 
-/**
- * ssr_work_func() - process the end of ssr
- * @work:	The ssr task to finish.
- */
 static void ssr_work_func(struct work_struct *work)
 {
 	struct delayed_work *w;
@@ -440,10 +491,20 @@ static void ssr_work_func(struct work_struct *work)
 	einfo->xprt_if.glink_core_if_ptr->link_up(&einfo->xprt_if);
 }
 
-/**
- * process_tx_done() - process a tx done task
- * @work:	The tx done task to process.
- */
+static void deferred_close_ack(struct work_struct *work)
+{
+	struct channel_work *ch_work;
+	struct channel *ch;
+
+	ch_work = container_of(work, struct channel_work, work);
+	ch = ch_work->ch;
+	mutex_lock(&ch->edge->rx_cmd_lock);
+	ch->edge->xprt_if.glink_core_if_ptr->rx_cmd_ch_close_ack(
+				&ch->edge->xprt_if, ch->lcid);
+	mutex_unlock(&ch->edge->rx_cmd_lock);
+	kfree(ch_work);
+}
+
 static void process_tx_done(struct work_struct *work)
 {
 	struct channel_work *ch_work;
@@ -462,10 +523,6 @@ static void process_tx_done(struct work_struct *work)
 								false);
 }
 
-/**
- * process_open_event() - process an open event task
- * @work:	The open task to process.
- */
 static void process_open_event(struct work_struct *work)
 {
 	struct channel_work *ch_work;
@@ -475,13 +532,33 @@ static void process_open_event(struct work_struct *work)
 	ch_work = container_of(work, struct channel_work, work);
 	ch = ch_work->ch;
 	einfo = ch->edge;
+<<<<<<< HEAD
+=======
+	ret = smd_write_segment_avail(ch->smd_ch);
+	if (ret == -ENODEV)
+		ch->streaming_ch = true;
+	if (ch->remote_legacy || !ch->rcid) {
+		ch->remote_legacy = true;
+		ch->rcid = ch->lcid + LEGACY_RCID_CHANNEL_OFFSET;
+		mutex_lock(&einfo->rx_cmd_lock);
+		einfo->xprt_if.glink_core_if_ptr->rx_cmd_ch_remote_open(
+							&einfo->xprt_if,
+							ch->rcid,
+							ch->name,
+							SMD_TRANS_XPRT_ID);
+		mutex_unlock(&einfo->rx_cmd_lock);
+	}
+	mutex_lock(&ch->ch_tasklet_lock);
+	if (!ch->is_tasklet_enabled) {
+		tasklet_enable(&ch->data_tasklet);
+		ch->is_tasklet_enabled = true;
+	}
+	mutex_unlock(&ch->ch_tasklet_lock);
+	wait_for_completion(&ch->open_notifier);
+>>>>>>> 0e91d2a... Nougat
 	kfree(ch_work);
 }
 
-/**
- * process_close_event() - process a close event task
- * @work:	The close task to process.
- */
 static void process_close_event(struct work_struct *work)
 {
 	struct channel_work *ch_work;
@@ -496,13 +573,20 @@ static void process_close_event(struct work_struct *work)
 		einfo->xprt_if.glink_core_if_ptr->rx_cmd_ch_remote_close(
 								&einfo->xprt_if,
 								ch->rcid);
+<<<<<<< HEAD
+=======
+		mutex_unlock(&einfo->rx_cmd_lock);
+	}
+	mutex_lock(&ch->ch_tasklet_lock);
+	if (ch->is_tasklet_enabled) {
+		tasklet_disable(&ch->data_tasklet);
+		ch->is_tasklet_enabled = false;
+	}
+	mutex_unlock(&ch->ch_tasklet_lock);
+>>>>>>> 0e91d2a... Nougat
 	ch->rcid = 0;
 }
 
-/**
- * process_status_event() - process a status event task
- * @work:	The status task to process.
- */
 static void process_status_event(struct work_struct *work)
 {
 	struct channel_work *ch_work;
@@ -534,10 +618,6 @@ static void process_status_event(struct work_struct *work)
 								sigs);
 }
 
-/**
- * process_reopen_event() - process a reopen ready event task
- * @work:	The reopen ready task to process.
- */
 static void process_reopen_event(struct work_struct *work)
 {
 	struct channel_work *ch_work;
@@ -552,17 +632,21 @@ static void process_reopen_event(struct work_struct *work)
 		einfo->xprt_if.glink_core_if_ptr->rx_cmd_ch_remote_close(
 								&einfo->xprt_if,
 								ch->rcid);
+<<<<<<< HEAD
+=======
+		mutex_unlock(&einfo->rx_cmd_lock);
+	}
+	if (ch->local_legacy) {
+		ch->local_legacy = false;
+		mutex_lock(&einfo->rx_cmd_lock);
+>>>>>>> 0e91d2a... Nougat
 		einfo->xprt_if.glink_core_if_ptr->rx_cmd_ch_close_ack(
 								&einfo->xprt_if,
 								ch->lcid);
 	}
 }
 
-/**
- * process_data_event() - process a data event task
- * @work:	The data task to process.
- */
-static void process_data_event(struct work_struct *work)
+static void process_data_event(unsigned long param)
 {
 	struct channel *ch;
 	struct edge_info *einfo;
@@ -574,7 +658,7 @@ static void process_data_event(struct work_struct *work)
 	unsigned long intents_flags;
 	unsigned long rx_data_flags;
 
-	ch = container_of(work, struct channel, work);
+	ch = (struct channel *)param;
 	einfo = ch->edge;
 
 	spin_lock_irqsave(&ch->rx_data_lock, rx_data_flags);
@@ -597,10 +681,17 @@ static void process_data_event(struct work_struct *work)
 			if (!ch->cur_intent) {
 				spin_unlock_irqrestore(&ch->rx_data_lock,
 								rx_data_flags);
+<<<<<<< HEAD
 				GLINK_DBG("%s %s Reqesting intent '%s' %u:%u\n",
 						__func__, "<SMDXPRT>", ch->name,
 						ch->lcid, ch->rcid);
 				ch->intent_req = true;
+=======
+				SMDXPRT_DBG(einfo,
+					"%s Reqesting intent '%s' %u:%u\n",
+					__func__, ch->name,
+					ch->lcid, ch->rcid);
+>>>>>>> 0e91d2a... Nougat
 				einfo->xprt_if.glink_core_if_ptr->
 						rx_cmd_remote_rx_intent_req(
 								&einfo->xprt_if,
@@ -647,11 +738,6 @@ static void process_data_event(struct work_struct *work)
 	spin_unlock_irqrestore(&ch->rx_data_lock, rx_data_flags);
 }
 
-/**
- * smd_data_ch_notify() - process an event from the smd channel
- * @priv:	The channel the event occurred on.
- * @event:	The event to process
- */
 static void smd_data_ch_notify(void *priv, unsigned event)
 {
 	struct channel *ch = priv;
@@ -659,7 +745,7 @@ static void smd_data_ch_notify(void *priv, unsigned event)
 
 	switch (event) {
 	case SMD_EVENT_DATA:
-		queue_work(ch->wq, &ch->work);
+		tasklet_hi_schedule(&ch->data_tasklet);
 		break;
 	case SMD_EVENT_OPEN:
 		work = kmalloc(sizeof(*work), GFP_ATOMIC);
@@ -711,25 +797,48 @@ static void smd_data_ch_notify(void *priv, unsigned event)
 	}
 }
 
-/**
- * smd_data_ch_close() - close and cleanup SMD data channel
- * @ch:	Channel to cleanup
- *
- * Must be called with einfo->ssr_sync SRCU locked.
- */
 static void smd_data_ch_close(struct channel *ch)
 {
 	struct intent_info *intent;
 	unsigned long flags;
+	struct channel_work *ch_work;
 
 	SMDXPRT_INFO("%s Closing SMD channel lcid %u\n", __func__, ch->lcid);
 
 	ch->is_closing = true;
+<<<<<<< HEAD
 	flush_workqueue(ch->wq);
 
 	smd_close(ch->smd_ch);
 	ch->smd_ch = NULL;
 	ch->local_legacy = false;
+=======
+	ch->tx_resume_needed = false;
+	mutex_lock(&ch->ch_tasklet_lock);
+	if (ch->is_tasklet_enabled) {
+		tasklet_disable(&ch->data_tasklet);
+		ch->is_tasklet_enabled = false;
+	}
+	mutex_unlock(&ch->ch_tasklet_lock);
+	flush_workqueue(ch->wq);
+
+	mutex_lock(&ch->ch_probe_lock);
+	ch->wait_for_probe = false;
+	if (ch->smd_ch) {
+		smd_close(ch->smd_ch);
+		ch->smd_ch = NULL;
+	} else if (ch->local_legacy) {
+		ch_work = kzalloc(sizeof(*ch_work), GFP_KERNEL);
+		ch->local_legacy = false;
+		if (ch_work) {
+			ch_work->ch = ch;
+			INIT_WORK(&ch_work->work, deferred_close_ack);
+			queue_work(ch->wq, &ch_work->work);
+		}
+	}
+	mutex_unlock(&ch->ch_probe_lock);
+
+>>>>>>> 0e91d2a... Nougat
 
 	spin_lock_irqsave(&ch->intents_lock, flags);
 	while (!list_empty(&ch->intents)) {
@@ -834,17 +943,6 @@ static struct platform_device dummy_device = {
 	.name = "dummydriver12345",
 };
 
-/**
- * add_platform_driver() - register the needed platform driver for a channel
- * @ch:	The channel that needs a platform driver registered.
- *
- * SMD channels are unique by name/edge tuples, but the platform driver can
- * only specify the name of the channel, so multiple unique SMD channels can
- * be covered under one platform driver.  Therfore we need to smartly manage
- * the muxing of channels on platform drivers.
- *
- * Return: Success or standard linux error code.
- */
 static int add_platform_driver(struct channel *ch)
 {
 	struct pdrvs *pdrv;
@@ -881,11 +979,15 @@ static int add_platform_driver(struct channel *ch)
 	} else {
 		if (ch->had_probed)
 			data_ch_probe_body(ch);
+<<<<<<< HEAD
 
 		/*
 		 * channel_probe might have seen the device we want, but
 		 * returned EPROBE_DEFER so we need to kick the deferred list
 		 */
+=======
+		mutex_unlock(&ch->ch_probe_lock);
+>>>>>>> 0e91d2a... Nougat
 		platform_driver_register(&dummy_driver);
 		if (first) {
 			platform_device_register(&dummy_device);
@@ -899,14 +1001,6 @@ out:
 	return ret;
 }
 
-/**
- * tx_cmd_version() - convert a version cmd to wire format and transmit
- * @if_ptr:	The transport to transmit on.
- * @version:	The version number to encode.
- * @features:	The features information to encode.
- *
- * The remote side doesn't speak G-Link, so we fake the version negotiation.
- */
 static void tx_cmd_version(struct glink_transport_if *if_ptr, uint32_t version,
 			   uint32_t features)
 {
@@ -921,29 +1015,12 @@ static void tx_cmd_version(struct glink_transport_if *if_ptr, uint32_t version,
 								features);
 }
 
-/**
- * tx_cmd_version_ack() - convert a version ack cmd to wire format and transmit
- * @if_ptr:	The transport to transmit on.
- * @version:	The version number to encode.
- * @features:	The features information to encode.
- *
- * The remote side doesn't speak G-Link.  The core is acking a version command
- * we faked.  Do nothing.
- */
 static void tx_cmd_version_ack(struct glink_transport_if *if_ptr,
 			       uint32_t version,
 			       uint32_t features)
 {
 }
 
-/**
- * set_version() - activate a negotiated version and feature set
- * @if_ptr:	The transport to configure.
- * @version:	The version to use.
- * @features:	The features to use.
- *
- * Return: The supported capabilities of the transport.
- */
 static uint32_t set_version(struct glink_transport_if *if_ptr, uint32_t version,
 			uint32_t features)
 {
@@ -955,15 +1032,6 @@ static uint32_t set_version(struct glink_transport_if *if_ptr, uint32_t version,
 				GCAP_INTENTLESS | GCAP_SIGNALS : GCAP_SIGNALS;
 }
 
-/**
- * tx_cmd_ch_open() - convert a channel open cmd to wire format and transmit
- * @if_ptr:	The transport to transmit on.
- * @lcid:	The local channel id to encode.
- * @name:	The channel name to encode.
- * @req_xprt:	The transport the core would like to migrate this channel to.
- *
- * Return: 0 on success or standard Linux error code.
- */
 static int tx_cmd_ch_open(struct glink_transport_if *if_ptr, uint32_t lcid,
 			  const char *name, uint16_t req_xprt)
 {
@@ -1005,11 +1073,22 @@ static int tx_cmd_ch_open(struct glink_transport_if *if_ptr, uint32_t lcid,
 		}
 		strlcpy(ch->name, name, GLINK_NAME_SIZE);
 		ch->edge = einfo;
+<<<<<<< HEAD
+=======
+		mutex_init(&ch->ch_probe_lock);
+		mutex_init(&ch->ch_tasklet_lock);
+		init_completion(&ch->open_notifier);
+>>>>>>> 0e91d2a... Nougat
 		INIT_LIST_HEAD(&ch->intents);
 		INIT_LIST_HEAD(&ch->used_intents);
 		spin_lock_init(&ch->intents_lock);
 		spin_lock_init(&ch->rx_data_lock);
-		INIT_WORK(&ch->work, process_data_event);
+		mutex_lock(&ch->ch_tasklet_lock);
+		tasklet_init(&ch->data_tasklet, process_data_event,
+				(unsigned long)ch);
+		tasklet_disable(&ch->data_tasklet);
+		ch->is_tasklet_enabled = false;
+		mutex_unlock(&ch->ch_tasklet_lock);
 		ch->wq = create_singlethread_workqueue(ch->name);
 		if (!ch->wq) {
 			SMDXPRT_ERR("%s: channel workqueue create failed\n",
@@ -1018,7 +1097,29 @@ static int tx_cmd_ch_open(struct glink_transport_if *if_ptr, uint32_t lcid,
 			srcu_read_unlock(&einfo->ssr_sync, rcu_id);
 			return -ENOMEM;
 		}
+<<<<<<< HEAD
 		list_add_tail(&ch->node, &einfo->channels);
+=======
+
+		temp_ch = ch;
+		spin_lock_irqsave(&einfo->channels_lock, flags);
+		list_for_each_entry(ch, &einfo->channels, node)
+			if (!strcmp(name, ch->name)) {
+				found = true;
+				break;
+			}
+
+		if (!found) {
+			ch = temp_ch;
+			list_add_tail(&ch->node, &einfo->channels);
+			spin_unlock_irqrestore(&einfo->channels_lock, flags);
+		} else {
+			spin_unlock_irqrestore(&einfo->channels_lock, flags);
+			tasklet_kill(&temp_ch->data_tasklet);
+			destroy_workqueue(temp_ch->wq);
+			kfree(temp_ch);
+		}
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	ch->lcid = lcid;
@@ -1045,24 +1146,24 @@ static int tx_cmd_ch_open(struct glink_transport_if *if_ptr, uint32_t lcid,
 		ch->rcid = lcid + LEGACY_RCID_CHANNEL_OFFSET;
 		ch->local_legacy = true;
 		ch->remote_legacy = true;
+		reinit_completion(&ch->open_notifier);
 		ret = add_platform_driver(ch);
 		if (!ret)
 			einfo->xprt_if.glink_core_if_ptr->rx_cmd_ch_open_ack(
 						&einfo->xprt_if,
 						ch->lcid, SMD_TRANS_XPRT_ID);
+<<<<<<< HEAD
+=======
+			mutex_unlock(&einfo->rx_cmd_lock);
+		}
+		complete_all(&ch->open_notifier);
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	srcu_read_unlock(&einfo->ssr_sync, rcu_id);
 	return ret;
 }
 
-/**
- * tx_cmd_ch_close() - convert a channel close cmd to wire format and transmit
- * @if_ptr:	The transport to transmit on.
- * @lcid:	The local channel id to encode.
- *
- * Return: 0 on success or standard Linux error code.
- */
 static int tx_cmd_ch_close(struct glink_transport_if *if_ptr, uint32_t lcid)
 {
 	struct command {
@@ -1112,13 +1213,6 @@ static int tx_cmd_ch_close(struct glink_transport_if *if_ptr, uint32_t lcid)
 	return 0;
 }
 
-/**
- * tx_cmd_ch_remote_open_ack() - convert a channel open ack cmd to wire format
- *				 and transmit
- * @if_ptr:	The transport to transmit on.
- * @rcid:	The remote channel id to encode.
- * @xprt_resp:	The response to a transport migration request.
- */
 static void tx_cmd_ch_remote_open_ack(struct glink_transport_if *if_ptr,
 				      uint32_t rcid, uint16_t xprt_resp)
 {
@@ -1170,12 +1264,6 @@ static void tx_cmd_ch_remote_open_ack(struct glink_transport_if *if_ptr,
 	mutex_unlock(&einfo->smd_lock);
 }
 
-/**
- * tx_cmd_ch_remote_close_ack() - convert a channel close ack cmd to wire format
- *				  and transmit
- * @if_ptr:	The transport to transmit on.
- * @rcid:	The remote channel id to encode.
- */
 static void tx_cmd_ch_remote_close_ack(struct glink_transport_if *if_ptr,
 				       uint32_t rcid)
 {
@@ -1216,12 +1304,6 @@ static void tx_cmd_ch_remote_close_ack(struct glink_transport_if *if_ptr,
 	ch->remote_legacy = false;
 }
 
-/**
- * ssr() - process a subsystem restart notification of a transport
- * @if_ptr:	The transport to restart.
- *
- * Return: 0 on success or standard Linux error code.
- */
 static int ssr(struct glink_transport_if *if_ptr)
 {
 	struct edge_info *einfo;
@@ -1240,6 +1322,12 @@ static int ssr(struct glink_transport_if *if_ptr)
 		if (!ch->smd_ch)
 			continue;
 		ch->is_closing = true;
+		mutex_lock(&ch->ch_tasklet_lock);
+		if (ch->is_tasklet_enabled) {
+			tasklet_disable(&ch->data_tasklet);
+			ch->is_tasklet_enabled = false;
+		}
+		mutex_unlock(&ch->ch_tasklet_lock);
 		flush_workqueue(ch->wq);
 		smd_close(ch->smd_ch);
 		ch->smd_ch = NULL;
@@ -1271,20 +1359,6 @@ static int ssr(struct glink_transport_if *if_ptr)
 	return 0;
 }
 
-/**
- * allocate_rx_intent() - allocate/reserve space for RX Intent
- * @if_ptr:	The transport the intent is associated with.
- * @size:	size of intent.
- * @intent:	Pointer to the intent structure.
- *
- * Assign "data" with the buffer created, since the transport creates
- * a linear buffer and "iovec" with the "intent" itself, so that
- * the data can be passed to a client that receives only vector buffer.
- * Note that returning NULL for the pointer is valid (it means that space has
- * been reserved, but the actual pointer will be provided later).
- *
- * Return: 0 on success or standard Linux error code.
- */
 static int allocate_rx_intent(struct glink_transport_if *if_ptr, size_t size,
 			      struct glink_core_rx_intent *intent)
 {
@@ -1301,13 +1375,6 @@ static int allocate_rx_intent(struct glink_transport_if *if_ptr, size_t size,
 	return 0;
 }
 
-/**
- * deallocate_rx_intent() - Deallocate space created for RX Intent
- * @if_ptr:	The transport the intent is associated with.
- * @intent:	Pointer to the intent structure.
- *
- * Return: 0 on success or standard Linux error code.
- */
 static int deallocate_rx_intent(struct glink_transport_if *if_ptr,
 				struct glink_core_rx_intent *intent)
 {
@@ -1321,6 +1388,7 @@ static int deallocate_rx_intent(struct glink_transport_if *if_ptr,
 	return 0;
 }
 
+<<<<<<< HEAD
 /**
  * tx_cmd_local_rx_intent() - convert an rx intent cmd to wire format and
  *			      transmit
@@ -1331,6 +1399,16 @@ static int deallocate_rx_intent(struct glink_transport_if *if_ptr,
  *
  * Return: 0 on success or standard Linux error code.
  */
+=======
+static void check_and_resume_rx(struct channel *ch, size_t intent_size)
+{
+	if (ch->intent_req && ch->intent_req_size <= intent_size) {
+		ch->intent_req = false;
+		tasklet_hi_schedule(&ch->data_tasklet);
+	}
+}
+
+>>>>>>> 0e91d2a... Nougat
 static int tx_cmd_local_rx_intent(struct glink_transport_if *if_ptr,
 				  uint32_t lcid, size_t size, uint32_t liid)
 {
@@ -1375,13 +1453,6 @@ static int tx_cmd_local_rx_intent(struct glink_transport_if *if_ptr,
 	return 0;
 }
 
-/**
- * tx_cmd_local_rx_done() - convert an rx done cmd to wire format and transmit
- * @if_ptr:	The transport to transmit on.
- * @lcid:	The local channel id to encode.
- * @liid:	The local intent id to encode.
- * @reuse:	Reuse the consumed intent.
- */
 static void tx_cmd_local_rx_done(struct glink_transport_if *if_ptr,
 				 uint32_t lcid, uint32_t liid, bool reuse)
 {
@@ -1488,26 +1559,34 @@ static int tx(struct glink_transport_if *if_ptr, uint32_t lcid,
 	return rc;
 }
 
-/**
- * tx_cmd_rx_intent_req() - convert an rx intent request cmd to wire format and
- *			    transmit
- * @if_ptr:	The transport to transmit on.
- * @lcid:	The local channel id to encode.
- * @size:	The requested intent size to encode.
- *
- * Return: 0 on success or standard Linux error code.
- */
 static int tx_cmd_rx_intent_req(struct glink_transport_if *if_ptr,
 				uint32_t lcid, size_t size)
 {
 	struct edge_info *einfo;
 	struct channel *ch;
+<<<<<<< HEAD
 
 	einfo = container_of(if_ptr, struct edge_info, xprt_if);
+=======
+	unsigned long flags;
+	int rcu_id;
+
+	einfo = container_of(if_ptr, struct edge_info, xprt_if);
+	rcu_id = srcu_read_lock(&einfo->ssr_sync);
+	if (einfo->in_ssr) {
+		srcu_read_unlock(&einfo->ssr_sync, rcu_id);
+		return -EFAULT;
+	}
+	spin_lock_irqsave(&einfo->channels_lock, flags);
+>>>>>>> 0e91d2a... Nougat
 	list_for_each_entry(ch, &einfo->channels, node) {
 		if (lcid == ch->lcid)
 			break;
 	}
+<<<<<<< HEAD
+=======
+	spin_unlock_irqrestore(&einfo->channels_lock, flags);
+>>>>>>> 0e91d2a... Nougat
 	einfo->xprt_if.glink_core_if_ptr->rx_cmd_rx_intent_req_ack(
 								&einfo->xprt_if,
 								ch->rcid,
@@ -1517,35 +1596,19 @@ static int tx_cmd_rx_intent_req(struct glink_transport_if *if_ptr,
 							ch->rcid,
 							ch->next_intent_id++,
 							size);
+<<<<<<< HEAD
+=======
+	srcu_read_unlock(&einfo->ssr_sync, rcu_id);
+>>>>>>> 0e91d2a... Nougat
 	return 0;
 }
 
-/**
- * tx_cmd_rx_intent_req_ack() - convert an rx intent request ack cmd to wire
- *				format and transmit
- * @if_ptr:	The transport to transmit on.
- * @lcid:	The local channel id to encode.
- * @granted:	The request response to encode.
- *
- * The remote side doesn't speak G-Link.  The core is just acking a request we
- * faked.  Do nothing.
- *
- * Return: 0 on success or standard Linux error code.
- */
 static int tx_cmd_remote_rx_intent_req_ack(struct glink_transport_if *if_ptr,
 					   uint32_t lcid, bool granted)
 {
 	return 0;
 }
 
-/**
- * tx_cmd_set_sigs() - convert a signal cmd to wire format and transmit
- * @if_ptr:	The transport to transmit on.
- * @lcid:	The local channel id to encode.
- * @sigs:	The signals to encode.
- *
- * Return: 0 on success or standard Linux error code.
- */
 static int tx_cmd_set_sigs(struct glink_transport_if *if_ptr, uint32_t lcid,
 			   uint32_t sigs)
 {
@@ -1583,14 +1646,6 @@ static int tx_cmd_set_sigs(struct glink_transport_if *if_ptr, uint32_t lcid,
 	return smd_tiocmset(ch->smd_ch, set, clear);
 }
 
-/**
- * poll() - poll for data on a channel
- * @if_ptr:	The transport to transmit on.
- * @lcid:	The local channel id for the channel.
- *
- * Return: 0 if no data available, 1 if data available, or standard Linux error
- * code.
- */
 static int poll(struct glink_transport_if *if_ptr, uint32_t lcid)
 {
 	struct edge_info *einfo;
@@ -1604,19 +1659,10 @@ static int poll(struct glink_transport_if *if_ptr, uint32_t lcid)
 	}
 	rc = smd_is_pkt_avail(ch->smd_ch);
 	if (rc == 1)
-		process_data_event(&ch->work);
+		process_data_event((unsigned long)ch);
 	return rc;
 }
 
-/**
- * mask_rx_irq() - mask the receive irq
- * @if_ptr:	The transport to transmit on.
- * @lcid:	The local channel id for the channel.
- * @mask:	True to mask the irq, false to unmask.
- * @pstruct:	Platform defined structure for handling the masking.
- *
- * Return: 0 on success or standard Linux error code.
- */
 static int mask_rx_irq(struct glink_transport_if *if_ptr, uint32_t lcid,
 		       bool mask, void *pstruct)
 {
@@ -1631,14 +1677,6 @@ static int mask_rx_irq(struct glink_transport_if *if_ptr, uint32_t lcid,
 	return smd_mask_receive_interrupt(ch->smd_ch, mask, pstruct);
 }
 
-/**
- * negotiate_features_v1() - determine what features of a version can be used
- * @if_ptr:	The transport for which features are negotiated for.
- * @version:	The version negotiated.
- * @features:	The set of requested features.
- *
- * Return: What set of the requested features can be supported.
- */
 static uint32_t negotiate_features_v1(struct glink_transport_if *if_ptr,
 				      const struct glink_core_version *version,
 				      uint32_t features)
@@ -1646,10 +1684,6 @@ static uint32_t negotiate_features_v1(struct glink_transport_if *if_ptr,
 	return features & version->features;
 }
 
-/**
-* init_xprt_if() - initialize the xprt_if for an edge
-* @einfo:	The edge to initialize.
-*/
 static void init_xprt_if(struct edge_info *einfo)
 {
 	einfo->xprt_if.tx_cmd_version = tx_cmd_version;
@@ -1673,10 +1707,6 @@ static void init_xprt_if(struct edge_info *einfo)
 	einfo->xprt_if.mask_rx_irq = mask_rx_irq;
 }
 
-/**
- * init_xprt_cfg() - initialize the xprt_cfg for an edge
- * @einfo:	The edge to initialize.
- */
 static void init_xprt_cfg(struct edge_info *einfo)
 {
 	einfo->xprt_cfg.name = XPRT_NAME;

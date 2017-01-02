@@ -965,6 +965,7 @@ struct journal_s
 	__u32 j_csum_seed;
 };
 
+<<<<<<< HEAD
 /*
  * Journal flag definitions
  */
@@ -977,6 +978,16 @@ struct journal_s
 #define JBD2_ABORT_ON_SYNCDATA_ERR	0x040	/* Abort the journal on file
 						 * data write error in ordered
 						 * mode */
+=======
+#define JBD2_UNMOUNT	0x001	
+#define JBD2_ABORT	0x002	
+#define JBD2_ACK_ERR	0x004	
+#define JBD2_FLUSHED	0x008	
+#define JBD2_LOADED	0x010	
+#define JBD2_BARRIER	0x020	
+#define JBD2_ABORT_ON_SYNCDATA_ERR	0x040	
+#define JBD2_REC_ERR	0x080	
+>>>>>>> 0e91d2a... Nougat
 
 /*
  * Function declarations for the journaling transaction and buffer

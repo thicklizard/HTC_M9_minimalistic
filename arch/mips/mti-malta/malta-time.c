@@ -167,6 +167,24 @@ unsigned int __cpuinit get_c0_compare_int(void)
 	return mips_cpu_timer_irq;
 }
 
+<<<<<<< HEAD
+=======
+static void __init init_rtc(void)
+{
+	unsigned char freq, ctrl;
+
+	/* Set 32KHz time base if not already set */
+	freq = CMOS_READ(RTC_FREQ_SELECT);
+	if ((freq & RTC_DIV_CTL) != RTC_REF_CLCK_32KHZ)
+		CMOS_WRITE(RTC_REF_CLCK_32KHZ, RTC_FREQ_SELECT);
+
+	/* Ensure SET bit is clear so RTC can run */
+	ctrl = CMOS_READ(RTC_CONTROL);
+	if (ctrl & RTC_SET)
+		CMOS_WRITE(ctrl & ~RTC_SET, RTC_CONTROL);
+}
+
+>>>>>>> 0e91d2a... Nougat
 void __init plat_time_init(void)
 {
 	unsigned int prid = read_c0_prid() & 0xffff00;

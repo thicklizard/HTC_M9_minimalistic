@@ -25,7 +25,12 @@ int sysctl_tcp_app_win __read_mostly = 31;
 int sysctl_tcp_adv_win_scale __read_mostly = 1;
 EXPORT_SYMBOL(sysctl_tcp_adv_win_scale);
 
+<<<<<<< HEAD
 int sysctl_tcp_challenge_ack_limit = 100;
+=======
+/* rfc5961 challenge ack rate limiting */
+int sysctl_tcp_challenge_ack_limit = 1000;
+>>>>>>> 0e91d2a... Nougat
 
 int sysctl_tcp_stdurg __read_mostly;
 int sysctl_tcp_rfc1337 __read_mostly;
@@ -2512,12 +2517,18 @@ static void tcp_send_challenge_ack(struct sock *sk)
 	static u32 challenge_timestamp;
 	static unsigned int challenge_count;
 	u32 now = jiffies / HZ;
+	u32 count;
 
 	if (now != challenge_timestamp) {
+		u32 half = (sysctl_tcp_challenge_ack_limit + 1) >> 1;
+
 		challenge_timestamp = now;
-		challenge_count = 0;
+		WRITE_ONCE(challenge_count, half +
+			   prandom_u32_max(sysctl_tcp_challenge_ack_limit));
 	}
-	if (++challenge_count <= sysctl_tcp_challenge_ack_limit) {
+	count = READ_ONCE(challenge_count);
+	if (count > 0) {
+		WRITE_ONCE(challenge_count, count - 1);
 		NET_INC_STATS_BH(sock_net(sk), LINUX_MIB_TCPCHALLENGEACK);
 		tcp_send_ack(sk);
 	}
@@ -3367,13 +3378,20 @@ static int __must_check tcp_queue_rcv(struct sock *sk, struct sk_buff *skb, int 
 
 int tcp_send_rcvq(struct sock *sk, struct msghdr *msg, size_t size)
 {
+<<<<<<< HEAD
 	struct sk_buff *skb = NULL;
 	struct tcphdr *th;
+=======
+	struct sk_buff *skb;
+	int err = -ENOMEM;
+	int data_len = 0;
+>>>>>>> 0e91d2a... Nougat
 	bool fragstolen;
 
 	if (size == 0)
 		return 0;
 
+<<<<<<< HEAD
 	skb = alloc_skb(size + sizeof(*th), sk->sk_allocation);
 	if (!skb)
 		goto err;
@@ -3386,6 +3404,29 @@ int tcp_send_rcvq(struct sock *sk, struct msghdr *msg, size_t size)
 	memset(th, 0, sizeof(*th));
 
 	if (memcpy_fromiovec(skb_put(skb, size), msg->msg_iov, size))
+=======
+	if (size > PAGE_SIZE) {
+		int npages = min_t(size_t, size >> PAGE_SHIFT, MAX_SKB_FRAGS);
+
+		data_len = npages << PAGE_SHIFT;
+		size = data_len + (size & ~PAGE_MASK);
+	}
+	skb = alloc_skb_with_frags(size - data_len, data_len,
+				   PAGE_ALLOC_COSTLY_ORDER,
+				   &err, sk->sk_allocation);
+	if (!skb)
+		goto err;
+
+	skb_put(skb, size - data_len);
+	skb->data_len = data_len;
+	skb->len = size;
+
+	if (tcp_try_rmem_schedule(sk, skb, skb->truesize))
+		goto err_free;
+
+	err = skb_copy_datagram_iovec(skb, 0, msg->msg_iov, size);
+	if (err)
+>>>>>>> 0e91d2a... Nougat
 		goto err_free;
 
 	TCP_SKB_CB(skb)->seq = tcp_sk(sk)->rcv_nxt;
@@ -3401,7 +3442,8 @@ int tcp_send_rcvq(struct sock *sk, struct msghdr *msg, size_t size)
 err_free:
 	kfree_skb(skb);
 err:
-	return -ENOMEM;
+	return err;
+
 }
 
 static void tcp_data_queue(struct sock *sk, struct sk_buff *skb)
@@ -4394,6 +4436,7 @@ discard:
 		}
 
 		tp->rcv_nxt = TCP_SKB_CB(skb)->seq + 1;
+		tp->copied_seq = tp->rcv_nxt;
 		tp->rcv_wup = TCP_SKB_CB(skb)->seq + 1;
 
 		tp->snd_wnd    = ntohs(th->window);

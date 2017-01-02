@@ -157,7 +157,14 @@ static int batadv_interface_tx(struct sk_buff *skb,
 	short vid __maybe_unused = -1;
 	bool do_bcast = false;
 	uint32_t seqno;
+<<<<<<< HEAD
 	unsigned long brd_delay = 1;
+=======
+	int gw_mode;
+	enum batadv_forw_mode forw_mode;
+	struct batadv_orig_node *mcast_single_orig = NULL;
+	int network_offset = ETH_HLEN;
+>>>>>>> 0e91d2a... Nougat
 
 	if (atomic_read(&bat_priv->mesh_state) != BATADV_MESH_ACTIVE)
 		goto dropped;
@@ -169,13 +176,17 @@ static int batadv_interface_tx(struct sk_buff *skb,
 		vhdr = (struct vlan_ethhdr *)skb->data;
 		vid = ntohs(vhdr->h_vlan_TCI) & VLAN_VID_MASK;
 
-		if (vhdr->h_vlan_encapsulated_proto != ethertype)
+		if (vhdr->h_vlan_encapsulated_proto != ethertype) {
+			network_offset += VLAN_HLEN;
 			break;
+		}
 
 		/* fall through */
 	case ETH_P_BATMAN:
 		goto dropped;
 	}
+
+	skb_set_network_header(skb, network_offset);
 
 	if (batadv_bla_tx(bat_priv, skb, vid))
 		goto dropped;

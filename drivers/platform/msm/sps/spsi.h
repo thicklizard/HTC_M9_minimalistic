@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -49,6 +53,13 @@
 	((sizeof(int) == sizeof(long)) ? 0 : (SPSRM_CLEAR << 32))
 
 #define MAX_MSG_LEN 80
+<<<<<<< HEAD
+=======
+#define SPS_IPC_LOGPAGES 10
+#define SPS_IPC_REG_DUMP_FACTOR 3
+#define SPS_IPC_DEFAULT_LOGLEVEL 3
+#define SPS_IPC_MAX_LOGLEVEL 4
+>>>>>>> 0e91d2a... Nougat
 
 extern u32 d_type;
 extern bool enhd_pipe;

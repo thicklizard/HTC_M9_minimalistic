@@ -757,6 +757,10 @@ static void handle_thermal_trip(struct thermal_zone_device *tz, int trip)
 {
 	enum thermal_trip_type type;
 
+	/* Ignore disabled trip points */
+	if (test_bit(trip, &tz->trips_disabled))
+		return;
+
 	tz->ops->get_trip_type(tz, trip, &type);
 
 	if (type == THERMAL_TRIP_CRITICAL || type == THERMAL_TRIP_HOT ||
@@ -839,6 +843,27 @@ static void update_temperature(struct thermal_zone_device *tz)
 	tz->last_temperature = tz->temperature;
 	tz->temperature = temp;
 	mutex_unlock(&tz->lock);
+<<<<<<< HEAD
+=======
+
+	trace_thermal_temperature(tz);
+	if (tz->last_temperature == THERMAL_TEMP_INVALID)
+		dev_dbg(&tz->device, "last_temperature N/A, current_temperature=%d\n",
+			tz->temperature);
+	else
+		dev_dbg(&tz->device, "last_temperature=%d, current_temperature=%d\n",
+			tz->last_temperature, tz->temperature);
+}
+
+static void thermal_zone_device_reset(struct thermal_zone_device *tz)
+{
+	struct thermal_instance *pos;
+
+	tz->temperature = THERMAL_TEMP_INVALID;
+	tz->passive = 0;
+	list_for_each_entry(pos, &tz->thermal_instances, tz_node)
+		pos->initialized = false;
+>>>>>>> 0e91d2a... Nougat
 }
 
 void thermal_zone_device_update(struct thermal_zone_device *tz)
@@ -1680,6 +1705,7 @@ int thermal_zone_bind_cooling_device(struct thermal_zone_device *tz,
 	if (!result) {
 		list_add_tail(&dev->tz_node, &tz->thermal_instances);
 		list_add_tail(&dev->cdev_node, &cdev->thermal_instances);
+		atomic_set(&tz->need_update, 1);
 	}
 	mutex_unlock(&cdev->lock);
 	mutex_unlock(&tz->lock);
@@ -1781,6 +1807,7 @@ thermal_cooling_device_register(char *type, void *devdata,
 				const struct thermal_cooling_device_ops *ops)
 {
 	struct thermal_cooling_device *cdev;
+	struct thermal_zone_device *pos = NULL;
 	int result;
 
 	if (type && strlen(type) >= THERMAL_NAME_LENGTH)
@@ -1837,6 +1864,12 @@ thermal_cooling_device_register(char *type, void *devdata,
 
 	/* Update binding information for 'this' new cdev */
 	bind_cdev(cdev);
+
+	mutex_lock(&thermal_list_lock);
+	list_for_each_entry(pos, &thermal_tz_list, node)
+		if (atomic_cmpxchg(&pos->need_update, 1, 0))
+			thermal_zone_device_update(pos);
+	mutex_unlock(&thermal_list_lock);
 
 	return cdev;
 
@@ -2089,6 +2122,7 @@ struct thermal_zone_device *thermal_zone_device_register(const char *type,
 {
 	struct thermal_zone_device *tz;
 	enum thermal_trip_type trip_type;
+	unsigned long trip_temp;
 	int result;
 	int count;
 	int passive = 0;
@@ -2126,6 +2160,8 @@ struct thermal_zone_device *thermal_zone_device_register(const char *type,
 	tz->trips = trips;
 	tz->passive_delay = passive_delay;
 	tz->polling_delay = polling_delay;
+	/* A new thermal zone needs to be updated anyway. */
+	atomic_set(&tz->need_update, 1);
 
 	dev_set_name(&tz->device, "thermal_zone%d", tz->id);
 	result = device_register(&tz->device);
@@ -2157,9 +2193,15 @@ struct thermal_zone_device *thermal_zone_device_register(const char *type,
 		goto unregister;
 
 	for (count = 0; count < trips; count++) {
-		tz->ops->get_trip_type(tz, count, &trip_type);
+		if (tz->ops->get_trip_type(tz, count, &trip_type))
+			set_bit(count, &tz->trips_disabled);
 		if (trip_type == THERMAL_TRIP_PASSIVE)
 			passive = 1;
+		if (tz->ops->get_trip_temp(tz, count, &trip_temp))
+			set_bit(count, &tz->trips_disabled);
+		/* Check for bogus trip points */
+		if (trip_temp == 0)
+			set_bit(count, &tz->trips_disabled);
 	}
 
 	if (!passive) {
@@ -2206,7 +2248,17 @@ struct thermal_zone_device *thermal_zone_device_register(const char *type,
 
 	INIT_DELAYED_WORK(&(tz->poll_queue), thermal_zone_device_check);
 
+<<<<<<< HEAD
 	thermal_zone_device_update(tz);
+=======
+	if (!tz->ops->get_temp)
+		thermal_zone_device_set_polling(tz, 0);
+
+	thermal_zone_device_reset(tz);
+	/* Update the new thermal zone and mark it as already updated. */
+	if (atomic_cmpxchg(&tz->need_update, 1, 0))
+		thermal_zone_device_update(tz);
+>>>>>>> 0e91d2a... Nougat
 
 	if (!result)
 		return tz;

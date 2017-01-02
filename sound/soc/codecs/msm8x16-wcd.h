@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -58,9 +62,77 @@ enum codec_versions {
 	TOMBAK_1_0,
 	TOMBAK_2_0,
 	CONGA,
+<<<<<<< HEAD
 	UNSUPPORTED,
 };
 
+=======
+	CAJON,
+	CAJON_2_0,
+	DIANGU,
+	UNSUPPORTED,
+};
+
+/* Support different hph modes */
+enum {
+	NORMAL_MODE = 0,
+	HD2_MODE,
+};
+
+/* Codec supports 1 compander */
+enum {
+	COMPANDER_NONE = 0,
+	COMPANDER_1, /* HPHL/R */
+	COMPANDER_MAX,
+};
+
+enum wcd_curr_ref {
+	I_h4_UA = 0,
+	I_pt5_UA,
+	I_14_UA,
+	I_l4_UA,
+	I_1_UA,
+};
+
+enum wcd_mbhc_imp_det_pin {
+	WCD_MBHC_DET_NONE = 0,
+	WCD_MBHC_DET_HPHL,
+	WCD_MBHC_DET_HPHR,
+	WCD_MBHC_DET_BOTH,
+};
+
+
+/* Each micbias can be assigned to one of three cfilters
+ * Vbatt_min >= .15V + ldoh_v
+ * ldoh_v >= .15v + cfiltx_mv
+ * If ldoh_v = 1.95 160 mv < cfiltx_mv < 1800 mv
+ * If ldoh_v = 2.35 200 mv < cfiltx_mv < 2200 mv
+ * If ldoh_v = 2.75 240 mv < cfiltx_mv < 2600 mv
+ * If ldoh_v = 2.85 250 mv < cfiltx_mv < 2700 mv
+ */
+
+struct wcd9xxx_micbias_setting {
+	u8 ldoh_v;
+	u32 cfilt1_mv; /* in mv */
+	u32 cfilt2_mv; /* in mv */
+	u32 cfilt3_mv; /* in mv */
+	/* Different WCD9xxx series codecs may not
+	 * have 4 mic biases. If a codec has fewer
+	 * mic biases, some of these properties will
+	 * not be used.
+	 */
+	u8 bias1_cfilt_sel;
+	u8 bias2_cfilt_sel;
+	u8 bias3_cfilt_sel;
+	u8 bias4_cfilt_sel;
+	u8 bias1_cap_mode;
+	u8 bias2_cap_mode;
+	u8 bias3_cap_mode;
+	u8 bias4_cap_mode;
+	bool bias2_is_headset_only;
+};
+
+>>>>>>> 0e91d2a... Nougat
 enum msm8x16_wcd_pid_current {
 	MSM8X16_WCD_PID_MIC_2P5_UA,
 	MSM8X16_WCD_PID_MIC_5_UA,
@@ -163,6 +235,7 @@ struct msm8916_asoc_mach_data {
 	int spk_ext_pa_gpio;
 	int mclk_freq;
 	int lb_mode;
+	int afe_clk_ver;
 	u8 micbias1_cap_mode;
 	u8 micbias2_cap_mode;
 	atomic_t mclk_rsc_ref;
@@ -170,6 +243,10 @@ struct msm8916_asoc_mach_data {
 	struct mutex cdc_mclk_mutex;
 	struct delayed_work disable_mclk_work;
 	struct afe_digital_clk_cfg digital_cdc_clk;
+<<<<<<< HEAD
+=======
+	struct afe_clk_set digital_cdc_core_clk;
+>>>>>>> 0e91d2a... Nougat
 	void __iomem *vaddr_gpio_mux_spkr_ctl;
 	void __iomem *vaddr_gpio_mux_mic_ctl;
 	void __iomem *vaddr_gpio_mux_pcm_ctl;
@@ -228,6 +305,14 @@ struct msm8x16_wcd_priv {
 	bool mclk_enabled;
 	bool clock_active;
 	bool config_mode_active;
+<<<<<<< HEAD
+=======
+	u16 boost_option;
+	/* mode to select hd2 */
+	u32 hph_mode;
+	/* compander used for each rx chain */
+	u32 comp_enabled[MSM8X16_WCD_RX_MAX];
+>>>>>>> 0e91d2a... Nougat
 	bool spk_boost_set;
 	bool ear_pa_boost_set;
 	bool ext_spk_boost_set;
@@ -240,6 +325,7 @@ struct msm8x16_wcd_priv {
 	struct fw_info *fw_data;
 	struct blocking_notifier_head notifier;
 	int (*codec_spk_ext_pa_cb)(struct snd_soc_codec *codec, int enable);
+	int (*codec_hph_comp_gpio)(bool enable);
 	unsigned long status_mask;
 
 };
@@ -252,14 +338,22 @@ extern int msm8x16_wcd_hs_detect(struct snd_soc_codec *codec,
 
 extern void msm8x16_wcd_hs_detect_exit(struct snd_soc_codec *codec);
 
+<<<<<<< HEAD
 extern int msm8x16_register_notifier(struct snd_soc_codec *codec,
 				     struct notifier_block *nblock);
 
 extern int msm8x16_unregister_notifier(struct snd_soc_codec *codec,
 				     struct notifier_block *nblock);
+=======
+extern void msm8x16_update_int_spk_boost(bool enable);
+>>>>>>> 0e91d2a... Nougat
 
 extern void msm8x16_wcd_spk_ext_pa_cb(
 		int (*codec_spk_ext_pa)(struct snd_soc_codec *codec,
 		int enable), struct snd_soc_codec *codec);
+
+extern void msm8x16_wcd_hph_comp_cb(
+		int (*codec_hph_comp_gpio)(bool enable),
+		struct snd_soc_codec *codec);
 #endif
 

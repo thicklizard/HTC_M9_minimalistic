@@ -69,19 +69,70 @@ config MSM_GLINK_SMEM_NATIVE_XPRT
 	  transport to only connecting with entities internal to the
 	  System-on-Chip.
 
+<<<<<<< HEAD
 config MSM_GLINK_PKT
 	bool "Enable device interface for GLINK packet channels"
 	depends on MSM_GLINK
+=======
+config MSM_GLADIATOR_ERP_V2
+	tristate "GLADIATOR coherency interconnect error reporting driver v2"
+	help
+	  Support dumping debug information for the GLADIATOR
+	  cache interconnect in the error interrupt handler.
+	  Meant to be used for debug scenarios only.
+
+	  If unsure, say N.
+
+config PANIC_ON_GLADIATOR_ERROR_V2
+	depends on MSM_GLADIATOR_ERP_V2
+	bool "Panic on GLADIATOR error report v2"
+	help
+	  Panic upon detection of an Gladiator coherency interconnect error
+	  in order to support dumping debug information.
+	  Meant to be used for debug scenarios only.
+
+	  If unsure, say N.
+
+config MSM_QDSP6_APRV3
+	bool "Audio QDSP6 APRv3 support"
+	depends on MSM_SMD
+>>>>>>> 0e91d2a... Nougat
 	help
 	  G-link packet driver provides the interface for the userspace
 	  clients to communicate over G-Link via deivce nodes.
 	  This enable the usersapce clients to read and write to
 	  some glink packets channel.
 
+<<<<<<< HEAD
 config MSM_IPC_ROUTER_SMD_XPRT
 	depends on MSM_SMD
 	depends on IPC_ROUTER
 	bool "MSM SMD XPRT Layer"
+=======
+config MSM_QDSP6_APRV2_GLINK
+	bool "Audio QDSP6 APRv2 over Glink support"
+	depends on MSM_GLINK
+	help
+	  Enable APRv2 IPC protocol support over
+	  Glink between application processor and
+	  QDSP6. APR is used by audio driver to
+	  configure QDSP6's ASM, ADM and AFE.
+
+config MSM_QDSP6_APRV3_GLINK
+	bool "Audio QDSP6 APRv3 over Glink support"
+	depends on MSM_GLINK
+	help
+	  Enable APRv3 IPC protocol support over
+	  Glink between application processor and
+	  QDSP6. APR is used by audio driver to
+	  configure QDSP6v2's ASM, ADM and AFE.
+
+config MSM_ADSP_LOADER
+	tristate "ADSP loader support"
+	select SND_SOC_MSM_APRV2_INTF
+	depends on MSM_QDSP6_APRV2 || MSM_QDSP6_APRV3 || \
+		MSM_QDSP6_APRV2_GLINK || MSM_QDSP6_APRV3_GLINK
+>>>>>>> 0e91d2a... Nougat
 	help
 	  SMD Transport Layer that enables IPC Router communication within
 	  a System-on-Chip(SoC). When the SMD channels become available,
@@ -154,10 +205,75 @@ config MSM_JTAGV8
 	  If unsure, say 'N' here to avoid potential power, performance and
 	  memory penalty.
 
+<<<<<<< HEAD
 config MSM_QMI_INTERFACE
 	depends on IPC_ROUTER
 	depends on QMI_ENCDEC
 	bool "MSM QMI Interface Library"
+=======
+config MSM_BOOT_STATS
+	bool "Use MSM boot stats reporting"
+	help
+	 Use this to report msm boot stats such as bootloader throughput,
+	 display init, total boot time.
+	 This figures are reported in mpm sleep clock cycles and have a
+	 resolution of 31 bits as 1 bit is used as an overflow check.
+
+config MSM_BOOT_TIME_MARKER
+	bool "Use MSM boot time marker reporting"
+	depends on MSM_BOOT_STATS
+	help
+	 Use this to mark msm boot kpi for measurement.
+	 An instrumentation for boot time measurement.
+	 To create an entry, call "place_marker" function.
+	 At userspace, write marker name to "/sys/kernel/debug/bootkpi/kpi_values"
+	 If unsure, say N
+
+config MSM_CPUSS_DUMP
+	bool "CPU Subsystem Dumping support"
+	help
+	 Add support to dump various hardware entities such as the instruction
+	 and data tlb's as well as the unified tlb, which are a part of the
+	 cpu subsystem to an allocated buffer. This allows for analysis of the
+	 the entities if corruption is suspected.
+	 If unsure, say N
+
+config MSM_COMMON_LOG
+	bool "MSM Common Log Support"
+	help
+	 Use this to export symbols of some log address and variables
+	 that need to parse crash dump files to a memory dump table. This
+	 table can be used by post analysis tools to extract information
+	 from memory when device crashes.
+
+config MSM_DDR_HEALTH
+	bool "MSM DDR Health Driver"
+	default n
+	help
+	  This option enables a driver which allocates DDR buffer of requested
+	  size and sends it's locatoin to RPM sub system. RPM subsystem can
+	  make use of this buffer to monitor DDR health.
+
+config MSM_HYP_DEBUG
+	bool "MSM Hypervisor Debug Driver"
+	help
+	  This enables the Hypervisor Debug driver. It allows the mapping and
+	  and unmapping of user defined memory range from stage 2. It also
+	  supports mapping and unmapping PIL image load memory range from
+	  stage 2 depending upon the PIL image state.
+
+config MSM_WATCHDOG_V2
+	bool "MSM Watchdog Support"
+	help
+	  This enables the watchdog module. It causes kernel panic if the
+	  watchdog times out. It allows for detection of cpu hangs and
+	  deadlocks. It does not run during the bootup process, so it will
+	  not catch any early lockups.
+
+config MSM_FORCE_WDOG_BITE_ON_PANIC
+	bool "MSM force watchdog bite"
+	depends on MSM_WATCHDOG_V2
+>>>>>>> 0e91d2a... Nougat
 	help
 	  Library to send and receive QMI messages over IPC Router.
 	  This library provides interface functions to the kernel drivers
@@ -386,8 +502,14 @@ config MSM_FORCE_WDOG_BITE_ON_PANIC
 	  kernel panic. On certain MSM SoCs, this provides us
 	  additional debugging information.
 
+<<<<<<< HEAD
 config MSM_HVC
 	bool "MSM Hypervisor Call Support"
+=======
+config MSM_TZ_SMMU
+	bool "Helper functions for SMMU configuration through TZ"
+	depends on ARCH_MSMTHULIUM || ARCH_MSM8953
+>>>>>>> 0e91d2a... Nougat
 	help
 	  This enables the Hypervisor Call module. It provides apis to call
 	  into the hypervisor thereby allowing access to services exposed by
@@ -619,6 +741,7 @@ config MSM_PACMAN
 	  This driver allows reconfiguration of the Bus Access Manager
 	  Low Speed Peripheral (BLSP) ownership.
 
+<<<<<<< HEAD
 config MSM_CORE_CTL_HELPER
 	tristate "Core control helper functions for dynamically hotplug CPUs"
 	help
@@ -626,6 +749,16 @@ config MSM_CORE_CTL_HELPER
 	  driver dynamically hotplugs CPUs from kernel based on current
 	  system load and state. It also supports limiting min and
 	  max online CPUs from userspace.
+=======
+config MSM_BAM_DMUX
+	bool "BAM Data Mux Driver"
+	depends on SPS
+	help
+	  Support Muxed Data Channels over BAM interface.
+	  BAM has a limited number of pipes.  This driver
+	  provides a means to support more logical channels
+	  via muxing than BAM could without muxing.
+>>>>>>> 0e91d2a... Nougat
 
 config MSM_PERFORMANCE
 	tristate "Core control driver to support userspace hotplug requests"
@@ -634,19 +767,116 @@ config MSM_PERFORMANCE
 	  It ensures that no more than a user specified number of CPUs stay
 	  online at any given point in time.
 
+<<<<<<< HEAD
 config QCOM_NPA_DUMP
 	bool "Read NPA dump from the RPM memory"
 	depends on DEBUG_FS
+=======
+config MSM_PERFORMANCE_HOTPLUG_ON
+	bool "Hotplug functionality through msm_performance turned on"
+	depends on MSM_PERFORMANCE
+	default y
+	help
+	  If some other core-control driver is present turn off the core-control
+	  capability of msm_performance driver. Setting this flag to false will
+	  compile out the nodes needed for core-control functionality through
+	  msm_performance.
+
+config MSM_POWER
+	tristate "Power driver to manage system resources"
+	help
+	  This driver monitors and manages system resources for better
+	  power efficiency. It keeps track of the current frequency of
+	  several resources (e.g. CPU and GPU) to manage other system
+	  resources (e.g. DDR frequency) more efficiently.
+
+config MSM_SERVICE_LOCATOR
+	bool "Service Locator"
+	depends on MSM_QMI_INTERFACE
+	help
+	  The Service Locator provides a library to retrieve location
+	  information given a service identifier. Location here translates
+	  to what process domain exports the service, and which subsystem
+	  that process domain will execute in.
+
+config MSM_SERVICE_NOTIFIER
+	bool "Service Notifier"
+	depends on MSM_SERVICE_LOCATOR && MSM_SUBSYSTEM_RESTART
+	help
+	  The Service Notifier provides a library for a kernel client to
+	  register for state change notifications regarding a remote service.
+	  A remote service here refers to a process providing certain services
+	  like audio, the identifier for which is provided by the service
+	  locator.
+
+config MSM_QBT1000
+	bool "QBT1000 Ultrasonic Fingerprint Sensor"
+>>>>>>> 0e91d2a... Nougat
 	help
 	  Read the NPA dump from RPM memory through debugfs.
 
 config KERNEL_TEXT_MPU_PROT
 	bool "Enable xpu protection of kernel r/o sections"
 	help
+<<<<<<< HEAD
 	  Enables xpu protection of kernel code and read-only data
 	  sections early in boot. Read access is permitted to
 	  all masters; Write access is only permited to the
 	  secure world.
+=======
+	  Add support for the Peripheral Access Control Manager (PACMan). This
+	  driver allows reconfiguration of the Bus Access Manager Low Speed
+	  peripheral (BLSP) ownership.
+
+config MSM_KERNEL_PROTECT
+	bool "Protect kernel text by removing write permissions"
+        depends on !FUNCTION_TRACER
+        help
+          On hypervisor-enabled targets, this option will make a call into
+          the hypervisor to request that the kernel text be remapped
+          without write permissions.  This protects against malicious
+          devices rewriting kernel code.
+
+          Note that this will BREAK any runtime patching of the kernel text
+          (i.e. anything that uses apply_alternatives,
+          aarch64_insn_patch_text_nosync, etc. including the various CPU
+          errata workarounds in arch/arm64/kernel/cpu_errata.c).
+
+	  For MPU based protection-enabled targets please refer to
+	  MSM_KERNEL_PROTECT_MPU
+
+config MSM_KERNEL_PROTECT_MPU
+	bool "Protect kernel text from other masters by MPU"
+	depends on MSM_KERNEL_PROTECT
+	help
+	  On MPU based protection enabled targets, this option will make a call
+	  into TrustZone to request that the kernel text be ptotected for any
+	  write access from external bus masters. This protects against
+	  malicious devices rewriting kernel code.
+
+config MSM_KERNEL_PROTECT_TEST
+	bool "Bootup test of kernel protection (INTENTIONAL CRASH)"
+        depends on MSM_KERNEL_PROTECT
+        help
+          Attempts to write to the kernel text after making the kernel text
+          read-only.  This test is FATAL whether it passes or fails!
+          Success is signaled by a stage-2 fault.
+>>>>>>> 0e91d2a... Nougat
+
+config MSM_REMOTEQDSS
+	bool "Allow debug tools to enable events on other processors"
+	depends on MSM_SCM && DEBUG_FS
+	help
+	  Other onchip processors/execution environments may support debug
+	  events. Provide a sysfs interface for debug tools to dynamically
+	  enable/disable these events. Interface located in
+	  /sys/class/remoteqdss.
+
+config QCOM_SMCINVOKE
+	bool "Secure QSEE Support"
+	help
+	  Enable SMCInvoke driver which supports capability based secure
+	  communication between QSEE and HLOS.
 
 source "drivers/soc/qcom/memshare/Kconfig"
 

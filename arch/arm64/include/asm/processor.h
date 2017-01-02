@@ -185,6 +185,10 @@ static inline void spin_lock_prefetch(const void *x)
 
 #endif
 
+<<<<<<< HEAD
 #include <asm-generic/processor.h>
+=======
+void cpu_enable_pan(void);
+>>>>>>> 0e91d2a... Nougat
 
 #endif /* __ASM_PROCESSOR_H */

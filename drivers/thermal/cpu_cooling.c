@@ -276,6 +276,28 @@ static int cpufreq_apply_cooling(struct cpufreq_cooling_device *cpufreq_device,
 	struct cpumask *mask = &cpufreq_device->allowed_cpus;
 	unsigned int cpu = cpumask_any(mask);
 
+<<<<<<< HEAD
+=======
+		num_opps = dev_pm_opp_get_opp_count(dev);
+		if (num_opps > 0) {
+			break;
+		} else if (num_opps < 0) {
+			ret = num_opps;
+			goto unlock;
+		}
+	}
+
+	if (num_opps == 0) {
+		ret = -EINVAL;
+		goto unlock;
+	}
+
+	power_table = kcalloc(num_opps, sizeof(*power_table), GFP_KERNEL);
+	if (!power_table) {
+		ret = -ENOMEM;
+		goto unlock;
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	/* Check if the old cooling action is same as new cooling action */
 	if (cpufreq_device->cpufreq_state == cooling_state)

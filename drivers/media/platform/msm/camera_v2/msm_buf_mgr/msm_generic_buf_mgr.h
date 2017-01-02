@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -37,4 +41,14 @@ struct msm_buf_mngr_device {
 	struct msm_sd_subdev subdev;
 	struct msm_sd_req_vb2_q vb2_ops;
 };
+
+/* kernel space functions*/
+struct msm_cam_buf_mgr_req_ops {
+	int (*msm_cam_buf_mgr_ops)(unsigned int cmd, void *argp);
+};
+
+/* API to register callback from client. This assumes cb_struct is allocated by
+ * client.
+ */
+int msm_cam_buf_mgr_register_ops(struct msm_cam_buf_mgr_req_ops *cb_struct);
 #endif

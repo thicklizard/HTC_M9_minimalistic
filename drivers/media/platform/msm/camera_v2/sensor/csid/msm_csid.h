@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -19,8 +23,9 @@
 #include <media/v4l2-subdev.h>
 #include <media/msm_cam_sensor.h>
 #include "msm_sd.h"
+#include "cam_soc_api.h"
 
-#define CSID_NUM_CLK_MAX  16
+#define CSID_SOF_DEBUG_COUNT                      3
 
 struct csid_reg_parms_t {
 /* MIPI	CSID registers */
@@ -72,9 +77,7 @@ enum msm_csid_state_t {
 struct csid_device {
 	struct platform_device *pdev;
 	struct msm_sd_subdev msm_sd;
-	struct resource *mem;
 	struct resource *irq;
-	struct resource *io;
 	struct regulator *csi_vdd;
 	void __iomem *base;
 	struct mutex mutex;
@@ -83,12 +86,25 @@ struct csid_device {
 	uint32_t hw_dts_version;
 	enum msm_csid_state_t csid_state;
 	struct csid_ctrl_t *ctrl_reg;
-	uint32_t num_clk;
-	uint32_t num_clk_src_info;
 	struct regulator *reg_ptr;
-	struct clk *csid_clk[CSID_NUM_CLK_MAX];
+	size_t num_clk;
+	struct clk **csid_clk;
+	struct msm_cam_clk_info *csid_clk_info;
 	uint32_t csid_clk_index;
 	uint32_t csid_max_clk;
+<<<<<<< HEAD
+=======
+	uint32_t csid_3p_enabled;
+	struct camera_vreg_t *csid_vreg;
+	struct regulator *csid_reg_ptr[MAX_REGULATOR];
+	int32_t regulator_count;
+	uint8_t is_testmode;
+	struct msm_camera_csid_testmode_parms testmode_params;
+	struct msm_camera_csid_params  current_csid_params;
+	uint32_t csid_sof_debug;
+	uint32_t csid_lane_cnt;
+	uint32_t csid_sof_debug_count;
+>>>>>>> 0e91d2a... Nougat
 };
 
 #define VIDIOC_MSM_CSID_RELEASE \

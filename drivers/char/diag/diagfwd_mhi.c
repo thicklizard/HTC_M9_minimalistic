@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -133,8 +137,6 @@ static int mhi_buf_tbl_add(struct diag_mhi_info *mhi_info, int type,
 
 	item = kzalloc(sizeof(struct diag_mhi_buf_tbl_t), GFP_KERNEL);
 	if (!item) {
-		pr_err_ratelimited("diag: In %s, unable to allocate new item for buf tbl, ch: %p, type: %d, buf: %p, len: %d\n",
-				   __func__, ch, ch->type, buf, len);
 		return -ENOMEM;
 	}
 	kmemleak_not_leak(item);
@@ -187,7 +189,7 @@ static void mhi_buf_tbl_remove(struct diag_mhi_info *mhi_info, int type,
 	spin_unlock_irqrestore(&ch->lock, flags);
 
 	if (!found) {
-		pr_err_ratelimited("diag: In %s, unable to find buffer, ch: %p, type: %d, buf: %p\n",
+		pr_err_ratelimited("diag: In %s, unable to find buffer, ch: %pK, type: %d, buf: %pK\n",
 				   __func__, ch, ch->type, buf);
 	}
 }
@@ -363,12 +365,31 @@ static void mhi_read_done_work_fn(struct work_struct *work)
 		phy_buf = result.payload_buf;
 		if (!phy_buf)
 			break;
+<<<<<<< HEAD
 		dma_unmap_single(NULL, result.payload_buf, result.bytes_xferd,
 				 DMA_FROM_DEVICE);
 		buf = dma_to_virt(NULL, result.payload_buf);
 		diag_remote_dev_read_done(mhi_info->dev_id, buf,
 					  result.bytes_xferd);
 	} while (phy_buf);
+=======
+		DIAG_LOG(DIAG_DEBUG_BRIDGE,
+			 "read from mhi port %d buf %pK\n",
+			 mhi_info->id, buf);
+		/*
+		 * The read buffers can come after the MHI channels are closed.
+		 * If the channels are closed at the time of read, discard the
+		 * buffers here and do not forward them to the mux layer.
+		 */
+		if ((atomic_read(&(mhi_info->read_ch.opened)))) {
+			diag_remote_dev_read_done(mhi_info->dev_id, buf,
+						  result.bytes_xferd);
+		} else {
+			mhi_buf_tbl_remove(mhi_info, TYPE_MHI_READ_CH, buf,
+					   result.bytes_xferd);
+		}
+	} while (buf);
+>>>>>>> 0e91d2a... Nougat
 }
 
 static void mhi_read_work_fn(struct work_struct *work)
@@ -397,9 +418,25 @@ static void mhi_read_work_fn(struct work_struct *work)
 	if (err)
 		goto fail;
 
+<<<<<<< HEAD
 	dma_addr = dma_map_single(NULL, buf, DIAG_MDM_BUF_SIZE, DMA_TO_DEVICE);
 	if (dma_mapping_error(NULL, dma_addr))
 		goto fail;
+=======
+		DIAG_LOG(DIAG_DEBUG_BRIDGE,
+			 "queueing a read buf %pK, ch: %s\n",
+			 buf, mhi_info->name);
+		spin_lock_irqsave(&read_ch->lock, flags);
+		err = mhi_queue_xfer(read_ch->hdl, buf, DIAG_MDM_BUF_SIZE,
+				     mhi_flags);
+		spin_unlock_irqrestore(&read_ch->lock, flags);
+		if (err) {
+			pr_err_ratelimited("diag: Unable to read from MHI channel %s, err: %d\n",
+					   mhi_info->name, err);
+			goto fail;
+		}
+	} while (buf);
+>>>>>>> 0e91d2a... Nougat
 
 	err = mhi_queue_xfer(read_ch->hdl, dma_addr, DIAG_MDM_BUF_SIZE, flags);
 	if (err) {
@@ -443,7 +480,7 @@ static int mhi_write(int id, unsigned char *buf, int len, int ctxt)
 	}
 
 	if (!buf || len <= 0) {
-		pr_err("diag: In %s, ch %d, invalid buf %p len %d\n",
+		pr_err("diag: In %s, ch %d, invalid buf %pK len %d\n",
 			__func__, id, buf, len);
 		return -EINVAL;
 	}
@@ -473,7 +510,7 @@ static int mhi_write(int id, unsigned char *buf, int len, int ctxt)
 
 	err = mhi_queue_xfer(ch->hdl, dma_addr, len, flags);
 	if (err) {
-		pr_err_ratelimited("diag: In %s, cannot write to MHI channel %p, len %d, err: %d\n",
+		pr_err_ratelimited("diag: In %s, cannot write to MHI channel %pK, len %d, err: %d\n",
 				   __func__, diag_mhi[id].name, len, err);
 		dma_unmap_single(NULL, (dma_addr_t)dma_addr, len,
 				 DMA_TO_DEVICE);

@@ -425,7 +425,7 @@ static void flush_to_ldisc(struct work_struct *work)
 	unsigned long 	flags;
 	struct tty_ldisc *disc;
 
-	tty = port->itty;
+	tty = READ_ONCE(port->itty);
 	if (tty == NULL)
 		return;
 

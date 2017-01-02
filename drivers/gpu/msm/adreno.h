@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2008-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -33,19 +33,22 @@
 #define DEVICE_3D_NAME "kgsl-3d"
 #define DEVICE_3D0_NAME "kgsl-3d0"
 
+<<<<<<< HEAD
 #define ADRENO_RBBM_STATUS_BUSY_MASK	~0x80000001
 
 #define ADRENO_PRIORITY_MAX_RB_LEVELS	4
 
 /* ADRENO_DEVICE - Given a kgsl_device return the adreno device struct */
+=======
+>>>>>>> 0e91d2a... Nougat
 #define ADRENO_DEVICE(device) \
 		container_of(device, struct adreno_device, dev)
 
-/* ADRENO_CONTEXT - Given a context return the adreno context struct */
+#define KGSL_DEVICE(_dev) (&((_dev)->dev))
+
 #define ADRENO_CONTEXT(context) \
 		container_of(context, struct adreno_context, base)
 
-/* ADRENO_GPU_DEVICE - Given an adreno device return the GPU specific struct */
 #define ADRENO_GPU_DEVICE(_a) ((_a)->gpucore->gpudev)
 
 /* ADRENO_PERFCOUNTERS - Given an adreno device, return the perfcounters list */
@@ -57,9 +60,9 @@
 #define ADRENO_CHIPID_MINOR(_id) (((_id) >> 8) & 0xFF)
 #define ADRENO_CHIPID_PATCH(_id) ((_id) & 0xFF)
 
-/* ADRENO_GPUREV - Return the GPU ID for the given adreno_device */
 #define ADRENO_GPUREV(_a) ((_a)->gpucore->gpurev)
 
+<<<<<<< HEAD
 /*
  * ADRENO_FEATURE - return true if the specified feature is supported by the GPU
  * core
@@ -93,35 +96,59 @@
 #define ADRENO_HAS_REG_TO_REG_CMDS BIT(7)
 /* The GPU supports content protection */
 #define ADRENO_CONTENT_PROTECTION BIT(8)
+=======
+#define ADRENO_FEATURE(_dev, _bit) \
+	((_dev)->gpucore->features & (_bit))
 
-/* Flags to control command packet settings */
+#define ADRENO_QUIRK(_dev, _bit) \
+	((_dev)->quirks & (_bit))
+
+#define ADRENO_PREEMPT_STYLE(flags) \
+	((flags & KGSL_CONTEXT_PREEMPT_STYLE_MASK) >> \
+		  KGSL_CONTEXT_PREEMPT_STYLE_SHIFT)
+
+#define ADRENO_CMDBATCH_DISPATCH_CMDQUEUE(c)	\
+	(&((ADRENO_CONTEXT(c->context))->rb->dispatch_q))
+
+#define ADRENO_CMDBATCH_RB(c)			\
+	((ADRENO_CONTEXT(c->context))->rb)
+
+#define ADRENO_USES_OCMEM     BIT(0)
+#define ADRENO_WARM_START     BIT(1)
+#define ADRENO_USE_BOOTSTRAP  BIT(2)
+#define ADRENO_SPTP_PC BIT(3)
+#define ADRENO_PPD BIT(4)
+#define ADRENO_CONTENT_PROTECTION BIT(5)
+#define ADRENO_PREEMPTION BIT(6)
+#define ADRENO_GPMU BIT(7)
+#define ADRENO_LM BIT(8)
+#define ADRENO_64BIT BIT(9)
+#define ADRENO_CPZ_RETENTION BIT(10)
+
+
+#define ADRENO_QUIRK_TWO_PASS_USE_WFI BIT(0)
+#define ADRENO_QUIRK_IOMMU_SYNC BIT(1)
+#define ADRENO_QUIRK_CRITICAL_PACKETS BIT(2)
+#define ADRENO_QUIRK_FAULT_DETECT_MASK BIT(3)
+#define ADRENO_QUIRK_DISABLE_RB_DP2CLOCKGATING BIT(4)
+>>>>>>> 0e91d2a... Nougat
+
 #define KGSL_CMD_FLAGS_NONE             0
 #define KGSL_CMD_FLAGS_PMODE		BIT(0)
 #define KGSL_CMD_FLAGS_INTERNAL_ISSUE   BIT(1)
 #define KGSL_CMD_FLAGS_WFI              BIT(2)
 #define KGSL_CMD_FLAGS_PROFILE		BIT(3)
 #define KGSL_CMD_FLAGS_PWRON_FIXUP      BIT(4)
-#define KGSL_CMD_FLAGS_MEMLIST          BIT(5)
 
-/* Command identifiers */
 #define KGSL_CONTEXT_TO_MEM_IDENTIFIER	0x2EADBEEF
 #define KGSL_CMD_IDENTIFIER		0x2EEDFACE
 #define KGSL_CMD_INTERNAL_IDENTIFIER	0x2EEDD00D
 #define KGSL_START_OF_IB_IDENTIFIER	0x2EADEABE
 #define KGSL_END_OF_IB_IDENTIFIER	0x2ABEDEAD
-#define KGSL_END_OF_FRAME_IDENTIFIER	0x2E0F2E0F
-#define KGSL_NOP_IB_IDENTIFIER	        0x20F20F20
 #define KGSL_START_OF_PROFILE_IDENTIFIER	0x2DEFADE1
 #define KGSL_END_OF_PROFILE_IDENTIFIER	0x2DEFADE2
 #define KGSL_PWRON_FIXUP_IDENTIFIER	0x2AFAFAFA
 
-#define ADRENO_ISTORE_START 0x5000 /* Istore offset */
-
-#define ADRENO_NUM_CTX_SWITCH_ALLOWED_BEFORE_DRAW	50
-
-/* One cannot wait forever for the core to idle, so set an upper limit to the
- * amount of time to wait for the core to go idle
- */
 
 #define ADRENO_IDLE_TIMEOUT (20 * 1000)
 
@@ -154,15 +181,45 @@ enum adreno_gpurev {
 
 #define ADRENO_SPTP_PC_CTRL 0
 #define ADRENO_PPD_CTRL     1
+<<<<<<< HEAD
+=======
+#define ADRENO_LM_CTRL      2
+#define ADRENO_HWCG_CTRL    3
+
+#define ADRENO_GPMU_THROTTLE_COUNTERS 4
+#define ADRENO_GPMU_THROTTLE_COUNTERS_BASE_REG 43
+>>>>>>> 0e91d2a... Nougat
 
 struct adreno_gpudev;
+
+#define ADRENO_PREEMPT_TIMEOUT 10000
+
+enum adreno_preempt_states {
+	ADRENO_PREEMPT_NONE = 0,
+	ADRENO_PREEMPT_START,
+	ADRENO_PREEMPT_TRIGGERED,
+	ADRENO_PREEMPT_FAULTED,
+	ADRENO_PREEMPT_PENDING,
+	ADRENO_PREEMPT_COMPLETE,
+};
+
+struct adreno_preemption {
+	atomic_t state;
+	struct kgsl_memdesc counters;
+	struct timer_list timer;
+	struct work_struct work;
+	bool token_submit;
+};
+
 
 struct adreno_busy_data {
 	unsigned int gpu_busy;
 	unsigned int vbif_ram_cycles;
 	unsigned int vbif_starved_ram;
+	unsigned int throttle_cycles[ADRENO_GPMU_THROTTLE_COUNTERS];
 };
 
+<<<<<<< HEAD
 /**
  * struct adreno_gpu_core - A specific GPU core definition
  * @gpurev: Unique GPU revision identifier
@@ -189,6 +246,8 @@ struct adreno_busy_data {
  * @shader_offset: Offset of shader from gpu reg base
  * @shader_size: Shader size
  */
+=======
+>>>>>>> 0e91d2a... Nougat
 struct adreno_gpu_core {
 	enum adreno_gpurev gpurev;
 	unsigned int core, major, minor, patchid;
@@ -211,7 +270,7 @@ struct adreno_gpu_core {
 };
 
 struct adreno_device {
-	struct kgsl_device dev;    /* Must be first field in this struct */
+	struct kgsl_device dev;    
 	unsigned long priv;
 	unsigned int chipid;
 	unsigned long gmem_base;
@@ -223,7 +282,14 @@ struct adreno_device {
 	unsigned int *pm4_fw;
 	size_t pm4_fw_size;
 	unsigned int pm4_fw_version;
+<<<<<<< HEAD
 	struct adreno_ringbuffer ringbuffers[ADRENO_PRIORITY_MAX_RB_LEVELS];
+=======
+	struct kgsl_memdesc pm4;
+	size_t gpmu_cmds_size;
+	unsigned int *gpmu_cmds;
+	struct adreno_ringbuffer ringbuffers[KGSL_PRIORITY_MAX_RB_LEVELS];
+>>>>>>> 0e91d2a... Nougat
 	int num_ringbuffers;
 	struct adreno_ringbuffer *cur_rb;
 	unsigned int wait_timeout;
@@ -247,6 +313,7 @@ struct adreno_device {
 
 	struct kgsl_memdesc cmdbatch_profile_buffer;
 	unsigned int cmdbatch_profile_index;
+<<<<<<< HEAD
 };
 
 /**
@@ -264,6 +331,31 @@ struct adreno_device {
  * @ADRENO_DEVICE_CMDBATCH_PROFILE - Set if the device supports command batch
  * profiling via the ALWAYSON counter
  */
+=======
+	uint64_t sp_local_gpuaddr;
+	uint64_t sp_pvt_gpuaddr;
+	const struct firmware *lm_fw;
+	uint32_t *lm_sequence;
+	uint32_t lm_size;
+	struct adreno_preemption preempt;
+	struct work_struct gpmu_work;
+	uint32_t lm_leakage;
+	uint32_t lm_limit;
+	uint32_t lm_threshold_count;
+	uint32_t lm_threshold_cross;
+
+	unsigned int speed_bin;
+	unsigned int quirks;
+
+	struct coresight_device *csdev;
+	uint32_t gpmu_throttle_counters[ADRENO_GPMU_THROTTLE_COUNTERS];
+	struct work_struct irq_storm_work;
+
+	struct list_head active_list;
+	spinlock_t active_list_lock;
+};
+
+>>>>>>> 0e91d2a... Nougat
 enum adreno_device_flags {
 	ADRENO_DEVICE_PWRON = 0,
 	ADRENO_DEVICE_PWRON_FIXUP = 1,
@@ -274,6 +366,7 @@ enum adreno_device_flags {
 	ADRENO_DEVICE_FAULT = 6,
 	ADRENO_DEVICE_CMDBATCH_PROFILE = 7,
 	ADRENO_DEVICE_GPU_REGULATOR_ENABLED = 8,
+<<<<<<< HEAD
 };
 
 #define PERFCOUNTER_FLAG_NONE 0x0
@@ -362,6 +455,15 @@ struct adreno_invalid_countables {
  * @started: Number of GPU ticks at start of the command batch
  * @retired: Number of GPU ticks at the end of the command batch
  */
+=======
+	ADRENO_DEVICE_PREEMPTION = 9,
+	ADRENO_DEVICE_SOFT_FAULT_DETECT = 10,
+	ADRENO_DEVICE_GPMU_INITIALIZED = 11,
+	ADRENO_DEVICE_ISDB_ENABLED = 12,
+	ADRENO_DEVICE_CACHE_FLUSH_TS_SUSPENDED = 13,
+};
+
+>>>>>>> 0e91d2a... Nougat
 struct adreno_cmdbatch_profile_entry {
 	uint64_t started;
 	uint64_t retired;
@@ -375,12 +477,6 @@ struct adreno_cmdbatch_profile_entry {
 	  + offsetof(struct adreno_cmdbatch_profile_entry, _member))
 
 
-/**
- * adreno_regs: List of registers that are used in kgsl driver for all
- * 3D devices. Each device type has different offset value for the same
- * register, so an array of register offsets are declared for every device
- * and are indexed by the enumeration values defined in this enum
- */
 enum adreno_regs {
 	ADRENO_REG_CP_ME_RAM_WADDR,
 	ADRENO_REG_CP_ME_RAM_DATA,
@@ -388,6 +484,12 @@ enum adreno_regs {
 	ADRENO_REG_CP_PFP_UCODE_ADDR,
 	ADRENO_REG_CP_WFI_PEND_CTR,
 	ADRENO_REG_CP_RB_BASE,
+<<<<<<< HEAD
+=======
+	ADRENO_REG_CP_RB_BASE_HI,
+	ADRENO_REG_CP_RB_RPTR_ADDR_LO,
+	ADRENO_REG_CP_RB_RPTR_ADDR_HI,
+>>>>>>> 0e91d2a... Nougat
 	ADRENO_REG_CP_RB_RPTR,
 	ADRENO_REG_CP_RB_WPTR,
 	ADRENO_REG_CP_CNTL,
@@ -445,13 +547,6 @@ enum adreno_regs {
 	ADRENO_REG_REGISTER_MAX,
 };
 
-/**
- * adreno_reg_offsets: Holds array of register offsets
- * @offsets: Offset array of size defined by enum adreno_regs
- * @offset_0: This is the index of the register in offset array whose value
- * is 0. 0 is a valid register offset and during initialization of the
- * offset array we need to know if an offset value is correctly defined to 0
- */
 struct adreno_reg_offsets {
 	unsigned int *const offsets;
 	enum adreno_regs offset_0;
@@ -460,27 +555,17 @@ struct adreno_reg_offsets {
 #define ADRENO_REG_UNUSED	0xFFFFFFFF
 #define ADRENO_REG_DEFINE(_offset, _reg) [_offset] = _reg
 
-/*
- * struct adreno_vbif_data - Describes vbif register value pair
- * @reg: Offset to vbif register
- * @val: The value that should be programmed in the register at reg
- */
 struct adreno_vbif_data {
 	unsigned int reg;
 	unsigned int val;
 };
 
-/*
- * struct adreno_vbif_platform - Holds an array of vbif reg value pairs
- * for a particular core
- * @devfunc: Pointer to platform/core identification function
- * @vbif: Array of reg value pairs for vbif registers
- */
 struct adreno_vbif_platform {
 	int(*devfunc)(struct adreno_device *);
 	const struct adreno_vbif_data *vbif;
 };
 
+<<<<<<< HEAD
 /*
  * struct adreno_vbif_snapshot_registers - Holds an array of vbif registers
  * listed for snapshot dump for a particular core
@@ -492,16 +577,15 @@ struct adreno_vbif_snapshot_registers {
 	const unsigned int vbif_version;
 	const unsigned int *vbif_snapshot_registers;
 	const int vbif_snapshot_registers_count;
+=======
+struct adreno_vbif_snapshot_registers {
+	const unsigned int version;
+	const unsigned int mask;
+	const unsigned int *registers;
+	const int count;
+>>>>>>> 0e91d2a... Nougat
 };
 
-/**
- * struct adreno_coresight_register - Definition for a coresight (tracebus)
- * debug register
- * @offset: Offset of the debug register in the KGSL mmio region
- * @initial: Default value to write when coresight is enabled
- * @value: Current shadow value of the register (to be reprogrammed after power
- * collapse)
- */
 struct adreno_coresight_register {
 	unsigned int offset;
 	unsigned int initial;
@@ -526,12 +610,6 @@ ssize_t adreno_coresight_store_register(struct device *dev,
 		adreno_coresight_store_register), \
 		(_reg), }
 
-/**
- * struct adreno_coresight - GPU specific coresight definition
- * @registers - Array of GPU specific registers to configure trace bus output
- * @count - Number of registers in the array
- * @groups - Pointer to an attribute list of control files
- */
 struct adreno_coresight {
 	struct adreno_coresight_register *registers;
 	unsigned int count;
@@ -550,16 +628,12 @@ struct adreno_irq {
 	int funcs_count;
 };
 
-/*
- * struct adreno_debugbus_block - Holds info about debug buses of a chip
- * @block_id: Bus identifier
- * @dwords: Number of dwords of data that this block holds
- */
 struct adreno_debugbus_block {
 	unsigned int block_id;
 	unsigned int dwords;
 };
 
+<<<<<<< HEAD
 /*
  * struct adreno_snapshot_section_sizes - Structure holding the size of
  * different sections dumped during device snapshot
@@ -570,6 +644,8 @@ struct adreno_debugbus_block {
  * @cp_merciu_size: CP MERCIU size
  * @roq_size: ROQ size
  */
+=======
+>>>>>>> 0e91d2a... Nougat
 struct adreno_snapshot_sizes {
 	int cp_state_deb;
 	int vpc_mem;
@@ -579,19 +655,11 @@ struct adreno_snapshot_sizes {
 	int roq;
 };
 
-/*
- * struct adreno_snapshot_data - Holds data used in snapshot
- * @sect_sizes: Has sections sizes
- */
 struct adreno_snapshot_data {
 	struct adreno_snapshot_sizes *sect_sizes;
 };
 
 struct adreno_gpudev {
-	/*
-	 * These registers are in a different location on different devices,
-	 * so define them in the structure and use them as variables.
-	 */
 	const struct adreno_reg_offsets *reg_offsets;
 	const struct adreno_ft_perf_counters *ft_perf_counters;
 	unsigned int ft_perf_counters_count;
@@ -606,12 +674,22 @@ struct adreno_gpudev {
 	struct adreno_irq *irq;
 	int num_prio_levels;
 	unsigned int vbif_xin_halt_ctrl0_mask;
-	/* GPU specific function hooks */
+	
 	void (*irq_trace)(struct adreno_device *, unsigned int status);
 	void (*snapshot)(struct adreno_device *, struct kgsl_snapshot *);
+<<<<<<< HEAD
 	void (*gpudev_init)(struct adreno_device *);
 	int (*rb_init)(struct adreno_device *, struct adreno_ringbuffer *);
 	int (*perfcounter_init)(struct adreno_device *);
+=======
+	void (*platform_setup)(struct adreno_device *);
+	void (*init)(struct adreno_device *);
+	void (*remove)(struct adreno_device *);
+	int (*rb_start)(struct adreno_device *, unsigned int start_type);
+	int (*microcode_read)(struct adreno_device *);
+	void (*perfcounter_init)(struct adreno_device *);
+	void (*perfcounter_close)(struct adreno_device *);
+>>>>>>> 0e91d2a... Nougat
 	void (*start)(struct adreno_device *);
 	void (*busy_cycles)(struct adreno_device *, struct adreno_busy_data *);
 	int (*perfcounter_enable)(struct adreno_device *, unsigned int group,
@@ -625,6 +703,7 @@ struct adreno_gpudev {
 	void (*regulator_enable)(struct adreno_device *);
 	void (*regulator_disable)(struct adreno_device *);
 	void (*pwrlevel_change_settings)(struct adreno_device *,
+<<<<<<< HEAD
 					bool mask_throttle);
 };
 
@@ -659,6 +738,44 @@ struct log_field {
 #define KGSL_FT_PAGEFAULT_LOG_ONE_PER_PAGE   BIT(2)
 #define KGSL_FT_PAGEFAULT_LOG_ONE_PER_INT    BIT(3)
 #define KGSL_FT_PAGEFAULT_DEFAULT_POLICY     KGSL_FT_PAGEFAULT_INT_ENABLE
+=======
+				unsigned int prelevel, unsigned int postlevel,
+				bool post);
+	unsigned int (*preemption_pre_ibsubmit)(struct adreno_device *,
+				struct adreno_ringbuffer *rb,
+				unsigned int *, struct kgsl_context *);
+	int (*preemption_yield_enable)(unsigned int *);
+	unsigned int (*preemption_post_ibsubmit)(struct adreno_device *,
+				unsigned int *);
+	int (*preemption_init)(struct adreno_device *);
+	void (*preemption_schedule)(struct adreno_device *);
+	void (*enable_64bit)(struct adreno_device *);
+	void (*pre_reset)(struct adreno_device *);
+};
+
+enum kgsl_ft_policy_bits {
+	KGSL_FT_OFF = 0,
+	KGSL_FT_REPLAY = 1,
+	KGSL_FT_SKIPIB = 2,
+	KGSL_FT_SKIPFRAME = 3,
+	KGSL_FT_DISABLE = 4,
+	KGSL_FT_TEMP_DISABLE = 5,
+	KGSL_FT_THROTTLE = 6,
+	KGSL_FT_SKIPCMD = 7,
+	
+	KGSL_FT_MAX_BITS,
+	
+	
+	KGSL_FT_SKIP_PMDUMP = 31,
+};
+
+#define KGSL_FT_POLICY_MASK GENMASK(KGSL_FT_MAX_BITS - 1, 0)
+
+#define  KGSL_FT_DEFAULT_POLICY \
+	(BIT(KGSL_FT_REPLAY) | \
+	 BIT(KGSL_FT_SKIPCMD) | \
+	 BIT(KGSL_FT_THROTTLE))
+>>>>>>> 0e91d2a... Nougat
 
 #define ADRENO_FT_TYPES \
 	{ BIT(KGSL_FT_OFF), "off" }, \
@@ -670,6 +787,22 @@ struct log_field {
 	{ BIT(KGSL_FT_THROTTLE), "throttle"}, \
 	{ BIT(KGSL_FT_SKIPCMD), "skipcmd" }
 
+<<<<<<< HEAD
+=======
+enum {
+	KGSL_FT_PAGEFAULT_INT_ENABLE = 0,
+	KGSL_FT_PAGEFAULT_GPUHALT_ENABLE = 1,
+	KGSL_FT_PAGEFAULT_LOG_ONE_PER_PAGE = 2,
+	KGSL_FT_PAGEFAULT_LOG_ONE_PER_INT = 3,
+	
+	KGSL_FT_PAGEFAULT_MAX_BITS,
+};
+
+#define KGSL_FT_PAGEFAULT_MASK GENMASK(KGSL_FT_PAGEFAULT_MAX_BITS - 1, 0)
+
+#define KGSL_FT_PAGEFAULT_DEFAULT_POLICY 0
+
+>>>>>>> 0e91d2a... Nougat
 #define FOR_EACH_RINGBUFFER(_dev, _rb, _i)			\
 	for ((_i) = 0, (_rb) = &((_dev)->ringbuffers[0]);	\
 		(_i) < (_dev)->num_ringbuffers;			\
@@ -710,11 +843,15 @@ extern const unsigned int a4xx_ppd_registers_count;
 extern const unsigned int a4xx_xpu_registers[];
 extern const unsigned int a4xx_xpu_reg_cnt;
 
+<<<<<<< HEAD
 extern const struct adreno_vbif_snapshot_registers
 				a4xx_vbif_snapshot_registers[];
 extern const unsigned int a4xx_vbif_snapshot_reg_cnt;
 
 int adreno_spin_idle(struct kgsl_device *device);
+=======
+int adreno_spin_idle(struct adreno_device *device, unsigned int timeout);
+>>>>>>> 0e91d2a... Nougat
 int adreno_idle(struct kgsl_device *device);
 bool adreno_isidle(struct kgsl_device *device);
 
@@ -742,10 +879,11 @@ void adreno_snapshot(struct kgsl_device *device,
 
 int adreno_reset(struct kgsl_device *device);
 
-void adreno_fault_skipcmd_detached(struct kgsl_device *device,
+void adreno_fault_skipcmd_detached(struct adreno_device *adreno_dev,
 					 struct adreno_context *drawctxt,
 					 struct kgsl_cmdbatch *cmdbatch);
 
+<<<<<<< HEAD
 void adreno_perfcounter_close(struct adreno_device *adreno_dev);
 
 void adreno_perfcounter_restore(struct adreno_device *adreno_dev);
@@ -772,6 +910,8 @@ int adreno_perfcounter_put(struct adreno_device *adreno_dev,
 int adreno_a3xx_pwron_fixup_init(struct adreno_device *adreno_dev);
 int adreno_a4xx_pwron_fixup_init(struct adreno_device *adreno_dev);
 
+=======
+>>>>>>> 0e91d2a... Nougat
 int adreno_coresight_init(struct adreno_device *adreno_dev);
 
 void adreno_coresight_start(struct adreno_device *adreno_dev);
@@ -781,18 +921,22 @@ void adreno_coresight_remove(struct adreno_device *adreno_dev);
 
 bool adreno_hw_isidle(struct adreno_device *adreno_dev);
 
+<<<<<<< HEAD
 int adreno_iommu_set_pt(struct adreno_ringbuffer *rb,
 			struct kgsl_pagetable *new_pt);
 
 void adreno_iommu_set_pt_generate_rb_cmds(struct adreno_ringbuffer *rb,
 					struct kgsl_pagetable *pt);
 
+=======
+>>>>>>> 0e91d2a... Nougat
 void adreno_fault_detect_start(struct adreno_device *adreno_dev);
 void adreno_fault_detect_stop(struct adreno_device *adreno_dev);
 
 void adreno_hang_int_callback(struct adreno_device *adreno_dev, int bit);
 void adreno_cp_callback(struct adreno_device *adreno_dev, int bit);
 
+<<<<<<< HEAD
 static inline int adreno_is_a3xx(struct adreno_device *adreno_dev)
 {
 	return ((ADRENO_GPUREV(adreno_dev) >= 300) &&
@@ -803,6 +947,10 @@ static inline int adreno_is_a304(struct adreno_device *adreno_dev)
 {
 	return (ADRENO_GPUREV(adreno_dev) == ADRENO_REV_A304);
 }
+=======
+int adreno_sysfs_init(struct adreno_device *adreno_dev);
+void adreno_sysfs_close(struct adreno_device *adreno_dev);
+>>>>>>> 0e91d2a... Nougat
 
 static inline int adreno_is_a305(struct adreno_device *adreno_dev)
 {
@@ -1006,6 +1154,7 @@ static inline int adreno_wait_reg_mem(unsigned int *cmds, unsigned int addr,
 
 	return cmds - start;
 }
+<<<<<<< HEAD
 /*
  * adreno_wait_reg_eq() - Add a CP_WAIT_REG_EQ command
  * @cmds:	Pointer to memory where commands are to be added
@@ -1026,12 +1175,9 @@ static inline int adreno_wait_reg_eq(unsigned int *cmds, unsigned int addr,
 	*cmds++ = interval;
 	return cmds - start;
 }
+=======
+>>>>>>> 0e91d2a... Nougat
 
-/*
- * adreno_checkreg_off() - Checks the validity of a register enum
- * @adreno_dev:		Pointer to adreno device
- * @offset_name:	The register enum that is checked
- */
 static inline bool adreno_checkreg_off(struct adreno_device *adreno_dev,
 					enum adreno_regs offset_name)
 {
@@ -1041,22 +1187,21 @@ static inline bool adreno_checkreg_off(struct adreno_device *adreno_dev,
 		ADRENO_REG_UNUSED == gpudev->reg_offsets->offsets[offset_name])
 			BUG();
 
+<<<<<<< HEAD
+=======
+	if (ADRENO_REG_SKIP == gpudev->reg_offsets->offsets[offset_name])
+		return false;
+
+>>>>>>> 0e91d2a... Nougat
 	return true;
 }
 
-/*
- * adreno_readreg() - Read a register by getting its offset from the
- * offset array defined in gpudev node
- * @adreno_dev:		Pointer to the the adreno device
- * @offset_name:	The register enum that is to be read
- * @val:		Register value read is placed here
- */
 static inline void adreno_readreg(struct adreno_device *adreno_dev,
 				enum adreno_regs offset_name, unsigned int *val)
 {
 	struct adreno_gpudev *gpudev = ADRENO_GPU_DEVICE(adreno_dev);
 	if (adreno_checkreg_off(adreno_dev, offset_name))
-		kgsl_regread(&adreno_dev->dev,
+		kgsl_regread(KGSL_DEVICE(adreno_dev),
 				gpudev->reg_offsets->offsets[offset_name], val);
 }
 
@@ -1072,16 +1217,10 @@ static inline void adreno_writereg(struct adreno_device *adreno_dev,
 {
 	struct adreno_gpudev *gpudev = ADRENO_GPU_DEVICE(adreno_dev);
 	if (adreno_checkreg_off(adreno_dev, offset_name))
-		kgsl_regwrite(&adreno_dev->dev,
+		kgsl_regwrite(KGSL_DEVICE(adreno_dev),
 				gpudev->reg_offsets->offsets[offset_name], val);
 }
 
-/*
- * adreno_getreg() - Returns the offset value of a register from the
- * register offset array in the gpudev node
- * @adreno_dev:		Pointer to the the adreno device
- * @offset_name:	The register enum whore offset is returned
- */
 static inline unsigned int adreno_getreg(struct adreno_device *adreno_dev,
 				enum adreno_regs offset_name)
 {
@@ -1091,40 +1230,21 @@ static inline unsigned int adreno_getreg(struct adreno_device *adreno_dev,
 	return gpudev->reg_offsets->offsets[offset_name];
 }
 
-/**
- * adreno_gpu_fault() - Return the current state of the GPU
- * @adreno_dev: A pointer to the adreno_device to query
- *
- * Return 0 if there is no fault or positive with the last type of fault that
- * occurred
- */
 static inline unsigned int adreno_gpu_fault(struct adreno_device *adreno_dev)
 {
 	smp_rmb();
 	return atomic_read(&adreno_dev->dispatcher.fault);
 }
 
-/**
- * adreno_set_gpu_fault() - Set the current fault status of the GPU
- * @adreno_dev: A pointer to the adreno_device to set
- * @state: fault state to set
- *
- */
 static inline void adreno_set_gpu_fault(struct adreno_device *adreno_dev,
 	int state)
 {
-	/* only set the fault bit w/o overwriting other bits */
+	
 	atomic_add(state, &adreno_dev->dispatcher.fault);
 	smp_wmb();
 }
 
 
-/**
- * adreno_clear_gpu_fault() - Clear the GPU fault register
- * @adreno_dev: A pointer to an adreno_device structure
- *
- * Clear the GPU fault status for the adreno device
- */
 
 static inline void adreno_clear_gpu_fault(struct adreno_device *adreno_dev)
 {
@@ -1132,10 +1252,6 @@ static inline void adreno_clear_gpu_fault(struct adreno_device *adreno_dev)
 	smp_wmb();
 }
 
-/**
- * adreno_gpu_halt() - Return the GPU halt refcount
- * @adreno_dev: A pointer to the adreno_device
- */
 static inline int adreno_gpu_halt(struct adreno_device *adreno_dev)
 {
 	smp_rmb();
@@ -1143,29 +1259,17 @@ static inline int adreno_gpu_halt(struct adreno_device *adreno_dev)
 }
 
 
-/**
- * adreno_clear_gpu_halt() - Clear the GPU halt refcount
- * @adreno_dev: A pointer to the adreno_device
- */
 static inline void adreno_clear_gpu_halt(struct adreno_device *adreno_dev)
 {
 	atomic_set(&adreno_dev->halt, 0);
 	smp_wmb();
 }
 
-/**
- * adreno_get_gpu_halt() - Increment GPU halt refcount
- * @adreno_dev: A pointer to the adreno_device
- */
 static inline void adreno_get_gpu_halt(struct adreno_device *adreno_dev)
 {
 	atomic_inc(&adreno_dev->halt);
 }
 
-/**
- * adreno_put_gpu_halt() - Decrement GPU halt refcount
- * @adreno_dev: A pointer to the adreno_device
- */
 static inline void adreno_put_gpu_halt(struct adreno_device *adreno_dev)
 {
 	if (atomic_dec_return(&adreno_dev->halt) < 0)
@@ -1173,13 +1277,6 @@ static inline void adreno_put_gpu_halt(struct adreno_device *adreno_dev)
 }
 
 
-/*
- * adreno_vbif_start() - Program VBIF registers, called in device start
- * @adreno_dev: Pointer to device whose vbif data is to be programmed
- * @vbif_platforms: list register value pair of vbif for a family
- * of adreno cores
- * @num_platforms: Number of platforms contained in vbif_platforms
- */
 static inline void adreno_vbif_start(struct adreno_device *adreno_dev,
 			const struct adreno_vbif_platform *vbif_platforms,
 			int num_platforms)
@@ -1193,28 +1290,19 @@ static inline void adreno_vbif_start(struct adreno_device *adreno_dev,
 			break;
 		}
 	}
+<<<<<<< HEAD
 	BUG_ON(vbif == NULL);
 	while (vbif->reg != 0) {
 		kgsl_regwrite(&adreno_dev->dev, vbif->reg, vbif->val);
+=======
+
+	while ((vbif != NULL) && (vbif->reg != 0)) {
+		kgsl_regwrite(KGSL_DEVICE(adreno_dev), vbif->reg, vbif->val);
+>>>>>>> 0e91d2a... Nougat
 		vbif++;
 	}
 }
 
-/**
- * adreno_set_protected_registers() - Protect the specified range of registers
- * from being accessed by the GPU
- * @adreno_dev: pointer to the Adreno device
- * @index: Pointer to the index of the protect mode register to write to
- * @reg: Starting dword register to write
- * @mask_len: Size of the mask to protect (# of registers = 2 ** mask_len)
- *
- * Add the range of registers to the list of protected mode registers that will
- * cause an exception if the GPU accesses them.  There are 16 available
- * protected mode registers.  Index is used to specify which register to write
- * to - the intent is to call this function multiple times with the same index
- * pointer for each range and the registers will be magically programmed in
- * incremental fashion
- */
 static inline void adreno_set_protected_registers(
 		struct adreno_device *adreno_dev, unsigned int *index,
 		unsigned int reg, int mask_len)
@@ -1231,11 +1319,6 @@ static inline void adreno_set_protected_registers(
 	else
 		BUG_ON(*index >= 16);
 
-	/*
-	 * On A4XX targets with more than 16 protected mode registers
-	 * the upper registers are not contiguous with the lower 16
-	 * registers so we have to adjust the base and offset accordingly
-	 */
 
 	if (adreno_is_a4xx(adreno_dev) && *index >= 0x10) {
 		base = A4XX_CP_PROTECT_REG_10;
@@ -1244,7 +1327,7 @@ static inline void adreno_set_protected_registers(
 
 	val = 0x60000000 | ((mask_len & 0x1F) << 24) | ((reg << 2) & 0xFFFFF);
 
-	kgsl_regwrite(&adreno_dev->dev, base + offset, val);
+	kgsl_regwrite(KGSL_DEVICE(adreno_dev), base + offset, val);
 	*index = *index + 1;
 }
 
@@ -1259,14 +1342,6 @@ static inline void adreno_context_debugfs_init(struct adreno_device *device,
 						{ }
 #endif
 
-/**
- * adreno_compare_pm4_version() - Compare the PM4 microcode version
- * @adreno_dev: Pointer to the adreno_device struct
- * @version: Version number to compare again
- *
- * Compare the current version against the specified version and return -1 if
- * the current code is older, 0 if equal or 1 if newer.
- */
 static inline int adreno_compare_pm4_version(struct adreno_device *adreno_dev,
 	unsigned int version)
 {
@@ -1276,14 +1351,6 @@ static inline int adreno_compare_pm4_version(struct adreno_device *adreno_dev,
 	return (adreno_dev->pm4_fw_version > version) ? 1 : -1;
 }
 
-/**
- * adreno_compare_pfp_version() - Compare the PFP microcode version
- * @adreno_dev: Pointer to the adreno_device struct
- * @version: Version number to compare against
- *
- * Compare the current version against the specified version and return -1 if
- * the current code is older, 0 if equal or 1 if newer.
- */
 static inline int adreno_compare_pfp_version(struct adreno_device *adreno_dev,
 	unsigned int version)
 {
@@ -1293,10 +1360,6 @@ static inline int adreno_compare_pfp_version(struct adreno_device *adreno_dev,
 	return (adreno_dev->pfp_fw_version > version) ? 1 : -1;
 }
 
-/*
- * adreno_bootstrap_ucode() - Checks if Ucode bootstrapping is supported
- * @adreno_dev:		Pointer to the the adreno device
- */
 static inline int adreno_bootstrap_ucode(struct adreno_device *adreno_dev)
 {
 	return (ADRENO_FEATURE(adreno_dev, ADRENO_USE_BOOTSTRAP) &&
@@ -1304,6 +1367,7 @@ static inline int adreno_bootstrap_ucode(struct adreno_device *adreno_dev)
 			adreno_dev->gpucore->pfp_bstrp_ver) >= 0) ? 1 : 0;
 }
 
+<<<<<<< HEAD
 /**
  * adreno_get_rptr() - Get the current ringbuffer read pointer
  * @rb: Pointer the ringbuffer to query
@@ -1327,6 +1391,28 @@ adreno_get_rptr(struct adreno_ringbuffer *rb)
  * @adreno_dev: The adreno device that context is using
  * @drawctxt: The context pointer
  */
+=======
+static inline bool adreno_in_preempt_state(struct adreno_device *adreno_dev,
+			enum adreno_preempt_states state)
+{
+	return atomic_read(&adreno_dev->preempt.state) == state;
+}
+static inline void adreno_set_preempt_state(struct adreno_device *adreno_dev,
+		enum adreno_preempt_states state)
+{
+	smp_wmb();
+	atomic_set(&adreno_dev->preempt.state, state);
+
+	
+	smp_wmb();
+}
+
+static inline bool adreno_is_preemption_enabled(
+				struct adreno_device *adreno_dev)
+{
+	return test_bit(ADRENO_DEVICE_PREEMPTION, &adreno_dev->priv);
+}
+>>>>>>> 0e91d2a... Nougat
 static inline struct adreno_ringbuffer *adreno_ctx_get_rb(
 				struct adreno_device *adreno_dev,
 				struct adreno_context *drawctxt)
@@ -1338,10 +1424,17 @@ static inline struct adreno_ringbuffer *adreno_ctx_get_rb(
 
 	context = &(drawctxt->base);
 
+<<<<<<< HEAD
 	/*
 	 * Math to convert the priority field in context structure to an RB ID.
 	 * Divide up the context priority based on number of ringbuffer levels.
 	 */
+=======
+
+	if (!adreno_is_preemption_enabled(adreno_dev))
+		return &(adreno_dev->ringbuffers[0]);
+
+>>>>>>> 0e91d2a... Nougat
 	level = context->priority / adreno_dev->num_ringbuffers;
 	if (level < adreno_dev->num_ringbuffers)
 		return &(adreno_dev->ringbuffers[level]);
@@ -1349,6 +1442,7 @@ static inline struct adreno_ringbuffer *adreno_ctx_get_rb(
 		return &(adreno_dev->ringbuffers[
 				adreno_dev->num_ringbuffers - 1]);
 }
+<<<<<<< HEAD
 /*
  * adreno_set_active_ctx_null() - Put back reference to any active context
  * and set the active context to NULL
@@ -1381,6 +1475,28 @@ static inline void adreno_set_active_ctx_null(struct adreno_device *adreno_dev)
  *
  */
 static inline bool adreno_use_cpu_path(struct adreno_device *adreno_dev)
+=======
+
+static inline int adreno_compare_prio_level(int p1, int p2)
+{
+	return p2 - p1;
+}
+
+void adreno_readreg64(struct adreno_device *adreno_dev,
+		enum adreno_regs lo, enum adreno_regs hi, uint64_t *val);
+
+void adreno_writereg64(struct adreno_device *adreno_dev,
+		enum adreno_regs lo, enum adreno_regs hi, uint64_t val);
+
+unsigned int adreno_get_rptr(struct adreno_ringbuffer *rb);
+
+static inline bool adreno_rb_empty(struct adreno_ringbuffer *rb)
+{
+	return (adreno_get_rptr(rb) == rb->wptr);
+}
+
+static inline bool adreno_soft_fault_detect(struct adreno_device *adreno_dev)
+>>>>>>> 0e91d2a... Nougat
 {
 	return (adreno_isidle(&adreno_dev->dev) ||
 		KGSL_STATE_ACTIVE != adreno_dev->dev.state ||
@@ -1388,6 +1504,7 @@ static inline bool adreno_use_cpu_path(struct adreno_device *adreno_dev)
 		adreno_dev->dev.cff_dump_enable);
 }
 
+<<<<<<< HEAD
 /**
  * adreno_set_apriv() - Generate commands to set/reset the APRIV
  * @adreno_dev: Device on which the commands will execute
@@ -1398,6 +1515,16 @@ static inline bool adreno_use_cpu_path(struct adreno_device *adreno_dev)
  */
 static inline unsigned int adreno_set_apriv(struct adreno_device *adreno_dev,
 				unsigned int *cmds, int set)
+=======
+static inline bool adreno_long_ib_detect(struct adreno_device *adreno_dev)
+{
+	return adreno_dev->long_ib_detect &&
+		!test_bit(ADRENO_DEVICE_ISDB_ENABLED, &adreno_dev->priv);
+}
+
+#if BITS_PER_LONG == 64
+static inline bool adreno_support_64bit(struct adreno_device *adreno_dev)
+>>>>>>> 0e91d2a... Nougat
 {
 	unsigned int *cmds_orig = cmds;
 
@@ -1414,5 +1541,41 @@ static inline unsigned int adreno_set_apriv(struct adreno_device *adreno_dev,
 
 	return cmds - cmds_orig;
 }
+<<<<<<< HEAD
+=======
+#endif 
 
-#endif /*__ADRENO_H */
+static inline void adreno_ringbuffer_set_global(
+		struct adreno_device *adreno_dev, int name)
+{
+	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
+
+	kgsl_sharedmem_writel(device,
+		&adreno_dev->ringbuffers[0].pagetable_desc,
+		PT_INFO_OFFSET(current_global_ptname), name);
+}
+
+static inline void adreno_ringbuffer_set_pagetable(struct adreno_ringbuffer *rb,
+		struct kgsl_pagetable *pt)
+{
+	struct adreno_device *adreno_dev = ADRENO_RB_DEVICE(rb);
+	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
+	unsigned long flags;
+
+	spin_lock_irqsave(&rb->preempt_lock, flags);
+
+	kgsl_sharedmem_writel(device, &rb->pagetable_desc,
+		PT_INFO_OFFSET(current_rb_ptname), pt->name);
+
+	kgsl_sharedmem_writeq(device, &rb->pagetable_desc,
+		PT_INFO_OFFSET(ttbr0), kgsl_mmu_pagetable_get_ttbr0(pt));
+
+	kgsl_sharedmem_writel(device, &rb->pagetable_desc,
+		PT_INFO_OFFSET(contextidr),
+		kgsl_mmu_pagetable_get_contextidr(pt));
+
+	spin_unlock_irqrestore(&rb->preempt_lock, flags);
+}
+>>>>>>> 0e91d2a... Nougat
+
+#endif 

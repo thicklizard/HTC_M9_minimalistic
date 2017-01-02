@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2014, Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2014, 2016 Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -16,16 +20,25 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
+<<<<<<< HEAD
 		system_heap: qcom,ion-heap@25 {
+=======
+		qcom,ion-heap@25 {
+>>>>>>> 0e91d2a... Nougat
 			reg = <25>;
 			qcom,ion-heap-type = "SYSTEM";
 		};
 
+<<<<<<< HEAD
 		system_contig_heap: qcom,ion-heap@21 {
+=======
+		qcom,ion-heap@21 {
+>>>>>>> 0e91d2a... Nougat
 			reg = <21>;
 			qcom,ion-heap-type = "SYSTEM_CONTIG";
 		};
 
+<<<<<<< HEAD
 		qsecom_heap: qcom,ion-heap@27 { /* QSEECOM HEAP */
 			compatible = "qcom,msm-ion-reserve";
 			reg = <27>;
@@ -44,6 +57,23 @@
 			compatible = "qcom,msm-ion-reserve";
 			reg = <26>;
 			linux,contiguous-region = <&modem_adsp_mem>;
+=======
+		qcom,ion-heap@27 { /* QSEECOM HEAP */
+			reg = <27>;
+			memory-region = <&venus_qseecom_mem>;
+			qcom,ion-heap-type = "DMA";
+		};
+
+		qcom,ion-heap@28 { /* AUDIO HEAP */
+			reg = <28>;
+			memory-region = <&audio_mem>;
+			qcom,ion-heap-type = "DMA";
+		};
+
+		modem_heap: qcom,ion-heap@26 { /* MODEM HEAP */
+			reg = <26>;
+			memory-region = <&modem_adsp_mem>;
+>>>>>>> 0e91d2a... Nougat
 			qcom,ion-heap-type = "DMA";
 		};
 	};

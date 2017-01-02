@@ -315,6 +315,7 @@ struct mmc_host {
 	int			rescan_disable;	
 	int			rescan_only_remove;
 	int			rescan_entered;	
+	int			retry_disable;	
 
 	struct mmc_card		*card;		
 
@@ -400,6 +401,7 @@ struct mmc_host {
 		
 		unsigned long wkbytes_drv;
 		ktime_t workload_time;
+<<<<<<< HEAD
 	} perf;
 	bool perf_enable;
 	struct {
@@ -419,6 +421,20 @@ struct mmc_host {
 		struct delayed_work work;
 		enum mmc_load	state;
 	} clk_scaling;
+=======
+
+		ktime_t start;
+
+		
+		unsigned long cmdq_read_map;
+		unsigned long cmdq_write_map;
+		ktime_t cmdq_read_start;
+		ktime_t cmdq_write_start;
+	} perf;
+	bool perf_enable;
+
+
+>>>>>>> 0e91d2a... Nougat
 	enum dev_state dev_status;
 	bool			card_clock_off;
 	unsigned int		removed_cnt;
@@ -456,8 +472,15 @@ static inline void *mmc_priv(struct mmc_host *host)
 #define mmc_dev(x)	((x)->parent)
 #define mmc_classdev(x)	(&(x)->class_dev)
 #define mmc_hostname(x)	(dev_name(&(x)->class_dev))
+<<<<<<< HEAD
 #define mmc_bus_needs_resume(host) ((host)->bus_resume_flags & MMC_BUSRESUME_NEEDS_RESUME)
 #define mmc_bus_manual_resume(host) ((host)->bus_resume_flags & MMC_BUSRESUME_MANUAL_RESUME)
+=======
+#define mmc_bus_needs_resume(host) ((host)->bus_resume_flags & \
+				    MMC_BUSRESUME_NEEDS_RESUME)
+#define mmc_bus_manual_resume(host) ((host)->bus_resume_flags & \
+				MMC_BUSRESUME_MANUAL_RESUME)
+>>>>>>> 0e91d2a... Nougat
 
 static inline void mmc_set_bus_resume_policy(struct mmc_host *host, int manual)
 {
@@ -468,9 +491,12 @@ static inline void mmc_set_bus_resume_policy(struct mmc_host *host, int manual)
 }
 
 extern int mmc_resume_bus(struct mmc_host *host);
+<<<<<<< HEAD
 
 int mmc_suspend_host(struct mmc_host *);
 int mmc_resume_host(struct mmc_host *);
+=======
+>>>>>>> 0e91d2a... Nougat
 
 int mmc_power_save_host(struct mmc_host *host);
 int mmc_power_restore_host(struct mmc_host *host);

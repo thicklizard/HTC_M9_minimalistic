@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2002,2008-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2002,2008-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -111,11 +115,18 @@ static char get_cacheflag(const struct kgsl_memdesc *m)
 
 static void print_mem_entry(struct seq_file *s, struct kgsl_mem_entry *entry)
 {
+<<<<<<< HEAD
 	char flags[7];
+=======
+	struct seq_file *s = data;
+	struct kgsl_mem_entry *entry = ptr;
+	char flags[9];
+>>>>>>> 0e91d2a... Nougat
 	char usage[16];
 	struct kgsl_memdesc *m = &entry->memdesc;
 
 	flags[0] = kgsl_memdesc_is_global(m) ?  'g' : '-';
+<<<<<<< HEAD
 	flags[1] = m->flags & KGSL_MEMFLAGS_GPUREADONLY ? 'r' : '-';
 	flags[2] = get_alignflag(m);
 	flags[3] = get_cacheflag(m);
@@ -131,6 +142,32 @@ static void print_mem_entry(struct seq_file *s, struct kgsl_mem_entry *entry)
 			m->size, entry->id, flags,
 			memtype_str(kgsl_memdesc_usermem_type(m)),
 			usage, m->sglen);
+=======
+	flags[1] = '-';
+	flags[2] = !(m->flags & KGSL_MEMFLAGS_GPUREADONLY) ? 'w' : '-';
+	flags[3] = get_alignflag(m);
+	flags[4] = get_cacheflag(m);
+	flags[5] = kgsl_memdesc_use_cpu_map(m) ? 'p' : '-';
+	flags[6] = (m->useraddr) ? 'Y' : 'N';
+	flags[7] = kgsl_memdesc_is_secured(m) ?  's' : '-';
+	flags[8] = '\0';
+
+	kgsl_get_memory_usage(usage, sizeof(usage), m->flags);
+
+	seq_printf(s, "%pK %pK %16llu %5d %9s %10s %16s %5d %16llu",
+			(uint64_t *)(uintptr_t) m->gpuaddr,
+			(unsigned long *) m->useraddr,
+			m->size, entry->id, flags,
+			memtype_str(kgsl_memdesc_usermem_type(m)),
+			usage, (m->sgt ? m->sgt->nents : 0), m->mapsize);
+
+	if (entry->metadata[0] != 0)
+		seq_printf(s, " %s", entry->metadata);
+
+	seq_putc(s, '\n');
+
+	return 0;
+>>>>>>> 0e91d2a... Nougat
 }
 
 static int process_mem_print(struct seq_file *s, void *unused)
@@ -140,9 +177,13 @@ static int process_mem_print(struct seq_file *s, void *unused)
 	struct kgsl_process_private *private = s->private;
 	int next = 0;
 
+<<<<<<< HEAD
 	seq_printf(s, "%8s %8s %8s %5s %6s %10s %16s %5s\n",
+=======
+	seq_printf(s, "%16s %16s %16s %5s %9s %10s %16s %5s %16s\n",
+>>>>>>> 0e91d2a... Nougat
 		   "gpuaddr", "useraddr", "size", "id", "flags", "type",
-		   "usage", "sglen");
+		   "usage", "sglen", "mapsize");
 
 	/* print all entries with a GPU address */
 	spin_lock(&private->mem_lock);

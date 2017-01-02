@@ -1196,13 +1196,20 @@ static void if_tag_stat_update(const char *ifname, uid_t uid,
 		"uid=%u sk=%p dir=%d proto=%d bytes=%d)\n",
 		 ifname, uid, sk, direction, proto, bytes);
 
+<<<<<<< HEAD
 
 	spin_lock_bh(&iface_stat_list_lock);
 	iface_entry = get_iface_entry(ifname);
 	if (!iface_entry) {
 		spin_unlock_bh(&iface_stat_list_lock);
+=======
+	spin_lock_bh(&iface_stat_list_lock);
+	iface_entry = get_iface_entry(ifname);
+	if (!iface_entry) {
+>>>>>>> 0e91d2a... Nougat
 		pr_err_ratelimited("qtaguid: tag_stat: stat_update() "
 				   "%s not found\n", ifname);
+		spin_unlock_bh(&iface_stat_list_lock);
 		return;
 	}
 	spin_unlock_bh(&iface_stat_list_lock);
@@ -1231,8 +1238,7 @@ static void if_tag_stat_update(const char *ifname, uid_t uid,
 					      tag);
 	if (tag_stat_entry) {
 		tag_stat_update(tag_stat_entry, direction, proto, bytes);
-		spin_unlock_bh(&iface_entry->tag_stat_list_lock);
-		return;
+		goto unlock;
 	}
 
 	
@@ -1260,6 +1266,7 @@ static void if_tag_stat_update(const char *ifname, uid_t uid,
 	tag_stat_update(new_tag_stat, direction, proto, bytes);
 unlock:
 	spin_unlock_bh(&iface_entry->tag_stat_list_lock);
+	spin_unlock_bh(&iface_stat_list_lock);
 }
 
 static int iface_netdev_event_handler(struct notifier_block *nb,
@@ -1522,6 +1529,7 @@ static bool qtaguid_mt(const struct sk_buff *skb, struct xt_action_param *par)
 	uid_t sock_uid;
 	bool res;
 	bool set_sk_callback_lock = false;
+	bool do_tag_stat = !(info->match & XT_QTAGUID_UID);
 
 	bool do_tag_stat = !(info->match & XT_QTAGUID_UID);
 
@@ -1599,7 +1607,11 @@ static bool qtaguid_mt(const struct sk_buff *skb, struct xt_action_param *par)
 	}
 	sock_uid = filp->f_cred->fsuid;
 	if (do_tag_stat)
+<<<<<<< HEAD
 		account_for_uid(skb, sk, sock_uid, par);
+=======
+		account_for_uid(skb, sk, from_kuid(&init_user_ns, sock_uid), par);
+>>>>>>> 0e91d2a... Nougat
 
 	if (info->match & XT_QTAGUID_UID)
 		if ((filp->f_cred->fsuid >= info->uid_min &&
@@ -2349,7 +2361,11 @@ static int pp_stats_line(struct seq_file *m, struct tag_stat *ts_entry,
 	uid_t stat_uid = get_uid_from_tag(tag);
 	struct proc_print_info *ppi = m->private;
 	
+<<<<<<< HEAD
 	if (get_atag_from_tag(tag) && !can_read_other_uid_stats(stat_uid)) {
+=======
+	if (!can_read_other_uid_stats(make_kuid(&init_user_ns,stat_uid))) {
+>>>>>>> 0e91d2a... Nougat
 		CT_DEBUG("qtaguid: stats line: "
 			 "%s 0x%llx %u: insufficient priv "
 			 "from pid=%u tgid=%u uid=%u stats.gid=%u\n",

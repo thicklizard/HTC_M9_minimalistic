@@ -67,8 +67,13 @@
 #include "iwl-agn-hw.h"
 
 /* Highest firmware API version supported */
+<<<<<<< HEAD
 #define IWL7260_UCODE_API_MAX	7
 #define IWL3160_UCODE_API_MAX	7
+=======
+#define IWL7260_UCODE_API_MAX	12
+#define IWL3160_UCODE_API_MAX	12
+>>>>>>> 0e91d2a... Nougat
 
 /* Oldest version we won't warn about */
 #define IWL7260_UCODE_API_OK	7
@@ -90,6 +95,20 @@
 #define IWL3160_FW_PRE "iwlwifi-3160-"
 #define IWL3160_MODULE_FIRMWARE(api) IWL3160_FW_PRE __stringify(api) ".ucode"
 
+<<<<<<< HEAD
+=======
+#define IWL3165_FW_PRE "iwlwifi-3165-"
+#define IWL3165_MODULE_FIRMWARE(api) IWL3165_FW_PRE __stringify(api) ".ucode"
+
+#define IWL7265_FW_PRE "iwlwifi-7265-"
+#define IWL7265_MODULE_FIRMWARE(api) IWL7265_FW_PRE __stringify(api) ".ucode"
+
+#define IWL7265D_FW_PRE "iwlwifi-7265D-"
+#define IWL7265D_MODULE_FIRMWARE(api) IWL7265D_FW_PRE __stringify(api) ".ucode"
+
+#define NVM_HW_SECTION_NUM_FAMILY_7000		0
+
+>>>>>>> 0e91d2a... Nougat
 static const struct iwl_base_params iwl7000_base_params = {
 	.eeprom_size = OTP_LOW_IMAGE_SIZE,
 	.num_of_queues = IWLAGN_NUM_QUEUES,
@@ -184,5 +203,99 @@ const struct iwl_cfg iwl3160_n_cfg = {
 	.host_interrupt_operation_mode = true,
 };
 
+<<<<<<< HEAD
 MODULE_FIRMWARE(IWL7260_MODULE_FIRMWARE(IWL7260_UCODE_API_OK));
 MODULE_FIRMWARE(IWL3160_MODULE_FIRMWARE(IWL3160_UCODE_API_OK));
+=======
+static const struct iwl_pwr_tx_backoff iwl7265_pwr_tx_backoffs[] = {
+	{.pwr = 1600, .backoff = 0},
+	{.pwr = 1300, .backoff = 467},
+	{.pwr = 900,  .backoff = 1900},
+	{.pwr = 800, .backoff = 2630},
+	{.pwr = 700, .backoff = 3720},
+	{.pwr = 600, .backoff = 5550},
+	{.pwr = 500, .backoff = 9350},
+	{0},
+};
+
+static const struct iwl_ht_params iwl7265_ht_params = {
+	.stbc = true,
+	.ldpc = true,
+	.ht40_bands = BIT(IEEE80211_BAND_2GHZ) | BIT(IEEE80211_BAND_5GHZ),
+};
+
+const struct iwl_cfg iwl3165_2ac_cfg = {
+	.name = "Intel(R) Dual Band Wireless AC 3165",
+	.fw_name_pre = IWL3165_FW_PRE,
+	IWL_DEVICE_7000,
+	.ht_params = &iwl7000_ht_params,
+	.nvm_ver = IWL3165_NVM_VERSION,
+	.nvm_calib_ver = IWL3165_TX_POWER_VERSION,
+	.pwr_tx_backoffs = iwl7265_pwr_tx_backoffs,
+};
+
+const struct iwl_cfg iwl7265_2ac_cfg = {
+	.name = "Intel(R) Dual Band Wireless AC 7265",
+	.fw_name_pre = IWL7265_FW_PRE,
+	IWL_DEVICE_7000,
+	.ht_params = &iwl7265_ht_params,
+	.nvm_ver = IWL7265_NVM_VERSION,
+	.nvm_calib_ver = IWL7265_TX_POWER_VERSION,
+	.pwr_tx_backoffs = iwl7265_pwr_tx_backoffs,
+};
+
+const struct iwl_cfg iwl7265_2n_cfg = {
+	.name = "Intel(R) Dual Band Wireless N 7265",
+	.fw_name_pre = IWL7265_FW_PRE,
+	IWL_DEVICE_7000,
+	.ht_params = &iwl7265_ht_params,
+	.nvm_ver = IWL7265_NVM_VERSION,
+	.nvm_calib_ver = IWL7265_TX_POWER_VERSION,
+	.pwr_tx_backoffs = iwl7265_pwr_tx_backoffs,
+};
+
+const struct iwl_cfg iwl7265_n_cfg = {
+	.name = "Intel(R) Wireless N 7265",
+	.fw_name_pre = IWL7265_FW_PRE,
+	IWL_DEVICE_7000,
+	.ht_params = &iwl7265_ht_params,
+	.nvm_ver = IWL7265_NVM_VERSION,
+	.nvm_calib_ver = IWL7265_TX_POWER_VERSION,
+	.pwr_tx_backoffs = iwl7265_pwr_tx_backoffs,
+};
+
+const struct iwl_cfg iwl7265d_2ac_cfg = {
+	.name = "Intel(R) Dual Band Wireless AC 7265",
+	.fw_name_pre = IWL7265D_FW_PRE,
+	IWL_DEVICE_7000,
+	.ht_params = &iwl7265_ht_params,
+	.nvm_ver = IWL7265_NVM_VERSION,
+	.nvm_calib_ver = IWL7265_TX_POWER_VERSION,
+	.pwr_tx_backoffs = iwl7265_pwr_tx_backoffs,
+};
+
+const struct iwl_cfg iwl7265d_2n_cfg = {
+	.name = "Intel(R) Dual Band Wireless N 7265",
+	.fw_name_pre = IWL7265D_FW_PRE,
+	IWL_DEVICE_7000,
+	.ht_params = &iwl7265_ht_params,
+	.nvm_ver = IWL7265_NVM_VERSION,
+	.nvm_calib_ver = IWL7265_TX_POWER_VERSION,
+	.pwr_tx_backoffs = iwl7265_pwr_tx_backoffs,
+};
+
+const struct iwl_cfg iwl7265d_n_cfg = {
+	.name = "Intel(R) Wireless N 7265",
+	.fw_name_pre = IWL7265D_FW_PRE,
+	IWL_DEVICE_7000,
+	.ht_params = &iwl7265_ht_params,
+	.nvm_ver = IWL7265_NVM_VERSION,
+	.nvm_calib_ver = IWL7265_TX_POWER_VERSION,
+	.pwr_tx_backoffs = iwl7265_pwr_tx_backoffs,
+};
+
+MODULE_FIRMWARE(IWL7260_MODULE_FIRMWARE(IWL7260_UCODE_API_OK));
+MODULE_FIRMWARE(IWL3160_MODULE_FIRMWARE(IWL7260_UCODE_API_OK));
+MODULE_FIRMWARE(IWL7265_MODULE_FIRMWARE(IWL7260_UCODE_API_OK));
+MODULE_FIRMWARE(IWL7265D_MODULE_FIRMWARE(IWL7260_UCODE_API_OK));
+>>>>>>> 0e91d2a... Nougat

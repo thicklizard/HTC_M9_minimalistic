@@ -98,6 +98,73 @@ static const char radeon_family_name[][16] = {
 	"LAST",
 };
 
+<<<<<<< HEAD
+=======
+#if defined(CONFIG_VGA_SWITCHEROO)
+bool radeon_has_atpx_dgpu_power_cntl(void);
+#else
+static inline bool radeon_has_atpx_dgpu_power_cntl(void) { return false; }
+#endif
+
+#define RADEON_PX_QUIRK_DISABLE_PX  (1 << 0)
+#define RADEON_PX_QUIRK_LONG_WAKEUP (1 << 1)
+
+struct radeon_px_quirk {
+	u32 chip_vendor;
+	u32 chip_device;
+	u32 subsys_vendor;
+	u32 subsys_device;
+	u32 px_quirk_flags;
+};
+
+static struct radeon_px_quirk radeon_px_quirk_list[] = {
+	/* Acer aspire 5560g (CPU: AMD A4-3305M; GPU: AMD Radeon HD 6480g + 7470m)
+	 * https://bugzilla.kernel.org/show_bug.cgi?id=74551
+	 */
+	{ PCI_VENDOR_ID_ATI, 0x6760, 0x1025, 0x0672, RADEON_PX_QUIRK_DISABLE_PX },
+	/* Asus K73TA laptop with AMD A6-3400M APU and Radeon 6550 GPU
+	 * https://bugzilla.kernel.org/show_bug.cgi?id=51381
+	 */
+	{ PCI_VENDOR_ID_ATI, 0x6741, 0x1043, 0x108c, RADEON_PX_QUIRK_DISABLE_PX },
+	/* Asus K53TK laptop with AMD A6-3420M APU and Radeon 7670m GPU
+	 * https://bugzilla.kernel.org/show_bug.cgi?id=51381
+	 */
+	{ PCI_VENDOR_ID_ATI, 0x6840, 0x1043, 0x2122, RADEON_PX_QUIRK_DISABLE_PX },
+	/* macbook pro 8.2 */
+	{ PCI_VENDOR_ID_ATI, 0x6741, PCI_VENDOR_ID_APPLE, 0x00e2, RADEON_PX_QUIRK_LONG_WAKEUP },
+	{ 0, 0, 0, 0, 0 },
+};
+
+bool radeon_is_px(struct drm_device *dev)
+{
+	struct radeon_device *rdev = dev->dev_private;
+
+	if (rdev->flags & RADEON_IS_PX)
+		return true;
+	return false;
+}
+
+static void radeon_device_handle_px_quirks(struct radeon_device *rdev)
+{
+	struct radeon_px_quirk *p = radeon_px_quirk_list;
+
+	/* Apply PX quirks */
+	while (p && p->chip_device != 0) {
+		if (rdev->pdev->vendor == p->chip_vendor &&
+		    rdev->pdev->device == p->chip_device &&
+		    rdev->pdev->subsystem_vendor == p->subsys_vendor &&
+		    rdev->pdev->subsystem_device == p->subsys_device) {
+			rdev->px_quirk_flags = p->px_quirk_flags;
+			break;
+		}
+		++p;
+	}
+
+	if (rdev->px_quirk_flags & RADEON_PX_QUIRK_DISABLE_PX)
+		rdev->flags &= ~RADEON_IS_PX;
+}
+
+>>>>>>> 0e91d2a... Nougat
 /**
  * radeon_program_register_sequence - program an array of registers.
  *
@@ -1169,7 +1236,16 @@ int radeon_device_init(struct radeon_device *rdev,
 	/* this will fail for cards that aren't VGA class devices, just
 	 * ignore it */
 	vga_client_register(rdev->pdev, rdev, NULL, radeon_vga_set_decode);
+<<<<<<< HEAD
 	vga_switcheroo_register_client(rdev->pdev, &radeon_switcheroo_ops);
+=======
+
+	if ((rdev->flags & RADEON_IS_PX) && radeon_has_atpx_dgpu_power_cntl())
+		runtime = true;
+	vga_switcheroo_register_client(rdev->pdev, &radeon_switcheroo_ops, runtime);
+	if (runtime)
+		vga_switcheroo_init_domain_pm_ops(rdev->dev, &rdev->vga_pm_domain);
+>>>>>>> 0e91d2a... Nougat
 
 	r = radeon_init(rdev);
 	if (r)

@@ -315,13 +315,13 @@ void msm_dealloc_port(struct slim_controller *ctrl, u8 pn)
 	if (pn >= dev->port_nums)
 		return;
 	endpoint = &dev->pipes[pn];
-	if (dev->pipes[pn].connected)
-		msm_slim_disconn_pipe_port(dev, pn);
-	if (endpoint->sps) {
+	if (dev->pipes[pn].connected) {
 		struct sps_connect *config = &endpoint->config;
-		msm_slim_free_endpoint(endpoint);
+		msm_slim_disconn_pipe_port(dev, pn);
 		msm_slim_sps_mem_free(dev, &config->desc);
 	}
+	if (endpoint->sps)
+		msm_slim_free_endpoint(endpoint);
 }
 
 enum slim_port_err msm_slim_port_xfer_status(struct slim_controller *ctr,
@@ -451,12 +451,34 @@ void msm_slim_tx_msg_return(struct msm_slim_ctrl *dev, int err)
 				pr_err("SLIM TX get IOVEC failed:%d", ret);
 			return;
 		}
+<<<<<<< HEAD
 		idx = (int) ((iovec.addr - (unsigned long) mem->phys_base)
+=======
+		if (addr == dev->bulk.wr_dma) {
+			dma_unmap_single(dev->dev, dev->bulk.wr_dma,
+					 dev->bulk.size, DMA_TO_DEVICE);
+			if (!dev->bulk.cb)
+				SLIM_WARN(dev, "no callback for bulk WR?");
+			else
+				dev->bulk.cb(dev->bulk.ctx, err);
+			dev->bulk.in_progress = false;
+			pm_runtime_mark_last_busy(dev->dev);
+			return;
+		} else if (addr < mem->phys_base ||
+			   (addr > (mem->phys_base +
+				    (MSM_TX_BUFS * SLIM_MSGQ_BUF_LEN)))) {
+			SLIM_WARN(dev, "BUF out of bounds:base:0x%pa, io:0x%pa",
+					&mem->phys_base, &addr);
+			continue;
+		}
+		idx = (int) ((addr - mem->phys_base)
+>>>>>>> 0e91d2a... Nougat
 			/ SLIM_MSGQ_BUF_LEN);
 		if (idx < MSM_TX_BUFS && dev->wr_comp[idx]) {
 			struct completion *comp = dev->wr_comp[idx];
 			dev->wr_comp[idx] = NULL;
 			complete(comp);
+<<<<<<< HEAD
 		} else if (idx >= MSM_TX_BUFS) {
 			SLIM_ERR(dev, "BUF out of bounds:base:0x%llx, io:0x%x",
 					(u64)mem->phys_base, iovec.addr);
@@ -464,6 +486,8 @@ void msm_slim_tx_msg_return(struct msm_slim_ctrl *dev, int err)
 			sps_get_bam_debug_info(dev->bam.hdl, 93,
 						SPS_BAM_PIPE(4), 0, 2);
 			continue;
+=======
+>>>>>>> 0e91d2a... Nougat
 		}
 		if (err) {
 			int i;

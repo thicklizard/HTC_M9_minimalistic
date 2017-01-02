@@ -1,4 +1,14 @@
 obj-$(CONFIG_IOMMU_API) += iommu.o
+<<<<<<< HEAD
+=======
+obj-$(CONFIG_IOMMU_API) += iommu-traces.o
+obj-$(CONFIG_IOMMU_API) += iommu-sysfs.o
+obj-$(CONFIG_IOMMU_API) += msm_dma_iommu_mapping.o
+obj-$(CONFIG_IOMMU_IO_PGTABLE) += io-pgtable.o
+obj-$(CONFIG_IOMMU_IO_PGTABLE_LPAE) += io-pgtable-arm.o
+obj-$(CONFIG_MSM_TZ_SMMU) += io-pgtable-msm-secure.o
+obj-$(CONFIG_IOMMU_IO_PGTABLE_FAST) += io-pgtable-fast.o dma-mapping-fast.o
+>>>>>>> 0e91d2a... Nougat
 obj-$(CONFIG_OF_IOMMU)	+= of_iommu.o
 obj-$(CONFIG_MSM_IOMMU) += msm_iommu.o msm_iommu_domains.o msm_iommu_mapping.o
 obj-$(CONFIG_MSM_IOMMU_V0) += msm_iommu-v0.o msm_iommu_dev-v0.o

@@ -1633,8 +1633,13 @@ static sctp_cookie_param_t *sctp_pack_cookie(const struct sctp_endpoint *ep,
 	cookie->c.adaptation_ind = asoc->peer.adaptation_ind;
 
 	/* Set an expiration time for the cookie.  */
+<<<<<<< HEAD
 	do_gettimeofday(&cookie->c.expiration);
 	TIMEVAL_ADD(asoc->cookie_life, cookie->c.expiration);
+=======
+	cookie->c.expiration = ktime_add(asoc->cookie_life,
+					 ktime_get_real());
+>>>>>>> 0e91d2a... Nougat
 
 	/* Copy the peer's init packet.  */
 	memcpy(&cookie->c.peer_init[0], init_chunk->chunk_hdr,
@@ -1762,7 +1767,11 @@ no_hmac:
 	if (sock_flag(ep->base.sk, SOCK_TIMESTAMP))
 		skb_get_timestamp(skb, &tv);
 	else
+<<<<<<< HEAD
 		do_gettimeofday(&tv);
+=======
+		kt = ktime_get_real();
+>>>>>>> 0e91d2a... Nougat
 
 	if (!asoc && tv_lt(bear_cookie->expiration, tv)) {
 		/*

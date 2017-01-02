@@ -29,11 +29,15 @@
 #include <linux/mempolicy.h>
 #include <linux/migrate.h>
 #include <linux/task_work.h>
+<<<<<<< HEAD
 #include <linux/module.h>
 
 #include <trace/events/sched.h>
+=======
+>>>>>>> 0e91d2a... Nougat
 
 #include "sched.h"
+#include <trace/events/sched.h>
 
 static int min_budget = 60;
 module_param(min_budget, int, 0755);
@@ -64,6 +68,27 @@ unsigned int __read_mostly sysctl_sched_shares_window = 10000000UL;
 unsigned int sysctl_sched_cfs_bandwidth_slice = 5000UL;
 #endif
 
+<<<<<<< HEAD
+=======
+static inline void update_load_add(struct load_weight *lw, unsigned long inc)
+{
+	lw->weight += inc;
+	lw->inv_weight = 0;
+}
+
+static inline void update_load_sub(struct load_weight *lw, unsigned long dec)
+{
+	lw->weight -= dec;
+	lw->inv_weight = 0;
+}
+
+static inline void update_load_set(struct load_weight *lw, unsigned long w)
+{
+	lw->weight = w;
+	lw->inv_weight = 0;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static int get_update_sysctl_factor(void)
 {
 	unsigned int cpus = min_t(int, num_online_cpus(), 8);
@@ -580,7 +605,11 @@ update_stats_wait_start(struct cfs_rq *cfs_rq, struct sched_entity *se)
 static void update_stats_enqueue(struct cfs_rq *cfs_rq, struct sched_entity *se)
 {
 	if (se != cfs_rq->curr)
+<<<<<<< HEAD
 		update_stats_wait_start(cfs_rq, se);
+=======
+		update_stats_wait_start(cfs_rq, se, migrating);
+>>>>>>> 0e91d2a... Nougat
 }
 
 static void
@@ -594,7 +623,11 @@ update_stats_wait_end(struct cfs_rq *cfs_rq, struct sched_entity *se)
 #ifdef CONFIG_SCHEDSTATS
 	if (entity_is_task(se)) {
 		trace_sched_stat_wait(task_of(se),
+<<<<<<< HEAD
 			rq_of(cfs_rq)->clock - se->statistics.wait_start);
+=======
+			rq_clock(rq_of(cfs_rq)) - se->statistics.wait_start);
+>>>>>>> 0e91d2a... Nougat
 	}
 #endif
 	schedstat_set(se->statistics.wait_start, 0);
@@ -999,7 +1032,13 @@ unsigned int __read_mostly sched_enable_hmp = 0;
 
 unsigned int __read_mostly sysctl_sched_spill_nr_run = 10;
 
-unsigned int __read_mostly sysctl_sched_enable_power_aware = 0;
+unsigned int __read_mostly sched_small_wakee_task_load;
+unsigned int __read_mostly sysctl_sched_small_wakee_task_load_pct = 10;
+
+unsigned int __read_mostly sched_big_waker_task_load;
+unsigned int __read_mostly sysctl_sched_big_waker_task_load_pct = 25;
+
+unsigned int __read_mostly sysctl_sched_prefer_sync_wakee_to_waker;
 
 unsigned int __read_mostly sysctl_sched_powerband_limit_pct = 20;
 
@@ -1010,8 +1049,8 @@ unsigned int __read_mostly sched_small_task;
 unsigned int __read_mostly sysctl_sched_small_task_pct = 10;
 
 #ifdef CONFIG_SCHED_FREQ_INPUT
-unsigned int __read_mostly sysctl_sched_heavy_task_pct;
-unsigned int __read_mostly sched_heavy_task;
+unsigned int __read_mostly sysctl_sched_freq_aggregate_threshold_pct = 0;
+unsigned int __read_mostly sched_freq_aggregate_threshold = 0;
 #endif
 
 unsigned int __read_mostly sched_upmigrate;
@@ -1025,7 +1064,20 @@ int __read_mostly sysctl_sched_upmigrate_min_nice = 15;
 
 unsigned int sysctl_sched_boost;
 
+<<<<<<< HEAD
 static inline int available_cpu_capacity(int cpu)
+=======
+static unsigned int __read_mostly
+sched_short_sleep_task_threshold = 2000 * NSEC_PER_USEC;
+unsigned int __read_mostly sysctl_sched_select_prev_cpu_us = 2000;
+
+static unsigned int __read_mostly
+sched_long_cpu_selection_threshold = 100 * NSEC_PER_MSEC;
+
+unsigned int __read_mostly sysctl_sched_restrict_cluster_spill;
+
+void update_up_down_migrate(void)
+>>>>>>> 0e91d2a... Nougat
 {
 	struct rq *rq = cpu_rq(cpu);
 
@@ -1047,8 +1099,11 @@ void set_hmp_defaults(void)
 		pct_to_real(sysctl_sched_downmigrate_pct);
 
 #ifdef CONFIG_SCHED_FREQ_INPUT
-	sched_heavy_task =
-		pct_to_real(sysctl_sched_heavy_task_pct);
+	sched_major_task_runtime =
+		mult_frac(sched_ravg_window, MAJOR_TASK_PCT, 100);
+
+	sched_freq_aggregate_threshold =
+		pct_to_real(sysctl_sched_freq_aggregate_threshold_pct);
 #endif
 
 	sched_init_task_load_pelt =
@@ -1060,6 +1115,20 @@ void set_hmp_defaults(void)
 			  (u64)sched_ravg_window, 100);
 
 	sched_upmigrate_min_nice = sysctl_sched_upmigrate_min_nice;
+<<<<<<< HEAD
+=======
+
+	sched_short_sleep_task_threshold = sysctl_sched_select_prev_cpu_us *
+					   NSEC_PER_USEC;
+
+	sched_small_wakee_task_load =
+		div64_u64((u64)sysctl_sched_small_wakee_task_load_pct *
+			  (u64)sched_ravg_window, 100);
+
+	sched_big_waker_task_load =
+		div64_u64((u64)sysctl_sched_big_waker_task_load_pct *
+			  (u64)sched_ravg_window, 100);
+>>>>>>> 0e91d2a... Nougat
 }
 
 u32 sched_get_init_task_load(struct task_struct *p)
@@ -1424,9 +1493,14 @@ unsigned int power_cost_at_freq(int cpu, unsigned int freq)
 	struct cpu_pwr_stats *per_cpu_info = get_cpu_pwr_stats();
 	struct cpu_pstate_pwr *costs;
 
+<<<<<<< HEAD
 	if (!per_cpu_info || !per_cpu_info[cpu].ptable ||
 	    !sysctl_sched_enable_power_aware)
 		return cpu_rq(cpu)->max_possible_capacity;
+=======
+	if (!per_cpu_info || !per_cpu_info[cpu].ptable)
+		return cpu_max_possible_capacity(cpu);
+>>>>>>> 0e91d2a... Nougat
 
 	if (!freq)
 		freq = min_max_freq;
@@ -1442,11 +1516,39 @@ unsigned int power_cost_at_freq(int cpu, unsigned int freq)
 	BUG();
 }
 
+<<<<<<< HEAD
 static unsigned int power_cost(u64 task_load, int cpu)
 {
 	unsigned int task_freq, cur_freq;
 	struct rq *rq = cpu_rq(cpu);
 	u64 demand;
+=======
+struct cpu_select_env {
+	struct task_struct *p;
+	struct related_thread_group *rtg;
+	u8 reason;
+	u8 need_idle:1;
+	u8 need_waker_cluster:1;
+	u8 boost:1;
+	u8 sync:1;
+	u8 ignore_prev_cpu:1;
+	int prev_cpu;
+	DECLARE_BITMAP(candidate_list, NR_CPUS);
+	DECLARE_BITMAP(backup_list, NR_CPUS);
+	u64 task_load;
+	u64 cpu_load;
+};
+
+struct cluster_cpu_stats {
+	int best_idle_cpu, least_loaded_cpu;
+	int best_capacity_cpu, best_cpu, best_sibling_cpu, best_fallback_cpu;
+	int min_cost, best_sibling_cpu_cost;
+	int best_cpu_cstate;
+	u64 min_load, best_load, best_sibling_cpu_load;
+	s64 highest_spare_capacity;
+	u64 min_load_f;
+};
+>>>>>>> 0e91d2a... Nougat
 
 	if (!sysctl_sched_enable_power_aware)
 		return rq->max_possible_capacity;
@@ -1458,8 +1560,16 @@ static unsigned int power_cost(u64 task_load, int cpu)
 	task_freq = demand * rq->max_possible_freq;
 	task_freq /= 100; 
 
+<<<<<<< HEAD
 	cur_freq = rq->cur_freq;
 	task_freq = max(cur_freq, task_freq);
+=======
+	grp = task_related_thread_group(p);
+	if (!grp || !sysctl_sched_enable_colocation)
+		rc = 1;
+	else
+		rc = (grp->preferred_cluster == cluster);
+>>>>>>> 0e91d2a... Nougat
 
 	return power_cost_at_freq(cpu, task_freq);
 }
@@ -1599,6 +1709,7 @@ static int skip_freq_domain(struct rq *task_rq, struct rq *rq, int reason)
 	if (!reason)
 		return 0;
 
+<<<<<<< HEAD
 	switch (reason) {
 	case BUDGET_MIGRATION:
 		skip = 0;
@@ -1607,6 +1718,27 @@ static int skip_freq_domain(struct rq *task_rq, struct rq *rq, int reason)
 	case UP_MIGRATION:
 		skip = rq->capacity <= task_rq->capacity;
 		break;
+=======
+static void
+update_spare_capacity(struct cluster_cpu_stats *stats,
+		      struct cpu_select_env *env, int cpu, int capacity,
+		      u64 cpu_load)
+{
+	s64 spare_capacity = sched_ravg_window - cpu_load;
+
+	if (spare_capacity > 0 &&
+	    (spare_capacity > stats->highest_spare_capacity ||
+	     (spare_capacity == stats->highest_spare_capacity &&
+	      ((!env->need_waker_cluster &&
+		capacity > cpu_capacity(stats->best_capacity_cpu)) ||
+	       (env->need_waker_cluster &&
+		cpu_rq(cpu)->nr_running <
+		cpu_rq(stats->best_capacity_cpu)->nr_running))))) {
+		stats->highest_spare_capacity = spare_capacity;
+		stats->best_capacity_cpu = cpu;
+	}
+}
+>>>>>>> 0e91d2a... Nougat
 
 	case DOWN_MIGRATION:
 		skip = rq->capacity >= task_rq->capacity;
@@ -1619,8 +1751,14 @@ static int skip_freq_domain(struct rq *task_rq, struct rq *rq, int reason)
 	case IRQLOAD_MIGRATION:
 		
 
+<<<<<<< HEAD
 	default:
 		return 0;
+=======
+			update_spare_capacity(stats, env, i, next->capacity,
+					  cpu_load_sync(i, env->sync));
+		}
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	return skip;
@@ -1634,6 +1772,7 @@ static int skip_cpu(struct rq *task_rq, struct rq *rq, int cpu,
 	if (!reason)
 		return 0;
 
+<<<<<<< HEAD
 	if (is_reserved(cpu))
 		return 1;
 
@@ -1651,6 +1790,113 @@ static int skip_cpu(struct rq *task_rq, struct rq *rq, int cpu,
 	}
 
 	return skip;
+=======
+#ifdef CONFIG_SCHED_HMP_CSTATE_AWARE
+static void __update_cluster_stats(int cpu, struct cluster_cpu_stats *stats,
+				   struct cpu_select_env *env, int cpu_cost)
+{
+	int cpu_cstate;
+	int prev_cpu = env->prev_cpu;
+
+	cpu_cstate = cpu_rq(cpu)->cstate;
+
+	if (env->need_idle) {
+		stats->min_cost = cpu_cost;
+		if (idle_cpu(cpu)) {
+			if (cpu_cstate < stats->best_cpu_cstate ||
+				(cpu_cstate == stats->best_cpu_cstate &&
+							cpu == prev_cpu)) {
+				stats->best_idle_cpu = cpu;
+				stats->best_cpu_cstate = cpu_cstate;
+			}
+		} else {
+			if (env->cpu_load < stats->min_load ||
+				(env->cpu_load == stats->min_load &&
+							cpu == prev_cpu)) {
+				stats->least_loaded_cpu = cpu;
+				stats->min_load = env->cpu_load;
+			}
+		}
+
+		return;
+	}
+
+	if (cpu_cost < stats->min_cost)  {
+		stats->min_cost = cpu_cost;
+		stats->best_cpu_cstate = cpu_cstate;
+		stats->best_load = env->cpu_load;
+		stats->best_cpu = cpu;
+		return;
+	}
+
+	
+
+	if (cpu_cstate > stats->best_cpu_cstate)
+		return;
+
+	if (cpu_cstate < stats->best_cpu_cstate) {
+		stats->best_cpu_cstate = cpu_cstate;
+		stats->best_load = env->cpu_load;
+		stats->best_cpu = cpu;
+		return;
+	}
+
+	
+	if (cpu == prev_cpu) {
+		stats->best_cpu = cpu;
+		return;
+	}
+
+	if (stats->best_cpu != prev_cpu &&
+	    ((cpu_cstate == 0 && env->cpu_load < stats->best_load) ||
+	    (cpu_cstate > 0 && env->cpu_load > stats->best_load))) {
+		stats->best_load = env->cpu_load;
+		stats->best_cpu = cpu;
+	}
+}
+#else 
+static void __update_cluster_stats(int cpu, struct cluster_cpu_stats *stats,
+				   struct cpu_select_env *env, int cpu_cost)
+{
+	int prev_cpu = env->prev_cpu;
+
+	if (cpu != prev_cpu && cpus_share_cache(prev_cpu, cpu)) {
+		if (stats->best_sibling_cpu_cost > cpu_cost ||
+		    (stats->best_sibling_cpu_cost == cpu_cost &&
+		     stats->best_sibling_cpu_load > env->cpu_load)) {
+			stats->best_sibling_cpu_cost = cpu_cost;
+			stats->best_sibling_cpu_load = env->cpu_load;
+			stats->best_sibling_cpu = cpu;
+		}
+	}
+
+	if ((cpu_cost < stats->min_cost) ||
+	    ((stats->best_cpu != prev_cpu &&
+	      stats->min_load > env->cpu_load) || cpu == prev_cpu)) {
+		if (env->need_idle) {
+			if (idle_cpu(cpu)) {
+				stats->min_cost = cpu_cost;
+				stats->best_idle_cpu = cpu;
+			}
+		} else {
+			stats->min_cost = cpu_cost;
+			stats->min_load = env->cpu_load;
+			stats->best_cpu = cpu;
+		}
+	}
+>>>>>>> 0e91d2a... Nougat
+}
+#endif
+
+static void update_cluster_stats(int cpu, struct cluster_cpu_stats *stats,
+					 struct cpu_select_env *env)
+{
+	int cpu_cost;
+
+	cpu_cost = power_cost(cpu, task_load(env->p) +
+				cpu_cravg_sync(cpu, env->sync));
+	if (cpu_cost <= stats->min_cost)
+		__update_cluster_stats(cpu, stats, env, cpu_cost);
 }
 
 static int select_packing_target(struct task_struct *p, int best_cpu)
@@ -1679,9 +1925,37 @@ static int select_packing_target(struct task_struct *p, int best_cpu)
 			target = i;
 			min_cost = cost;
 		}
+<<<<<<< HEAD
+=======
+
+		update_spare_capacity(stats, env, i, c->capacity,
+				      env->cpu_load);
+
+		if (env->boost || env->need_waker_cluster ||
+		    sched_cpu_high_irqload(i) ||
+		    spill_threshold_crossed(env, cpu_rq(i)))
+			continue;
+
+		update_cluster_stats(i, stats, env);
+>>>>>>> 0e91d2a... Nougat
 	}
 
+<<<<<<< HEAD
 	return target;
+=======
+static inline void init_cluster_cpu_stats(struct cluster_cpu_stats *stats)
+{
+	stats->best_cpu = stats->best_idle_cpu = -1;
+	stats->best_capacity_cpu = stats->best_sibling_cpu  = -1;
+	stats->min_cost = stats->best_sibling_cpu_cost = INT_MAX;
+	stats->min_load	= stats->best_sibling_cpu_load = ULLONG_MAX;
+	stats->min_load_f = ULLONG_MAX;
+	stats->highest_spare_capacity = 0;
+	stats->best_fallback_cpu = -1;
+	stats->least_loaded_cpu = -1;
+	stats->best_cpu_cstate = INT_MAX;
+	
+>>>>>>> 0e91d2a... Nougat
 }
 
 static inline int wake_to_idle(struct task_struct *p)
@@ -1693,6 +1967,7 @@ static inline int wake_to_idle(struct task_struct *p)
 static int select_best_cpu(struct task_struct *p, int target, int reason,
 			   int sync)
 {
+<<<<<<< HEAD
 	int i, j, prev_cpu, best_cpu = -1;
 	int fallback_idle_cpu = -1, min_cstate_cpu = -1;
 	int cpu_cost, min_cost = INT_MAX;
@@ -1731,6 +2006,31 @@ static int select_best_cpu(struct task_struct *p, int target, int reason,
 	cpumask_and(&search_cpus, tsk_cpus_allowed(p), cpu_online_mask);
 	for_each_cpu(i, &search_cpus) {
 		struct rq *rq = cpu_rq(i);
+=======
+	int prev_cpu;
+	struct task_struct *task = env->p;
+	struct sched_cluster *cluster;
+
+	if (env->boost || env->reason || env->need_idle ||
+				!task->ravg.mark_start ||
+				!sched_short_sleep_task_threshold)
+		return false;
+
+	prev_cpu = env->prev_cpu;
+	if (!cpumask_test_cpu(prev_cpu, tsk_cpus_allowed(task)) ||
+					unlikely(!cpu_active(prev_cpu)))
+		return false;
+
+	if (over_schedule_budget(prev_cpu)) {
+		env->ignore_prev_cpu = 1;
+		return false;
+	}
+
+	if (task->ravg.mark_start - task->last_cpu_selected_ts >=
+				sched_long_cpu_selection_threshold)
+		return false;
+
+>>>>>>> 0e91d2a... Nougat
 
 		trace_sched_cpu_load(cpu_rq(i), idle_cpu(i),
 				     mostly_idle_cpu_sync(i,
@@ -1746,17 +2046,43 @@ static int select_best_cpu(struct task_struct *p, int target, int reason,
 		if (!boost && over_schedule_budget(i))
 			continue;
 
+<<<<<<< HEAD
 		if (skip_freq_domain(trq, rq, reason)) {
 			cpumask_andnot(&search_cpus, &search_cpus,
 						&rq->freq_domain_cpumask);
 			continue;
 		}
+=======
+	env->cpu_load = cpu_load_sync(prev_cpu, env->sync);
+	if (sched_cpu_high_irqload(prev_cpu) ||
+			spill_threshold_crossed(env, cpu_rq(prev_cpu))) {
+		update_spare_capacity(stats, env, prev_cpu,
+				cluster->capacity, env->cpu_load);
+		env->ignore_prev_cpu = 1;
+		return false;
+	}
+>>>>>>> 0e91d2a... Nougat
 
 		tload =  scale_load_to_cpu(task_load(p), i);
 		if (skip_cpu(trq, rq, i, tload, reason))
 			continue;
 
+<<<<<<< HEAD
 		prev_cpu = (i == task_cpu(p));
+=======
+static inline bool
+wake_to_waker_cluster(struct cpu_select_env *env)
+{
+	return !env->need_idle && !env->reason && env->sync &&
+	       task_load(current) > sched_big_waker_task_load &&
+	       task_load(env->p) < sched_small_wakee_task_load;
+}
+
+static inline int
+cluster_allowed(struct task_struct *p, struct sched_cluster *cluster)
+{
+	cpumask_t tmp_mask;
+>>>>>>> 0e91d2a... Nougat
 
 		cpu_load = cpu_load_sync(i, sync);
 		if (cpu_load < min_load_b ||
@@ -1788,9 +2114,32 @@ static int select_best_cpu(struct task_struct *p, int target, int reason,
 		if (prefer_idle == -1)
 			prefer_idle = cpu_rq(i)->prefer_idle;
 
+<<<<<<< HEAD
 		cpu_load = cpu_load_sync(i, sync);
 		if (!eligible_cpu(tload, cpu_load, i, sync))
 			continue;
+=======
+static int select_best_cpu(struct task_struct *p, int target, int reason,
+			   int sync)
+{
+	struct sched_cluster *cluster, *pref_cluster = NULL;
+	struct cluster_cpu_stats stats;
+	bool fast_path = false;
+	struct related_thread_group *grp;
+	int cpu = raw_smp_processor_id();
+
+	struct cpu_select_env env = {
+		.p			= p,
+		.reason			= reason,
+		.need_idle		= wake_to_idle(p),
+		.need_waker_cluster	= 0,
+		.boost			= sched_boost(),
+		.sync			= sync,
+		.prev_cpu		= target,
+		.ignore_prev_cpu	= 0,
+		.rtg			= NULL,
+	};
+>>>>>>> 0e91d2a... Nougat
 
 
 		cpu_cost = power_cost(tload, i);
@@ -1807,10 +2156,43 @@ static int select_best_cpu(struct task_struct *p, int target, int reason,
 			if (!prefer_idle_override)
 				prefer_idle = cpu_rq(i)->prefer_idle;
 		}
+<<<<<<< HEAD
 
 		if (idle_cpu(i) || (sync && i == smp_processor_id()
 			&& prefer_idle && cpu_rq(i)->nr_running == 1)) {
 			cstate = cpu_rq(i)->cstate;
+=======
+	}
+
+	grp = task_related_thread_group(p);
+
+	if (grp && grp->preferred_cluster) {
+		pref_cluster = grp->preferred_cluster;
+		if (!cluster_allowed(p, pref_cluster))
+			clear_bit(pref_cluster->id, env.candidate_list);
+		else
+			env.rtg = grp;
+	} else {
+		cluster = cpu_rq(cpu)->cluster;
+		if (wake_to_waker_cluster(&env)) {
+			if (sysctl_sched_prefer_sync_wakee_to_waker &&
+				cpu_rq(cpu)->nr_running == 1 &&
+				cpumask_test_cpu(cpu, tsk_cpus_allowed(p)) &&
+				cpu_active(cpu)) {
+				fast_path = true;
+				target = cpu;
+				goto out;
+			} else if (cluster_allowed(p, cluster)) {
+				env.need_waker_cluster = 1;
+				bitmap_zero(env.candidate_list, NR_CPUS);
+				__set_bit(cluster->id, env.candidate_list);
+			}
+		} else if (bias_to_prev_cpu(&env, &stats)) {
+			fast_path = true;
+			goto out;
+		}
+	}
+>>>>>>> 0e91d2a... Nougat
 
 			if (cstate > min_cstate)
 				continue;
@@ -1834,12 +2216,24 @@ static int select_best_cpu(struct task_struct *p, int target, int reason,
 		if (cpu_load > min_load)
 			continue;
 
+<<<<<<< HEAD
 		if (cpu_load < min_load) {
 			min_load = cpu_load;
 			min_busy_cost = cpu_cost;
 			best_cpu = i;
 			continue;
 		}
+=======
+	if (env.need_idle) {
+		if (stats.best_idle_cpu >= 0)
+			target = stats.best_idle_cpu;
+		else if (stats.least_loaded_cpu >= 0)
+			target = stats.least_loaded_cpu;
+	} else if (stats.best_cpu >= 0) {
+		if (stats.best_cpu != task_cpu(p) &&
+				stats.min_cost == stats.best_sibling_cpu_cost)
+			stats.best_cpu = stats.best_sibling_cpu;
+>>>>>>> 0e91d2a... Nougat
 
 		if (cpu_cost < min_busy_cost ||
 		    (prev_cpu && cpu_cost == min_busy_cost)) {
@@ -1858,6 +2252,7 @@ done:
 		else
 			best_cpu = fallback_idle_cpu;
 	}
+	p->last_cpu_selected_ts = sched_ktime_clock();
 
 	if (cpu_rq(best_cpu)->mostly_idle_freq && !prefer_idle_override)
 		best_cpu = select_packing_target(p, best_cpu);
@@ -1914,9 +2309,16 @@ dec_rq_hmp_stats(struct rq *rq, struct task_struct *p, int change_cra)
 
 static void reset_hmp_stats(struct hmp_sched_stats *stats, int reset_cra)
 {
+<<<<<<< HEAD
 	stats->nr_big_tasks = stats->nr_small_tasks = 0;
 	if (reset_cra)
+=======
+	stats->nr_big_tasks = 0;
+	if (reset_cra) {
+>>>>>>> 0e91d2a... Nougat
 		stats->cumulative_runnable_avg = 0;
+		set_pred_demands_sum(stats, 0);
+	}
 }
 
 
@@ -2038,6 +2440,37 @@ static void dec_hmp_sched_stats_fair(struct rq *rq, struct task_struct *p)
 	_dec_hmp_sched_stats_fair(rq, p, 1);
 }
 
+<<<<<<< HEAD
+=======
+static void fixup_hmp_sched_stats_fair(struct rq *rq, struct task_struct *p,
+				       u32 new_task_load, u32 new_pred_demand)
+{
+	struct cfs_rq *cfs_rq;
+	struct sched_entity *se = &p->se;
+	s64 task_load_delta = (s64)new_task_load - task_load(p);
+	s64 pred_demand_delta = PRED_DEMAND_DELTA;
+
+	for_each_sched_entity(se) {
+		cfs_rq = cfs_rq_of(se);
+
+		fixup_cumulative_runnable_avg(&cfs_rq->hmp_stats, p,
+					      task_load_delta,
+					      pred_demand_delta);
+		fixup_nr_big_tasks(&cfs_rq->hmp_stats, p, task_load_delta);
+		if (cfs_rq_throttled(cfs_rq))
+			break;
+	}
+
+	
+	if (!se) {
+		fixup_cumulative_runnable_avg(&rq->hmp_stats, p,
+					      task_load_delta,
+					      pred_demand_delta);
+		fixup_nr_big_tasks(&rq->hmp_stats, p, task_load_delta);
+	}
+}
+
+>>>>>>> 0e91d2a... Nougat
 static int task_will_be_throttled(struct task_struct *p);
 
 #else	
@@ -2055,6 +2488,20 @@ dec_hmp_sched_stats_fair(struct rq *rq, struct task_struct *p)
 	dec_nr_big_small_task(&rq->hmp_stats, p);
 	dec_cumulative_runnable_avg(&rq->hmp_stats, p);
 }
+<<<<<<< HEAD
+=======
+static void
+fixup_hmp_sched_stats_fair(struct rq *rq, struct task_struct *p,
+			   u32 new_task_load, u32 new_pred_demand)
+{
+	s64 task_load_delta = (s64)new_task_load - task_load(p);
+	s64 pred_demand_delta = PRED_DEMAND_DELTA;
+
+	fixup_cumulative_runnable_avg(&rq->hmp_stats, p, task_load_delta,
+				      pred_demand_delta);
+	fixup_nr_big_tasks(&rq->hmp_stats, p, task_load_delta);
+}
+>>>>>>> 0e91d2a... Nougat
 
 static inline int task_will_be_throttled(struct task_struct *p)
 {
@@ -2112,16 +2559,35 @@ DEFINE_MUTEX(policy_mutex);
 #ifdef CONFIG_SCHED_FREQ_INPUT
 static inline int invalid_value_freq_input(unsigned int *data)
 {
-	if (data == &sysctl_sched_migration_fixup)
+	if (data == &sysctl_sched_freq_aggregate)
 		return !(*data == 0 || *data == 1);
 
-	if (data == &sysctl_sched_freq_account_wait_time)
-		return !(*data == 0 || *data == 1);
+	return 0;
+}
+
+static inline int
+handle_freq_aggregate_threshold(unsigned int *data, unsigned int old_val)
+{
+	if (data == &sysctl_sched_freq_aggregate_threshold_pct) {
+		if (*data > 1000) {
+			*data = old_val;
+			return -EINVAL;
+		}
+		sched_freq_aggregate_threshold =
+			pct_to_real(sysctl_sched_freq_aggregate_threshold_pct);
+		return 1;
+	}
 
 	return 0;
 }
 #else
 static inline int invalid_value_freq_input(unsigned int *data)
+{
+	return 0;
+}
+
+static inline int
+handle_freq_aggregate_threshold(unsigned int *data, unsigned int old_val)
 {
 	return 0;
 }
@@ -2136,9 +2602,6 @@ static inline int invalid_value(unsigned int *data)
 
 	if (data == &sysctl_sched_window_stats_policy)
 		return val >= WINDOW_STATS_INVALID_POLICY;
-
-	if (data == &sysctl_sched_account_wait_time)
-		return !(val == 0 || val == 1);
 
 	return invalid_value_freq_input(data);
 }
@@ -2197,11 +2660,17 @@ int sched_hmp_proc_update_handler(struct ctl_table *table, int write,
 	if (write && (old_val == *data))
 		goto done;
 
+<<<<<<< HEAD
 	if (data == &sysctl_sched_min_runtime) {
 		sched_min_runtime = ((u64) sysctl_sched_min_runtime) * 1000;
 		goto done;
 	}
 
+=======
+	if (handle_freq_aggregate_threshold(data, old_val)) {
+		goto done;
+	}
+>>>>>>> 0e91d2a... Nougat
 	if (data == (unsigned int *)&sysctl_sched_upmigrate_min_nice) {
 		if ((*(int *)data) < -20 || (*(int *)data) > 19) {
 			*data = old_val;
@@ -2209,8 +2678,7 @@ int sched_hmp_proc_update_handler(struct ctl_table *table, int write,
 			goto done;
 		}
 		update_min_nice = 1;
-	} else {
-		
+	} else if (data != &sysctl_sched_select_prev_cpu_us) {
 		if (sysctl_sched_downmigrate_pct >
 		    sysctl_sched_upmigrate_pct || *data > 100) {
 			*data = old_val;
@@ -2322,7 +2790,12 @@ static inline int is_task_migration_throttled(struct task_struct *p);
 
 static inline int migration_needed(struct rq *rq, struct task_struct *p)
 {
+<<<<<<< HEAD
 	int nice = TASK_NICE(p);
+=======
+	int nice;
+	struct related_thread_group *grp;
+>>>>>>> 0e91d2a... Nougat
 
 	if (!sched_enable_hmp || p->state != TASK_RUNNING)
 		return 0;
@@ -2347,12 +2820,29 @@ static inline int migration_needed(struct rq *rq, struct task_struct *p)
 	if (sched_cpu_high_irqload(cpu_of(rq)))
 		return IRQLOAD_MIGRATION;
 
+<<<<<<< HEAD
 	if ((nice > sched_upmigrate_min_nice || upmigrate_discouraged(p)) &&
 			 rq->capacity > min_capacity)
+=======
+	nice = task_nice(p);
+	rcu_read_lock();
+	grp = task_related_thread_group(p);
+	if (!grp && (nice > sched_upmigrate_min_nice ||
+	       upmigrate_discouraged(p)) && cpu_capacity(cpu) > min_capacity) {
+		rcu_read_unlock();
+>>>>>>> 0e91d2a... Nougat
 		return DOWN_MIGRATION;
+	}
 
+<<<<<<< HEAD
 	if (!task_will_fit(p, cpu_of(rq)))
+=======
+	if (!grp && !task_will_fit(p, cpu)) {
+		rcu_read_unlock();
+>>>>>>> 0e91d2a... Nougat
 		return UP_MIGRATION;
+	}
+	rcu_read_unlock();
 
 	if (sysctl_sched_enable_power_aware &&
 	    !is_task_migration_throttled(p) &&
@@ -2447,8 +2937,6 @@ unsigned int cpu_temp(int cpu)
 
 #else	
 
-#define sysctl_sched_enable_power_aware 0
-
 static inline int task_will_fit(struct task_struct *p, int cpu)
 {
 	return 1;
@@ -2465,6 +2953,7 @@ static inline int find_new_hmp_ilb(int call_cpu, int type)
 	return 0;
 }
 
+<<<<<<< HEAD
 static inline int power_cost(u64 task_load, int cpu)
 {
 	return SCHED_POWER_SCALE;
@@ -2481,6 +2970,8 @@ static inline int mostly_idle_cpu(int cpu)
 	return 0;
 }
 
+=======
+>>>>>>> 0e91d2a... Nougat
 static inline int sched_boost(void)
 {
 	return 0;
@@ -2527,10 +3018,20 @@ inc_hmp_sched_stats_fair(struct rq *rq, struct task_struct *p) { }
 static inline void
 dec_hmp_sched_stats_fair(struct rq *rq, struct task_struct *p) { }
 
+<<<<<<< HEAD
+=======
+#define preferred_cluster(...) 1
+
+>>>>>>> 0e91d2a... Nougat
 #endif	
 
 #ifdef CONFIG_SCHED_HMP
 
+#ifdef CONFIG_SCHED_FREQ_INPUT
+#define clear_ravg_pred_demand() (p->ravg.pred_demand = 0)
+#else
+#define clear_ravg_pred_demand()
+#endif
 void init_new_task_load(struct task_struct *p)
 {
 	int i;
@@ -2540,7 +3041,13 @@ void init_new_task_load(struct task_struct *p)
 
 	
 	memset(&p->ravg, 0, sizeof(struct ravg));
+	p->cpu_cycles = 0;
 	p->se.avg.decay_count	= 0;
+<<<<<<< HEAD
+=======
+	rcu_assign_pointer(p->grp, NULL);
+	INIT_LIST_HEAD(&p->grp_list);
+>>>>>>> 0e91d2a... Nougat
 
 	if (init_load_pct) {
 		init_load_pelt = div64_u64((u64)init_load_pct *
@@ -2550,6 +3057,7 @@ void init_new_task_load(struct task_struct *p)
 	}
 
 	p->ravg.demand = init_load_windows;
+	clear_ravg_pred_demand();
 	for (i = 0; i < RAVG_HIST_SIZE_MAX; ++i)
 		p->ravg.sum_history[i] = init_load_windows;
 
@@ -2945,6 +3453,7 @@ static void init_cfs_rq_hmp_stats(struct cfs_rq *cfs_rq)
 	cfs_rq->hmp_stats.nr_big_tasks = 0;
 	cfs_rq->hmp_stats.nr_small_tasks = 0;
 	cfs_rq->hmp_stats.cumulative_runnable_avg = 0;
+	set_pred_demands_sum(&cfs_rq->hmp_stats, 0);
 }
 
 static void inc_cfs_rq_hmp_stats(struct cfs_rq *cfs_rq,
@@ -2970,6 +3479,8 @@ static void inc_throttled_cfs_rq_hmp_stats(struct hmp_sched_stats *stats,
 	stats->nr_small_tasks += cfs_rq->hmp_stats.nr_small_tasks;
 	stats->cumulative_runnable_avg +=
 				cfs_rq->hmp_stats.cumulative_runnable_avg;
+	set_pred_demands_sum(stats, stats->pred_demands_sum +
+			     cfs_rq->hmp_stats.pred_demands_sum);
 }
 
 static void dec_throttled_cfs_rq_hmp_stats(struct hmp_sched_stats *stats,
@@ -2979,9 +3490,12 @@ static void dec_throttled_cfs_rq_hmp_stats(struct hmp_sched_stats *stats,
 	stats->nr_small_tasks -= cfs_rq->hmp_stats.nr_small_tasks;
 	stats->cumulative_runnable_avg -=
 				cfs_rq->hmp_stats.cumulative_runnable_avg;
+	set_pred_demands_sum(stats, stats->pred_demands_sum -
+			     cfs_rq->hmp_stats.pred_demands_sum);
 
 	BUG_ON(stats->nr_big_tasks < 0 || stats->nr_small_tasks < 0 ||
 		(s64)stats->cumulative_runnable_avg < 0);
+	verify_pred_demands_sum(stats);
 }
 
 #else	
@@ -3070,6 +3584,7 @@ static void enqueue_sleeper(struct cfs_rq *cfs_rq, struct sched_entity *se)
 			}
 
 			trace_sched_stat_blocked(tsk, delta);
+			trace_sched_blocked_reason(tsk);
 
 			if (unlikely(prof_on == SLEEP_PROFILING)) {
 				profile_hits(SLEEP_PROFILING,
@@ -4656,6 +5171,68 @@ static struct task_struct *pick_next_task_fair(struct rq *rq)
 	struct task_struct *p;
 	struct cfs_rq *cfs_rq = &rq->cfs;
 	struct sched_entity *se;
+<<<<<<< HEAD
+=======
+	struct task_struct *p;
+	int new_tasks;
+
+again:
+#ifdef CONFIG_FAIR_GROUP_SCHED
+	if (!cfs_rq->nr_running)
+		goto idle;
+
+	if (prev->sched_class != &fair_sched_class)
+		goto simple;
+
+
+	do {
+		struct sched_entity *curr = cfs_rq->curr;
+
+		if (curr) {
+			if (curr->on_rq)
+				update_curr(cfs_rq);
+			else
+				curr = NULL;
+
+			if (unlikely(check_cfs_rq_runtime(cfs_rq)))
+				goto simple;
+		}
+
+		se = pick_next_entity(cfs_rq, curr);
+		cfs_rq = group_cfs_rq(se);
+	} while (cfs_rq);
+
+	p = task_of(se);
+
+	if (prev != p) {
+		struct sched_entity *pse = &prev->se;
+
+		while (!(cfs_rq = is_same_group(se, pse))) {
+			int se_depth = se->depth;
+			int pse_depth = pse->depth;
+
+			if (se_depth <= pse_depth) {
+				put_prev_entity(cfs_rq_of(pse), pse);
+				pse = parent_entity(pse);
+			}
+			if (se_depth >= pse_depth) {
+				set_next_entity(cfs_rq_of(se), se);
+				se = parent_entity(se);
+			}
+		}
+
+		put_prev_entity(cfs_rq, pse);
+		set_next_entity(cfs_rq, se);
+	}
+
+	if (hrtick_enabled(rq))
+		hrtick_start_fair(rq, p);
+
+	return p;
+simple:
+	cfs_rq = &rq->cfs;
+#endif
+>>>>>>> 0e91d2a... Nougat
 
 	if (!cfs_rq->nr_running)
 		return NULL;
@@ -4735,7 +5312,13 @@ static unsigned long __read_mostly max_load_balance_interval = HZ/10;
 #define LBF_HMP_ACTIVE_BALANCE (LBF_EA_ACTIVE_BALANCE | \
 				LBF_SCHED_BOOST_ACTIVE_BALANCE | \
 				LBF_BIG_TASK_ACTIVE_BALANCE)
+<<<<<<< HEAD
 #define LBF_IGNORE_BIG_TASKS 0x80
+=======
+#define LBF_IGNORE_BIG_TASKS 0x100
+#define LBF_IGNORE_PREFERRED_CLUSTER_TASKS 0x200
+#define LBF_MOVED_RELATED_THREAD_GROUP_TASK 0x400
+>>>>>>> 0e91d2a... Nougat
 
 struct lb_env {
 	struct sched_domain	*sd;
@@ -4875,7 +5458,24 @@ int can_migrate_task(struct task_struct *p, struct lb_env *env)
 	return 0;
 }
 
+<<<<<<< HEAD
 static int move_one_task(struct lb_env *env)
+=======
+static void detach_task(struct task_struct *p, struct lb_env *env)
+{
+	lockdep_assert_held(&env->src_rq->lock);
+
+	deactivate_task(env->src_rq, p, DEQUEUE_MIGRATING);
+	p->on_rq = TASK_ON_RQ_MIGRATING;
+	double_lock_balance(env->src_rq, env->dst_rq);
+	set_task_cpu(p, env->dst_cpu);
+	if (is_task_in_related_thread_group(p))
+		env->flags |= LBF_MOVED_RELATED_THREAD_GROUP_TASK;
+	double_unlock_balance(env->src_rq, env->dst_rq);
+}
+
+static struct task_struct *detach_one_task(struct lb_env *env)
+>>>>>>> 0e91d2a... Nougat
 {
 	struct task_struct *p, *n;
 
@@ -5120,7 +5720,23 @@ bail_inter_cluster_balance(struct lb_env *env, struct sd_lb_stats *sds)
 {
 	int nr_cpus;
 
+<<<<<<< HEAD
 	if (group_rq_capacity(sds->this) <= group_rq_capacity(sds->busiest))
+=======
+	if (!sysctl_sched_restrict_cluster_spill || sched_boost())
+		return 0;
+
+	local_cpu = group_first_cpu(sds->local);
+	busiest_cpu = group_first_cpu(sds->busiest);
+
+	local_capacity = cpu_max_possible_capacity(local_cpu);
+	busiest_capacity = cpu_max_possible_capacity(busiest_cpu);
+
+	local_pwr_cost = cpu_max_power_cost(local_cpu);
+	busiest_pwr_cost = cpu_max_power_cost(busiest_cpu);
+
+	if (local_pwr_cost <= busiest_pwr_cost)
+>>>>>>> 0e91d2a... Nougat
 		return 0;
 
 	if (sds->busiest_nr_big_tasks)
@@ -6010,8 +6626,13 @@ no_move:
 
 		
 		if (!same_freq_domain(this_cpu, cpu_of(busiest))) {
-			check_for_freq_change(this_rq);
-			check_for_freq_change(busiest);
+			int check_groups = !!(env.flags &
+					 LBF_MOVED_RELATED_THREAD_GROUP_TASK);
+
+			check_for_freq_change(this_rq, false, check_groups);
+			check_for_freq_change(busiest, false, check_groups);
+		} else {
+			check_for_freq_change(this_rq, true, false);
 		}
 	}
 	if (likely(!active_balance)) {
@@ -6211,8 +6832,12 @@ out_unlock:
 	raw_spin_unlock_irq(&busiest_rq->lock);
 
 	if (moved && !same_freq_domain(busiest_cpu, target_cpu)) {
-		check_for_freq_change(busiest_rq);
-		check_for_freq_change(target_rq);
+		int check_groups = !!(env.flags &
+					 LBF_MOVED_RELATED_THREAD_GROUP_TASK);
+		check_for_freq_change(busiest_rq, false, check_groups);
+		check_for_freq_change(target_rq, false, check_groups);
+	} else if (moved) {
+		check_for_freq_change(target_rq, true, false);
 	}
 
 	if (per_cpu(dbs_boost_needed, target_cpu)) {
@@ -6239,7 +6864,44 @@ static struct {
 	unsigned long next_balance;     
 } nohz ____cacheline_aligned;
 
+<<<<<<< HEAD
 static inline int find_new_ilb(int call_cpu, int type)
+=======
+#ifdef CONFIG_SCHED_HMP
+static inline int find_new_hmp_ilb(int type)
+{
+	int call_cpu = raw_smp_processor_id();
+	struct sched_domain *sd;
+	int ilb;
+
+	rcu_read_lock();
+
+	
+	for_each_domain(call_cpu, sd) {
+		for_each_cpu_and(ilb, nohz.idle_cpus_mask,
+						sched_domain_span(sd)) {
+			if (idle_cpu(ilb) && (type != NOHZ_KICK_RESTRICT ||
+					cpu_max_power_cost(ilb) <=
+					cpu_max_power_cost(call_cpu))) {
+				rcu_read_unlock();
+				reset_balance_interval(ilb);
+				return ilb;
+			}
+		}
+	}
+
+	rcu_read_unlock();
+	return nr_cpu_ids;
+}
+#else	
+static inline int find_new_hmp_ilb(int type)
+{
+	return 0;
+}
+#endif	
+
+static inline int find_new_ilb(int type)
+>>>>>>> 0e91d2a... Nougat
 {
 	int ilb;
 
@@ -6486,6 +7148,7 @@ static inline int _nohz_kick_needed_hmp(struct rq *rq, int cpu, int *type)
 		 && rq->max_freq > rq->mostly_idle_freq)
 			return 0;
 
+<<<<<<< HEAD
 	if (rq->nr_running >= 2 &&
 		(rq->nr_running - rq->hmp_stats.nr_small_tasks >= 2 ||
 		rq->nr_running > rq->mostly_idle_nr_run ||
@@ -6493,6 +7156,13 @@ static inline int _nohz_kick_needed_hmp(struct rq *rq, int cpu, int *type)
 
 		if (rq->capacity == max_capacity)
 			return 1;
+=======
+	if (!sysctl_sched_restrict_cluster_spill || sched_boost())
+		return 1;
+
+	if (cpu_max_power_cost(cpu) == max_power_cost)
+		return 1;
+>>>>>>> 0e91d2a... Nougat
 
 		rcu_read_lock();
 		sd = rcu_dereference_check_sched_domain(rq->sd);

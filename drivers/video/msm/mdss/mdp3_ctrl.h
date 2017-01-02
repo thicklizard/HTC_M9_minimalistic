@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2014, 2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -55,9 +55,7 @@ struct mdp3_session_data {
 	atomic_t dma_done_cnt;
 	int histo_status;
 	struct mutex histo_lock;
-	struct mutex pp_lock;
 	int lut_sel;
-	int cc_vect_sel;
 	bool vsync_before_commit;
 	bool first_commit;
 	int clk_on;
@@ -66,6 +64,10 @@ struct mdp3_session_data {
 	int vsync_enabled;
 	atomic_t vsync_countdown; /* Used to count down  */
 	bool in_splash_screen;
+<<<<<<< HEAD
+=======
+	bool esd_recovery;
+>>>>>>> 0e91d2a... Nougat
 	int dyn_pu_state; /* dynamic partial update status */
 
 	bool dma_active;

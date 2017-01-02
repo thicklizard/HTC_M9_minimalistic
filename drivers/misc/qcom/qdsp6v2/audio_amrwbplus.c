@@ -2,7 +2,11 @@
  *
  * Copyright (C) 2008 Google, Inc.
  * Copyright (C) 2008 HTC Corporation
+<<<<<<< HEAD
  * Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
+=======
+ * Copyright (c) 2010-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -52,7 +56,7 @@ static long audio_ioctl_shared(struct file *file, unsigned int cmd,
 
 	switch (cmd) {
 	case AUDIO_START: {
-		pr_err("%s[%p]: AUDIO_START session_id[%d]\n", __func__,
+		pr_err("%s[%pK]: AUDIO_START session_id[%d]\n", __func__,
 			audio, audio->ac->session);
 		if (audio->feedback == NON_TUNNEL_MODE) {
 			/* Configure PCM output block */
@@ -159,7 +163,7 @@ static long audio_ioctl(struct file *file, unsigned int cmd,
 		break;
 	}
 	default: {
-		pr_debug("%s[%p]: Calling utils ioctl\n", __func__, audio);
+		pr_debug("%s[%pK]: Calling utils ioctl\n", __func__, audio);
 		rc = audio->codec_ioctl(file, cmd, arg);
 		break;
 	}
@@ -202,6 +206,10 @@ static long audio_compat_ioctl(struct file *file, unsigned int cmd,
 			struct msm_audio_amrwbplus_config_v2 *amrwbplus_config;
 			struct msm_audio_amrwbplus_config_v2_32
 						amrwbplus_config_32;
+
+			memset(&amrwbplus_config_32, 0,
+					sizeof(amrwbplus_config_32));
+
 			amrwbplus_config =
 				(struct msm_audio_amrwbplus_config_v2 *)
 				audio->codec_cfg;
@@ -271,7 +279,7 @@ static long audio_compat_ioctl(struct file *file, unsigned int cmd,
 		break;
 	}
 	default: {
-		pr_debug("%s[%p]: Calling utils ioctl\n", __func__, audio);
+		pr_debug("%s[%pK]: Calling utils ioctl\n", __func__, audio);
 		rc = audio->codec_compat_ioctl(file, cmd, arg);
 		break;
 	}
@@ -302,6 +310,8 @@ static int audio_open(struct inode *inode, struct file *file)
 		return -ENOMEM;
 	}
 	audio->pcm_cfg.buffer_size = PCM_BUFSZ_MIN;
+
+	init_waitqueue_head(&audio->event_wait);
 
 	audio->ac =
 	q6asm_audio_client_alloc((app_cb) q6_audio_cb, (void *)audio);

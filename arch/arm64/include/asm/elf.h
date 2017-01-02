@@ -182,7 +182,15 @@ typedef compat_elf_greg_t		compat_elf_gregset_t[COMPAT_ELF_NGREG];
 					 ((x)->e_flags & EF_ARM_EABI_MASK))
 
 #define compat_start_thread		compat_start_thread
+<<<<<<< HEAD
 #define COMPAT_SET_PERSONALITY(ex)	set_thread_flag(TIF_32BIT);
+=======
+#define COMPAT_SET_PERSONALITY(ex)					\
+do {									\
+	set_thread_flag(TIF_32BIT);					\
+} while (0)
+
+>>>>>>> 0e91d2a... Nougat
 #define COMPAT_ARCH_DLINFO
 extern int aarch32_setup_vectors_page(struct linux_binprm *bprm,
 				      int uses_interp);

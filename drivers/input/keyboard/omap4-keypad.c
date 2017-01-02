@@ -269,6 +269,7 @@ static int omap4_keypad_probe(struct platform_device *pdev)
 
 	keypad_data->irq = irq;
 
+<<<<<<< HEAD
 	if (pdata) {
 		keypad_data->rows = pdata->rows;
 		keypad_data->cols = pdata->cols;
@@ -277,6 +278,11 @@ static int omap4_keypad_probe(struct platform_device *pdev)
 		if (error)
 			return error;
 	}
+=======
+	error = omap4_keypad_parse_dt(&pdev->dev, keypad_data);
+	if (error)
+		goto err_free_keypad;
+>>>>>>> 0e91d2a... Nougat
 
 	res = request_mem_region(res->start, resource_size(res), pdev->name);
 	if (!res) {

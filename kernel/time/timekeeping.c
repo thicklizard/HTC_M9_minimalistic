@@ -171,8 +171,12 @@ static inline s64 timekeeping_get_ns(struct timekeeper *tk)
 	/* calculate the delta since the last update_wall_time: */
 	cycle_delta = (cycle_now - clock->cycle_last) & clock->mask;
 
+<<<<<<< HEAD
 	nsec = cycle_delta * tk->mult + tk->xtime_nsec;
 	nsec >>= tk->shift;
+=======
+	nsec = (delta * tkr->mult + tkr->xtime_nsec) >> tkr->shift;
+>>>>>>> 0e91d2a... Nougat
 
 	/* If arch requires, add in get_arch_timeoffset() */
 	return nsec + get_arch_timeoffset();
@@ -1207,6 +1211,76 @@ static void timekeeping_adjust(struct timekeeper *tk, s64 offset)
 	tk->xtime_interval += interval;
 	tk->xtime_nsec -= offset;
 	tk->ntp_error -= (interval - offset) << tk->ntp_error_shift;
+<<<<<<< HEAD
+=======
+}
+
+/*
+ * Calculate the multiplier adjustment needed to match the frequency
+ * specified by NTP
+ */
+static __always_inline void timekeeping_freqadjust(struct timekeeper *tk,
+							s64 offset)
+{
+	s64 interval = tk->cycle_interval;
+	s64 xinterval = tk->xtime_interval;
+	s64 tick_error;
+	bool negative;
+	u32 adj;
+
+	/* Remove any current error adj from freq calculation */
+	if (tk->ntp_err_mult)
+		xinterval -= tk->cycle_interval;
+
+	tk->ntp_tick = ntp_tick_length();
+
+	/* Calculate current error per tick */
+	tick_error = ntp_tick_length() >> tk->ntp_error_shift;
+	tick_error -= (xinterval + tk->xtime_remainder);
+
+	/* Don't worry about correcting it if its small */
+	if (likely((tick_error >= 0) && (tick_error <= interval)))
+		return;
+
+	/* preserve the direction of correction */
+	negative = (tick_error < 0);
+
+	/* Sort out the magnitude of the correction */
+	tick_error = abs64(tick_error);
+	for (adj = 0; tick_error > interval; adj++)
+		tick_error >>= 1;
+
+	/* scale the corrections */
+	timekeeping_apply_adjustment(tk, offset, negative, adj);
+}
+
+/*
+ * Adjust the timekeeper's multiplier to the correct frequency
+ * and also to reduce the accumulated error value.
+ */
+static void timekeeping_adjust(struct timekeeper *tk, s64 offset)
+{
+	/* Correct for the current frequency error */
+	timekeeping_freqadjust(tk, offset);
+
+	/* Next make a small adjustment to fix any cumulative error */
+	if (!tk->ntp_err_mult && (tk->ntp_error > 0)) {
+		tk->ntp_err_mult = 1;
+		timekeeping_apply_adjustment(tk, offset, 0, 0);
+	} else if (tk->ntp_err_mult && (tk->ntp_error <= 0)) {
+		/* Undo any existing error adjustment */
+		timekeeping_apply_adjustment(tk, offset, 1, 0);
+		tk->ntp_err_mult = 0;
+	}
+
+	if (unlikely(tk->tkr.clock->maxadj &&
+		(tk->tkr.mult > tk->tkr.clock->mult + tk->tkr.clock->maxadj))) {
+		printk_once(KERN_WARNING
+			"Adjusting %s more than 11%% (%ld vs %ld)\n",
+			tk->tkr.clock->name, (long)tk->tkr.mult,
+			(long)tk->tkr.clock->mult + tk->tkr.clock->maxadj);
+	}
+>>>>>>> 0e91d2a... Nougat
 
 out_adjust:
 	/*

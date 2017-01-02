@@ -1478,8 +1478,32 @@ static void intel_enable_pll(struct drm_i915_private *dev_priv, enum pipe pipe)
 	BUG_ON(!IS_VALLEYVIEW(dev_priv->dev) && dev_priv->info->gen >= 5);
 
 	/* PLL is protected by panel, make sure we can write it */
+<<<<<<< HEAD
 	if (IS_MOBILE(dev_priv->dev) && !IS_I830(dev_priv->dev))
 		assert_panel_unlocked(dev_priv, pipe);
+=======
+	if (IS_MOBILE(dev) && !IS_I830(dev))
+		assert_panel_unlocked(dev_priv, crtc->pipe);
+
+	/* Enable DVO 2x clock on both PLLs if necessary */
+	if (IS_I830(dev) && intel_num_dvo_pipes(dev) > 0) {
+		/*
+		 * It appears to be important that we don't enable this
+		 * for the current pipe before otherwise configuring the
+		 * PLL. No idea how this should be handled if multiple
+		 * DVO outputs are enabled simultaneosly.
+		 */
+		dpll |= DPLL_DVO_2X_MODE;
+		I915_WRITE(DPLL(!crtc->pipe),
+			   I915_READ(DPLL(!crtc->pipe)) | DPLL_DVO_2X_MODE);
+	}
+
+	I915_WRITE(reg, dpll);
+
+	/* Wait for the clocks to stabilize. */
+	POSTING_READ(reg);
+	udelay(150);
+>>>>>>> 0e91d2a... Nougat
 
 	reg = DPLL(pipe);
 	val = I915_READ(reg);
@@ -7535,6 +7559,49 @@ static void intel_modeset_commit_output_state(struct drm_device *dev)
 			    base.head) {
 		encoder->base.crtc = &encoder->new_crtc->base;
 	}
+<<<<<<< HEAD
+=======
+
+	for_each_intel_crtc(dev, crtc) {
+		crtc->base.enabled = crtc->new_enabled;
+	}
+}
+
+static void
+connected_sink_compute_bpp(struct intel_connector *connector,
+			   struct intel_crtc_config *pipe_config)
+{
+	int bpp = pipe_config->pipe_bpp;
+
+	DRM_DEBUG_KMS("[CONNECTOR:%d:%s] checking for sink bpp constrains\n",
+		connector->base.base.id,
+		connector->base.name);
+
+	/* Don't use an invalid EDID bpc value */
+	if (connector->base.display_info.bpc &&
+	    connector->base.display_info.bpc * 3 < bpp) {
+		DRM_DEBUG_KMS("clamping display bpp (was %d) to EDID reported max of %d\n",
+			      bpp, connector->base.display_info.bpc*3);
+		pipe_config->pipe_bpp = connector->base.display_info.bpc*3;
+	}
+
+	/* Clamp bpp to default limit on screens without EDID 1.4 */
+	if (connector->base.display_info.bpc == 0) {
+		int type = connector->base.connector_type;
+		int clamp_bpp = 24;
+
+		/* Fall back to 18 bpp when DP sink capability is unknown. */
+		if (type == DRM_MODE_CONNECTOR_DisplayPort ||
+		    type == DRM_MODE_CONNECTOR_eDP)
+			clamp_bpp = 18;
+
+		if (bpp > clamp_bpp) {
+			DRM_DEBUG_KMS("clamping display bpp (was %d) to default limit of %d\n",
+				      bpp, clamp_bpp);
+			pipe_config->pipe_bpp = clamp_bpp;
+		}
+	}
+>>>>>>> 0e91d2a... Nougat
 }
 
 static int

@@ -574,7 +574,11 @@ asmlinkage void __init start_kernel(void)
 
 	check_bugs();
 
+<<<<<<< HEAD
 	acpi_early_init(); 
+=======
+	acpi_subsystem_init();
+>>>>>>> 0e91d2a... Nougat
 	sfi_init_late();
 
 	if (efi_enabled(EFI_RUNTIME_SERVICES)) {

@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is Mree software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -796,6 +800,7 @@ static void unregister_client_adhoc(uint32_t cl)
 	}
 	msm_bus_dbg_client_data(client->pdata, MSM_BUS_DBG_UNREGISTER, cl);
 	kfree(client->src_pnode);
+	kfree(client->src_devs);
 	kfree(client);
 	handle_list.cl_list[cl] = NULL;
 exit_unregister_client:
@@ -1086,6 +1091,7 @@ static void unregister_adhoc(struct msm_bus_client_handle *cl)
 				cl->first_hop, cl->active_only);
 
 	msm_bus_dbg_remove_client(cl);
+	kfree(cl->name);
 	kfree(cl);
 exit_unregister_client:
 	rt_mutex_unlock(&msm_bus_adhoc_lock);

@@ -613,6 +613,14 @@ static void qdisc_rcu_free(struct rcu_head *head)
 {
 	struct Qdisc *qdisc = container_of(head, struct Qdisc, rcu_head);
 
+<<<<<<< HEAD
+=======
+	if (qdisc_is_percpu_stats(qdisc)) {
+		free_percpu(qdisc->cpu_bstats);
+		free_percpu(qdisc->cpu_qstats);
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	kfree((char *) qdisc - qdisc->padded);
 }
 

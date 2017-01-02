@@ -84,6 +84,7 @@ static void bpf_jit_build_prologue(struct sk_filter *fp, u32 *image,
 		PPC_LI(r_X, 0);
 	}
 
+<<<<<<< HEAD
 	switch (filter[0].code) {
 	case BPF_S_RET_K:
 	case BPF_S_LD_W_LEN:
@@ -102,8 +103,11 @@ static void bpf_jit_build_prologue(struct sk_filter *fp, u32 *image,
 		break;
 	default:
 		/* make sure we dont leak kernel information to user */
+=======
+	/* make sure we dont leak kernel information to user */
+	if (bpf_needs_clear_a(&filter[0]))
+>>>>>>> 0e91d2a... Nougat
 		PPC_LI(r_A, 0);
-	}
 }
 
 static void bpf_jit_build_epilogue(u32 *image, struct codegen_context *ctx)
@@ -699,8 +703,13 @@ static void jit_free_defer(struct work_struct *arg)
  */
 void bpf_jit_free(struct sk_filter *fp)
 {
+<<<<<<< HEAD
 	if (fp->bpf_func != sk_run_filter) {
 		struct work_struct *work = (struct work_struct *)fp->bpf_func;
+=======
+	if (fp->jited)
+		module_memfree(fp->bpf_func);
+>>>>>>> 0e91d2a... Nougat
 
 		INIT_WORK(work, jit_free_defer);
 		schedule_work(work);

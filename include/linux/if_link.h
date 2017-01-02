@@ -12,5 +12,12 @@ struct ifla_vf_info {
 	__u32 qos;
 	__u32 tx_rate;
 	__u32 spoofchk;
+<<<<<<< HEAD
+=======
+	__u32 linkstate;
+	__u32 min_tx_rate;
+	__u32 max_tx_rate;
+	__u32 rss_query_en;
+>>>>>>> 0e91d2a... Nougat
 };
 #endif /* _LINUX_IF_LINK_H */

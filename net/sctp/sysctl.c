@@ -309,8 +309,15 @@ static int proc_sctp_do_hmac_alg(ctl_table *ctl,
 				loff_t *ppos)
 {
 	struct net *net = current->nsproxy->net_ns;
+<<<<<<< HEAD
 	char tmp[8];
 	ctl_table tbl;
+=======
+	struct ctl_table tbl;
+	bool changed = false;
+	char *none = "none";
+	char tmp[8] = {0};
+>>>>>>> 0e91d2a... Nougat
 	int ret;
 	int changed = 0;
 	char *none = "none";

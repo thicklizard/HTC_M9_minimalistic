@@ -242,7 +242,15 @@ SECTIONS
 	. = PAGE_OFFSET + TEXT_OFFSET;
 #else
 	__init_end = .;
+<<<<<<< HEAD
 	. = ALIGN(THREAD_SIZE);
+=======
+#ifdef CONFIG_ARM_KERNMEM_PERMS
+	. = ALIGN(1<<SECTION_SHIFT);
+#else
+	. = ALIGN(THREAD_SIZE);
+#endif
+>>>>>>> 0e91d2a... Nougat
 	__data_loc = .;
 #endif
 

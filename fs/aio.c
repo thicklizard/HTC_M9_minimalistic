@@ -977,6 +977,7 @@ static ssize_t aio_setup_vectored_rw(int rw, struct kiocb *kiocb, bool compat)
 
 static ssize_t aio_setup_single_vector(int rw, struct kiocb *kiocb)
 {
+<<<<<<< HEAD
 	if (unlikely(!access_ok(!rw, kiocb->ki_buf, kiocb->ki_nbytes)))
 		return -EFAULT;
 
@@ -984,6 +985,19 @@ static ssize_t aio_setup_single_vector(int rw, struct kiocb *kiocb)
 	kiocb->ki_iovec->iov_base = kiocb->ki_buf;
 	kiocb->ki_iovec->iov_len = kiocb->ki_nbytes;
 	kiocb->ki_nr_segs = 1;
+=======
+	size_t len = kiocb->ki_nbytes;
+
+	if (len > MAX_RW_COUNT)
+		len = MAX_RW_COUNT;
+
+	if (unlikely(!access_ok(!rw, buf, len)))
+		return -EFAULT;
+
+	iovec->iov_base = buf;
+	iovec->iov_len = len;
+	*nr_segs = 1;
+>>>>>>> 0e91d2a... Nougat
 	return 0;
 }
 

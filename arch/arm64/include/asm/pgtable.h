@@ -33,11 +33,22 @@
 
 /*
  * VMALLOC and SPARSEMEM_VMEMMAP ranges.
+<<<<<<< HEAD
+=======
+ *
+ * VMEMAP_SIZE: allows the whole linear region to be covered by a struct page array
+ *	(rounded up to PUD_SIZE).
+ * VMALLOC_START: beginning of the kernel VA space
+ * VMALLOC_END: extends to the available space below vmmemmap, PCI I/O space,
+ *	fixed mappings and modules
+>>>>>>> 0e91d2a... Nougat
  */
 #define VMALLOC_START		(UL(0xffffffffffffffff) << VA_BITS)
 #define VMALLOC_END		(PAGE_OFFSET - UL(0x400000000) - SZ_64K)
 
-#define vmemmap			((struct page *)(VMALLOC_END + SZ_64K))
+#define VMEMMAP_START		(VMALLOC_END + SZ_64K)
+#define vmemmap			((struct page *)VMEMMAP_START - \
+				 SECTION_ALIGN_DOWN(memstart_addr >> PAGE_SHIFT))
 
 #define FIRST_USER_ADDRESS	0
 
@@ -60,7 +71,14 @@ extern void __pgd_error(const char *file, int line, unsigned long val);
  */
 #define _PAGE_DEFAULT		PTE_TYPE_PAGE | PTE_AF
 
+<<<<<<< HEAD
 extern pgprot_t pgprot_default;
+=======
+#define PROT_DEVICE_nGnRnE	(PROT_DEFAULT | PTE_PXN | PTE_UXN | PTE_ATTRINDX(MT_DEVICE_nGnRnE))
+#define PROT_DEVICE_nGnRE	(PROT_DEFAULT | PTE_PXN | PTE_UXN | PTE_ATTRINDX(MT_DEVICE_nGnRE))
+#define PROT_NORMAL_NC		(PROT_DEFAULT | PTE_PXN | PTE_UXN | PTE_ATTRINDX(MT_NORMAL_NC))
+#define PROT_NORMAL		(PROT_DEFAULT | PTE_PXN | PTE_UXN | PTE_ATTRINDX(MT_NORMAL))
+>>>>>>> 0e91d2a... Nougat
 
 #define __pgprot_modify(prot,mask,bits) \
 	__pgprot((pgprot_val(prot) & ~(mask)) | (bits))

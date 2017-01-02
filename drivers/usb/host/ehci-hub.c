@@ -268,8 +268,13 @@ int ehci_bus_suspend(struct usb_hcd *hcd)
 		if (t1 & PORT_OWNER)
 			set_bit(port, &ehci->owned_ports);
 		else if ((t1 & PORT_PE) && !(t1 & PORT_SUSPEND)) {
+<<<<<<< HEAD
 			/*clear RS bit before setting SUSP bit
 			* and wait for HCH to get set*/
+=======
+			/* clear RS bit before setting SUSP bit
+			 * and wait for HCH to get set. */
+>>>>>>> 0e91d2a... Nougat
 			if (ehci->susp_sof_bug) {
 				spin_unlock_irq(&ehci->lock);
 				ehci_halt(ehci);
@@ -325,7 +330,11 @@ int ehci_bus_suspend(struct usb_hcd *hcd)
 	if (ehci->bus_suspended)
 		udelay(150);
 
+<<<<<<< HEAD
 	/* if this bit is set, controller is already halted */
+=======
+	/* if this bit is set, controller is already haled */
+>>>>>>> 0e91d2a... Nougat
 	if (!ehci->susp_sof_bug)
 		ehci_halt(ehci); /* turn off now-idle HC */
 
@@ -1210,7 +1219,11 @@ static int ehci_hub_control (
 			else
 				ehci_writel(ehci, temp | PORT_SUSPEND,
 						status_reg);
+<<<<<<< HEAD
 			if (ehci->has_hostpc) {
+=======
+			if (ehci->has_tdi_phy_lpm) {
+>>>>>>> 0e91d2a... Nougat
 				spin_unlock_irqrestore(&ehci->lock, flags);
 				msleep(5);/* 5ms for HCD enter low pwr mode */
 				spin_lock_irqsave(&ehci->lock, flags);

@@ -821,6 +821,207 @@ mc_cont:
 2:	addi	r6,r6,1
 	bdnz	1b
 	stw	r5,VCPU_SLB_MAX(r9)
+<<<<<<< HEAD
+=======
+
+	/*
+	 * Save the guest PURR/SPURR
+	 */
+BEGIN_FTR_SECTION
+	mfspr	r5,SPRN_PURR
+	mfspr	r6,SPRN_SPURR
+	ld	r7,VCPU_PURR(r9)
+	ld	r8,VCPU_SPURR(r9)
+	std	r5,VCPU_PURR(r9)
+	std	r6,VCPU_SPURR(r9)
+	subf	r5,r7,r5
+	subf	r6,r8,r6
+
+	/*
+	 * Restore host PURR/SPURR and add guest times
+	 * so that the time in the guest gets accounted.
+	 */
+	ld	r3,HSTATE_PURR(r13)
+	ld	r4,HSTATE_SPURR(r13)
+	add	r3,r3,r5
+	add	r4,r4,r6
+	mtspr	SPRN_PURR,r3
+	mtspr	SPRN_SPURR,r4
+END_FTR_SECTION_IFCLR(CPU_FTR_ARCH_201)
+
+	/* Save DEC */
+	mfspr	r5,SPRN_DEC
+	mftb	r6
+	extsw	r5,r5
+	add	r5,r5,r6
+	/* r5 is a guest timebase value here, convert to host TB */
+	ld	r3,HSTATE_KVM_VCORE(r13)
+	ld	r4,VCORE_TB_OFFSET(r3)
+	subf	r5,r4,r5
+	std	r5,VCPU_DEC_EXPIRES(r9)
+
+BEGIN_FTR_SECTION
+	b	8f
+END_FTR_SECTION_IFCLR(CPU_FTR_ARCH_207S)
+	/* Save POWER8-specific registers */
+	mfspr	r5, SPRN_IAMR
+	mfspr	r6, SPRN_PSPB
+	mfspr	r7, SPRN_FSCR
+	std	r5, VCPU_IAMR(r9)
+	stw	r6, VCPU_PSPB(r9)
+	std	r7, VCPU_FSCR(r9)
+	mfspr	r5, SPRN_IC
+	mfspr	r6, SPRN_VTB
+	mfspr	r7, SPRN_TAR
+	std	r5, VCPU_IC(r9)
+	std	r6, VCPU_VTB(r9)
+	std	r7, VCPU_TAR(r9)
+	mfspr	r8, SPRN_EBBHR
+	std	r8, VCPU_EBBHR(r9)
+	mfspr	r5, SPRN_EBBRR
+	mfspr	r6, SPRN_BESCR
+	mfspr	r7, SPRN_CSIGR
+	mfspr	r8, SPRN_TACR
+	std	r5, VCPU_EBBRR(r9)
+	std	r6, VCPU_BESCR(r9)
+	std	r7, VCPU_CSIGR(r9)
+	std	r8, VCPU_TACR(r9)
+	mfspr	r5, SPRN_TCSCR
+	mfspr	r6, SPRN_ACOP
+	mfspr	r7, SPRN_PID
+	mfspr	r8, SPRN_WORT
+	std	r5, VCPU_TCSCR(r9)
+	std	r6, VCPU_ACOP(r9)
+	stw	r7, VCPU_GUEST_PID(r9)
+	std	r8, VCPU_WORT(r9)
+	/*
+	 * Restore various registers to 0, where non-zero values
+	 * set by the guest could disrupt the host.
+	 */
+	li	r0, 0
+	mtspr	SPRN_IAMR, r0
+	mtspr	SPRN_CIABR, r0
+	mtspr	SPRN_DAWRX, r0
+	mtspr	SPRN_TCSCR, r0
+	mtspr	SPRN_WORT, r0
+	/* Set MMCRS to 1<<31 to freeze and disable the SPMC counters */
+	li	r0, 1
+	sldi	r0, r0, 31
+	mtspr	SPRN_MMCRS, r0
+8:
+
+	/* Save and reset AMR and UAMOR before turning on the MMU */
+BEGIN_FTR_SECTION
+	mfspr	r5,SPRN_AMR
+	mfspr	r6,SPRN_UAMOR
+	std	r5,VCPU_AMR(r9)
+	std	r6,VCPU_UAMOR(r9)
+	li	r6,0
+	mtspr	SPRN_AMR,r6
+END_FTR_SECTION_IFSET(CPU_FTR_ARCH_206)
+
+	/* Switch DSCR back to host value */
+BEGIN_FTR_SECTION
+	mfspr	r8, SPRN_DSCR
+	ld	r7, HSTATE_DSCR(r13)
+	std	r8, VCPU_DSCR(r9)
+	mtspr	SPRN_DSCR, r7
+END_FTR_SECTION_IFSET(CPU_FTR_ARCH_206)
+
+	/* Save non-volatile GPRs */
+	std	r14, VCPU_GPR(R14)(r9)
+	std	r15, VCPU_GPR(R15)(r9)
+	std	r16, VCPU_GPR(R16)(r9)
+	std	r17, VCPU_GPR(R17)(r9)
+	std	r18, VCPU_GPR(R18)(r9)
+	std	r19, VCPU_GPR(R19)(r9)
+	std	r20, VCPU_GPR(R20)(r9)
+	std	r21, VCPU_GPR(R21)(r9)
+	std	r22, VCPU_GPR(R22)(r9)
+	std	r23, VCPU_GPR(R23)(r9)
+	std	r24, VCPU_GPR(R24)(r9)
+	std	r25, VCPU_GPR(R25)(r9)
+	std	r26, VCPU_GPR(R26)(r9)
+	std	r27, VCPU_GPR(R27)(r9)
+	std	r28, VCPU_GPR(R28)(r9)
+	std	r29, VCPU_GPR(R29)(r9)
+	std	r30, VCPU_GPR(R30)(r9)
+	std	r31, VCPU_GPR(R31)(r9)
+
+	/* Save SPRGs */
+	mfspr	r3, SPRN_SPRG0
+	mfspr	r4, SPRN_SPRG1
+	mfspr	r5, SPRN_SPRG2
+	mfspr	r6, SPRN_SPRG3
+	std	r3, VCPU_SPRG0(r9)
+	std	r4, VCPU_SPRG1(r9)
+	std	r5, VCPU_SPRG2(r9)
+	std	r6, VCPU_SPRG3(r9)
+
+	/* save FP state */
+	mr	r3, r9
+	bl	kvmppc_save_fp
+
+#ifdef CONFIG_PPC_TRANSACTIONAL_MEM
+BEGIN_FTR_SECTION
+	b	2f
+END_FTR_SECTION_IFCLR(CPU_FTR_TM)
+	/* Turn on TM. */
+	mfmsr	r8
+	li	r0, 1
+	rldimi	r8, r0, MSR_TM_LG, 63-MSR_TM_LG
+	mtmsrd	r8
+
+	ld	r5, VCPU_MSR(r9)
+	rldicl. r5, r5, 64 - MSR_TS_S_LG, 62
+	beq	1f	/* TM not active in guest. */
+
+	li	r3, TM_CAUSE_KVM_RESCHED
+
+	/* Clear the MSR RI since r1, r13 are all going to be foobar. */
+	li	r5, 0
+	mtmsrd	r5, 1
+
+	/* All GPRs are volatile at this point. */
+	TRECLAIM(R3)
+
+	/* Temporarily store r13 and r9 so we have some regs to play with */
+	SET_SCRATCH0(r13)
+	GET_PACA(r13)
+	std	r9, PACATMSCRATCH(r13)
+	ld	r9, HSTATE_KVM_VCPU(r13)
+
+	/* Get a few more GPRs free. */
+	std	r29, VCPU_GPRS_TM(29)(r9)
+	std	r30, VCPU_GPRS_TM(30)(r9)
+	std	r31, VCPU_GPRS_TM(31)(r9)
+
+	/* Save away PPR and DSCR soon so don't run with user values. */
+	mfspr	r31, SPRN_PPR
+	HMT_MEDIUM
+	mfspr	r30, SPRN_DSCR
+	ld	r29, HSTATE_DSCR(r13)
+	mtspr	SPRN_DSCR, r29
+
+	/* Save all but r9, r13 & r29-r31 */
+	reg = 0
+	.rept	29
+	.if (reg != 9) && (reg != 13)
+	std	reg, VCPU_GPRS_TM(reg)(r9)
+	.endif
+	reg = reg + 1
+	.endr
+	/* ... now save r13 */
+	GET_SCRATCH0(r4)
+	std	r4, VCPU_GPRS_TM(13)(r9)
+	/* ... and save r9 */
+	ld	r4, PACATMSCRATCH(r13)
+	std	r4, VCPU_GPRS_TM(9)(r9)
+
+	/* Reload stack pointer and TOC. */
+	ld	r1, HSTATE_HOST_R1(r13)
+	ld	r2, PACATOC(r13)
+>>>>>>> 0e91d2a... Nougat
 
 	/*
 	 * Save the guest PURR/SPURR
@@ -1507,6 +1708,20 @@ _GLOBAL(kvmppc_h_set_dabr)
 	li	r3,0
 	blr
 
+<<<<<<< HEAD
+=======
+	/* Emulate H_SET_DABR/X on P8 for the sake of compat mode guests */
+2:	rlwimi	r5, r4, 5, DAWRX_DR | DAWRX_DW
+	rlwimi	r5, r4, 2, DAWRX_WT
+	clrrdi	r4, r4, 3
+	std	r4, VCPU_DAWR(r3)
+	std	r5, VCPU_DAWRX(r3)
+	mtspr	SPRN_DAWR, r4
+	mtspr	SPRN_DAWRX, r5
+	li	r3, 0
+	blr
+
+>>>>>>> 0e91d2a... Nougat
 _GLOBAL(kvmppc_h_cede)
 	ori	r11,r11,MSR_EE
 	std	r11,VCPU_MSR(r3)

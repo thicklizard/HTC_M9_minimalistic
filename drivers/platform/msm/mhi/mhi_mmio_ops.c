@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -13,7 +13,41 @@
 #include "mhi_hwio.h"
 #include "mhi.h"
 
+<<<<<<< HEAD
 enum MHI_STATUS mhi_test_for_device_ready(struct mhi_device_ctxt *mhi_dev_ctxt)
+=======
+int mhi_test_for_device_reset(struct mhi_device_ctxt *mhi_dev_ctxt)
+{
+	u32 pcie_word_val = 0;
+	u32 expiry_counter;
+
+	mhi_log(MHI_MSG_INFO, "Waiting for MMIO RESET bit to be cleared.\n");
+	pcie_word_val = mhi_reg_read(mhi_dev_ctxt->mmio_info.mmio_addr,
+					MHISTATUS);
+	MHI_READ_FIELD(pcie_word_val,
+			MHICTRL_RESET_MASK,
+			MHICTRL_RESET_SHIFT);
+	if (pcie_word_val == 0xFFFFFFFF)
+		return -ENOTCONN;
+	while (MHI_STATE_RESET != pcie_word_val && expiry_counter < 100) {
+		expiry_counter++;
+		mhi_log(MHI_MSG_ERROR,
+			"Device is not RESET, sleeping and retrying.\n");
+		msleep(MHI_READY_STATUS_TIMEOUT_MS);
+		pcie_word_val = mhi_reg_read(mhi_dev_ctxt->mmio_info.mmio_addr,
+							MHICTRL);
+		MHI_READ_FIELD(pcie_word_val,
+				MHICTRL_RESET_MASK,
+				MHICTRL_RESET_SHIFT);
+	}
+
+	if (MHI_STATE_READY != pcie_word_val)
+		return -ENOTCONN;
+	return 0;
+}
+
+int mhi_test_for_device_ready(struct mhi_device_ctxt *mhi_dev_ctxt)
+>>>>>>> 0e91d2a... Nougat
 {
 	u32 pcie_word_val = 0;
 	u32 expiry_counter;
@@ -26,7 +60,7 @@ enum MHI_STATUS mhi_test_for_device_ready(struct mhi_device_ctxt *mhi_dev_ctxt)
 			MHISTATUS_READY_SHIFT);
 
 	if (pcie_word_val == 0xFFFFFFFF)
-		return MHI_STATUS_LINK_DOWN;
+		return -ENOTCONN;
 	expiry_counter = 0;
 	while (MHI_STATE_READY != pcie_word_val && expiry_counter < 50) {
 		expiry_counter++;
@@ -40,16 +74,16 @@ enum MHI_STATUS mhi_test_for_device_ready(struct mhi_device_ctxt *mhi_dev_ctxt)
 	}
 
 	if (pcie_word_val != MHI_STATE_READY)
-		return MHI_STATUS_DEVICE_NOT_READY;
-	return MHI_STATUS_SUCCESS;
+		return -ETIMEDOUT;
+	return 0;
 }
 
-enum MHI_STATUS mhi_init_mmio(struct mhi_device_ctxt *mhi_dev_ctxt)
+int mhi_init_mmio(struct mhi_device_ctxt *mhi_dev_ctxt)
 {
 	u64 pcie_dword_val = 0;
 	u32 pcie_word_val = 0;
 	u32 i = 0;
-	enum MHI_STATUS ret_val;
+	int ret_val;
 
 	mhi_log(MHI_MSG_INFO, "~~~ Initializing MMIO ~~~\n");
 	mhi_dev_ctxt->mmio_addr = mhi_dev_ctxt->dev_props->bar0_base;
@@ -62,7 +96,7 @@ enum MHI_STATUS mhi_init_mmio(struct mhi_device_ctxt *mhi_dev_ctxt)
 
 	if (0 == mhi_dev_ctxt->mmio_len) {
 		mhi_log(MHI_MSG_ERROR, "Received mmio length as zero\n");
-		return MHI_STATUS_ERROR;
+		return -EIO;
 	}
 
 	mhi_log(MHI_MSG_INFO, "Testing MHI Ver\n");
@@ -71,11 +105,10 @@ enum MHI_STATUS mhi_init_mmio(struct mhi_device_ctxt *mhi_dev_ctxt)
 	if (MHI_VERSION != mhi_dev_ctxt->dev_props->mhi_ver) {
 		mhi_log(MHI_MSG_CRITICAL, "Bad MMIO version, 0x%x\n",
 					mhi_dev_ctxt->dev_props->mhi_ver);
-
 		if (mhi_dev_ctxt->dev_props->mhi_ver == 0xFFFFFFFF)
 			ret_val = mhi_wait_for_mdm(mhi_dev_ctxt);
 		if (ret_val)
-			return MHI_STATUS_ERROR;
+			return ret_val;
 	}
 	/* Enable the channels */
 	for (i = 0; i < MHI_MAX_CHANNELS; ++i) {
@@ -222,6 +255,6 @@ enum MHI_STATUS mhi_init_mmio(struct mhi_device_ctxt *mhi_dev_ctxt)
 			pcie_word_val);
 
 	mhi_log(MHI_MSG_INFO, "Done..\n");
-	return MHI_STATUS_SUCCESS;
+	return 0;
 }
 

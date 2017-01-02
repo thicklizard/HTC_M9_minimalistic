@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -23,8 +23,15 @@
 #include <linux/ioctl.h>
 #include <linux/miscdevice.h>
 
+<<<<<<< HEAD
 #define NFC_SET_PWR	_IOW(0xE9, 0x01, unsigned int)
 #define SET_RX_BLOCK	_IOW(0xE9, 0x04, unsigned int)
+=======
+#define NFC_SET_PWR			_IOW(0xE9, 0x01, unsigned int)
+#define ESE_SET_PWR			_IOW(0xE9, 0x02, unsigned int)
+#define ESE_GET_PWR			_IOR(0xE9, 0x03, unsigned int)
+#define SET_RX_BLOCK			_IOW(0xE9, 0x04, unsigned int)
+>>>>>>> 0e91d2a... Nougat
 #define SET_EMULATOR_TEST_POINT		_IOW(0xE9, 0x05, unsigned int)
 #define NFCC_INITIAL_CORE_RESET_NTF	_IOW(0xE9, 0x10, unsigned int)
 

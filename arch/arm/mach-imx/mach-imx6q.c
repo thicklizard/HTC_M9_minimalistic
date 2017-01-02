@@ -164,8 +164,19 @@ static void __init imx6q_usb_init(void)
 
 static void __init imx6q_init_machine(void)
 {
+<<<<<<< HEAD
 	if (of_machine_is_compatible("fsl,imx6q-sabrelite"))
 		imx6q_sabrelite_init();
+=======
+	struct device *parent;
+
+	imx_print_silicon_rev(cpu_is_imx6dl() ? "i.MX6DL" : "i.MX6Q",
+			      imx_get_soc_revision());
+
+	parent = imx_soc_device_init();
+	if (parent == NULL)
+		pr_warn("failed to initialize soc device\n");
+>>>>>>> 0e91d2a... Nougat
 
 	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
 
@@ -202,7 +213,19 @@ static void __init imx6q_opp_check_1p2ghz(struct device *cpu_dev)
 	if ((val & 0x3) != OCOTP_CFG3_SPEED_1P2GHZ)
 		if (dev_pm_opp_disable(cpu_dev, 1200000000))
 			pr_warn("failed to disable 1.2 GHz OPP\n");
+<<<<<<< HEAD
 
+=======
+	if (val < OCOTP_CFG3_SPEED_996MHZ)
+		if (dev_pm_opp_disable(cpu_dev, 996000000))
+			pr_warn("failed to disable 996 MHz OPP\n");
+	if (cpu_is_imx6q()) {
+		if (val != OCOTP_CFG3_SPEED_852MHZ)
+			if (dev_pm_opp_disable(cpu_dev, 852000000))
+				pr_warn("failed to disable 852 MHz OPP\n");
+	}
+	iounmap(base);
+>>>>>>> 0e91d2a... Nougat
 put_node:
 	of_node_put(np);
 }
@@ -217,8 +240,12 @@ static void __init imx6q_opp_init(struct device *cpu_dev)
 		return;
 	}
 
+<<<<<<< HEAD
 	cpu_dev->of_node = np;
 	if (of_init_opp_table(cpu_dev)) {
+=======
+	if (dev_pm_opp_of_add_table(cpu_dev)) {
+>>>>>>> 0e91d2a... Nougat
 		pr_warn("failed to init OPP table\n");
 		goto put_node;
 	}
@@ -256,10 +283,15 @@ static void __init imx6q_map_io(void)
 
 static void __init imx6q_init_irq(void)
 {
+<<<<<<< HEAD
 	imx6q_init_revision();
 	l2x0_of_init(0, ~0UL);
+=======
+	imx_gpc_check_dt();
+	imx_init_revision_from_anatop();
+	imx_init_l2cache();
+>>>>>>> 0e91d2a... Nougat
 	imx_src_init();
-	imx_gpc_init();
 	irqchip_init();
 }
 
@@ -285,5 +317,8 @@ DT_MACHINE_START(IMX6Q, "Freescale i.MX6 Quad/DualLite (Device Tree)")
 	.init_machine	= imx6q_init_machine,
 	.init_late      = imx6q_init_late,
 	.dt_compat	= imx6q_dt_compat,
+<<<<<<< HEAD
 	.restart	= imx6q_restart,
+=======
+>>>>>>> 0e91d2a... Nougat
 MACHINE_END

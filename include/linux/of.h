@@ -23,6 +23,11 @@
 #include <linux/spinlock.h>
 #include <linux/topology.h>
 #include <linux/notifier.h>
+<<<<<<< HEAD
+=======
+#include <linux/property.h>
+#include <linux/list.h>
+>>>>>>> 0e91d2a... Nougat
 
 #include <asm/byteorder.h>
 #include <asm/errno.h>
@@ -54,10 +59,14 @@ struct device_node {
 	struct	device_node *parent;
 	struct	device_node *child;
 	struct	device_node *sibling;
+<<<<<<< HEAD
 	struct	device_node *next;	/* next device of same type */
 	struct	device_node *allnext;	/* next in list of all nodes */
 	struct	proc_dir_entry *pde;	/* this node's proc directory */
 	struct	kref kref;
+=======
+	struct	kobject kobj;
+>>>>>>> 0e91d2a... Nougat
 	unsigned long _flags;
 	void	*data;
 #if defined(CONFIG_SPARC)
@@ -74,6 +83,34 @@ struct of_phandle_args {
 	uint32_t args[MAX_PHANDLE_ARGS];
 };
 
+<<<<<<< HEAD
+=======
+struct of_reconfig_data {
+	struct device_node	*dn;
+	struct property		*prop;
+	struct property		*old_prop;
+};
+
+/* initialize a node */
+extern struct kobj_type of_node_ktype;
+static inline void of_node_init(struct device_node *node)
+{
+	kobject_init(&node->kobj, &of_node_ktype);
+}
+
+/* true when node is initialized */
+static inline int of_node_is_initialized(struct device_node *node)
+{
+	return node && node->kobj.state_initialized;
+}
+
+/* true when node is attached (i.e. present on sysfs) */
+static inline int of_node_is_attached(struct device_node *node)
+{
+	return node && node->kobj.state_in_sysfs;
+}
+
+>>>>>>> 0e91d2a... Nougat
 #ifdef CONFIG_OF_DYNAMIC
 extern struct device_node *of_node_get(struct device_node *node);
 extern void of_node_put(struct device_node *node);
@@ -86,17 +123,16 @@ static inline struct device_node *of_node_get(struct device_node *node)
 static inline void of_node_put(struct device_node *node) { }
 #endif /* !CONFIG_OF_DYNAMIC */
 
-#ifdef CONFIG_OF
-
 /* Pointer for first entry in chain of all nodes. */
-extern struct device_node *of_allnodes;
+extern struct device_node *of_root;
 extern struct device_node *of_chosen;
 extern struct device_node *of_aliases;
 extern raw_spinlock_t devtree_lock;
 
+#ifdef CONFIG_OF
 static inline bool of_have_populated_dt(void)
 {
-	return of_allnodes != NULL;
+	return of_root != NULL;
 }
 
 static inline bool of_node_is_root(const struct device_node *node)
@@ -114,6 +150,30 @@ static inline void of_node_set_flag(struct device_node *n, unsigned long flag)
 	set_bit(flag, &n->_flags);
 }
 
+<<<<<<< HEAD
+=======
+static inline void of_node_clear_flag(struct device_node *n, unsigned long flag)
+{
+	clear_bit(flag, &n->_flags);
+}
+
+static inline int of_property_check_flag(struct property *p, unsigned long flag)
+{
+	return test_bit(flag, &p->_flags);
+}
+
+static inline void of_property_set_flag(struct property *p, unsigned long flag)
+{
+	set_bit(flag, &p->_flags);
+}
+
+static inline void of_property_clear_flag(struct property *p, unsigned long flag)
+{
+	clear_bit(flag, &p->_flags);
+}
+
+extern struct device_node *__of_find_all_nodes(struct device_node *prev);
+>>>>>>> 0e91d2a... Nougat
 extern struct device_node *of_find_all_nodes(struct device_node *prev);
 
 /*
@@ -167,6 +227,12 @@ static inline const char *of_node_full_name(const struct device_node *np)
 	return np ? np->full_name : "<no-node>";
 }
 
+<<<<<<< HEAD
+=======
+#define for_each_of_allnodes_from(from, dn) \
+	for (dn = __of_find_all_nodes(from); dn; dn = __of_find_all_nodes(dn))
+#define for_each_of_allnodes(dn) for_each_of_allnodes_from(NULL, dn)
+>>>>>>> 0e91d2a... Nougat
 extern struct device_node *of_find_node_by_name(struct device_node *from,
 	const char *name);
 #define for_each_node_by_name(dn, name) \
@@ -186,6 +252,7 @@ extern struct device_node *of_find_matching_node_and_match(
 	struct device_node *from,
 	const struct of_device_id *matches,
 	const struct of_device_id **match);
+<<<<<<< HEAD
 static inline struct device_node *of_find_matching_node(
 	struct device_node *from,
 	const struct of_device_id *matches)
@@ -199,6 +266,16 @@ static inline struct device_node *of_find_matching_node(
 	for (dn = of_find_matching_node_and_match(NULL, matches, match); \
 	     dn; dn = of_find_matching_node_and_match(dn, matches, match))
 extern struct device_node *of_find_node_by_path(const char *path);
+=======
+
+extern struct device_node *of_find_node_opts_by_path(const char *path,
+	const char **opts);
+static inline struct device_node *of_find_node_by_path(const char *path)
+{
+	return of_find_node_opts_by_path(path, NULL);
+}
+
+>>>>>>> 0e91d2a... Nougat
 extern struct device_node *of_find_node_by_phandle(phandle handle);
 extern struct device_node *of_get_parent(const struct device_node *node);
 extern struct device_node *of_get_next_parent(struct device_node *node);
@@ -262,7 +339,7 @@ extern int of_property_read_string_helper(struct device_node *np,
 					      const char **out_strs, size_t sz, int index);
 extern int of_device_is_compatible(const struct device_node *device,
 				   const char *);
-extern int of_device_is_available(const struct device_node *device);
+extern bool of_device_is_available(const struct device_node *device);
 extern const void *of_get_property(const struct device_node *node,
 				const char *name,
 				int *lenp);
@@ -300,6 +377,7 @@ extern int of_update_property(struct device_node *np, struct property *newprop);
 #define OF_RECONFIG_REMOVE_PROPERTY	0x0004
 #define OF_RECONFIG_UPDATE_PROPERTY	0x0005
 
+<<<<<<< HEAD
 struct of_prop_reconfig {
 	struct device_node	*dn;
 	struct property		*prop;
@@ -309,6 +387,8 @@ extern int of_reconfig_notifier_register(struct notifier_block *);
 extern int of_reconfig_notifier_unregister(struct notifier_block *);
 extern int of_reconfig_notify(unsigned long, void *);
 
+=======
+>>>>>>> 0e91d2a... Nougat
 extern int of_attach_node(struct device_node *);
 extern int of_detach_node(struct device_node *);
 
@@ -362,6 +442,12 @@ static inline struct device_node *of_find_node_by_path(const char *path)
 	return NULL;
 }
 
+static inline struct device_node *of_find_node_opts_by_path(const char *path,
+	const char **opts)
+{
+	return NULL;
+}
+
 static inline struct device_node *of_get_parent(const struct device_node *node)
 {
 	return NULL;
@@ -393,9 +479,9 @@ static inline int of_device_is_compatible(const struct device_node *device,
 	return 0;
 }
 
-static inline int of_device_is_available(const struct device_node *device)
+static inline bool of_device_is_available(const struct device_node *device)
 {
-	return 0;
+	return false;
 }
 
 static inline struct property *of_find_property(const struct device_node *np,
@@ -639,6 +725,7 @@ static inline int of_property_read_u32(const struct device_node *np,
 	return of_property_read_u32_array(np, propname, out_value, 1);
 }
 
+<<<<<<< HEAD
 #if defined(CONFIG_PROC_FS) && defined(CONFIG_PROC_DEVICETREE)
 extern void proc_device_tree_add_node(struct device_node *, struct proc_dir_entry *);
 extern void proc_device_tree_add_prop(struct proc_dir_entry *pde, struct property *prop);
@@ -649,4 +736,236 @@ extern void proc_device_tree_update_prop(struct proc_dir_entry *pde,
 					 struct property *oldprop);
 #endif
 
+=======
+static inline int of_property_read_s32(const struct device_node *np,
+				       const char *propname,
+				       s32 *out_value)
+{
+	return of_property_read_u32(np, propname, (u32*) out_value);
+}
+
+#define of_property_for_each_u32(np, propname, prop, p, u)	\
+	for (prop = of_find_property(np, propname, NULL),	\
+		p = of_prop_next_u32(prop, NULL, &u);		\
+		p;						\
+		p = of_prop_next_u32(prop, p, &u))
+
+#define of_property_for_each_string(np, propname, prop, s)	\
+	for (prop = of_find_property(np, propname, NULL),	\
+		s = of_prop_next_string(prop, NULL);		\
+		s;						\
+		s = of_prop_next_string(prop, s))
+
+#define for_each_node_by_name(dn, name) \
+	for (dn = of_find_node_by_name(NULL, name); dn; \
+	     dn = of_find_node_by_name(dn, name))
+#define for_each_node_by_type(dn, type) \
+	for (dn = of_find_node_by_type(NULL, type); dn; \
+	     dn = of_find_node_by_type(dn, type))
+#define for_each_compatible_node(dn, type, compatible) \
+	for (dn = of_find_compatible_node(NULL, type, compatible); dn; \
+	     dn = of_find_compatible_node(dn, type, compatible))
+#define for_each_matching_node(dn, matches) \
+	for (dn = of_find_matching_node(NULL, matches); dn; \
+	     dn = of_find_matching_node(dn, matches))
+#define for_each_matching_node_and_match(dn, matches, match) \
+	for (dn = of_find_matching_node_and_match(NULL, matches, match); \
+	     dn; dn = of_find_matching_node_and_match(dn, matches, match))
+
+#define for_each_child_of_node(parent, child) \
+	for (child = of_get_next_child(parent, NULL); child != NULL; \
+	     child = of_get_next_child(parent, child))
+#define for_each_available_child_of_node(parent, child) \
+	for (child = of_get_next_available_child(parent, NULL); child != NULL; \
+	     child = of_get_next_available_child(parent, child))
+
+#define for_each_node_with_property(dn, prop_name) \
+	for (dn = of_find_node_with_property(NULL, prop_name); dn; \
+	     dn = of_find_node_with_property(dn, prop_name))
+
+static inline int of_get_child_count(const struct device_node *np)
+{
+	struct device_node *child;
+	int num = 0;
+
+	for_each_child_of_node(np, child)
+		num++;
+
+	return num;
+}
+
+static inline int of_get_available_child_count(const struct device_node *np)
+{
+	struct device_node *child;
+	int num = 0;
+
+	for_each_available_child_of_node(np, child)
+		num++;
+
+	return num;
+}
+
+#ifdef CONFIG_OF
+#define _OF_DECLARE(table, name, compat, fn, fn_type)			\
+	static const struct of_device_id __of_table_##name		\
+		__used __section(__##table##_of_table)			\
+		 = { .compatible = compat,				\
+		     .data = (fn == (fn_type)NULL) ? fn : fn  }
+#else
+#define _OF_DECLARE(table, name, compat, fn, fn_type)			\
+	static const struct of_device_id __of_table_##name		\
+		__attribute__((unused))					\
+		 = { .compatible = compat,				\
+		     .data = (fn == (fn_type)NULL) ? fn : fn }
+#endif
+
+typedef int (*of_init_fn_2)(struct device_node *, struct device_node *);
+typedef void (*of_init_fn_1)(struct device_node *);
+
+#define OF_DECLARE_1(table, name, compat, fn) \
+		_OF_DECLARE(table, name, compat, fn, of_init_fn_1)
+#define OF_DECLARE_2(table, name, compat, fn) \
+		_OF_DECLARE(table, name, compat, fn, of_init_fn_2)
+
+/**
+ * struct of_changeset_entry	- Holds a changeset entry
+ *
+ * @node:	list_head for the log list
+ * @action:	notifier action
+ * @np:		pointer to the device node affected
+ * @prop:	pointer to the property affected
+ * @old_prop:	hold a pointer to the original property
+ *
+ * Every modification of the device tree during a changeset
+ * is held in a list of of_changeset_entry structures.
+ * That way we can recover from a partial application, or we can
+ * revert the changeset
+ */
+struct of_changeset_entry {
+	struct list_head node;
+	unsigned long action;
+	struct device_node *np;
+	struct property *prop;
+	struct property *old_prop;
+};
+
+/**
+ * struct of_changeset - changeset tracker structure
+ *
+ * @entries:	list_head for the changeset entries
+ *
+ * changesets are a convenient way to apply bulk changes to the
+ * live tree. In case of an error, changes are rolled-back.
+ * changesets live on after initial application, and if not
+ * destroyed after use, they can be reverted in one single call.
+ */
+struct of_changeset {
+	struct list_head entries;
+};
+
+enum of_reconfig_change {
+	OF_RECONFIG_NO_CHANGE = 0,
+	OF_RECONFIG_CHANGE_ADD,
+	OF_RECONFIG_CHANGE_REMOVE,
+};
+
+#ifdef CONFIG_OF_DYNAMIC
+extern int of_reconfig_notifier_register(struct notifier_block *);
+extern int of_reconfig_notifier_unregister(struct notifier_block *);
+extern int of_reconfig_notify(unsigned long, struct of_reconfig_data *rd);
+extern int of_reconfig_get_state_change(unsigned long action,
+					struct of_reconfig_data *arg);
+
+extern void of_changeset_init(struct of_changeset *ocs);
+extern void of_changeset_destroy(struct of_changeset *ocs);
+extern int of_changeset_apply(struct of_changeset *ocs);
+extern int of_changeset_revert(struct of_changeset *ocs);
+extern int of_changeset_action(struct of_changeset *ocs,
+		unsigned long action, struct device_node *np,
+		struct property *prop);
+
+static inline int of_changeset_attach_node(struct of_changeset *ocs,
+		struct device_node *np)
+{
+	return of_changeset_action(ocs, OF_RECONFIG_ATTACH_NODE, np, NULL);
+}
+
+static inline int of_changeset_detach_node(struct of_changeset *ocs,
+		struct device_node *np)
+{
+	return of_changeset_action(ocs, OF_RECONFIG_DETACH_NODE, np, NULL);
+}
+
+static inline int of_changeset_add_property(struct of_changeset *ocs,
+		struct device_node *np, struct property *prop)
+{
+	return of_changeset_action(ocs, OF_RECONFIG_ADD_PROPERTY, np, prop);
+}
+
+static inline int of_changeset_remove_property(struct of_changeset *ocs,
+		struct device_node *np, struct property *prop)
+{
+	return of_changeset_action(ocs, OF_RECONFIG_REMOVE_PROPERTY, np, prop);
+}
+
+static inline int of_changeset_update_property(struct of_changeset *ocs,
+		struct device_node *np, struct property *prop)
+{
+	return of_changeset_action(ocs, OF_RECONFIG_UPDATE_PROPERTY, np, prop);
+}
+#else /* CONFIG_OF_DYNAMIC */
+static inline int of_reconfig_notifier_register(struct notifier_block *nb)
+{
+	return -EINVAL;
+}
+static inline int of_reconfig_notifier_unregister(struct notifier_block *nb)
+{
+	return -EINVAL;
+}
+static inline int of_reconfig_notify(unsigned long action,
+				     struct of_reconfig_data *arg)
+{
+	return -EINVAL;
+}
+static inline int of_reconfig_get_state_change(unsigned long action,
+						struct of_reconfig_data *arg)
+{
+	return -EINVAL;
+}
+#endif /* CONFIG_OF_DYNAMIC */
+
+/* CONFIG_OF_RESOLVE api */
+extern int of_resolve_phandles(struct device_node *tree);
+
+/**
+ * Overlay support
+ */
+
+#ifdef CONFIG_OF_OVERLAY
+
+/* ID based overlays; the API for external users */
+int of_overlay_create(struct device_node *tree);
+int of_overlay_destroy(int id);
+int of_overlay_destroy_all(void);
+
+#else
+
+static inline int of_overlay_create(struct device_node *tree)
+{
+	return -ENOTSUPP;
+}
+
+static inline int of_overlay_destroy(int id)
+{
+	return -ENOTSUPP;
+}
+
+static inline int of_overlay_destroy_all(void)
+{
+	return -ENOTSUPP;
+}
+
+#endif
+
+>>>>>>> 0e91d2a... Nougat
 #endif /* _LINUX_OF_H */

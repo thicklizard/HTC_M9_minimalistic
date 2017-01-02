@@ -58,6 +58,90 @@ int memblock_remove(phys_addr_t base, phys_addr_t size);
 int memblock_free(phys_addr_t base, phys_addr_t size);
 int memblock_reserve(phys_addr_t base, phys_addr_t size);
 void memblock_trim_memory(phys_addr_t align);
+<<<<<<< HEAD
+=======
+int memblock_mark_hotplug(phys_addr_t base, phys_addr_t size);
+int memblock_clear_hotplug(phys_addr_t base, phys_addr_t size);
+unsigned long memblock_region_resize_late_begin(void);
+void memblock_region_resize_late_end(unsigned long);
+
+/* Low level functions */
+int memblock_add_range(struct memblock_type *type,
+		       phys_addr_t base, phys_addr_t size,
+		       int nid, unsigned long flags);
+
+int memblock_remove_range(struct memblock_type *type,
+			  phys_addr_t base,
+			  phys_addr_t size);
+
+void __next_mem_range(u64 *idx, int nid, struct memblock_type *type_a,
+		      struct memblock_type *type_b, phys_addr_t *out_start,
+		      phys_addr_t *out_end, int *out_nid);
+
+void __next_mem_range_rev(u64 *idx, int nid, struct memblock_type *type_a,
+			  struct memblock_type *type_b, phys_addr_t *out_start,
+			  phys_addr_t *out_end, int *out_nid);
+
+/**
+ * for_each_mem_range - iterate through memblock areas from type_a and not
+ * included in type_b. Or just type_a if type_b is NULL.
+ * @i: u64 used as loop variable
+ * @type_a: ptr to memblock_type to iterate
+ * @type_b: ptr to memblock_type which excludes from the iteration
+ * @nid: node selector, %NUMA_NO_NODE for all nodes
+ * @p_start: ptr to phys_addr_t for start address of the range, can be %NULL
+ * @p_end: ptr to phys_addr_t for end address of the range, can be %NULL
+ * @p_nid: ptr to int for nid of the range, can be %NULL
+ */
+#define for_each_mem_range(i, type_a, type_b, nid,			\
+			   p_start, p_end, p_nid)			\
+	for (i = 0, __next_mem_range(&i, nid, type_a, type_b,		\
+				     p_start, p_end, p_nid);		\
+	     i != (u64)ULLONG_MAX;					\
+	     __next_mem_range(&i, nid, type_a, type_b,			\
+			      p_start, p_end, p_nid))
+
+/**
+ * for_each_mem_range_rev - reverse iterate through memblock areas from
+ * type_a and not included in type_b. Or just type_a if type_b is NULL.
+ * @i: u64 used as loop variable
+ * @type_a: ptr to memblock_type to iterate
+ * @type_b: ptr to memblock_type which excludes from the iteration
+ * @nid: node selector, %NUMA_NO_NODE for all nodes
+ * @p_start: ptr to phys_addr_t for start address of the range, can be %NULL
+ * @p_end: ptr to phys_addr_t for end address of the range, can be %NULL
+ * @p_nid: ptr to int for nid of the range, can be %NULL
+ */
+#define for_each_mem_range_rev(i, type_a, type_b, nid,			\
+			       p_start, p_end, p_nid)			\
+	for (i = (u64)ULLONG_MAX,					\
+		     __next_mem_range_rev(&i, nid, type_a, type_b,	\
+					 p_start, p_end, p_nid);	\
+	     i != (u64)ULLONG_MAX;					\
+	     __next_mem_range_rev(&i, nid, type_a, type_b,		\
+				  p_start, p_end, p_nid))
+
+#ifdef CONFIG_MOVABLE_NODE
+static inline bool memblock_is_hotpluggable(struct memblock_region *m)
+{
+	return m->flags & MEMBLOCK_HOTPLUG;
+}
+
+static inline bool movable_node_is_enabled(void)
+{
+	return movable_node_enabled;
+}
+#else
+static inline bool memblock_is_hotpluggable(struct memblock_region *m)
+{
+	return false;
+}
+static inline bool movable_node_is_enabled(void)
+{
+	return false;
+}
+#endif
+>>>>>>> 0e91d2a... Nougat
 
 #ifdef CONFIG_HAVE_MEMBLOCK_NODE_MAP
 void __next_mem_pfn_range(int *idx, int nid, unsigned long *out_start_pfn,
@@ -246,6 +330,14 @@ static inline unsigned long memblock_region_reserved_end_pfn(const struct memblo
 #else
 #define __init_memblock
 #define __initdata_memblock
+#endif
+
+#ifdef CONFIG_MEMTEST
+extern void early_memtest(phys_addr_t start, phys_addr_t end);
+#else
+static inline void early_memtest(phys_addr_t start, phys_addr_t end)
+{
+}
 #endif
 
 #else

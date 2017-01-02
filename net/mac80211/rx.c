@@ -3058,6 +3058,18 @@ static int prepare_for_handlers(struct ieee80211_rx_data *rx,
 			if (!ieee80211_is_beacon(hdr->frame_control))
 				return 0;
 			status->rx_flags &= ~IEEE80211_RX_RA_MATCH;
+<<<<<<< HEAD
+=======
+		} else if (!ieee80211_has_tods(hdr->frame_control)) {
+			/* ignore data frames to TDLS-peers */
+			if (ieee80211_is_data(hdr->frame_control))
+				return false;
+			/* ignore action frames to TDLS-peers */
+			if (ieee80211_is_action(hdr->frame_control) &&
+			    !is_broadcast_ether_addr(bssid) &&
+			    !ether_addr_equal(bssid, hdr->addr1))
+				return false;
+>>>>>>> 0e91d2a... Nougat
 		}
 		break;
 	case NL80211_IFTYPE_WDS:

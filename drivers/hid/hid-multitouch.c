@@ -326,8 +326,19 @@ static void mt_feature_mapping(struct hid_device *hdev,
 			break;
 		}
 
-		td->inputmode = field->report->id;
-		td->inputmode_index = usage->usage_index;
+		if (td->inputmode < 0) {
+			td->inputmode = field->report->id;
+			td->inputmode_index = usage->usage_index;
+		} else {
+			/*
+			 * Some elan panels wrongly declare 2 input mode
+			 * features, and silently ignore when we set the
+			 * value in the second field. Skip the second feature
+			 * and hope for the best.
+			 */
+			dev_info(&hdev->dev,
+				 "Ignoring the extra HID_DG_INPUTMODE\n");
+		}
 
 		break;
 	case HID_DG_CONTACTMAX:
@@ -944,6 +955,7 @@ static void mt_post_parse(struct mt_device *td)
 static int mt_input_configured(struct hid_device *hdev, struct hid_input *hi)
 {
 	struct mt_device *td = hid_get_drvdata(hdev);
+<<<<<<< HEAD
 	char *name = kstrdup(hdev->name, GFP_KERNEL);
 	int ret = 0;
 
@@ -951,11 +963,76 @@ static int mt_input_configured(struct hid_device *hdev, struct hid_input *hi)
 		hi->input->name = name;
 
 	if (hi->report->id == td->mt_report_id)
-		ret = mt_touch_input_configured(hdev, hi);
+=======
+	char *name;
+	const char *suffix = NULL;
+	struct hid_field *field = hi->report->field[0];
+	int ret;
 
+	if (hi->report->id == td->mt_report_id) {
+>>>>>>> 0e91d2a... Nougat
+		ret = mt_touch_input_configured(hdev, hi);
+		if (ret)
+			return ret;
+	}
+
+<<<<<<< HEAD
 	if (hi->report->id == td->pen_report_id)
 		mt_pen_input_configured(hdev, hi);
 	return ret;
+=======
+	/*
+	 * some egalax touchscreens have "application == HID_DG_TOUCHSCREEN"
+	 * for the stylus. Check this first, and then rely on the application
+	 * field.
+	 */
+	if (hi->report->field[0]->physical == HID_DG_STYLUS) {
+		suffix = "Pen";
+		/* force BTN_STYLUS to allow tablet matching in udev */
+		__set_bit(BTN_STYLUS, hi->input->keybit);
+	} else {
+		switch (field->application) {
+		case HID_GD_KEYBOARD:
+			suffix = "Keyboard";
+			break;
+		case HID_GD_KEYPAD:
+			suffix = "Keypad";
+			break;
+		case HID_GD_MOUSE:
+			suffix = "Mouse";
+			break;
+		case HID_DG_STYLUS:
+			suffix = "Pen";
+			/* force BTN_STYLUS to allow tablet matching in udev */
+			__set_bit(BTN_STYLUS, hi->input->keybit);
+			break;
+		case HID_DG_TOUCHSCREEN:
+			/* we do not set suffix = "Touchscreen" */
+			break;
+		case HID_GD_SYSTEM_CONTROL:
+			suffix = "System Control";
+			break;
+		case HID_CP_CONSUMER_CONTROL:
+			suffix = "Consumer Control";
+			break;
+		default:
+			suffix = "UNKNOWN";
+			break;
+		}
+	}
+
+	if (suffix) {
+		name = devm_kzalloc(&hi->input->dev,
+				    strlen(hdev->name) + strlen(suffix) + 2,
+				    GFP_KERNEL);
+		if (name) {
+			sprintf(name, "%s %s", hdev->name, suffix);
+			hi->input->name = name;
+		}
+	}
+
+	return 0;
+>>>>>>> 0e91d2a... Nougat
 }
 
 static int mt_probe(struct hid_device *hdev, const struct hid_device_id *id)

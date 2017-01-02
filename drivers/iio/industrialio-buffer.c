@@ -69,6 +69,12 @@ unsigned int iio_buffer_poll(struct file *filp,
 	struct iio_dev *indio_dev = filp->private_data;
 	struct iio_buffer *rb = indio_dev->buffer;
 
+<<<<<<< HEAD
+=======
+	if (!indio_dev->info)
+		return 0;
+
+>>>>>>> 0e91d2a... Nougat
 	poll_wait(filp, &rb->pollq, wait);
 	if (rb->stufftoread)
 		return POLLIN | POLLRDNORM;

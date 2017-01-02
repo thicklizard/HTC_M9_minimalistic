@@ -111,10 +111,13 @@ static struct snd_seq_queue *queue_new(int owner, int locked)
 	struct snd_seq_queue *q;
 
 	q = kzalloc(sizeof(*q), GFP_KERNEL);
+<<<<<<< HEAD
 	if (q == NULL) {
 		snd_printd("malloc failed for snd_seq_queue_new()\n");
+=======
+	if (!q)
+>>>>>>> 0e91d2a... Nougat
 		return NULL;
-	}
 
 	spin_lock_init(&q->owner_lock);
 	spin_lock_init(&q->check_lock);

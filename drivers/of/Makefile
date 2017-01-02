@@ -6,7 +6,12 @@ obj-$(CONFIG_OF_IRQ)    += irq.o
 obj-$(CONFIG_OF_DEVICE) += device.o platform.o
 obj-$(CONFIG_OF_I2C)	+= of_i2c.o
 obj-$(CONFIG_OF_NET)	+= of_net.o
+<<<<<<< HEAD
 obj-$(CONFIG_OF_SELFTEST) += selftest.o
+=======
+obj-$(CONFIG_OF_UNITTEST) += of_unittest.o
+of_unittest-objs := unittest.o unittest-data/testcases.dtb.o
+>>>>>>> 0e91d2a... Nougat
 obj-$(CONFIG_OF_MDIO)	+= of_mdio.o
 obj-$(CONFIG_OF_PCI)	+= of_pci.o
 obj-$(CONFIG_OF_PCI_IRQ)  += of_pci_irq.o
@@ -15,6 +20,10 @@ obj-$(CONFIG_OF_MTD)	+= of_mtd.o
 obj-$(CONFIG_OF_SLIMBUS)	+= of_slimbus.o
 obj-$(CONFIG_OF_CORESIGHT) += of_coresight.o
 obj-$(CONFIG_OF_BATTERYDATA)	+= of_batterydata.o
+<<<<<<< HEAD
 obj-$(CONFIG_OF_RESERVED_MEM) += of_reserved_mem.o
+=======
+obj-$(CONFIG_OF_OVERLAY) += overlay.o
+>>>>>>> 0e91d2a... Nougat
 
 CFLAGS_fdt.o = -I$(src)/../../scripts/dtc/libfdt

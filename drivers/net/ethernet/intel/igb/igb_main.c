@@ -1169,7 +1169,19 @@ static int igb_alloc_q_vector(struct igb_adapter *adapter,
 	       (sizeof(struct igb_ring) * ring_count);
 
 	/* allocate q_vector and rings */
+<<<<<<< HEAD
 	q_vector = kzalloc(size, GFP_KERNEL);
+=======
+	q_vector = adapter->q_vector[v_idx];
+	if (!q_vector) {
+		q_vector = kzalloc(size, GFP_KERNEL);
+	} else if (size > ksize(q_vector)) {
+		kfree_rcu(q_vector, rcu);
+		q_vector = kzalloc(size, GFP_KERNEL);
+	} else {
+		memset(q_vector, 0, size);
+	}
+>>>>>>> 0e91d2a... Nougat
 	if (!q_vector)
 		return -ENOMEM;
 
@@ -2623,6 +2635,14 @@ static void igb_init_queue_configuration(struct igb_adapter *adapter)
 	}
 
 	adapter->rss_queues = min_t(u32, max_rss_queues, num_online_cpus());
+
+	igb_set_flag_queue_pairs(adapter, max_rss_queues);
+}
+
+void igb_set_flag_queue_pairs(struct igb_adapter *adapter,
+			      const u32 max_rss_queues)
+{
+	struct e1000_hw *hw = &adapter->hw;
 
 	/* Determine if we need to pair queues. */
 	switch (hw->mac.type) {

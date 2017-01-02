@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -24,6 +28,10 @@
 
 /**
  * @freq_hz: output rate
+<<<<<<< HEAD
+=======
+ * @src_freq: source freq for dynamic pll. For fixed plls, set to 0.
+>>>>>>> 0e91d2a... Nougat
  * @src_clk: source clock for freq_hz
  * @m_val: M value corresponding to freq_hz
  * @n_val: N value corresponding to freq_hz
@@ -43,21 +51,39 @@ struct clk_freq_tbl {
 
 #define FREQ_END	(ULONG_MAX-1)
 #define F_END { .freq_hz = FREQ_END }
+<<<<<<< HEAD
 
+=======
+#define	FIXED_CLK_SRC	0
+>>>>>>> 0e91d2a... Nougat
 /*
  * Generic clock-definition struct and macros
  */
 /**
  * struct rcg_clk - root clock generator
  * @cmd_rcgr_reg: command register
+<<<<<<< HEAD
+=======
+ * @mnd_reg_width: Width of MND register
+>>>>>>> 0e91d2a... Nougat
  * @set_rate: function to set frequency
  * @freq_tbl: frequency table for this RCG
  * @current_freq: current RCG frequency
  * @c: generic clock data
+<<<<<<< HEAD
+=======
+ * @non_local_children: set if RCG has at least one branch owned by a diff EE
+ * @non_local_control_timeout: configurable RCG timeout needed when all RCG
+ *			 children can be controlled by an entity outside of
+			 HLOS.
+ * @force_enable_rcgr: set if RCG needs to be force enabled/disabled during
+ * power sequence
+>>>>>>> 0e91d2a... Nougat
  * @base: pointer to base address of ioremapped registers.
  */
 struct rcg_clk {
 	u32 cmd_rcgr_reg;
+	u32 mnd_reg_width;
 
 	void   (*set_rate)(struct rcg_clk *, struct clk_freq_tbl *);
 
@@ -65,6 +91,12 @@ struct rcg_clk {
 	struct clk_freq_tbl *current_freq;
 	struct clk	c;
 
+<<<<<<< HEAD
+=======
+	bool non_local_children;
+	int non_local_control_timeout;
+	bool force_enable_rcgr;
+>>>>>>> 0e91d2a... Nougat
 	void *const __iomem *base;
 };
 
@@ -86,6 +118,16 @@ extern struct clk_freq_tbl rcg_dummy_freq;
  * @max_div: maximum branch divider value (if zero, no divider exists)
  * @halt_check: halt checking type
  * @toggle_memory: toggle memory during enable/disable if true
+<<<<<<< HEAD
+=======
+ * @no_halt_check_on_disable: When set, do not check status bit during
+ *			      clk_disable().
+ * @check_enable_bit: Check the enable bit to determine clock status
+				during handoff.
+ * @aggr_sibling_rates: Set if there are multiple branch clocks with rate
+			setting capability on the common RCG.
+ * @is_prepared: Set if clock's prepare count is greater than 0.
+>>>>>>> 0e91d2a... Nougat
  * @base: pointer to base address of ioremapped registers.
  */
 struct branch_clk {
@@ -98,6 +140,13 @@ struct branch_clk {
 	u32 max_div;
 	const u32 halt_check;
 	bool toggle_memory;
+<<<<<<< HEAD
+=======
+	bool no_halt_check_on_disable;
+	bool check_enable_bit;
+	bool aggr_sibling_rates;
+	bool is_prepared;
+>>>>>>> 0e91d2a... Nougat
 	void *const __iomem *base;
 };
 

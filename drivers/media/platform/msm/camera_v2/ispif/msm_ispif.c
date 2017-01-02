@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -26,6 +30,11 @@
 #include "msm.h"
 #include "msm_sd.h"
 #include "msm_camera_io_util.h"
+<<<<<<< HEAD
+=======
+#include "cam_hw_ops.h"
+#include "cam_soc_api.h"
+>>>>>>> 0e91d2a... Nougat
 
 #ifdef CONFIG_MSM_ISPIF_V1
 #include "msm_ispif_hwreg_v1.h"
@@ -50,7 +59,17 @@
 #define CDBG(fmt, args...) do { } while (0)
 #endif
 
+<<<<<<< HEAD
 int g_subcam_vfe_intf = 0;
+=======
+static int msm_ispif_clk_ahb_enable(struct ispif_device *ispif, int enable);
+static int ispif_close_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh);
+static long msm_ispif_subdev_ioctl_unlocked(struct v4l2_subdev *sd,
+	unsigned int cmd, void *arg);
+
+int msm_ispif_get_clk_info(struct ispif_device *ispif_dev,
+	struct platform_device *pdev);
+>>>>>>> 0e91d2a... Nougat
 
 static void msm_ispif_io_dump_reg(struct ispif_device *ispif)
 {
@@ -86,7 +105,242 @@ static struct msm_cam_clk_info ispif_8626_reset_clk_info[] = {
 	{"camss_csi_vfe_clk", NO_SET_RATE},
 };
 
+<<<<<<< HEAD
 static struct msm_cam_clk_info ispif_8974_ahb_clk_info[ISPIF_CLK_INFO_MAX];
+=======
+#ifdef CONFIG_COMPAT
+struct ispif_cfg_data_ext_32 {
+	enum ispif_cfg_type_t cfg_type;
+	compat_caddr_t data;
+	uint32_t size;
+};
+
+#define VIDIOC_MSM_ISPIF_CFG_EXT_COMPAT \
+	_IOWR('V', BASE_VIDIOC_PRIVATE+1, struct ispif_cfg_data_ext_32)
+#endif
+
+static void msm_ispif_get_pack_mask_from_cfg(
+	struct msm_ispif_pack_cfg *pack_cfg,
+	struct msm_ispif_params_entry *entry,
+	uint32_t *pack_mask)
+{
+	int i;
+	uint32_t temp;
+
+	BUG_ON(!entry);
+
+	memset(pack_mask, 0, sizeof(uint32_t) * 2);
+	for (i = 0; i < entry->num_cids; i++) {
+		temp = (pack_cfg[entry->cids[i]].pack_mode & 0x3)|
+			(pack_cfg[entry->cids[i]].even_odd_sel & 0x1) << 2 |
+			(pack_cfg[entry->cids[i]].pixel_swap_en & 0x1) << 3;
+		temp = (temp & 0xF) << ((entry->cids[i] % CID8) * 4);
+
+		if (entry->cids[i] > CID7)
+			pack_mask[1] |= temp;
+		else
+			pack_mask[0] |= temp;
+		CDBG("%s:num %d cid %d mode %d pack_mask %x %x\n",
+			__func__, entry->num_cids, entry->cids[i],
+			pack_cfg[i].pack_mode,
+			pack_mask[0], pack_mask[1]);
+
+	}
+}
+
+static int msm_ispif_config2(struct ispif_device *ispif,
+	void *data)
+{
+	int rc = 0, i = 0;
+	enum msm_ispif_intftype intftype;
+	enum msm_ispif_vfe_intf vfe_intf;
+	uint32_t pack_cfg_mask[2];
+	struct msm_ispif_param_data_ext *params =
+		(struct msm_ispif_param_data_ext *)data;
+
+	BUG_ON(!ispif);
+	BUG_ON(!params);
+
+	if (ispif->ispif_state != ISPIF_POWER_UP) {
+		pr_err("%s: ispif invalid state %d\n", __func__,
+			ispif->ispif_state);
+		rc = -EPERM;
+		return rc;
+	}
+	if (params->num > MAX_PARAM_ENTRIES) {
+		pr_err("%s: invalid param entries %d\n", __func__,
+			params->num);
+		rc = -EINVAL;
+		return rc;
+	}
+
+	for (i = 0; i < params->num; i++) {
+		intftype = params->entries[i].intftype;
+		vfe_intf = params->entries[i].vfe_intf;
+
+		CDBG("%s, num %d intftype %x, vfe_intf %d, csid %d\n", __func__,
+			params->num, intftype, vfe_intf,
+			params->entries[i].csid);
+
+		if ((intftype >= INTF_MAX) ||
+			(vfe_intf >=  ispif->vfe_info.num_vfe) ||
+			(ispif->csid_version <= CSID_VERSION_V22 &&
+			(vfe_intf > VFE0))) {
+			pr_err("%s: VFEID %d and CSID version %d mismatch\n",
+				__func__, vfe_intf, ispif->csid_version);
+			return -EINVAL;
+		}
+
+		msm_ispif_get_pack_mask_from_cfg(params->pack_cfg,
+				&params->entries[i], pack_cfg_mask);
+		msm_ispif_cfg_pack_mode(ispif, intftype, vfe_intf,
+			pack_cfg_mask);
+	}
+	return rc;
+}
+
+static long msm_ispif_cmd_ext(struct v4l2_subdev *sd,
+	void *arg)
+{
+	long rc = 0;
+	struct ispif_device *ispif =
+		(struct ispif_device *)v4l2_get_subdevdata(sd);
+	struct ispif_cfg_data_ext pcdata;
+	struct msm_ispif_param_data_ext *params = NULL;
+#ifdef CONFIG_COMPAT
+	struct ispif_cfg_data_ext_32 *pcdata32 =
+		(struct ispif_cfg_data_ext_32 *)arg;
+
+	if (pcdata32 == NULL) {
+		pr_err("Invalid params passed from user\n");
+		return -EINVAL;
+	}
+	pcdata.cfg_type  = pcdata32->cfg_type;
+	pcdata.size = pcdata32->size;
+	pcdata.data = compat_ptr(pcdata32->data);
+
+#else
+	struct ispif_cfg_data_ext *pcdata64 =
+		(struct ispif_cfg_data_ext *)arg;
+
+	if (pcdata64 == NULL) {
+		pr_err("Invalid params passed from user\n");
+		return -EINVAL;
+	}
+	pcdata.cfg_type  = pcdata64->cfg_type;
+	pcdata.size = pcdata64->size;
+	pcdata.data = pcdata64->data;
+#endif
+	if (pcdata.size != sizeof(struct msm_ispif_param_data_ext)) {
+		pr_err("%s: payload size mismatch\n", __func__);
+		return -EINVAL;
+	}
+
+	params = kzalloc(sizeof(struct msm_ispif_param_data_ext), GFP_KERNEL);
+	if (!params) {
+		CDBG("%s: params alloc failed\n", __func__);
+		return -ENOMEM;
+	}
+	if (copy_from_user(params, (void __user *)(pcdata.data),
+		pcdata.size)) {
+		kfree(params);
+		return -EFAULT;
+	}
+
+	mutex_lock(&ispif->mutex);
+	switch (pcdata.cfg_type) {
+	case ISPIF_CFG2:
+		rc = msm_ispif_config2(ispif, params);
+		msm_ispif_io_dump_reg(ispif);
+		break;
+	default:
+		pr_err("%s: invalid cfg_type\n", __func__);
+		rc = -EINVAL;
+		break;
+	}
+	mutex_unlock(&ispif->mutex);
+	kfree(params);
+	return rc;
+}
+
+#ifdef CONFIG_COMPAT
+static long msm_ispif_subdev_ioctl_compat(struct v4l2_subdev *sd,
+	unsigned int cmd, void *arg)
+{
+	BUG_ON(!sd);
+	switch (cmd) {
+	case VIDIOC_MSM_ISPIF_CFG_EXT_COMPAT:
+		return msm_ispif_cmd_ext(sd, arg);
+
+	default:
+		return msm_ispif_subdev_ioctl_unlocked(sd, cmd, arg);
+	}
+}
+static long msm_ispif_subdev_ioctl(struct v4l2_subdev *sd,
+	unsigned int cmd, void *arg)
+{
+	if (is_compat_task())
+		return msm_ispif_subdev_ioctl_compat(sd, cmd, arg);
+	else
+		return msm_ispif_subdev_ioctl_unlocked(sd, cmd, arg);
+}
+#else
+static long msm_ispif_subdev_ioctl(struct v4l2_subdev *sd,
+	unsigned int cmd, void *arg)
+{
+	return msm_ispif_subdev_ioctl_unlocked(sd, cmd, arg);
+}
+#endif
+static void msm_ispif_put_regulator(struct ispif_device *ispif_dev)
+{
+	int i;
+
+	for (i = 0; i < ispif_dev->ispif_vdd_count; i++) {
+		regulator_put(ispif_dev->ispif_vdd[i]);
+		ispif_dev->ispif_vdd[i] = NULL;
+	}
+	for (i = 0; i < ispif_dev->vfe_vdd_count; i++) {
+		regulator_put(ispif_dev->vfe_vdd[i]);
+		ispif_dev->vfe_vdd[i] = NULL;
+	}
+}
+
+static inline int __get_vdd(struct platform_device *pdev,
+				struct regulator **reg, const char *vdd)
+{
+	int rc = 0;
+	*reg = regulator_get(&pdev->dev, vdd);
+	if (IS_ERR_OR_NULL(*reg)) {
+		rc = PTR_ERR(*reg);
+		rc = rc ? rc : -EINVAL;
+		pr_err("%s: Regulator %s get failed %d\n", __func__, vdd, rc);
+		*reg = NULL;
+	}
+	return rc;
+}
+
+static int msm_ispif_get_regulator_info(struct ispif_device *ispif_dev,
+					struct platform_device *pdev)
+{
+	int rc;
+	const char *vdd_name;
+	struct device_node *of_node;
+	int i;
+	int count;
+
+	of_node = pdev->dev.of_node;
+
+	count = of_property_count_strings(of_node,
+					"qcom,vdd-names");
+	if (0 == count) {
+		pr_err("%s: no regulators found\n", __func__);
+		return -EINVAL;
+	}
+
+	BUG_ON(count > (ISPIF_VDD_INFO_MAX + ISPIF_VFE_VDD_INFO_MAX));
+	ispif_dev->vfe_vdd_count = 0;
+	ispif_dev->ispif_vdd_count = 0;
+>>>>>>> 0e91d2a... Nougat
 
 static struct msm_cam_clk_info ispif_8974_reset_clk_info[] = {
 	{"csi0_src_clk", INIT_RATE},
@@ -121,30 +375,50 @@ static int msm_ispif_reset_hw(struct ispif_device *ispif)
 	struct clk *reset_clk1[ARRAY_SIZE(ispif_8626_reset_clk_info)];
 	ispif->clk_idx = 0;
 
+<<<<<<< HEAD
 	rc = msm_cam_clk_enable(&ispif->pdev->dev,
 		ispif_8974_reset_clk_info, reset_clk,
 		ARRAY_SIZE(ispif_8974_reset_clk_info), 1);
 	if (rc < 0) {
 		rc = msm_cam_clk_enable(&ispif->pdev->dev,
+=======
+	/* Turn ON VFE regulators before enabling the vfe clocks */
+	rc = msm_ispif_set_regulators(ispif->vfe_vdd, ispif->vfe_vdd_count, 1);
+	if (rc < 0)
+		return rc;
+
+	rc = msm_camera_clk_enable(&ispif->pdev->dev,
+		ispif->clk_info, ispif->clks,
+		ispif->num_clk, 1);
+	if (rc < 0) {
+		pr_err("%s: cannot enable clock, error = %d\n",
+			__func__, rc);
+		rc = msm_camera_clk_enable(&ispif->pdev->dev,
+>>>>>>> 0e91d2a... Nougat
 			ispif_8626_reset_clk_info, reset_clk1,
 			ARRAY_SIZE(ispif_8626_reset_clk_info), 1);
 		if (rc < 0) {
 			pr_err("%s: cannot enable clock, error = %d",
 				__func__, rc);
 		} else {
-			
+			/* This is set when device is 8x26 */
 			ispif->clk_idx = 2;
 		}
 	} else {
-		
+		/* This is set when device is 8974 */
 		ispif->clk_idx = 1;
 	}
 
+<<<<<<< HEAD
 	init_completion(&ispif->reset_complete[VFE0]);
 	if (ispif->hw_num_isps > 1)
 		init_completion(&ispif->reset_complete[VFE1]);
 
 	
+=======
+	atomic_set(&ispif->reset_trig[VFE0], 1);
+	/* initiate reset of ISPIF */
+>>>>>>> 0e91d2a... Nougat
 	msm_camera_io_w(ISPIF_RST_CMD_MASK,
 				ispif->base + ISPIF_RST_CMD_ADDR);
 	if (ispif->hw_num_isps > 1)
@@ -186,6 +460,7 @@ static int msm_ispif_reset_hw(struct ispif_device *ispif)
 	}
 
 	if (ispif->clk_idx == 1) {
+<<<<<<< HEAD
 		rc = msm_cam_clk_enable(&ispif->pdev->dev,
 			ispif_8974_reset_clk_info, reset_clk,
 			ARRAY_SIZE(ispif_8974_reset_clk_info), 0);
@@ -197,6 +472,15 @@ static int msm_ispif_reset_hw(struct ispif_device *ispif)
 
 	if (ispif->clk_idx == 2) {
 		rc = msm_cam_clk_enable(&ispif->pdev->dev,
+=======
+		rc = rc ? rc : msm_camera_clk_enable(&ispif->pdev->dev,
+			ispif->clk_info, ispif->clks,
+			ispif->num_clk, 0);
+	}
+
+	if (ispif->clk_idx == 2) {
+		rc = rc ? rc :  msm_camera_clk_enable(&ispif->pdev->dev,
+>>>>>>> 0e91d2a... Nougat
 			ispif_8626_reset_clk_info, reset_clk1,
 			ARRAY_SIZE(ispif_8626_reset_clk_info), 0);
 		if (rc < 0) {
@@ -208,6 +492,7 @@ static int msm_ispif_reset_hw(struct ispif_device *ispif)
 	return rc;
 }
 
+<<<<<<< HEAD
 int msm_ispif_get_ahb_clk_info(struct ispif_device *ispif_dev,
 	struct platform_device *pdev,
 	struct msm_cam_clk_info *ahb_clk_info)
@@ -215,29 +500,27 @@ int msm_ispif_get_ahb_clk_info(struct ispif_device *ispif_dev,
 	uint32_t count, num_ahb_clk = 0;
 	int i, rc;
 	uint32_t rates[ISPIF_CLK_INFO_MAX];
+=======
+int msm_ispif_get_clk_info(struct ispif_device *ispif_dev,
+	struct platform_device *pdev)
+{
+	uint32_t num_ahb_clk = 0, non_ahb_clk = 0;
+	size_t num_clks;
+	int i, rc;
+	int j;
+	struct clk **clks, **temp_clks;
+	struct msm_cam_clk_info *clk_info, *temp_clk_info;
+>>>>>>> 0e91d2a... Nougat
 
 	struct device_node *of_node;
 	of_node = pdev->dev.of_node;
 
-	count = of_property_count_strings(of_node, "clock-names");
+	rc = msm_camera_get_clk_info(pdev, &clk_info,
+			&clks, &num_clks);
 
-	CDBG("count = %d\n", count);
-	if (count == 0) {
-		pr_err("no clocks found in device tree, count=%d", count);
-		return 0;
-	}
-
-	if (count > ISPIF_CLK_INFO_MAX) {
-		pr_err("invalid count=%d, max is %d\n", count,
-			ISPIF_CLK_INFO_MAX);
-		return -EINVAL;
-	}
-
-	rc = of_property_read_u32_array(of_node, "qcom,clock-rates",
-		rates, count);
-	if (rc < 0) {
-		pr_err("%s failed %d\n", __func__, __LINE__);
+	if (rc)
 		return rc;
+<<<<<<< HEAD
 	}
 	for (i = 0; i < count; i++) {
 		rc = of_property_read_string_index(of_node, "clock-names",
@@ -256,15 +539,71 @@ int msm_ispif_get_ahb_clk_info(struct ispif_device *ispif_dev,
 				ahb_clk_info[i].clk_rate);
 			num_ahb_clk++;
 		}
+=======
+
+	/*
+	 * reshuffle the clock arrays so that the ahb clocks are
+	 * at the beginning of array
+	 */
+	temp_clks = kcalloc(num_clks, sizeof(struct clk *),
+				GFP_KERNEL);
+	temp_clk_info = kcalloc(num_clks, sizeof(struct msm_cam_clk_info),
+				GFP_KERNEL);
+	if (!temp_clks || !temp_clk_info) {
+		rc = -ENOMEM;
+		kfree(temp_clk_info);
+		kfree(temp_clks);
+		goto alloc_fail;
 	}
+	j = 0;
+	for (i = 0; i < num_clks; i++) {
+		if (strnstr(clk_info[i].clk_name,
+			"ahb", strlen(clk_info[i].clk_name))) {
+			temp_clk_info[j] = clk_info[i];
+			temp_clks[j] = clks[i];
+			j++;
+			num_ahb_clk++;
+		}
+	}
+	for (i = 0; i < num_clks; i++) {
+		if (!strnstr(clk_info[i].clk_name,
+			"ahb", strlen(clk_info[i].clk_name))) {
+			temp_clk_info[j] = clk_info[i];
+			temp_clks[j] = clks[i];
+			j++;
+			non_ahb_clk++;
+		}
+	}
+
+	for (i = 0; i < num_clks; i++) {
+		clk_info[i] = temp_clk_info[i];
+		clks[i] = temp_clks[i];
+>>>>>>> 0e91d2a... Nougat
+	}
+	kfree(temp_clk_info);
+	kfree(temp_clks);
+
+	ispif_dev->ahb_clk = clks;
+	ispif_dev->ahb_clk_info = clk_info;
 	ispif_dev->num_ahb_clk = num_ahb_clk;
+<<<<<<< HEAD
+=======
+	ispif_dev->clk_info = clk_info + num_ahb_clk;
+	ispif_dev->clks = clks + num_ahb_clk;
+	ispif_dev->num_clk = non_ahb_clk;
+
+>>>>>>> 0e91d2a... Nougat
 	return 0;
+alloc_fail:
+	msm_camera_put_clk_info(pdev, &clk_info, &clks, num_clks);
+	return rc;
 }
 
 static int msm_ispif_clk_ahb_enable(struct ispif_device *ispif, int enable)
 {
 	int rc = 0;
 
+<<<<<<< HEAD
 	if (ispif->csid_version < CSID_VERSION_V30) {
 		
 		return 0;
@@ -279,6 +618,10 @@ static int msm_ispif_clk_ahb_enable(struct ispif_device *ispif, int enable)
 
 	rc = msm_cam_clk_enable(&ispif->pdev->dev,
 		ispif_8974_ahb_clk_info, ispif->ahb_clk,
+=======
+	rc = msm_cam_clk_enable(&ispif->pdev->dev,
+		ispif->ahb_clk_info, ispif->ahb_clk,
+>>>>>>> 0e91d2a... Nougat
 		ispif->num_ahb_clk, enable);
 	if (rc < 0) {
 		pr_err("%s: cannot enable clock, error = %d",
@@ -365,6 +708,7 @@ static void msm_ispif_sel_csid_core(struct ispif_device *ispif,
 	switch (intftype) {
 	case PIX0:
 		data &= ~(BIT(1) | BIT(0));
+<<<<<<< HEAD
 		data |= csid;
 		break;
 	case RDI0:
@@ -382,6 +726,25 @@ static void msm_ispif_sel_csid_core(struct ispif_device *ispif,
 	case RDI2:
 		data &= ~(BIT(21) | BIT(20));
 		data |= (csid << 20);
+=======
+		data |= (uint32_t) csid;
+		break;
+	case RDI0:
+		data &= ~(BIT(5) | BIT(4));
+		data |= ((uint32_t) csid) << 4;
+		break;
+	case PIX1:
+		data &= ~(BIT(9) | BIT(8));
+		data |= ((uint32_t) csid) << 8;
+		break;
+	case RDI1:
+		data &= ~(BIT(13) | BIT(12));
+		data |= ((uint32_t) csid) << 12;
+		break;
+	case RDI2:
+		data &= ~(BIT(21) | BIT(20));
+		data |= ((uint32_t) csid) << 20;
+>>>>>>> 0e91d2a... Nougat
 		break;
 	}
 
@@ -457,9 +820,15 @@ static void msm_ispif_enable_intf_cids(struct ispif_device *ispif,
 
 	data = msm_camera_io_r(ispif->base + intf_addr);
 	if (enable)
+<<<<<<< HEAD
 		data |= cid_mask;
 	else
 		data &= ~cid_mask;
+=======
+		data |=  (uint32_t) cid_mask;
+	else
+		data &= ~((uint32_t) cid_mask);
+>>>>>>> 0e91d2a... Nougat
 	msm_camera_io_w_mb(data, ispif->base + intf_addr);
 }
 
@@ -551,6 +920,10 @@ static void msm_ispif_select_clk_mux(struct ispif_device *ispif,
 		break;
 	}
 	CDBG("%s intftype %d data %x\n", __func__, intftype, data);
+<<<<<<< HEAD
+=======
+	/* ensure clk mux is enabled */
+>>>>>>> 0e91d2a... Nougat
 	mb();
 	return;
 }
@@ -560,7 +933,6 @@ static uint16_t msm_ispif_get_cids_mask_from_cfg(
 {
 	int i;
 	uint16_t cids_mask = 0;
-
 	BUG_ON(!entry);
 
 	for (i = 0; i < entry->num_cids; i++)
@@ -568,14 +940,15 @@ static uint16_t msm_ispif_get_cids_mask_from_cfg(
 
 	return cids_mask;
 }
-
 static int msm_ispif_config(struct ispif_device *ispif,
-	struct msm_ispif_param_data *params)
+	void *data)
 {
 	int rc = 0, i = 0;
 	uint16_t cid_mask;
 	enum msm_ispif_intftype intftype;
 	enum msm_ispif_vfe_intf vfe_intf;
+	struct msm_ispif_param_data *params =
+		(struct msm_ispif_param_data *)data;
 
 	BUG_ON(!ispif);
 	BUG_ON(!params);
@@ -634,7 +1007,7 @@ static int msm_ispif_config(struct ispif_device *ispif,
 		}
 
 		if (ispif->csid_version >= CSID_VERSION_V30)
-				msm_ispif_select_clk_mux(ispif, intftype,
+			msm_ispif_select_clk_mux(ispif, intftype,
 				params->entries[i].csid, vfe_intf);
 
 		rc = msm_ispif_validate_intf_status(ispif, intftype, vfe_intf);
@@ -714,28 +1087,28 @@ static void msm_ispif_intf_cmd(struct ispif_device *ispif, uint32_t cmd_bits,
 			cid = params->entries[i].cids[k];
 			vc = cid / 4;
 			if (intf_type == RDI2) {
-				
+				/* zero out two bits */
 				ispif->applied_intf_cmd[vfe_intf].intf_cmd1 &=
 					~(0x3 << (vc * 2 + 8));
-				
+				/* set cmd bits */
 				ispif->applied_intf_cmd[vfe_intf].intf_cmd1 |=
 					(cmd_bits << (vc * 2 + 8));
 			} else {
-				
+				/* zero 2 bits */
 				ispif->applied_intf_cmd[vfe_intf].intf_cmd &=
 					~(0x3 << (vc * 2 + intf_type * 8));
-				
+				/* set cmd bits */
 				ispif->applied_intf_cmd[vfe_intf].intf_cmd |=
 					(cmd_bits << (vc * 2 + intf_type * 8));
 			}
 		}
-		
+		/* cmd for PIX0, PIX1, RDI0, RDI1 */
 		if (ispif->applied_intf_cmd[vfe_intf].intf_cmd != 0xFFFFFFFF)
 			msm_camera_io_w_mb(
 				ispif->applied_intf_cmd[vfe_intf].intf_cmd,
 				ispif->base + ISPIF_VFE_m_INTF_CMD_0(vfe_intf));
 
-		
+		/* cmd for RDI2 */
 		if (ispif->applied_intf_cmd[vfe_intf].intf_cmd1 != 0xFFFFFFFF)
 			msm_camera_io_w_mb(
 				ispif->applied_intf_cmd[vfe_intf].intf_cmd1,
@@ -766,7 +1139,7 @@ static int msm_ispif_stop_immediately(struct ispif_device *ispif,
 	}
 	msm_ispif_intf_cmd(ispif, ISPIF_INTF_CMD_DISABLE_IMMEDIATELY, params);
 
-	
+	/* after stop the interface we need to unmask the CID enable bits */
 	for (i = 0; i < params->num; i++) {
 		cid_mask = msm_ispif_get_cids_mask_from_cfg(
 			&params->entries[i]);
@@ -803,6 +1176,7 @@ static int msm_ispif_start_frame_boundary(struct ispif_device *ispif,
 static int msm_ispif_restart_frame_boundary(struct ispif_device *ispif,
 	struct msm_ispif_param_data *params)
 {
+<<<<<<< HEAD
 	int rc = 0, i;
 	long timeout = 0;
 	uint16_t cid_mask;
@@ -924,6 +1298,23 @@ static int msm_ispif_restart_frame_boundary(struct ispif_device *ispif,
 	}
 
 end:
+=======
+	int rc = 0;
+
+	rc = msm_ispif_reset_hw(ispif);
+	if (!rc)
+		rc = msm_ispif_reset(ispif);
+	if (!rc)
+		rc = msm_ispif_config(ispif, params);
+	if (!rc)
+		rc = msm_ispif_start_frame_boundary(ispif, params);
+
+	if (!rc)
+		pr_info("ISPIF restart Successful\n");
+	else
+		pr_info("ISPIF restart Failed\n");
+
+>>>>>>> 0e91d2a... Nougat
 	return rc;
 disable_clk:
 	rc = msm_cam_clk_enable(&ispif->pdev->dev,
@@ -1009,9 +1400,9 @@ static int msm_ispif_stop_frame_boundary(struct ispif_device *ispif,
 					ISPIF_TIMEOUT_SLEEP_US,
 					ISPIF_TIMEOUT_ALL_US);
 		if (rc < 0)
-			goto end;
+			pr_err("ISPIF stop frame boundary timeout\n");
 
-		
+		/* disable CIDs in CID_MASK register */
 		msm_ispif_enable_intf_cids(ispif, params->entries[i].intftype,
 			cid_mask, vfe_intf, 0);
 	}
@@ -1122,6 +1513,20 @@ static inline void msm_ispif_read_irq_status(struct ispif_irq_status *out,
 
 		ispif_process_irq(ispif, out, VFE1);
 	}
+<<<<<<< HEAD
+=======
+
+	if (fatal_err == true) {
+		pr_err_ratelimited("%s: fatal error, stop ispif immediately\n",
+			__func__);
+		for (i = 0; i < ispif->vfe_info.num_vfe; i++) {
+			msm_camera_io_w(ISPIF_STOP_INTF_IMMEDIATELY,
+				ispif->base + ISPIF_VFE_m_INTF_CMD_0(i));
+			msm_camera_io_w(ISPIF_STOP_INTF_IMMEDIATELY,
+				ispif->base + ISPIF_VFE_m_INTF_CMD_1(i));
+		}
+	}
+>>>>>>> 0e91d2a... Nougat
 }
 
 static irqreturn_t msm_io_ispif_irq(int irq_num, void *data)
@@ -1135,6 +1540,16 @@ static irqreturn_t msm_io_ispif_irq(int irq_num, void *data)
 static int msm_ispif_set_vfe_info(struct ispif_device *ispif,
 	struct msm_ispif_vfe_info *vfe_info)
 {
+<<<<<<< HEAD
+=======
+	if (!vfe_info || (vfe_info->num_vfe == 0) ||
+		(vfe_info->num_vfe > ispif->hw_num_isps)) {
+		pr_err("Invalid VFE info: %pK %d\n", vfe_info,
+			   (vfe_info ? vfe_info->num_vfe : 0));
+		return -EINVAL;
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	memcpy(&ispif->vfe_info, vfe_info, sizeof(struct msm_ispif_vfe_info));
 
 	return 0;
@@ -1154,7 +1569,7 @@ static int msm_ispif_init(struct ispif_device *ispif,
 		return rc;
 	}
 
-	
+	/* can we set to zero? */
 	ispif->applied_intf_cmd[VFE0].intf_cmd  = 0xFFFFFFFF;
 	ispif->applied_intf_cmd[VFE0].intf_cmd1 = 0xFFFFFFFF;
 	ispif->applied_intf_cmd[VFE1].intf_cmd  = 0xFFFFFFFF;
@@ -1163,57 +1578,47 @@ static int msm_ispif_init(struct ispif_device *ispif,
 
 	ispif->csid_version = csid_version;
 
-	if (ispif->csid_version >= CSID_VERSION_V30) {
-		if (!ispif->clk_mux_mem || !ispif->clk_mux_io) {
-			pr_err("%s csi clk mux mem %p io %p\n", __func__,
-				ispif->clk_mux_mem, ispif->clk_mux_io);
-			rc = -ENOMEM;
-			return rc;
-		}
-		ispif->clk_mux_base = ioremap(ispif->clk_mux_mem->start,
-			resource_size(ispif->clk_mux_mem));
-		if (!ispif->clk_mux_base) {
-			pr_err("%s: clk_mux_mem ioremap failed\n", __func__);
-			rc = -ENOMEM;
-			return rc;
-		}
+	if (ispif->csid_version >= CSID_VERSION_V30 && !ispif->clk_mux_base) {
+		ispif->clk_mux_base = msm_camera_get_reg_base(ispif->pdev,
+							"csi_clk_mux", 1);
+		if (!ispif->clk_mux_base)
+			return -ENOMEM;
 	}
 
-	ispif->base = ioremap(ispif->mem->start,
-		resource_size(ispif->mem));
-	if (!ispif->base) {
-		rc = -ENOMEM;
-		pr_err("%s: nomem\n", __func__);
-		goto end;
-	}
-	rc = request_irq(ispif->irq->start, msm_io_ispif_irq,
-		IRQF_TRIGGER_RISING, "ispif", ispif);
-	if (rc) {
-		pr_err("%s: request_irq error = %d\n", __func__, rc);
-		goto error_irq;
-	}
-
+<<<<<<< HEAD
 	rc = msm_ispif_clk_ahb_enable(ispif, 1);
 	if (rc) {
 		pr_err("%s: ahb_clk enable failed", __func__);
 		goto error_ahb;
+=======
+	rc = cam_config_ahb_clk(NULL, 0,
+			CAM_AHB_CLIENT_ISPIF, CAM_AHB_SVS_VOTE);
+	if (rc < 0) {
+		pr_err("%s: failed to vote for AHB\n", __func__);
+		return rc;
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	msm_ispif_reset_hw(ispif);
 
 	rc = msm_ispif_reset(ispif);
-	if (rc == 0) {
-		ispif->ispif_state = ISPIF_POWER_UP;
-		CDBG("%s: power up done\n", __func__);
-		goto end;
-	}
+	if (rc)
+		goto error_ahb;
+	ispif->ispif_state = ISPIF_POWER_UP;
+	return 0;
 
 error_ahb:
+<<<<<<< HEAD
 	free_irq(ispif->irq->start, ispif);
 error_irq:
 	iounmap(ispif->base);
 
 end:
+=======
+	if (cam_config_ahb_clk(NULL, 0, CAM_AHB_CLIENT_ISPIF,
+		CAM_AHB_SUSPEND_VOTE) < 0)
+		pr_err("%s: failed to remove vote for AHB\n", __func__);
+>>>>>>> 0e91d2a... Nougat
 	return rc;
 }
 
@@ -1221,20 +1626,9 @@ static void msm_ispif_release(struct ispif_device *ispif)
 {
 	BUG_ON(!ispif);
 
-	if (!ispif->base) {
-		pr_err("%s: ispif base is NULL\n", __func__);
-		return;
-	}
-
-	if (ispif->ispif_state != ISPIF_POWER_UP) {
-		pr_err("%s: ispif invalid state %d\n", __func__,
-			ispif->ispif_state);
-		return;
-	}
-
-	
 	msm_ispif_reset(ispif);
 
+<<<<<<< HEAD
 	msm_ispif_clk_ahb_enable(ispif, 0);
 
 	free_irq(ispif->irq->start, ispif);
@@ -1244,6 +1638,15 @@ static void msm_ispif_release(struct ispif_device *ispif)
 	iounmap(ispif->clk_mux_base);
 
 	ispif->ispif_state = ISPIF_POWER_DOWN;
+=======
+	msm_camera_enable_irq(ispif->irq, 0);
+
+	ispif->ispif_state = ISPIF_POWER_DOWN;
+
+	if (cam_config_ahb_clk(NULL, 0, CAM_AHB_CLIENT_ISPIF,
+		CAM_AHB_SUSPEND_VOTE) < 0)
+		pr_err("%s: failed to remove vote for AHB\n", __func__);
+>>>>>>> 0e91d2a... Nougat
 }
 
 static long msm_ispif_cmd(struct v4l2_subdev *sd, void *arg)
@@ -1259,7 +1662,7 @@ static long msm_ispif_cmd(struct v4l2_subdev *sd, void *arg)
 	mutex_lock(&ispif->mutex);
 	switch (pcdata->cfg_type) {
 	case ISPIF_ENABLE_REG_DUMP:
-		ispif->enb_dump_reg = pcdata->reg_dump; 
+		ispif->enb_dump_reg = pcdata->reg_dump; /* save dump config */
 		break;
 	case ISPIF_INIT:
 		rc = msm_ispif_init(ispif, pcdata->csid_version);
@@ -1287,7 +1690,8 @@ static long msm_ispif_cmd(struct v4l2_subdev *sd, void *arg)
 		msm_ispif_io_dump_reg(ispif);
 		break;
 	case ISPIF_RELEASE:
-		msm_ispif_release(ispif);
+		msm_ispif_reset(ispif);
+		msm_ispif_reset_hw(ispif);
 		break;
 	case ISPIF_SET_VFE_INFO:
 		rc = msm_ispif_set_vfe_info(ispif, &pcdata->vfe_info);
@@ -1302,19 +1706,33 @@ static long msm_ispif_cmd(struct v4l2_subdev *sd, void *arg)
 }
 static struct v4l2_file_operations msm_ispif_v4l2_subdev_fops;
 
-static long msm_ispif_subdev_ioctl(struct v4l2_subdev *sd,
+static long msm_ispif_subdev_ioctl_unlocked(struct v4l2_subdev *sd,
 	unsigned int cmd, void *arg)
 {
 	switch (cmd) {
 	case VIDIOC_MSM_ISPIF_CFG:
 		return msm_ispif_cmd(sd, arg);
+<<<<<<< HEAD
 	case MSM_SD_SHUTDOWN: {
 		struct ispif_device *ispif =
 			(struct ispif_device *)v4l2_get_subdevdata(sd);
 		if (ispif && ispif->base)
 			msm_ispif_release(ispif);
+=======
+	case VIDIOC_MSM_ISPIF_CFG_EXT:
+		return msm_ispif_cmd_ext(sd, arg);
+	case MSM_SD_NOTIFY_FREEZE: {
+		ispif->ispif_sof_debug = 0;
+		ispif->ispif_rdi0_debug = 0;
+		ispif->ispif_rdi1_debug = 0;
+		ispif->ispif_rdi2_debug = 0;
 		return 0;
 	}
+	case MSM_SD_UNNOTIFY_FREEZE:
+		return 0;
+	case MSM_SD_SHUTDOWN:
+>>>>>>> 0e91d2a... Nougat
+		return 0;
 	default:
 		pr_err_ratelimited("%s: invalid cmd 0x%x received\n",
 			__func__, cmd);
@@ -1339,10 +1757,39 @@ static long msm_ispif_subdev_fops_ioctl(struct file *file, unsigned int cmd,
 static int ispif_open_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	struct ispif_device *ispif = v4l2_get_subdevdata(sd);
+<<<<<<< HEAD
 
 	mutex_lock(&ispif->mutex);
 	
 	ispif->open_cnt++;
+=======
+	int rc = 0;
+
+	mutex_lock(&ispif->mutex);
+	if (0 == ispif->open_cnt) {
+		/* enable regulator and clocks on first open */
+		rc = msm_ispif_set_regulators(ispif->ispif_vdd,
+					ispif->ispif_vdd_count, 1);
+		if (rc)
+			goto unlock;
+
+		rc = msm_ispif_clk_ahb_enable(ispif, 1);
+		if (rc)
+			goto ahb_clk_enable_fail;
+		rc = msm_camera_enable_irq(ispif->irq, 1);
+		if (rc)
+			goto irq_enable_fail;
+	}
+	/* mem remap is done in init when the clock is on */
+	ispif->open_cnt++;
+	mutex_unlock(&ispif->mutex);
+	return rc;
+ahb_clk_enable_fail:
+	msm_ispif_set_regulators(ispif->ispif_vdd, ispif->ispif_vdd_count, 0);
+irq_enable_fail:
+	msm_ispif_clk_ahb_enable(ispif, 0);
+unlock:
+>>>>>>> 0e91d2a... Nougat
 	mutex_unlock(&ispif->mutex);
 	return 0;
 }
@@ -1366,6 +1813,14 @@ static int ispif_close_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	ispif->open_cnt--;
 	if (ispif->open_cnt == 0)
 		msm_ispif_release(ispif);
+<<<<<<< HEAD
+=======
+		/* disable clocks and regulator on last close */
+		msm_ispif_clk_ahb_enable(ispif, 0);
+		msm_ispif_set_regulators(ispif->ispif_vdd,
+					ispif->ispif_vdd_count, 0);
+	}
+>>>>>>> 0e91d2a... Nougat
 end:
 	mutex_unlock(&ispif->mutex);
 	return rc;
@@ -1402,44 +1857,46 @@ static int ispif_probe(struct platform_device *pdev)
 		rc = of_property_read_u32((&pdev->dev)->of_node,
 		"qcom,num-isps", &ispif->hw_num_isps);
 		if (rc)
-			
+			/* backward compatibility */
 			ispif->hw_num_isps = 1;
-		
+		/* not an error condition */
 		rc = 0;
 	}
 
+<<<<<<< HEAD
+=======
+	rc = msm_ispif_get_regulator_info(ispif, pdev);
+	if (rc < 0)
+		goto regulator_fail;
+
+	rc = msm_ispif_get_clk_info(ispif, pdev);
+	if (rc < 0) {
+		pr_err("%s: msm_isp_get_clk_info() failed", __func__);
+		rc = -EFAULT;
+		goto get_clk_fail;
+	}
+>>>>>>> 0e91d2a... Nougat
 	mutex_init(&ispif->mutex);
-	ispif->mem = platform_get_resource_byname(pdev,
-		IORESOURCE_MEM, "ispif");
-	if (!ispif->mem) {
-		pr_err("%s: no mem resource?\n", __func__);
-		rc = -ENODEV;
-		goto error;
+	ispif->base = msm_camera_get_reg_base(pdev, "ispif", 1);
+	if (!ispif->base) {
+		rc = -ENOMEM;
+		goto reg_base_fail;
 	}
-	ispif->irq = platform_get_resource_byname(pdev,
-		IORESOURCE_IRQ, "ispif");
+
+	ispif->irq = msm_camera_get_irq(pdev, "ispif");
 	if (!ispif->irq) {
-		pr_err("%s: no irq resource?\n", __func__);
 		rc = -ENODEV;
-		goto error;
+		goto get_irq_fail;
 	}
-	ispif->io = request_mem_region(ispif->mem->start,
-		resource_size(ispif->mem), pdev->name);
-	if (!ispif->io) {
-		pr_err("%s: no valid mem region\n", __func__);
-		rc = -EBUSY;
-		goto error;
+	rc = msm_camera_register_irq(pdev, ispif->irq, msm_io_ispif_irq,
+			IRQF_TRIGGER_RISING, "ispif", ispif);
+	if (rc) {
+		rc = -ENODEV;
+		goto get_irq_fail;
 	}
-	ispif->clk_mux_mem = platform_get_resource_byname(pdev,
-		IORESOURCE_MEM, "csi_clk_mux");
-	if (ispif->clk_mux_mem) {
-		ispif->clk_mux_io = request_mem_region(
-			ispif->clk_mux_mem->start,
-			resource_size(ispif->clk_mux_mem),
-			ispif->clk_mux_mem->name);
-		if (!ispif->clk_mux_io)
-			pr_err("%s: no valid csi_mux region\n", __func__);
-	}
+	rc = msm_camera_enable_irq(ispif->irq, 0);
+	if (rc)
+		goto sd_reg_fail;
 
 	v4l2_subdev_init(&ispif->msm_sd.sd, &msm_ispif_subdev_ops);
 	ispif->msm_sd.sd.internal_ops = &msm_ispif_internal_ops;
@@ -1459,7 +1916,7 @@ static int ispif_probe(struct platform_device *pdev)
 	rc = msm_sd_register(&ispif->msm_sd);
 	if (rc) {
 		pr_err("%s: msm_sd_register error = %d\n", __func__, rc);
-		goto error;
+		goto sd_reg_fail;
 	}
 	msm_ispif_v4l2_subdev_fops.owner = v4l2_subdev_fops.owner;
 	msm_ispif_v4l2_subdev_fops.open = v4l2_subdev_fops.open;
@@ -1475,7 +1932,21 @@ static int ispif_probe(struct platform_device *pdev)
 	ispif->open_cnt = 0;
 	return 0;
 
+<<<<<<< HEAD
 error:
+=======
+sd_reg_fail:
+	msm_camera_unregister_irq(pdev, ispif->irq, ispif);
+get_irq_fail:
+	msm_camera_put_reg_base(pdev, ispif->base, "ispif", 1);
+reg_base_fail:
+	msm_camera_put_clk_info(pdev, &ispif->ahb_clk_info,
+		&ispif->ahb_clk,
+		ispif->num_ahb_clk + ispif->num_clk);
+get_clk_fail:
+	msm_ispif_put_regulator(ispif);
+regulator_fail:
+>>>>>>> 0e91d2a... Nougat
 	mutex_destroy(&ispif->mutex);
 	kfree(ispif);
 	return rc;

@@ -1681,9 +1681,14 @@ int btrfs_should_delete_dir_index(struct list_head *del_list,
  * btrfs_readdir_delayed_dir_index - read dir info stored in the delayed tree
  *
  */
+<<<<<<< HEAD
 int btrfs_readdir_delayed_dir_index(struct file *filp, void *dirent,
 				    filldir_t filldir,
 				    struct list_head *ins_list)
+=======
+int btrfs_readdir_delayed_dir_index(struct dir_context *ctx,
+				    struct list_head *ins_list, bool *emitted)
+>>>>>>> 0e91d2a... Nougat
 {
 	struct btrfs_dir_item *di;
 	struct btrfs_delayed_item *curr, *next;
@@ -1727,6 +1732,7 @@ int btrfs_readdir_delayed_dir_index(struct file *filp, void *dirent,
 
 		if (over)
 			return 1;
+		*emitted = true;
 	}
 	return 0;
 }

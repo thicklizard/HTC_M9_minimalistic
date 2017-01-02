@@ -110,6 +110,8 @@ static int xhci_plat_probe(struct platform_device *pdev)
 	struct usb_hcd		*hcd;
 	int			ret;
 	int			irq;
+	u32			temp, imod;
+	unsigned long		flags;
 
 	if (usb_disabled())
 		return -ENODEV;
@@ -178,7 +180,29 @@ static int xhci_plat_probe(struct platform_device *pdev)
 	if (ret)
 		goto put_usb3_hcd;
 
+<<<<<<< HEAD
 	pm_runtime_put(&pdev->dev);
+=======
+	/* override imod interval if specified */
+	if (pdata && pdata->imod_interval) {
+		imod = pdata->imod_interval & ER_IRQ_INTERVAL_MASK;
+		spin_lock_irqsave(&xhci->lock, flags);
+		temp = readl_relaxed(&xhci->ir_set->irq_control);
+		temp &= ~ER_IRQ_INTERVAL_MASK;
+		temp |= imod;
+		writel_relaxed(temp, &xhci->ir_set->irq_control);
+		spin_unlock_irqrestore(&xhci->lock, flags);
+		dev_dbg(&pdev->dev, "%s: imod set to %u\n", __func__, imod);
+	}
+
+	ret = device_create_file(&pdev->dev, &dev_attr_config_imod);
+	if (ret)
+		dev_err(&pdev->dev, "%s: unable to create imod sysfs entry\n",
+					__func__);
+
+	pm_runtime_mark_last_busy(&pdev->dev);
+	pm_runtime_put_autosuspend(&pdev->dev);
+>>>>>>> 0e91d2a... Nougat
 
 	return 0;
 
@@ -207,6 +231,11 @@ static int xhci_plat_remove(struct platform_device *dev)
 
 	pm_runtime_disable(&dev->dev);
 
+<<<<<<< HEAD
+=======
+	device_remove_file(&dev->dev, &dev_attr_config_imod);
+	xhci->xhc_state |= XHCI_STATE_REMOVING;
+>>>>>>> 0e91d2a... Nougat
 	usb_remove_hcd(xhci->shared_hcd);
 	usb_put_hcd(xhci->shared_hcd);
 
@@ -224,13 +253,23 @@ static int xhci_plat_runtime_suspend(struct device *dev)
 {
 	struct usb_hcd *hcd = dev_get_drvdata(dev);
 	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
+	int ret;
 
 	if (!xhci)
 		return 0;
 
 	dev_dbg(dev, "xhci-plat runtime suspend\n");
 
+<<<<<<< HEAD
 	return xhci_suspend(xhci);
+=======
+	disable_irq(hcd->irq);
+	ret = xhci_suspend(xhci, true);
+	if (ret)
+		enable_irq(hcd->irq);
+
+	return ret;
+>>>>>>> 0e91d2a... Nougat
 }
 
 static int xhci_plat_runtime_resume(struct device *dev)
@@ -243,7 +282,15 @@ static int xhci_plat_runtime_resume(struct device *dev)
 
 	dev_dbg(dev, "xhci-plat runtime resume\n");
 
+<<<<<<< HEAD
 	return xhci_resume(xhci, false);
+=======
+	ret = xhci_resume(xhci, false);
+	enable_irq(hcd->irq);
+	pm_runtime_mark_last_busy(dev);
+
+	return ret;
+>>>>>>> 0e91d2a... Nougat
 }
 #endif
 

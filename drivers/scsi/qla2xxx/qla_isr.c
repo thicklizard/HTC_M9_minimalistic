@@ -2828,6 +2828,7 @@ qla24xx_enable_msix(struct qla_hw_data *ha, struct rsp_que *rsp)
 		    "-- %d/%d\n Retry with %d vectors.\n",
 		    ha->msix_count, ret, ret);
 		ha->msix_count = ret;
+<<<<<<< HEAD
 		ret = pci_enable_msix(ha->pdev, entries, ha->msix_count);
 		if (ret) {
 msix_failed:
@@ -2837,6 +2838,8 @@ msix_failed:
 			    ha->msix_count, ret);
 			goto msix_out;
 		}
+=======
+>>>>>>> 0e91d2a... Nougat
 		ha->max_rsp_queues = ha->msix_count - 1;
 	}
 	ha->msix_entries = kzalloc(sizeof(struct qla_msix_entry) *

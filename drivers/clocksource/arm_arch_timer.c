@@ -338,6 +338,25 @@ static void arch_timer_configure_evtstream(void)
 	arch_timer_evtstrm_enable(min(pos, 15));
 }
 
+<<<<<<< HEAD
+=======
+static void arch_counter_set_user_access(void)
+{
+	u32 cntkctl = arch_timer_get_cntkctl();
+
+	/* Disable user access to the timers */
+	/* Also disable virtual event stream */
+	cntkctl &= ~(ARCH_TIMER_USR_PT_ACCESS_EN
+			| ARCH_TIMER_VIRT_EVT_EN);
+
+	/* Enable user access to the virtual and physical counters */
+	cntkctl |= ARCH_TIMER_USR_VCT_ACCESS_EN | ARCH_TIMER_USR_PCT_ACCESS_EN
+			| ARCH_TIMER_USR_VT_ACCESS_EN;
+
+	arch_timer_set_cntkctl(cntkctl);
+}
+
+>>>>>>> 0e91d2a... Nougat
 static int arch_timer_setup(struct clock_event_device *clk)
 {
 	__arch_timer_setup(ARCH_CP15_TIMER, clk);

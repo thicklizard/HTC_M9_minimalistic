@@ -475,6 +475,10 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 		card->ext_csd.rel_param = ext_csd[EXT_CSD_WR_REL_PARAM];
 		card->ext_csd.rst_n_function = ext_csd[EXT_CSD_RST_N_FUNCTION];
 
+		if (!(card->ext_csd.rel_param &
+					EXT_CSD_WR_REL_PARAM_EN_RPMB_REL_WR))
+			card->ext_csd.rel_sectors = 0x1;
+
 		card->ext_csd.raw_rpmb_size_mult = ext_csd[EXT_CSD_RPMB_MULT];
 		if (ext_csd[EXT_CSD_RPMB_MULT] && mmc_host_cmd23(card->host)) {
 			mmc_part_add(card, ext_csd[EXT_CSD_RPMB_MULT] << 17,
@@ -1122,6 +1126,7 @@ int mmc_set_clock_bus_speed(struct mmc_card *card, unsigned long freq)
 {
 	int err;
 
+<<<<<<< HEAD
 	if (freq < MMC_HS400_MAX_DTR) {
 		mmc_set_timing(card->host, MMC_TIMING_LEGACY);
 		mmc_set_clock(card->host, MMC_HIGH_26_MAX_DTR);
@@ -1130,6 +1135,18 @@ int mmc_set_clock_bus_speed(struct mmc_card *card, unsigned long freq)
 	} else {
 		err = mmc_select_hs400(card, card->cached_ext_csd);
 	}
+=======
+	mmc_select_hs(host->card);
+	err = mmc_select_bus_width(host->card);
+	if (err < 0) {
+		pr_err("%s: %s: select_bus_width failed(%d)\n",
+			mmc_hostname(host), __func__, err);
+		return err;
+	}
+
+	err = mmc_select_hs_ddr(host->card);
+	mmc_set_clock(host, MMC_HIGH_52_MAX_DTR);
+>>>>>>> 0e91d2a... Nougat
 
 	return err;
 }
@@ -1156,8 +1173,32 @@ static int mmc_change_bus_speed(struct mmc_host *host, unsigned long *freq)
 		*freq = card->csd.max_dtr;
 	}
 
+<<<<<<< HEAD
 	if (*freq < host->f_min)
 		*freq = host->f_min;
+=======
+	mmc_set_clock(host, freq);
+
+	return 0;
+}
+
+static int mmc_scale_high(struct mmc_host *host)
+{
+	int err = 0;
+
+	if (mmc_card_ddr52(host->card)) {
+		mmc_set_timing(host, MMC_TIMING_LEGACY);
+		mmc_set_clock(host, MMC_HIGH_26_MAX_DTR);
+	}
+
+	if (!host->card->ext_csd.strobe_support) {
+		if (!(host->card->mmc_avail_type & EXT_CSD_CARD_TYPE_HS200)) {
+			pr_err("%s: %s: card does not support HS200\n",
+				mmc_hostname(host), __func__);
+			WARN_ON(1);
+			return -EPERM;
+		}
+>>>>>>> 0e91d2a... Nougat
 
 	if (mmc_card_hs400(card)) {
 		err = mmc_set_clock_bus_speed(card, *freq);
@@ -1214,8 +1255,33 @@ static int mmc_select_bus_speed(struct mmc_card *card, u8 *ext_csd)
 	if (!mmc_select_hs(card, ext_csd))
 		goto out;
 
+<<<<<<< HEAD
 	mmc_set_clock(card->host, card->csd.max_dtr);
 	err = mmc_select_bus_width(card, 0, ext_csd);
+=======
+	if (mmc_card_hs400(card) ||
+		(!mmc_card_hs200(host->card) && *freq == MMC_HS200_MAX_DTR)) {
+		err = mmc_set_clock_bus_speed(card, *freq);
+		if (err) {
+			pr_err("%s: %s: failed (%d)to set bus and clock speed (freq=%lu)\n",
+				mmc_hostname(host), __func__, err, *freq);
+			goto out;
+		}
+	} else if (mmc_card_hs200(host->card)) {
+		mmc_set_clock(host, *freq);
+		err = mmc_hs200_tuning(host->card);
+		if (err) {
+			pr_warn("%s: %s: tuning execution failed %d\n",
+				mmc_hostname(card->host),
+				__func__, err);
+			mmc_set_clock(host, host->clk_scaling.curr_freq);
+		}
+	} else {
+		if (mmc_card_ddr52(host->card))
+			actual_freq = mmc_ddr_freq_accommodation(*freq);
+		mmc_set_clock(host, actual_freq);
+	}
+>>>>>>> 0e91d2a... Nougat
 
 out:
 	return err;
@@ -1611,6 +1677,72 @@ static void mmc_detect(struct mmc_host *host)
 	}
 }
 
+<<<<<<< HEAD
+=======
+static int mmc_cache_card_ext_csd(struct mmc_host *host)
+{
+	int err;
+	u8 *ext_csd;
+	struct mmc_card *card = host->card;
+
+	err = mmc_get_ext_csd(card, &ext_csd);
+	if (err || !ext_csd) {
+		pr_err("%s: %s: mmc_get_ext_csd failed (%d)\n",
+			mmc_hostname(host), __func__, err);
+		return err;
+	}
+
+	
+	card->ext_csd.raw_ext_csd_cmdq = ext_csd[EXT_CSD_CMDQ];
+	card->ext_csd.raw_ext_csd_cache_ctrl = ext_csd[EXT_CSD_CACHE_CTRL];
+	card->ext_csd.raw_ext_csd_bus_width = ext_csd[EXT_CSD_BUS_WIDTH];
+	card->ext_csd.raw_ext_csd_hs_timing = ext_csd[EXT_CSD_HS_TIMING];
+
+	mmc_free_ext_csd(ext_csd);
+
+	return 0;
+}
+
+static int mmc_test_awake_ext_csd(struct mmc_host *host)
+{
+	int err;
+	u8 *ext_csd;
+	struct mmc_card *card = host->card;
+
+	err = mmc_get_ext_csd(card, &ext_csd);
+	if (err || !ext_csd) {
+		pr_err("%s: %s: mmc_get_ext_csd failed (%d)\n",
+			mmc_hostname(host), __func__, err);
+		return err;
+	}
+
+	
+	pr_debug("%s: %s: type(cached:current) cmdq(%d:%d) cache_ctrl(%d:%d) bus_width (%d:%d) timing(%d:%d)\n",
+		mmc_hostname(host), __func__,
+		card->ext_csd.raw_ext_csd_cmdq,
+		ext_csd[EXT_CSD_CMDQ],
+		card->ext_csd.raw_ext_csd_cache_ctrl,
+		ext_csd[EXT_CSD_CACHE_CTRL],
+		card->ext_csd.raw_ext_csd_bus_width,
+		ext_csd[EXT_CSD_BUS_WIDTH],
+		card->ext_csd.raw_ext_csd_hs_timing,
+		ext_csd[EXT_CSD_HS_TIMING]);
+
+	err = !((card->ext_csd.raw_ext_csd_cmdq ==
+			ext_csd[EXT_CSD_CMDQ]) &&
+		(card->ext_csd.raw_ext_csd_cache_ctrl ==
+			ext_csd[EXT_CSD_CACHE_CTRL]) &&
+		(card->ext_csd.raw_ext_csd_bus_width ==
+			ext_csd[EXT_CSD_BUS_WIDTH]) &&
+		(card->ext_csd.raw_ext_csd_hs_timing ==
+			ext_csd[EXT_CSD_HS_TIMING]));
+
+	mmc_free_ext_csd(ext_csd);
+
+	return err;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static int _mmc_suspend(struct mmc_host *host, bool is_suspend)
 {
 	int err = 0;
@@ -1621,26 +1753,113 @@ static int _mmc_suspend(struct mmc_host *host, bool is_suspend)
 	if (!mmc_try_claim_host(host))
 		return -EBUSY;
 
+<<<<<<< HEAD
 	mmc_disable_clk_scaling(host);
+=======
+	if (mmc_card_suspended(host->card))
+		goto out;
+
+	if (host->card->cmdq_init) {
+		BUG_ON(host->cmdq_ctx.active_reqs);
+
+		err = mmc_cmdq_halt(host, true);
+		if (err) {
+			pr_err("%s: halt: failed: %d\n", __func__, err);
+			goto out;
+		}
+		mmc_host_clk_hold(host);
+		host->cmdq_ops->disable(host, true);
+		mmc_host_clk_release(host);
+	}
+
+	if (mmc_card_doing_bkops(host->card)) {
+		err = mmc_stop_bkops(host->card);
+		if (err)
+			goto out;
+	}
+
+	if (mmc_card_doing_auto_bkops(host->card)) {
+		err = mmc_set_auto_bkops(host->card, false);
+		if (err)
+			goto out;
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	err = mmc_flush_cache(host->card);
 	if (err)
 		goto out;
 
+<<<<<<< HEAD
 	if (mmc_card_can_sleep(host))
 		err = mmc_card_sleep(host);
 	else if (!mmc_host_is_spi(host))
 		err = mmc_deselect_cards(host);
 	host->card->state &= ~(MMC_STATE_HIGHSPEED | MMC_STATE_HIGHSPEED_200);
+=======
+	if (mmc_can_sleepawake(host)) {
+		mmc_host_clk_hold(host);
+		memcpy(&host->cached_ios, &host->ios, sizeof(host->cached_ios));
+		mmc_cache_card_ext_csd(host);
+		err = mmc_sleepawake(host, true);
+		mmc_host_clk_release(host);
+	} else if (!mmc_host_is_spi(host)) {
+		err = mmc_deselect_cards(host);
+	}
+>>>>>>> 0e91d2a... Nougat
 
 out:
+<<<<<<< HEAD
+=======
+	
+	if (host->card->cmdq_init)
+		wake_up(&host->cmdq_ctx.wait);
+
+>>>>>>> 0e91d2a... Nougat
 	mmc_release_host(host);
 	return err;
 }
 
 static int mmc_reinit(struct mmc_host *host)
 {
+<<<<<<< HEAD
 	int err;
+=======
+	int err = 0;
+	struct mmc_card *card = host->card;
+
+	pr_debug("%s: %s: starting partial init\n",
+		mmc_hostname(host), __func__);
+
+	mmc_set_bus_width(host, host->cached_ios.bus_width);
+	mmc_set_timing(host, host->cached_ios.timing);
+	mmc_set_clock(host, host->cached_ios.clock);
+	mmc_set_bus_mode(host, host->cached_ios.bus_mode);
+
+	mmc_host_clk_hold(host);
+
+	if (mmc_card_hs400(card)) {
+		if (card->ext_csd.strobe_support && host->ops->enhanced_strobe)
+			err = host->ops->enhanced_strobe(host);
+	} else if (mmc_card_hs200(card) && host->ops->execute_tuning) {
+		err = host->ops->execute_tuning(host,
+			MMC_SEND_TUNING_BLOCK_HS200);
+		if (err)
+			pr_warn("%s: %s: tuning execution failed (%d)\n",
+				mmc_hostname(host), __func__, err);
+	}
+
+	err = mmc_test_awake_ext_csd(host);
+	if (err) {
+		pr_debug("%s: %s: fail on ext_csd read (%d)\n",
+			mmc_hostname(host), __func__, err);
+		goto out;
+	}
+	pr_debug("%s: %s: reading and comparing ext_csd successful\n",
+		mmc_hostname(host), __func__);
+
+	if (mmc_card_support_auto_bkops(host->card))
+		(void)mmc_set_auto_bkops(host->card, true);
+>>>>>>> 0e91d2a... Nougat
 
 	BUG_ON(!host);
 	BUG_ON(!host->card);
@@ -1654,7 +1873,22 @@ static int mmc_reinit(struct mmc_host *host)
 
 static int mmc_suspend(struct mmc_host *host)
 {
+<<<<<<< HEAD
 	return _mmc_suspend(host, true);
+=======
+	int err;
+	ktime_t start = ktime_get();
+
+	err = _mmc_suspend(host, true);
+	if (!err) {
+		pm_runtime_disable(&host->card->dev);
+		pm_runtime_set_suspended(&host->card->dev);
+	}
+
+	trace_mmc_suspend(mmc_hostname(host), err,
+			ktime_to_us(ktime_sub(ktime_get(), start)));
+	return err;
+>>>>>>> 0e91d2a... Nougat
 }
 
 static int mmc_resume(struct mmc_host *host)
@@ -1684,8 +1918,135 @@ static int mmc_resume(struct mmc_host *host)
 	}
 	mmc_release_host(host);
 
+<<<<<<< HEAD
 	if (mmc_can_scale_clk(host))
 		mmc_init_clk_scaling(host);
+=======
+	err = mmc_resume_clk_scaling(host);
+	if (err)
+		pr_err("%s: %s: fail to resume clock scaling (%d)\n",
+			mmc_hostname(host), __func__, err);
+
+out:
+	return err;
+}
+
+static int mmc_resume(struct mmc_host *host)
+{
+	int err = 0;
+	ktime_t start = ktime_get();
+
+	if (!(host->caps & MMC_CAP_RUNTIME_RESUME)) {
+		err = _mmc_resume(host);
+		pm_runtime_set_active(&host->card->dev);
+		pm_runtime_mark_last_busy(&host->card->dev);
+	}
+	pm_runtime_enable(&host->card->dev);
+
+	trace_mmc_resume(mmc_hostname(host), err,
+			ktime_to_us(ktime_sub(ktime_get(), start)));
+
+	return err;
+}
+
+#define MAX_DEFER_SUSPEND_COUNTER 20
+static bool mmc_process_bkops(struct mmc_host *host)
+{
+	int err = 0;
+	bool is_running = false;
+	u32 status;
+
+	mmc_claim_host(host);
+	if (mmc_card_cmdq(host->card)) {
+		BUG_ON(host->cmdq_ctx.active_reqs);
+
+		err = mmc_cmdq_halt(host, true);
+		if (err) {
+			pr_err("%s: halt: failed: %d\n", __func__, err);
+			goto unhalt;
+		}
+	}
+
+	if (mmc_card_doing_bkops(host->card)) {
+		
+		err = mmc_send_status(host->card, &status);
+		if (err) {
+			pr_err("%s: Get card status fail\n", __func__);
+			goto unhalt;
+		}
+		if (R1_CURRENT_STATE(status) != R1_STATE_PRG) {
+			mmc_card_clr_doing_bkops(host->card);
+			goto unhalt;
+		}
+	} else {
+		mmc_check_bkops(host->card);
+	}
+
+	if (host->card->bkops.needs_bkops &&
+			!mmc_card_support_auto_bkops(host->card))
+		mmc_start_manual_bkops(host->card);
+
+unhalt:
+	if (mmc_card_cmdq(host->card)) {
+		err = mmc_cmdq_halt(host, false);
+		if (err)
+			pr_err("%s: unhalt: failed: %d\n", __func__, err);
+	}
+	mmc_release_host(host);
+
+	if (host->card->bkops.needs_bkops ||
+			mmc_card_doing_bkops(host->card)) {
+		if (host->card->bkops.retry_counter++ <
+				MAX_DEFER_SUSPEND_COUNTER) {
+			host->card->bkops.needs_check = true;
+			is_running = true;
+		} else {
+			host->card->bkops.retry_counter = 0;
+		}
+	}
+	return is_running;
+}
+
+static int mmc_runtime_suspend(struct mmc_host *host)
+{
+	int err;
+	ktime_t start = ktime_get();
+
+	if (!(host->caps & MMC_CAP_AGGRESSIVE_PM))
+		return 0;
+
+	if (mmc_process_bkops(host)) {
+		pm_runtime_mark_last_busy(&host->card->dev);
+		pr_debug("%s: defered, need bkops\n", __func__);
+		return -EBUSY;
+	}
+
+	err = _mmc_suspend(host, true);
+	if (err)
+		pr_err("%s: error %d doing aggessive suspend\n",
+			mmc_hostname(host), err);
+
+	trace_mmc_runtime_suspend(mmc_hostname(host), err,
+			ktime_to_us(ktime_sub(ktime_get(), start)));
+	return err;
+}
+
+static int mmc_runtime_resume(struct mmc_host *host)
+{
+	int err;
+	ktime_t start = ktime_get();
+
+	if (!(host->caps & (MMC_CAP_AGGRESSIVE_PM | MMC_CAP_RUNTIME_RESUME)))
+		return 0;
+
+	err = _mmc_resume(host);
+	if (err)
+		pr_err("%s: error %d doing aggessive resume\n",
+			mmc_hostname(host), err);
+
+	trace_mmc_runtime_resume(mmc_hostname(host), err,
+			ktime_to_us(ktime_sub(ktime_get(), start)));
+>>>>>>> 0e91d2a... Nougat
 
 	return err;
 }
@@ -1708,6 +2069,7 @@ static int mmc_power_restore(struct mmc_host *host)
 	return ret;
 }
 
+<<<<<<< HEAD
 static int mmc_sleep(struct mmc_host *host)
 {
 	struct mmc_card *card = host->card;
@@ -1757,6 +2119,8 @@ static int mmc_awake(struct mmc_host *host)
 	return err;
 }
 
+=======
+>>>>>>> 0e91d2a... Nougat
 static const struct mmc_bus_ops mmc_ops = {
 	.awake = mmc_awake,
 	.sleep = mmc_sleep,
@@ -1776,7 +2140,12 @@ static const struct mmc_bus_ops mmc_ops_unsafe = {
 	.detect = mmc_detect,
 	.suspend = mmc_suspend,
 	.resume = mmc_resume,
+<<<<<<< HEAD
 	.reinit = mmc_reinit,
+=======
+	.runtime_suspend = mmc_runtime_suspend,
+	.runtime_resume = mmc_runtime_resume,
+>>>>>>> 0e91d2a... Nougat
 	.power_restore = mmc_power_restore,
 	.alive = mmc_alive,
 	.change_bus_speed = mmc_change_bus_speed,

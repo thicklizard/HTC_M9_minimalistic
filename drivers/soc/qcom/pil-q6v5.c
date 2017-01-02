@@ -1,5 +1,9 @@
 /*
+<<<<<<< HEAD
  * Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+=======
+ * Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -88,15 +92,31 @@ int pil_q6v5_make_proxy_votes(struct pil_desc *pil)
 		goto out;
 	}
 
+	ret = clk_prepare_enable(drv->qpic_clk);
+	if (ret) {
+		dev_err(pil->dev, "Failed to vote for qpic clk\n");
+		goto err_qpic_vote;
+	}
+
 	ret = clk_prepare_enable(drv->pnoc_clk);
 	if (ret) {
 		dev_err(pil->dev, "Failed to vote for pnoc\n");
 		goto err_pnoc_vote;
 	}
 
+<<<<<<< HEAD
 	ret = regulator_set_voltage(drv->vreg_cx,
 				    RPM_REGULATOR_CORNER_SUPER_TURBO,
 				    RPM_REGULATOR_CORNER_SUPER_TURBO);
+=======
+	ret = clk_prepare_enable(drv->qdss_clk);
+	if (ret) {
+		dev_err(pil->dev, "Failed to vote for qdss\n");
+		goto err_qdss_vote;
+	}
+
+	ret = regulator_set_voltage(drv->vreg_cx, uv, INT_MAX);
+>>>>>>> 0e91d2a... Nougat
 	if (ret) {
 		dev_err(pil->dev, "Failed to request vdd_cx voltage.\n");
 		goto err_cx_voltage;
@@ -129,11 +149,17 @@ err_vreg_pll:
 err_cx_enable:
 	regulator_set_optimum_mode(drv->vreg_cx, 0);
 err_cx_mode:
+<<<<<<< HEAD
 	regulator_set_voltage(drv->vreg_cx, RPM_REGULATOR_CORNER_NONE,
 			      RPM_REGULATOR_CORNER_SUPER_TURBO);
+=======
+	regulator_set_voltage(drv->vreg_cx, RPM_REGULATOR_CORNER_NONE, INT_MAX);
+>>>>>>> 0e91d2a... Nougat
 err_cx_voltage:
 	clk_disable_unprepare(drv->pnoc_clk);
 err_pnoc_vote:
+	clk_disable_unprepare(drv->qpic_clk);
+err_qpic_vote:
 	clk_disable_unprepare(drv->xo);
 out:
 	return ret;
@@ -150,9 +176,14 @@ void pil_q6v5_remove_proxy_votes(struct pil_desc *pil)
 	}
 	regulator_disable(drv->vreg_cx);
 	regulator_set_optimum_mode(drv->vreg_cx, 0);
+<<<<<<< HEAD
 	regulator_set_voltage(drv->vreg_cx, RPM_REGULATOR_CORNER_NONE,
 			      RPM_REGULATOR_CORNER_SUPER_TURBO);
+=======
+	regulator_set_voltage(drv->vreg_cx, RPM_REGULATOR_CORNER_NONE, INT_MAX);
+>>>>>>> 0e91d2a... Nougat
 	clk_disable_unprepare(drv->xo);
+	clk_disable_unprepare(drv->qpic_clk);
 	clk_disable_unprepare(drv->pnoc_clk);
 }
 EXPORT_SYMBOL(pil_q6v5_remove_proxy_votes);
@@ -318,6 +349,12 @@ static int __pil_q6v55_reset(struct pil_desc *pil)
 		writel_relaxed(QDSP6SS_ACC_OVERRIDE_VAL,
 				drv->reg_base + QDSP6SS_STRAP_ACC);
 
+	/* Override the ACC value with input value */
+	if (!of_property_read_u32(pil->dev->of_node, "qcom,override-acc-1",
+				&drv->override_acc_1))
+		writel_relaxed(drv->override_acc_1,
+				drv->reg_base + QDSP6SS_STRAP_ACC);
+
 	/* Assert resets, stop core */
 	val = readl_relaxed(drv->reg_base + QDSP6SS_RESET);
 	val |= (Q6SS_CORE_ARES | Q6SS_BUS_ARES_ENA | Q6SS_STOP_CORE);
@@ -349,6 +386,90 @@ static int __pil_q6v55_reset(struct pil_desc *pil)
 			writel_relaxed(val, drv->reg_base + QDSP6SS_PWR_CTL);
 			udelay(1);
 		}
+<<<<<<< HEAD
+=======
+	} else if (drv->qdsp6v56_1_5 || drv->qdsp6v56_1_8
+					|| drv->qdsp6v56_1_10) {
+		/* Deassert QDSP6 compiler memory clamp */
+		val = readl_relaxed(drv->reg_base + QDSP6SS_PWR_CTL);
+		val &= ~QDSP6v55_CLAMP_QMC_MEM;
+		writel_relaxed(val, drv->reg_base + QDSP6SS_PWR_CTL);
+
+		/* Deassert memory peripheral sleep and L2 memory standby */
+		val |= (Q6SS_L2DATA_STBY_N | Q6SS_SLP_RET_N);
+		writel_relaxed(val, drv->reg_base + QDSP6SS_PWR_CTL);
+
+		/* Turn on L1, L2, ETB and JU memories 1 at a time */
+		val = readl_relaxed(drv->reg_base + QDSP6SS_MEM_PWR_CTL);
+		for (i = 19; i >= 0; i--) {
+			val |= BIT(i);
+			writel_relaxed(val, drv->reg_base +
+						QDSP6SS_MEM_PWR_CTL);
+			val |= readl_relaxed(drv->reg_base +
+						QDSP6SS_MEM_PWR_CTL);
+			/*
+			 * Wait for 1us for both memory peripheral and
+			 * data array to turn on.
+			 */
+			udelay(1);
+		}
+	} else if (drv->qdsp6v56_1_8_inrush_current) {
+		/* Deassert QDSP6 compiler memory clamp */
+		val = readl_relaxed(drv->reg_base + QDSP6SS_PWR_CTL);
+		val &= ~QDSP6v55_CLAMP_QMC_MEM;
+		writel_relaxed(val, drv->reg_base + QDSP6SS_PWR_CTL);
+
+		/* Deassert memory peripheral sleep and L2 memory standby */
+		val |= (Q6SS_L2DATA_STBY_N | Q6SS_SLP_RET_N);
+		writel_relaxed(val, drv->reg_base + QDSP6SS_PWR_CTL);
+
+		/* Turn on L1, L2, ETB and JU memories 1 at a time */
+		val = readl_relaxed(drv->reg_base + QDSP6SS_MEM_PWR_CTL);
+		for (i = 19; i >= 6; i--) {
+			val |= BIT(i);
+			writel_relaxed(val, drv->reg_base +
+						QDSP6SS_MEM_PWR_CTL);
+			/*
+			 * Wait for 1us for both memory peripheral and
+			 * data array to turn on.
+			 */
+			udelay(1);
+		}
+
+		for (i = 0 ; i <= 5 ; i++) {
+			val |= BIT(i);
+			writel_relaxed(val, drv->reg_base +
+						QDSP6SS_MEM_PWR_CTL);
+			/*
+			 * Wait for 1us for both memory peripheral and
+			 * data array to turn on.
+			 */
+			udelay(1);
+		}
+	} else if (drv->qdsp6v61_1_1 || drv->qdsp6v62_1_2) {
+		/* Deassert QDSP6 compiler memory clamp */
+		val = readl_relaxed(drv->reg_base + QDSP6SS_PWR_CTL);
+		val &= ~QDSP6v55_CLAMP_QMC_MEM;
+		writel_relaxed(val, drv->reg_base + QDSP6SS_PWR_CTL);
+
+		/* Deassert memory peripheral sleep and L2 memory standby */
+		val |= (Q6SS_L2DATA_STBY_N | Q6SS_SLP_RET_N);
+		writel_relaxed(val, drv->reg_base + QDSP6SS_PWR_CTL);
+
+		/* Turn on L1, L2, ETB and JU memories 1 at a time */
+		val = readl_relaxed(drv->reg_base +
+				QDSP6V6SS_MEM_PWR_CTL);
+		for (i = 28; i >= 0; i--) {
+			val |= BIT(i);
+			writel_relaxed(val, drv->reg_base +
+					QDSP6V6SS_MEM_PWR_CTL);
+			/*
+			 * Wait for 1us for both memory peripheral and
+			 * data array to turn on.
+			 */
+			udelay(1);
+		}
+>>>>>>> 0e91d2a... Nougat
 	} else {
 		/* Turn on memories. */
 		val = readl_relaxed(drv->reg_base + QDSP6SS_PWR_CTL);
@@ -485,6 +606,26 @@ struct q6v5_data *pil_q6v5_init(struct platform_device *pdev)
 
 	drv->qdsp6v56_1_3 = of_property_read_bool(pdev->dev.of_node,
 						"qcom,qdsp6v56-1-3");
+<<<<<<< HEAD
+=======
+	drv->qdsp6v56_1_5 = of_property_read_bool(pdev->dev.of_node,
+						"qcom,qdsp6v56-1-5");
+
+	drv->qdsp6v56_1_8 = of_property_read_bool(pdev->dev.of_node,
+						"qcom,qdsp6v56-1-8");
+	drv->qdsp6v56_1_10 = of_property_read_bool(pdev->dev.of_node,
+						"qcom,qdsp6v56-1-10");
+
+	drv->qdsp6v56_1_8_inrush_current = of_property_read_bool(
+						pdev->dev.of_node,
+						"qcom,qdsp6v56-1-8-inrush-current");
+
+	drv->qdsp6v61_1_1 = of_property_read_bool(pdev->dev.of_node,
+						"qcom,qdsp6v61-1-1");
+
+	drv->qdsp6v62_1_2 = of_property_read_bool(pdev->dev.of_node,
+						"qcom,qdsp6v62-1-2");
+>>>>>>> 0e91d2a... Nougat
 
 	drv->non_elf_image = of_property_read_bool(pdev->dev.of_node,
 						"qcom,mba-image-is-not-elf");
@@ -498,6 +639,10 @@ struct q6v5_data *pil_q6v5_init(struct platform_device *pdev)
 	drv->xo = devm_clk_get(&pdev->dev, "xo");
 	if (IS_ERR(drv->xo))
 		return ERR_CAST(drv->xo);
+
+	drv->qpic_clk = devm_clk_get(&pdev->dev, "qpic");
+	if (IS_ERR(drv->qpic_clk))
+		drv->qpic_clk = NULL;
 
 	if (of_property_read_bool(pdev->dev.of_node, "qcom,pnoc-clk-vote")) {
 		drv->pnoc_clk = devm_clk_get(&pdev->dev, "pnoc_clk");

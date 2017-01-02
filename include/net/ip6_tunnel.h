@@ -79,11 +79,16 @@ static inline void ip6tunnel_xmit(struct sk_buff *skb, struct net_device *dev)
 	err = ip6_local_out(skb);
 
 	if (net_xmit_eval(err) == 0) {
+<<<<<<< HEAD
 		struct pcpu_tstats *tstats = this_cpu_ptr(dev->tstats);
+=======
+		struct pcpu_sw_netstats *tstats = get_cpu_ptr(dev->tstats);
+>>>>>>> 0e91d2a... Nougat
 		u64_stats_update_begin(&tstats->syncp);
 		tstats->tx_bytes += pkt_len;
 		tstats->tx_packets++;
 		u64_stats_update_end(&tstats->syncp);
+		put_cpu_ptr(tstats);
 	} else {
 		stats->tx_errors++;
 		stats->tx_aborted_errors++;

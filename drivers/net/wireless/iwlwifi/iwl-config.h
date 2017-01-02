@@ -329,5 +329,19 @@ extern const struct iwl_cfg iwl7260_n_cfg;
 extern const struct iwl_cfg iwl3160_2ac_cfg;
 extern const struct iwl_cfg iwl3160_2n_cfg;
 extern const struct iwl_cfg iwl3160_n_cfg;
+<<<<<<< HEAD
+=======
+extern const struct iwl_cfg iwl3165_2ac_cfg;
+extern const struct iwl_cfg iwl7265_2ac_cfg;
+extern const struct iwl_cfg iwl7265_2n_cfg;
+extern const struct iwl_cfg iwl7265_n_cfg;
+extern const struct iwl_cfg iwl7265d_2ac_cfg;
+extern const struct iwl_cfg iwl7265d_2n_cfg;
+extern const struct iwl_cfg iwl7265d_n_cfg;
+extern const struct iwl_cfg iwl8260_2n_cfg;
+extern const struct iwl_cfg iwl8260_2ac_cfg;
+extern const struct iwl_cfg iwl8260_2ac_sdio_cfg;
+#endif /* CONFIG_IWLMVM */
+>>>>>>> 0e91d2a... Nougat
 
 #endif /* __IWL_CONFIG_H__ */

@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -818,10 +822,10 @@ int32_t qpnp_adc_scale_pmic_therm(struct qpnp_vadc_chip *vadc,
 
 	if (!chan_properties || !chan_properties->offset_gain_numerator ||
 		!chan_properties->offset_gain_denominator || !adc_properties
-		|| !adc_chan_result
-		|| !chan_properties->adc_graph[CALIB_ABSOLUTE].dy)
+		|| !adc_chan_result)
 		return -EINVAL;
 
+<<<<<<< HEAD
 	pmic_voltage = (adc_code -
 		chan_properties->adc_graph[CALIB_ABSOLUTE].adc_gnd)
 		* chan_properties->adc_graph[CALIB_ABSOLUTE].dx;
@@ -834,6 +838,21 @@ int32_t qpnp_adc_scale_pmic_therm(struct qpnp_vadc_chip *vadc,
 	if (negative_offset)
 		pmic_voltage = -pmic_voltage;
 	pmic_voltage += chan_properties->adc_graph[CALIB_ABSOLUTE].dx;
+=======
+	if (adc_properties->adc_hc) {
+		/* (ADC code * vref_vadc (1.875V)) / 0x4000 */
+		pmic_voltage = (int64_t) adc_code;
+		pmic_voltage *= (int64_t) (adc_properties->adc_vdd_reference
+							* 1000);
+		pmic_voltage = div64_s64(pmic_voltage,
+					QPNP_VADC_HC_VREF_CODE);
+	} else {
+		if (!chan_properties->adc_graph[CALIB_ABSOLUTE].dy)
+			return -EINVAL;
+		qpnp_adc_scale_with_calib_param(adc_code, adc_properties,
+					chan_properties, &pmic_voltage);
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	if (pmic_voltage > 0) {
 		/* 2mV/K */
@@ -847,7 +866,7 @@ int32_t qpnp_adc_scale_pmic_therm(struct qpnp_vadc_chip *vadc,
 	}
 	/* Change to .001 deg C */
 	adc_chan_result->measurement -= KELVINMIL_DEGMIL;
-	adc_chan_result->physical = (int32_t)adc_chan_result->measurement;
+	adc_chan_result->physical = (int32_t) adc_chan_result->measurement;
 
 	return 0;
 }
@@ -921,8 +940,24 @@ int32_t qpnp_adc_tdkntcg_therm(struct qpnp_vadc_chip *chip,
 		|| !adc_chan_result)
 		return -EINVAL;
 
+<<<<<<< HEAD
 	xo_thm = qpnp_adc_scale_ratiometric_calib(adc_code,
 			adc_properties, chan_properties);
+=======
+	if (adc_properties->adc_hc) {
+		/* (ADC code * vref_vadc (1.875V) * 1000) / (0x4000 * 1000) */
+		xo_thm_voltage = (int64_t) adc_code;
+		xo_thm_voltage *= (int64_t) (adc_properties->adc_vdd_reference
+							* 1000);
+		xo_thm_voltage = div64_s64(xo_thm_voltage,
+					QPNP_VADC_HC_VREF_CODE * 1000);
+		qpnp_adc_map_voltage_temp(adcmap_100k_104ef_104fb_1875_vref,
+			ARRAY_SIZE(adcmap_100k_104ef_104fb_1875_vref),
+			xo_thm_voltage, &adc_chan_result->physical);
+	} else {
+		qpnp_adc_scale_with_calib_param(adc_code,
+			adc_properties, chan_properties, &xo_thm_voltage);
+>>>>>>> 0e91d2a... Nougat
 
 	qpnp_adc_map_voltage_temp(adcmap_100k_104ef_104fb,
 		ARRAY_SIZE(adcmap_100k_104ef_104fb),
@@ -1138,8 +1173,32 @@ int32_t qpnp_adc_scale_therm_pu2(struct qpnp_vadc_chip *chip,
 {
 	int64_t therm_voltage = 0;
 
+<<<<<<< HEAD
 	therm_voltage = qpnp_adc_scale_ratiometric_calib(adc_code,
 			adc_properties, chan_properties);
+=======
+	if (!chan_properties || !chan_properties->offset_gain_numerator ||
+		!chan_properties->offset_gain_denominator || !adc_properties)
+		return -EINVAL;
+
+	if (adc_properties->adc_hc) {
+		/* (ADC code * vref_vadc (1.875V) * 1000) / (0x4000 * 1000) */
+		therm_voltage = (int64_t) adc_code;
+		therm_voltage *= (int64_t) (adc_properties->adc_vdd_reference
+							* 1000);
+		therm_voltage = div64_s64(therm_voltage,
+					(QPNP_VADC_HC_VREF_CODE * 1000));
+
+		qpnp_adc_map_voltage_temp(adcmap_100k_104ef_104fb_1875_vref,
+			ARRAY_SIZE(adcmap_100k_104ef_104fb_1875_vref),
+			therm_voltage, &adc_chan_result->physical);
+	} else {
+		qpnp_adc_scale_with_calib_param(adc_code,
+			adc_properties, chan_properties, &therm_voltage);
+
+		if (chan_properties->calib_type == CALIB_ABSOLUTE)
+			do_div(therm_voltage, 1000);
+>>>>>>> 0e91d2a... Nougat
 
 	qpnp_adc_map_voltage_temp(adcmap_100k_104ef_104fb,
 		ARRAY_SIZE(adcmap_100k_104ef_104fb),
@@ -1258,12 +1317,26 @@ int32_t qpnp_adc_scale_default(struct qpnp_vadc_chip *vadc,
 		|| !adc_chan_result)
 		return -EINVAL;
 
+<<<<<<< HEAD
 	scale_voltage = (adc_code -
 		chan_properties->adc_graph[chan_properties->calib_type].adc_gnd)
 		* chan_properties->adc_graph[chan_properties->calib_type].dx;
 	if (scale_voltage < 0) {
 		negative_offset = 1;
 		scale_voltage = -scale_voltage;
+=======
+	if (adc_properties->adc_hc) {
+		/* (ADC code * vref_vadc (1.875V)) / 0x4000 */
+		scale_voltage = (int64_t) adc_code;
+		scale_voltage *= (adc_properties->adc_vdd_reference * 1000);
+		scale_voltage = div64_s64(scale_voltage,
+						QPNP_VADC_HC_VREF_CODE);
+	} else {
+		qpnp_adc_scale_with_calib_param(adc_code, adc_properties,
+					chan_properties, &scale_voltage);
+		if (!chan_properties->calib_type == CALIB_ABSOLUTE)
+			scale_voltage *= 1000;
+>>>>>>> 0e91d2a... Nougat
 	}
 	do_div(scale_voltage,
 		chan_properties->adc_graph[chan_properties->calib_type].dy);
@@ -1288,8 +1361,14 @@ int32_t qpnp_adc_scale_default(struct qpnp_vadc_chip *vadc,
 	adc_chan_result->measurement = scale_voltage *
 				chan_properties->offset_gain_denominator;
 
+<<<<<<< HEAD
 	/* do_div only perform positive integer division! */
 	do_div(adc_chan_result->measurement,
+=======
+
+	scale_voltage *= chan_properties->offset_gain_denominator;
+	scale_voltage = div64_s64(scale_voltage,
+>>>>>>> 0e91d2a... Nougat
 				chan_properties->offset_gain_numerator);
 
 	if (negative_rawfromoffset)
@@ -1711,100 +1790,92 @@ int qpnp_adc_get_revid_version(struct device *dev)
 		(revid_data->rev2 == PM8941_V3P1_REV2) &&
 		(revid_data->rev3 == PM8941_V3P1_REV3) &&
 		(revid_data->rev4 == PM8941_V3P1_REV4) &&
-		(revid_data->pmic_type == PM8941_V3P1_TYPE) &&
-		(revid_data->pmic_subtype == PM8941_V3P1_SUBTYPE))
+		(revid_data->pmic_subtype == PM8941_SUBTYPE))
 			return QPNP_REV_ID_8941_3_1;
 	else if ((revid_data->rev1 == PM8941_V3P0_REV1) &&
 		(revid_data->rev2 == PM8941_V3P0_REV2) &&
 		(revid_data->rev3 == PM8941_V3P0_REV3) &&
 		(revid_data->rev4 == PM8941_V3P0_REV4) &&
-		(revid_data->pmic_type == PM8941_V3P0_TYPE) &&
-		(revid_data->pmic_subtype == PM8941_V3P0_SUBTYPE))
+		(revid_data->pmic_subtype == PM8941_SUBTYPE))
 			return QPNP_REV_ID_8941_3_0;
 	else if ((revid_data->rev1 == PM8941_V2P0_REV1) &&
 		(revid_data->rev2 == PM8941_V2P0_REV2) &&
 		(revid_data->rev3 == PM8941_V2P0_REV3) &&
 		(revid_data->rev4 == PM8941_V2P0_REV4) &&
-		(revid_data->pmic_type == PM8941_V2P0_TYPE) &&
-		(revid_data->pmic_subtype == PM8941_V2P0_SUBTYPE))
+		(revid_data->pmic_subtype == PM8941_SUBTYPE))
 			return QPNP_REV_ID_8941_2_0;
 	else if ((revid_data->rev1 == PM8226_V2P2_REV1) &&
 		(revid_data->rev2 == PM8226_V2P2_REV2) &&
 		(revid_data->rev3 == PM8226_V2P2_REV3) &&
 		(revid_data->rev4 == PM8226_V2P2_REV4) &&
-		(revid_data->pmic_type == PM8226_V2P2_TYPE) &&
-		(revid_data->pmic_subtype == PM8226_V2P2_SUBTYPE))
+		(revid_data->pmic_subtype == PM8226_SUBTYPE))
 			return QPNP_REV_ID_8026_2_2;
 	else if ((revid_data->rev1 == PM8226_V2P1_REV1) &&
 		(revid_data->rev2 == PM8226_V2P1_REV2) &&
 		(revid_data->rev3 == PM8226_V2P1_REV3) &&
 		(revid_data->rev4 == PM8226_V2P1_REV4) &&
-		(revid_data->pmic_type == PM8226_V2P1_TYPE) &&
-		(revid_data->pmic_subtype == PM8226_V2P1_SUBTYPE))
+		(revid_data->pmic_subtype == PM8226_SUBTYPE))
 			return QPNP_REV_ID_8026_2_1;
 	else if ((revid_data->rev1 == PM8226_V2P0_REV1) &&
 		(revid_data->rev2 == PM8226_V2P0_REV2) &&
 		(revid_data->rev3 == PM8226_V2P0_REV3) &&
 		(revid_data->rev4 == PM8226_V2P0_REV4) &&
-		(revid_data->pmic_type == PM8226_V2P0_TYPE) &&
-		(revid_data->pmic_subtype == PM8226_V2P0_SUBTYPE))
+		(revid_data->pmic_subtype == PM8226_SUBTYPE))
 			return QPNP_REV_ID_8026_2_0;
 	else if ((revid_data->rev1 == PM8226_V1P0_REV1) &&
 		(revid_data->rev2 == PM8226_V1P0_REV2) &&
 		(revid_data->rev3 == PM8226_V1P0_REV3) &&
 		(revid_data->rev4 == PM8226_V1P0_REV4) &&
-		(revid_data->pmic_type == PM8226_V1P0_TYPE) &&
-		(revid_data->pmic_subtype == PM8226_V1P0_SUBTYPE))
+		(revid_data->pmic_subtype == PM8226_SUBTYPE))
 			return QPNP_REV_ID_8026_1_0;
 	else if ((revid_data->rev1 == PM8110_V1P0_REV1) &&
 		(revid_data->rev2 == PM8110_V1P0_REV2) &&
 		(revid_data->rev3 == PM8110_V1P0_REV3) &&
 		(revid_data->rev4 == PM8110_V1P0_REV4) &&
-		(revid_data->pmic_type == PM8110_V1P0_TYPE) &&
-		(revid_data->pmic_subtype == PM8110_V1P0_SUBTYPE))
+		(revid_data->pmic_subtype == PM8110_SUBTYPE))
 			return QPNP_REV_ID_8110_1_0;
 	else if ((revid_data->rev1 == PM8110_V2P0_REV1) &&
 		(revid_data->rev2 == PM8110_V2P0_REV2) &&
 		(revid_data->rev3 == PM8110_V2P0_REV3) &&
 		(revid_data->rev4 == PM8110_V2P0_REV4) &&
-		(revid_data->pmic_type == PM8110_V2P0_TYPE) &&
-		(revid_data->pmic_subtype == PM8110_V2P0_SUBTYPE))
+		(revid_data->pmic_subtype == PM8110_SUBTYPE))
 			return QPNP_REV_ID_8110_2_0;
 	else if ((revid_data->rev1 == PM8916_V1P0_REV1) &&
 		(revid_data->rev2 == PM8916_V1P0_REV2) &&
 		(revid_data->rev3 == PM8916_V1P0_REV3) &&
 		(revid_data->rev4 == PM8916_V1P0_REV4) &&
-		(revid_data->pmic_type == PM8916_V1P0_TYPE) &&
-		(revid_data->pmic_subtype == PM8916_V1P0_SUBTYPE))
+		(revid_data->pmic_subtype == PM8916_SUBTYPE))
 			return QPNP_REV_ID_8916_1_0;
 	else if ((revid_data->rev1 == PM8916_V1P1_REV1) &&
 		(revid_data->rev2 == PM8916_V1P1_REV2) &&
 		(revid_data->rev3 == PM8916_V1P1_REV3) &&
 		(revid_data->rev4 == PM8916_V1P1_REV4) &&
-		(revid_data->pmic_type == PM8916_V1P1_TYPE) &&
-		(revid_data->pmic_subtype == PM8916_V1P1_SUBTYPE))
+		(revid_data->pmic_subtype == PM8916_SUBTYPE))
 			return QPNP_REV_ID_8916_1_1;
 	else if ((revid_data->rev1 == PM8916_V2P0_REV1) &&
 		(revid_data->rev2 == PM8916_V2P0_REV2) &&
 		(revid_data->rev3 == PM8916_V2P0_REV3) &&
 		(revid_data->rev4 == PM8916_V2P0_REV4) &&
-		(revid_data->pmic_type == PM8916_V2P0_TYPE) &&
-		(revid_data->pmic_subtype == PM8916_V2P0_SUBTYPE))
+		(revid_data->pmic_subtype == PM8916_SUBTYPE))
 			return QPNP_REV_ID_8916_2_0;
 	else if ((revid_data->rev1 == PM8909_V1P0_REV1) &&
 		(revid_data->rev2 == PM8909_V1P0_REV2) &&
 		(revid_data->rev3 == PM8909_V1P0_REV3) &&
 		(revid_data->rev4 == PM8909_V1P0_REV4) &&
-		(revid_data->pmic_type == PM8909_V1P0_TYPE) &&
-		(revid_data->pmic_subtype == PM8909_V1P0_SUBTYPE))
+		(revid_data->pmic_subtype == PM8909_SUBTYPE))
 			return QPNP_REV_ID_8909_1_0;
 	else if ((revid_data->rev1 == PM8909_V1P1_REV1) &&
 		(revid_data->rev2 == PM8909_V1P1_REV2) &&
 		(revid_data->rev3 == PM8909_V1P1_REV3) &&
 		(revid_data->rev4 == PM8909_V1P1_REV4) &&
-		(revid_data->pmic_type == PM8909_V1P1_TYPE) &&
-		(revid_data->pmic_subtype == PM8909_V1P1_SUBTYPE))
+		(revid_data->pmic_subtype == PM8909_SUBTYPE))
 			return QPNP_REV_ID_8909_1_1;
+<<<<<<< HEAD
+=======
+	else if ((revid_data->rev4 == PM8950_V1P0_REV4) &&
+		(revid_data->pmic_subtype == PM8950_SUBTYPE))
+			return QPNP_REV_ID_PM8950_1_0;
+>>>>>>> 0e91d2a... Nougat
 	else
 		return -EINVAL;
 }
@@ -1820,6 +1891,11 @@ int32_t qpnp_adc_get_devicetree_data(struct spmi_device *spmi,
 	struct qpnp_adc_properties *adc_prop;
 	struct qpnp_adc_amux_properties *amux_prop;
 	int count_adc_channel_list = 0, decimation, rc = 0, i = 0;
+<<<<<<< HEAD
+=======
+	int cal_val_hc = 0;
+	bool adc_hc;
+>>>>>>> 0e91d2a... Nougat
 
 	if (!node)
 		return -EINVAL;
@@ -1923,6 +1999,17 @@ int32_t qpnp_adc_get_devicetree_data(struct spmi_device *spmi,
 			pr_err("Invalid channel fast average setup\n");
 			return -EINVAL;
 		}
+		if (of_device_is_compatible(node, "qcom,qpnp-vadc-hc")) {
+			rc = of_property_read_u32(child, "qcom,cal-val",
+							&cal_val_hc);
+			if (rc) {
+				pr_debug("Use calibration value from timer\n");
+				adc_channel_list[i].cal_val = ADC_TIMER_CAL;
+			} else {
+				adc_channel_list[i].cal_val = cal_val_hc;
+			}
+		}
+
 		/* Individual channel properties */
 		adc_channel_list[i].name = (char *)channel_name;
 		adc_channel_list[i].channel_num = channel_num;

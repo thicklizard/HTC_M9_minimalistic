@@ -18,6 +18,7 @@
  * driver.
  */
 
+#include <linux/device.h>
 #include <linux/errno.h>
 #include <linux/list.h>
 #include <linux/module.h>
@@ -362,6 +363,58 @@ int of_irq_to_resource(struct device_node *dev, int index, struct resource *r)
 EXPORT_SYMBOL_GPL(of_irq_to_resource);
 
 /**
+<<<<<<< HEAD
+=======
+ * of_irq_get - Decode a node's IRQ and return it as a Linux irq number
+ * @dev: pointer to device tree node
+ * @index: zero-based index of the irq
+ *
+ * Returns Linux irq number on success, or -EPROBE_DEFER if the irq domain
+ * is not yet created.
+ *
+ */
+int of_irq_get(struct device_node *dev, int index)
+{
+	int rc;
+	struct of_phandle_args oirq;
+	struct irq_domain *domain;
+
+	rc = of_irq_parse_one(dev, index, &oirq);
+	if (rc)
+		return rc;
+
+	domain = irq_find_host(oirq.np);
+	if (!domain)
+		return -EPROBE_DEFER;
+
+	return irq_create_of_mapping(&oirq);
+}
+EXPORT_SYMBOL_GPL(of_irq_get);
+
+/**
+ * of_irq_get_byname - Decode a node's IRQ and return it as a Linux irq number
+ * @dev: pointer to device tree node
+ * @name: irq name
+ *
+ * Returns Linux irq number on success, or -EPROBE_DEFER if the irq domain
+ * is not yet created, or error code in case of any other failure.
+ */
+int of_irq_get_byname(struct device_node *dev, const char *name)
+{
+	int index;
+
+	if (unlikely(!name))
+		return -EINVAL;
+
+	index = of_property_match_string(dev, "interrupt-names", name);
+	if (index < 0)
+		return index;
+
+	return of_irq_get(dev, index);
+}
+
+/**
+>>>>>>> 0e91d2a... Nougat
  * of_irq_count - Count the number of IRQs a node uses
  * @dev: pointer to device tree node
  */
@@ -501,4 +554,24 @@ err:
 		list_del(&desc->list);
 		kfree(desc);
 	}
+}
+
+/**
+ * of_msi_configure - Set the msi_domain field of a device
+ * @dev: device structure to associate with an MSI irq domain
+ * @np: device node for that device
+ */
+void of_msi_configure(struct device *dev, struct device_node *np)
+{
+	struct device_node *msi_np;
+	struct irq_domain *d;
+
+	msi_np = of_parse_phandle(np, "msi-parent", 0);
+	if (!msi_np)
+		return;
+
+	d = irq_find_matching_host(msi_np, DOMAIN_BUS_PLATFORM_MSI);
+	if (!d)
+		d = irq_find_host(msi_np);
+	dev_set_msi_domain(dev, d);
 }

@@ -22,7 +22,17 @@ cirrus	Cirrus Logic, Inc.
 cortina	Cortina Systems, Inc.
 dallas	Maxim Integrated Products (formerly Dallas Semiconductor)
 denx	Denx Software Engineering
+<<<<<<< HEAD
 di	Dyna Image Corporation
+=======
+digi	Digi International Inc.
+di	Dyna Image Corporation
+dlg	Dialog Semiconductor
+dlink	D-Link Corporation
+dmo	Data Modul AG
+ebv	EBV Elektronik
+edt	Emerging Display Technologies
+>>>>>>> 0e91d2a... Nougat
 emmicro	EM Microelectronic
 epson	Seiko Epson Corp.
 est	ESTeem Wireless Modems
@@ -32,6 +42,20 @@ fsl	Freescale Semiconductor
 GEFanuc	GE Fanuc Intelligent Platforms Embedded Systems, Inc.
 goodix	Goodix. Ltd.
 gef	GE Fanuc Intelligent Platforms Embedded Systems, Inc.
+<<<<<<< HEAD
+=======
+geniatech	Geniatech, Inc.
+globalscale	Globalscale Technologies, Inc.
+gmt	Global Mixed-mode Technology, Inc.
+google	Google, Inc.
+goodix	Goodix. Ltd
+gumstix	Gumstix, Inc.
+gw	Gateworks Corporation
+halo	Halo Microelectronics Co., Ltd.
+haoyu	Haoyu Microelectronic Co. Ltd.
+hisilicon	Hisilicon Limited.
+honeywell	Honeywell
+>>>>>>> 0e91d2a... Nougat
 hp	Hewlett Packard
 ibm	International Business Machines (IBM)
 idt	Integrated Device Technologies, Inc.
@@ -43,7 +67,12 @@ jdi	Japan Display Inc.
 lattice	Lattice Semiconductor.
 linux	Linux-specific binding
 liteon	Lite-On Technology Corporation
+<<<<<<< HEAD
 kionix	Kionix Inc.
+=======
+lsi	LSI Corp. (LSI Logic)
+lltc	Linear Technology Corporation
+>>>>>>> 0e91d2a... Nougat
 marvell	Marvell Technology Group Ltd.
 maxim	Maxim Integrated Products
 mcube	mCube, Inc.
@@ -56,6 +85,12 @@ nxp	NXP Semiconductors
 onnn	ON Semiconductor Corp.
 ovti	OmniVision Technologies, Inc.
 picochip	Picochip Ltd
+<<<<<<< HEAD
+=======
+plathome	Plat'Home Co., Ltd.
+plda	PLDA
+pixcir  PIXCIR MICROELECTRONICS Co., Ltd
+>>>>>>> 0e91d2a... Nougat
 powervr	PowerVR (deprecated, use img)
 qca	Qualcomm Atheros, Inc.
 qcom	Qualcomm Technologies, Inc

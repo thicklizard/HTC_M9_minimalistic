@@ -1076,7 +1076,7 @@ sequence_cmd:
 	if (!rc && dump_payload == false && unsol_data)
 		iscsit_set_unsoliticed_dataout(cmd);
 	else if (dump_payload && imm_data)
-		target_put_sess_cmd(conn->sess->se_sess, &cmd->se_cmd);
+		target_put_sess_cmd(&cmd->se_cmd);
 
 	return 0;
 }
@@ -1350,7 +1350,7 @@ isert_put_cmd(struct isert_cmd *isert_cmd, bool comp_err)
 			    cmd->se_cmd.t_state == TRANSPORT_WRITE_PENDING) {
 				struct se_cmd *se_cmd = &cmd->se_cmd;
 
-				target_put_sess_cmd(se_cmd->se_sess, se_cmd);
+				target_put_sess_cmd(se_cmd);
 			}
 		}
 
@@ -1451,7 +1451,17 @@ isert_completion_rdma_read(struct iser_tx_desc *tx_desc,
 	cmd->i_state = ISTATE_RECEIVED_LAST_DATAOUT;
 	spin_unlock_bh(&cmd->istate_lock);
 
+<<<<<<< HEAD
 	target_execute_cmd(se_cmd);
+=======
+	if (ret) {
+		target_put_sess_cmd(se_cmd);
+		transport_send_check_condition_and_sense(se_cmd,
+							 se_cmd->pi_err, 0);
+	} else {
+		target_execute_cmd(se_cmd);
+	}
+>>>>>>> 0e91d2a... Nougat
 }
 
 static void
@@ -2096,9 +2106,16 @@ unmap_sg:
 static int
 isert_immediate_queue(struct iscsi_conn *conn, struct iscsi_cmd *cmd, int state)
 {
-	int ret;
+	struct isert_cmd *isert_cmd = iscsit_priv_cmd(cmd);
+	int ret = 0;
 
 	switch (state) {
+	case ISTATE_REMOVE:
+		spin_lock_bh(&conn->cmd_lock);
+		list_del_init(&cmd->i_conn_node);
+		spin_unlock_bh(&conn->cmd_lock);
+		isert_put_cmd(isert_cmd, true);
+		break;
 	case ISTATE_SEND_NOPIN_WANT_RESPONSE:
 		ret = isert_put_nopin(cmd, conn, false);
 		break;

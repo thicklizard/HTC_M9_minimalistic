@@ -60,6 +60,15 @@
 
 #define FAN53555_NVOLTAGES	64	/* Numbers of voltages */
 
+<<<<<<< HEAD
+=======
+enum fan53555_vendor {
+	FAN53555_VENDOR_FAIRCHILD = 0,
+	FAN53555_VENDOR_SILERGY,
+	HALO_HL7509,
+};
+
+>>>>>>> 0e91d2a... Nougat
 /* IC Type */
 enum {
 	FAN53555_CHIP_ID_00 = 0,
@@ -100,10 +109,14 @@ struct fan53555_device_info {
 	unsigned int slew_rate;
 	/* Sleep voltage cache */
 	unsigned int sleep_vol_cache;
+<<<<<<< HEAD
 	unsigned int peek_poke_address;
 
 	struct dentry *debug_root;
 
+=======
+	/* Disable suspend */
+>>>>>>> 0e91d2a... Nougat
 	bool disable_suspend;
 };
 
@@ -168,6 +181,8 @@ static int fan53555_set_suspend_voltage(struct regulator_dev *rdev, int uV)
 	struct fan53555_device_info *di = rdev_get_drvdata(rdev);
 	int ret;
 
+	if (di->disable_suspend)
+		return 0;
 	if (di->sleep_vol_cache == uV)
 		return 0;
 	ret = regulator_map_voltage_linear(rdev, uV, uV);
@@ -320,6 +335,9 @@ static int fan53555_device_setup(struct fan53555_device_info *di,
 		di->vsel_min = 603000;
 		di->vsel_step = 12826;
 		break;
+	case HALO_HL7509:
+		ret = fan53555_voltages_setup_fairchild(di);
+		break;
 	default:
 		dev_err(di->dev,
 			"Chip ID[%d]\n not supported!\n", di->chip_id);
@@ -370,6 +388,7 @@ static struct regmap_config fan53555_regmap_config = {
 	.val_bits = 8,
 };
 
+<<<<<<< HEAD
 static int fan53555_parse_backup_reg(struct i2c_client *client, u32 *sleep_sel)
 {
 	int rc = -EINVAL;
@@ -391,6 +410,21 @@ static int fan53555_parse_backup_reg(struct i2c_client *client, u32 *sleep_sel)
 
 	return rc;
 }
+=======
+static int fan53555_parse_dt(struct fan53555_device_info *di,
+				struct fan53555_platform_data *pdata)
+{
+	struct device *dev = di->dev;
+	struct device_node *np = dev->of_node;
+	int ret;
+	u32 tmp;
+
+	pdata->regulator = of_get_regulator_init_data(dev, np);
+	if (!pdata->regulator) {
+		dev_err(dev, "regulator init data is missing\n");
+		return -ENODEV;
+	}
+>>>>>>> 0e91d2a... Nougat
 
 
 static struct fan53555_platform_data *
@@ -430,9 +464,12 @@ static struct fan53555_platform_data *
 	pdata->regulator = init_data;
 	pdata->sleep_vsel_id = sleep_sel;
 
-	return pdata;
+	di->disable_suspend = of_property_read_bool(np, "fcs,disable-suspend");
+
+	return ret;
 }
 
+<<<<<<< HEAD
 static int fan53555_restore_working_reg(struct device_node *node,
 			struct fan53555_device_info *di)
 {
@@ -538,6 +575,25 @@ static int set_reg(void *data, u64 val)
 	return rc;
 }
 DEFINE_SIMPLE_ATTRIBUTE(poke_poke_debug_ops, get_reg, set_reg, "0x%02llx\n");
+=======
+static const struct of_device_id fan53555_dt_ids[] = {
+	{
+		.compatible = "fcs,fan53555",
+		.data = (void *)FAN53555_VENDOR_FAIRCHILD
+	}, {
+		.compatible = "silergy,syr827",
+		.data = (void *)FAN53555_VENDOR_SILERGY,
+	}, {
+		.compatible = "silergy,syr828",
+		.data = (void *)FAN53555_VENDOR_SILERGY,
+	}, {
+		.compatible = "halo,hl7509",
+		.data = (void *)HALO_HL7509,
+	},
+	{ }
+};
+MODULE_DEVICE_TABLE(of, fan53555_dt_ids);
+>>>>>>> 0e91d2a... Nougat
 
 static int fan53555_regulator_probe(struct i2c_client *client,
 				const struct i2c_device_id *id)
@@ -548,6 +604,7 @@ static int fan53555_regulator_probe(struct i2c_client *client,
 	unsigned int val;
 	int ret;
 
+<<<<<<< HEAD
 	if (client->dev.of_node)
 		pdata = fan53555_get_of_platform_data(client);
 	else
@@ -556,6 +613,13 @@ static int fan53555_regulator_probe(struct i2c_client *client,
 	if (!pdata || !pdata->regulator) {
 		dev_err(&client->dev, "Platform data not found!\n");
 		return -ENODEV;
+=======
+	pdata = dev_get_platdata(&client->dev);
+	if (!pdata) {
+		pdata = devm_kzalloc(&client->dev, sizeof(*pdata), GFP_KERNEL);
+		if (!pdata)
+			return -ENOMEM;
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	di = devm_kzalloc(&client->dev, sizeof(struct fan53555_device_info),
@@ -563,14 +627,47 @@ static int fan53555_regulator_probe(struct i2c_client *client,
 	if (!di) {
 		dev_err(&client->dev, "Failed to allocate device info data!\n");
 		return -ENOMEM;
+<<<<<<< HEAD
+=======
+
+	di->dev = &client->dev;
+	ret = fan53555_parse_dt(di, pdata);
+	if (ret)
+		return ret;
+
+	di->regulator = pdata->regulator;
+	if (client->dev.of_node) {
+		const struct of_device_id *match;
+
+		match = of_match_device(of_match_ptr(fan53555_dt_ids),
+					&client->dev);
+		if (!match)
+			return -ENODEV;
+
+		di->vendor = (unsigned long) match->data;
+	} else {
+		/* if no ramp constraint set, get the pdata ramp_delay */
+		if (!di->regulator->constraints.ramp_delay) {
+			int slew_idx = (pdata->slew_rate & 0x7)
+						? pdata->slew_rate : 0;
+
+			di->regulator->constraints.ramp_delay
+						= slew_rates[slew_idx];
+		}
+
+		di->vendor = id->driver_data;
+>>>>>>> 0e91d2a... Nougat
 	}
 	di->regmap = devm_regmap_init_i2c(client, &fan53555_regmap_config);
 	if (IS_ERR(di->regmap)) {
 		dev_err(&client->dev, "Failed to allocate regmap!\n");
 		return PTR_ERR(di->regmap);
 	}
+<<<<<<< HEAD
 	di->dev = &client->dev;
 	di->regulator = pdata->regulator;
+=======
+>>>>>>> 0e91d2a... Nougat
 	i2c_set_clientdata(client, di);
 	/* Get chip ID */
 	ret = fan53555_read(di, FAN53555_ID1, &val);
@@ -656,7 +753,20 @@ static struct of_device_id fan53555_match_table[] = {
 MODULE_DEVICE_TABLE(of, fan53555_match_table);
 
 static const struct i2c_device_id fan53555_id[] = {
+<<<<<<< HEAD
 	{"fan53555", -1},
+=======
+	{
+		.name = "fan53555",
+		.driver_data = FAN53555_VENDOR_FAIRCHILD
+	}, {
+		.name = "syr82x",
+		.driver_data = FAN53555_VENDOR_SILERGY
+	}, {
+		.name = "hl7509",
+		.driver_data = HALO_HL7509
+	},
+>>>>>>> 0e91d2a... Nougat
 	{ },
 };
 
@@ -671,6 +781,7 @@ static struct i2c_driver fan53555_regulator_driver = {
 	.id_table = fan53555_id,
 };
 
+<<<<<<< HEAD
 /**
  * fan53555_regulator_init() - initialized fan53555 regulator driver
  * This function registers the fan53555 regulator platform driver.
@@ -696,6 +807,19 @@ static void __exit fan53555_regulator_exit(void)
 	i2c_del_driver(&fan53555_regulator_driver);
 }
 module_exit(fan53555_regulator_exit);
+=======
+static int __init fan53555_init(void)
+{
+	return i2c_add_driver(&fan53555_regulator_driver);
+}
+subsys_initcall(fan53555_init);
+
+static void __exit fan53555_exit(void)
+{
+	i2c_del_driver(&fan53555_regulator_driver);
+}
+module_exit(fan53555_exit);
+>>>>>>> 0e91d2a... Nougat
 
 MODULE_AUTHOR("Yunfan Zhang <yfzhang@marvell.com>");
 MODULE_DESCRIPTION("FAN53555 regulator driver");

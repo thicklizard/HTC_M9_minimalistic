@@ -36,12 +36,23 @@ struct radio_data {
 	struct smd_channel  *fm_channel;
 };
 struct radio_data hs;
+<<<<<<< HEAD
 
 static struct work_struct *reset_worker;
+=======
+DEFINE_MUTEX(fm_smd_enable);
+static int fmsmd_set;
+static bool chan_opened;
+static int hcismd_fm_set_enable(const char *val, struct kernel_param *kp);
+module_param_call(fmsmd_set, hcismd_fm_set_enable, NULL, &fmsmd_set, 0644);
+static struct work_struct *reset_worker;
+static void radio_hci_smd_deregister(void);
+static void radio_hci_smd_exit(void);
+>>>>>>> 0e91d2a... Nougat
 
 static void radio_hci_smd_destruct(struct radio_hci_dev *hdev)
 {
-	radio_hci_unregister_dev(hs.hdev);
+	radio_hci_unregister_dev();
 }
 
 
@@ -52,6 +63,11 @@ static void radio_hci_smd_recv_event(unsigned long temp)
 	struct sk_buff *skb;
 	unsigned  char *buf;
 	struct radio_data *hsmd = &hs;
+<<<<<<< HEAD
+=======
+	FMDBG("");
+
+>>>>>>> 0e91d2a... Nougat
 	len = smd_read_avail(hsmd->fm_channel);
 
 	while (len) {
@@ -85,6 +101,7 @@ static void radio_hci_smd_recv_event(unsigned long temp)
 static int radio_hci_smd_send_frame(struct sk_buff *skb)
 {
 	int len = 0;
+	FMDBG("skb %pK", skb);
 
 	len = smd_write(hs.fm_channel, skb->data, skb->len);
 	if (len < skb->len) {
@@ -123,7 +140,8 @@ static void send_disable_event(struct work_struct *worker)
 
 static void radio_hci_smd_notify_cmd(void *data, unsigned int event)
 {
-	struct radio_hci_dev *hdev = hs.hdev;
+	struct radio_hci_dev *hdev = (struct radio_hci_dev *)data;
+	FMDBG("data %p event %u", data, event);
 
 	if (!hdev) {
 		FMDERR("Frame for unknown HCI device (hdev=NULL)");
@@ -154,6 +172,7 @@ static int radio_hci_smd_register_dev(struct radio_data *hsmd)
 {
 	struct radio_hci_dev *hdev;
 	int rc;
+	FMDBG("hsmd: %pK", hsmd);
 
 	if (hsmd == NULL)
 		return -ENODEV;
@@ -162,11 +181,14 @@ static int radio_hci_smd_register_dev(struct radio_data *hsmd)
 	if (hdev == NULL)
 		return -ENODEV;
 
-	hsmd->hdev = hdev;
 	tasklet_init(&hsmd->rx_task, radio_hci_smd_recv_event,
 		(unsigned long) hsmd);
 	hdev->send  = radio_hci_smd_send_frame;
 	hdev->destruct = radio_hci_smd_destruct;
+<<<<<<< HEAD
+=======
+	hdev->close_smd = radio_hci_smd_exit;
+>>>>>>> 0e91d2a... Nougat
 
 	/* Open the SMD Channel and device and register the callback function */
 	rc = smd_named_open_on_edge("APPS_FM", SMD_APPS_WCNSS,
@@ -189,24 +211,53 @@ static int radio_hci_smd_register_dev(struct radio_data *hsmd)
 		return -ENODEV;
 	}
 
+	hsmd->hdev = hdev;
 	return 0;
 }
 
 static void radio_hci_smd_deregister(void)
 {
+	FMDBG("");
+
+	radio_hci_unregister_dev();
+	kfree(hs.hdev);
+	hs.hdev = NULL;
+
 	smd_close(hs.fm_channel);
 	hs.fm_channel = 0;
 }
 
 static int radio_hci_smd_init(void)
 {
-	return radio_hci_smd_register_dev(&hs);
+	int ret;
+
+	if (chan_opened) {
+		FMDBG("Channel is already opened");
+		return 0;
+	}
+
+	/* this should be called with fm_smd_enable lock held */
+	ret = radio_hci_smd_register_dev(&hs);
+	if (ret < 0) {
+		FMDERR("Failed to register smd device");
+		chan_opened = false;
+		return ret;
+	}
+	chan_opened = true;
+	return ret;
 }
 module_init(radio_hci_smd_init);
 
 static void __exit radio_hci_smd_exit(void)
 {
+	if (!chan_opened) {
+		FMDBG("Channel already closed");
+		return;
+	}
+
+	/* this should be called with fm_smd_enable lock held */
 	radio_hci_smd_deregister();
+	chan_opened = false;
 }
 module_exit(radio_hci_smd_exit);
 

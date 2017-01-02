@@ -162,6 +162,7 @@
 #define IRQCHIP_OF_MATCH_TABLE()
 #endif
 
+<<<<<<< HEAD
 #ifdef CONFIG_COMMON_CLK
 #define CLK_OF_TABLES() . = ALIGN(8);				\
 			VMLINUX_SYMBOL(__clk_of_table) = .;	\
@@ -179,6 +180,15 @@
 #else
 #define CPU_METHOD_OF_TABLES()
 #endif
+=======
+#define CLKSRC_OF_TABLES()	OF_TABLE(CONFIG_CLKSRC_OF, clksrc)
+#define IRQCHIP_OF_MATCH_TABLE() OF_TABLE(CONFIG_IRQCHIP, irqchip)
+#define CLK_OF_TABLES()		OF_TABLE(CONFIG_COMMON_CLK, clk)
+#define IOMMU_OF_TABLES()	OF_TABLE(CONFIG_OF_IOMMU, iommu)
+#define RESERVEDMEM_OF_TABLES()	OF_TABLE(CONFIG_OF_RESERVED_MEM, reservedmem)
+#define CPU_METHOD_OF_TABLES()	OF_TABLE(CONFIG_SMP, cpu_method)
+#define EARLYCON_OF_TABLES()	OF_TABLE(CONFIG_SERIAL_EARLYCON, earlycon)
+>>>>>>> 0e91d2a... Nougat
 
 #define KERNEL_DTB()							\
 	STRUCT_ALIGN();							\
@@ -524,6 +534,12 @@
 	CPU_DISCARD(init.rodata)					\
 	MEM_DISCARD(init.rodata)					\
 	CLK_OF_TABLES()							\
+<<<<<<< HEAD
+=======
+	RESERVEDMEM_OF_TABLES()						\
+	CLKSRC_OF_TABLES()						\
+	IOMMU_OF_TABLES()						\
+>>>>>>> 0e91d2a... Nougat
 	CPU_METHOD_OF_TABLES()						\
 	CLKSRC_OF_TABLES()						\
 	KERNEL_DTB()							\

@@ -1195,11 +1195,30 @@ decrypt_pki_encrypted_session_key(struct ecryptfs_auth_tok *auth_tok,
 				cipher_code)
 		goto out;
 	}
+<<<<<<< HEAD
+=======
+
+	auth_tok->session_key.flags |= ECRYPTFS_CONTAINS_DECRYPTED_KEY;
+	memcpy(crypt_stat->key, auth_tok->session_key.decrypted_key,
+	       auth_tok->session_key.decrypted_key_size);
+	crypt_stat->key_size = ecryptfs_get_key_size_to_restore_key(
+			auth_tok->session_key.decrypted_key_size, crypt_stat);
+
+	ecryptfs_parse_full_cipher(full_cipher,
+		crypt_stat->cipher, crypt_stat->cipher_mode);
+
+>>>>>>> 0e91d2a... Nougat
 	crypt_stat->flags |= ECRYPTFS_KEY_VALID;
 	if (ecryptfs_verbosity > 0) {
 		ecryptfs_printk(KERN_DEBUG, "Decrypted session key:\n");
 		ecryptfs_dump_hex(crypt_stat->key,
 				  crypt_stat->key_size);
+<<<<<<< HEAD
+=======
+
+		ecryptfs_dump_salt_hex(crypt_stat->key, crypt_stat->key_size,
+				crypt_stat);
+>>>>>>> 0e91d2a... Nougat
 	}
 out:
 	kfree(msg);
@@ -1466,7 +1485,14 @@ parse_tag_3_packet(struct ecryptfs_crypt_stat *crypt_stat,
 		break;
 	default:
 		crypt_stat->key_size =
+<<<<<<< HEAD
 			(*new_auth_tok)->session_key.encrypted_key_size;
+=======
+			ecryptfs_get_key_size_to_restore_key(
+			(*new_auth_tok)->session_key.encrypted_key_size,
+			crypt_stat);
+
+>>>>>>> 0e91d2a... Nougat
 	}
 	rc = ecryptfs_init_crypt_ctx(crypt_stat);
 	if (rc)
@@ -1737,6 +1763,11 @@ decrypt_passphrase_encrypted_session_key(struct ecryptfs_auth_tok *auth_tok,
 				crypt_stat->key_size);
 		ecryptfs_dump_hex(crypt_stat->key,
 				  crypt_stat->key_size);
+<<<<<<< HEAD
+=======
+		ecryptfs_dump_salt_hex(crypt_stat->key, crypt_stat->key_size,
+				crypt_stat);
+>>>>>>> 0e91d2a... Nougat
 	}
 out:
 	return rc;
@@ -2296,7 +2327,13 @@ write_tag_3_packet(char *dest, size_t *remaining_bytes,
 	}
 	rc = 0;
 	ecryptfs_printk(KERN_DEBUG, "Encrypting [%zd] bytes of the key\n",
+<<<<<<< HEAD
 			crypt_stat->key_size);
+=======
+		crypt_stat->key_size);
+	ecryptfs_printk(KERN_DEBUG, "Encrypting [%zd] bytes of the salt key\n",
+		ecryptfs_get_salt_size_for_cipher(crypt_stat));
+>>>>>>> 0e91d2a... Nougat
 	rc = crypto_blkcipher_encrypt(&desc, dst_sg, src_sg,
 				      (*key_rec).enc_key_size);
 	mutex_unlock(tfm_mutex);

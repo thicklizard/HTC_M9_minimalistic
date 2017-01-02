@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -443,6 +443,7 @@ static int msm_ssphy_qmp_init(struct usb_phy *uphy)
 		misc = qmp_settings_rev0_misc;
 		break;
 	case 0x10000001:
+	case 0x10010000:
 		reg = qmp_settings_rev1;
 		misc = qmp_settings_rev1_misc;
 		break;
@@ -486,9 +487,14 @@ static int msm_ssphy_qmp_init(struct usb_phy *uphy)
 	writel_relaxed(0x00, phy->base + PCIE_USB3_PHY_SW_RESET);
 	writel_relaxed(0x03, phy->base + PCIE_USB3_PHY_START);
 
+<<<<<<< HEAD
 	if (!phy->switch_pipe_clk_src)
 		
 		clk_prepare_enable(phy->pipe_clk);
+=======
+	
+	mb();
+>>>>>>> 0e91d2a... Nougat
 
 	
 	do {
@@ -667,8 +673,18 @@ static int msm_ssphy_qmp_set_suspend(struct usb_phy *uphy, int suspend)
 		if (!phy->cable_connected) {
 			clk_disable_unprepare(phy->pipe_clk);
 			writel_relaxed(0x00,
+<<<<<<< HEAD
 				phy->base + PCIE_USB3_PHY_POWER_DOWN_CONTROL);
 		}
+=======
+			phy->base + phy->phy_reg[USB3_PHY_POWER_DOWN_CONTROL]);
+		else
+			msm_ssusb_qmp_enable_autonomous(phy, 1);
+
+		
+		wmb();
+
+>>>>>>> 0e91d2a... Nougat
 		clk_disable_unprepare(phy->cfg_ahb_clk);
 		clk_disable_unprepare(phy->aux_clk);
 		phy->in_suspend = true;
@@ -683,7 +699,14 @@ static int msm_ssphy_qmp_set_suspend(struct usb_phy *uphy, int suspend)
 			writel_relaxed(0x01,
 				phy->base + PCIE_USB3_PHY_POWER_DOWN_CONTROL);
 		}
+<<<<<<< HEAD
 		msm_ssusb_qmp_enable_autonomous(phy);
+=======
+
+		
+		wmb();
+
+>>>>>>> 0e91d2a... Nougat
 		phy->in_suspend = false;
 		dev_info(uphy->dev, "QMP PHY is resumed\n");
 	}

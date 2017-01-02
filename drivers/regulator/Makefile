@@ -79,6 +79,14 @@ obj-$(CONFIG_REGULATOR_RPM_SMD) += rpm-smd-regulator.o
 obj-$(CONFIG_REGULATOR_QPNP) += qpnp-regulator.o
 obj-$(CONFIG_REGULATOR_SPM) += spm-regulator.o
 obj-$(CONFIG_REGULATOR_CPR) += cpr-regulator.o
+<<<<<<< HEAD
+=======
+obj-$(CONFIG_REGULATOR_CPR3) += cpr3-regulator.o cpr3-util.o
+obj-$(CONFIG_REGULATOR_CPR3_HMSS) += cpr3-hmss-regulator.o
+obj-$(CONFIG_REGULATOR_CPR3_MMSS) += cpr3-mmss-regulator.o
+obj-$(CONFIG_REGULATOR_CPR4_APSS) += cpr4-apss-regulator.o
+obj-$(CONFIG_REGULATOR_CPRH_KBSS) += cprh-kbss-regulator.o
+>>>>>>> 0e91d2a... Nougat
 obj-$(CONFIG_REGULATOR_QPNP_LABIBB) += qpnp-labibb-regulator.o
 
 ccflags-$(CONFIG_REGULATOR_DEBUG) += -DDEBUG

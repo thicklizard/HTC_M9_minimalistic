@@ -687,6 +687,8 @@ static void bcache_device_link(struct bcache_device *d, struct cache_set *c,
 	WARN(sysfs_create_link(&d->kobj, &c->kobj, "cache") ||
 	     sysfs_create_link(&c->kobj, &d->kobj, d->name),
 	     "Couldn't create device <-> cache set symlinks");
+
+	clear_bit(BCACHE_DEV_UNLINK_DONE, &d->flags);
 }
 
 static void bcache_device_detach(struct bcache_device *d)
@@ -804,8 +806,11 @@ void bch_cached_dev_run(struct cached_dev *dc)
 {
 	struct bcache_device *d = &dc->disk;
 
-	if (atomic_xchg(&dc->running, 1))
+	if (atomic_xchg(&dc->running, 1)) {
+		kfree(env[1]);
+		kfree(env[2]);
 		return;
+	}
 
 	if (!d->c &&
 	    BDEV_STATE(&dc->sb) != BDEV_STATE_NONE) {
@@ -962,6 +967,16 @@ int bch_cached_dev_attach(struct cached_dev *dc, struct cache_set *c)
 	 */
 	atomic_set(&dc->count, 1);
 
+<<<<<<< HEAD
+=======
+	/* Block writeback thread, but spawn it */
+	down_write(&dc->writeback_lock);
+	if (bch_cached_dev_writeback_start(dc)) {
+		up_write(&dc->writeback_lock);
+		return -ENOMEM;
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	if (BDEV_STATE(&dc->sb) == BDEV_STATE_DIRTY) {
 		atomic_set(&dc->has_dirty, 1);
 		atomic_inc(&dc->count);
@@ -970,6 +985,9 @@ int bch_cached_dev_attach(struct cached_dev *dc, struct cache_set *c)
 
 	bch_cached_dev_run(dc);
 	bcache_device_link(&dc->disk, c, "bdev");
+
+	/* Allow the writeback thread to proceed */
+	up_write(&dc->writeback_lock);
 
 	pr_info("Caching %s as %s on set %pU",
 		bdevname(dc->bdev, buf), dc->disk.disk->disk_name,
@@ -1294,6 +1312,9 @@ static void cache_set_flush(struct closure *cl)
 	/* Shut down allocator threads */
 	set_bit(CACHE_SET_STOPPING_2, &c->flags);
 	wake_up(&c->alloc_wait);
+
+	if (!c)
+		closure_return(cl);
 
 	bch_cache_accounting_destroy(&c->accounting);
 
@@ -1756,11 +1777,17 @@ err:
 	return -ENOMEM;
 }
 
+<<<<<<< HEAD
 static void register_cache(struct cache_sb *sb, struct page *sb_page,
 				  struct block_device *bdev, struct cache *ca)
+=======
+static int register_cache(struct cache_sb *sb, struct page *sb_page,
+				struct block_device *bdev, struct cache *ca)
+>>>>>>> 0e91d2a... Nougat
 {
 	char name[BDEVNAME_SIZE];
-	const char *err = "cannot allocate memory";
+	const char *err = NULL;
+	int ret = 0;
 
 	memcpy(&ca->sb, sb, sizeof(struct cache_sb));
 	ca->bdev = bdev;
@@ -1775,14 +1802,18 @@ static void register_cache(struct cache_sb *sb, struct page *sb_page,
 	if (blk_queue_discard(bdev_get_queue(ca->bdev)))
 		ca->discard = CACHE_DISCARD(&ca->sb);
 
-	if (cache_alloc(sb, ca) != 0)
+	ret = cache_alloc(sb, ca);
+	if (ret != 0)
 		goto err;
 
-	err = "error creating kobject";
-	if (kobject_add(&ca->kobj, &part_to_dev(bdev->bd_part)->kobj, "bcache"))
-		goto err;
+	if (kobject_add(&ca->kobj, &part_to_dev(bdev->bd_part)->kobj, "bcache")) {
+		err = "error calling kobject_add";
+		ret = -ENOMEM;
+		goto out;
+	}
 
 	err = register_cache_set(ca);
+<<<<<<< HEAD
 	if (err)
 		goto err;
 
@@ -1791,6 +1822,25 @@ static void register_cache(struct cache_sb *sb, struct page *sb_page,
 err:
 	pr_notice("error opening %s: %s", bdevname(bdev, name), err);
 	kobject_put(&ca->kobj);
+=======
+	mutex_unlock(&bch_register_lock);
+
+	if (err) {
+		ret = -ENODEV;
+		goto out;
+	}
+
+	pr_info("registered cache device %s", bdevname(bdev, name));
+
+out:
+	kobject_put(&ca->kobj);
+
+err:
+	if (err)
+		pr_notice("error opening %s: %s", bdevname(bdev, name), err);
+
+	return ret;
+>>>>>>> 0e91d2a... Nougat
 }
 
 /* Global interfaces/init */
@@ -1825,8 +1875,22 @@ static ssize_t register_bcache(struct kobject *k, struct kobj_attribute *attr,
 				  FMODE_READ|FMODE_WRITE|FMODE_EXCL,
 				  sb);
 	if (IS_ERR(bdev)) {
+<<<<<<< HEAD
 		if (bdev == ERR_PTR(-EBUSY))
 			err = "device busy";
+=======
+		if (bdev == ERR_PTR(-EBUSY)) {
+			bdev = lookup_bdev(strim(path));
+			mutex_lock(&bch_register_lock);
+			if (!IS_ERR(bdev) && bch_is_open(bdev))
+				err = "device already registered";
+			else
+				err = "device busy";
+			mutex_unlock(&bch_register_lock);
+			if (attr == &ksysfs_register_quiet)
+				goto out;
+		}
+>>>>>>> 0e91d2a... Nougat
 		goto err;
 	}
 
@@ -1849,7 +1913,8 @@ static ssize_t register_bcache(struct kobject *k, struct kobj_attribute *attr,
 		if (!ca)
 			goto err_close;
 
-		register_cache(sb, sb_page, bdev, ca);
+		if (register_cache(sb, sb_page, bdev, ca) != 0)
+			goto err_close;
 	}
 out:
 	if (sb_page)
@@ -1863,8 +1928,7 @@ out:
 err_close:
 	blkdev_put(bdev, FMODE_READ|FMODE_WRITE|FMODE_EXCL);
 err:
-	if (attr != &ksysfs_register_quiet)
-		pr_info("error opening %s: %s", path, err);
+	pr_info("error opening %s: %s", path, err);
 	ret = -EINVAL;
 	goto out;
 }
@@ -1959,8 +2023,10 @@ static int __init bcache_init(void)
 	closure_debug_init();
 
 	bcache_major = register_blkdev(0, "bcache");
-	if (bcache_major < 0)
+	if (bcache_major < 0) {
+		unregister_reboot_notifier(&reboot);
 		return bcache_major;
+	}
 
 	if (!(bcache_wq = create_workqueue("bcache")) ||
 	    !(bcache_kobj = kobject_create_and_add("bcache", fs_kobj)) ||

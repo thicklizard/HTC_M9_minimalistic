@@ -136,6 +136,62 @@ static unsigned long num_core_regs(void)
 }
 
 /**
+<<<<<<< HEAD
+=======
+ * ARM64 versions of the TIMER registers, always available on arm64
+ */
+
+#define NUM_TIMER_REGS 3
+
+static bool is_timer_reg(u64 index)
+{
+	switch (index) {
+	case KVM_REG_ARM_TIMER_CTL:
+	case KVM_REG_ARM_TIMER_CNT:
+	case KVM_REG_ARM_TIMER_CVAL:
+		return true;
+	}
+	return false;
+}
+
+static int copy_timer_indices(struct kvm_vcpu *vcpu, u64 __user *uindices)
+{
+	if (put_user(KVM_REG_ARM_TIMER_CTL, uindices))
+		return -EFAULT;
+	uindices++;
+	if (put_user(KVM_REG_ARM_TIMER_CNT, uindices))
+		return -EFAULT;
+	uindices++;
+	if (put_user(KVM_REG_ARM_TIMER_CVAL, uindices))
+		return -EFAULT;
+
+	return 0;
+}
+
+static int set_timer_reg(struct kvm_vcpu *vcpu, const struct kvm_one_reg *reg)
+{
+	void __user *uaddr = (void __user *)(long)reg->addr;
+	u64 val;
+	int ret;
+
+	ret = copy_from_user(&val, uaddr, KVM_REG_SIZE(reg->id));
+	if (ret != 0)
+		return -EFAULT;
+
+	return kvm_arm_timer_set_reg(vcpu, reg->id, val);
+}
+
+static int get_timer_reg(struct kvm_vcpu *vcpu, const struct kvm_one_reg *reg)
+{
+	void __user *uaddr = (void __user *)(long)reg->addr;
+	u64 val;
+
+	val = kvm_arm_timer_get_reg(vcpu, reg->id);
+	return copy_to_user(uaddr, &val, KVM_REG_SIZE(reg->id)) ? -EFAULT : 0;
+}
+
+/**
+>>>>>>> 0e91d2a... Nougat
  * kvm_arm_num_regs - how many registers do we present via KVM_GET_ONE_REG
  *
  * This is for all registers.

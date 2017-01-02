@@ -6,6 +6,7 @@ GUD_ROOT_FOLDER := drivers/gud
 obj-$(CONFIG_MOBICORE_API) += mcKernelApi.o
 obj-$(CONFIG_MOBICORE_SUPPORT) += mcDrvModule.o
 
+<<<<<<< HEAD
 mcDrvModule-objs := MobiCoreDriver/logging.o \
 		MobiCoreDriver/ops.o \
 		MobiCoreDriver/mem.o \
@@ -38,3 +39,12 @@ ccflags-y += -I$(GUD_ROOT_FOLDER)/MobiCoreDriver/public
 # MobiCore KernelApi required incldes
 ccflags-y += -I$(GUD_ROOT_FOLDER)/MobiCoreKernelApi/include
 ccflags-y += -I$(GUD_ROOT_FOLDER)/MobiCoreKernelApi/public
+=======
+ifneq (,$(findstring N70,$(PRIVATE_RCMS_NAME)))
+obj-$(CONFIG_TRUSTONIC_TEE) := 310d/MobiCoreDriver/
+obj-$(CONFIG_TRUSTONIC_TRUSTED_UI) += 310d/TlcTui/
+else
+obj-$(CONFIG_TRUSTONIC_TEE) := 310a/MobiCoreDriver/
+obj-$(CONFIG_TRUSTONIC_TRUSTED_UI) += 310a/TlcTui/
+endif
+>>>>>>> 0e91d2a... Nougat

@@ -194,6 +194,7 @@ static int change_xattr(struct ubifs_info *c, struct inode *host,
 	int err;
 	struct ubifs_inode *host_ui = ubifs_inode(host);
 	struct ubifs_inode *ui = ubifs_inode(inode);
+	void *buf = NULL;
 	struct ubifs_budget_req req = { .dirtied_ino = 2,
 		.dirtied_ino_d = ALIGN(size, 8) + ALIGN(host_ui->data_len, 8) };
 
@@ -202,14 +203,17 @@ static int change_xattr(struct ubifs_info *c, struct inode *host,
 	if (err)
 		return err;
 
-	kfree(ui->data);
-	ui->data = kmemdup(value, size, GFP_NOFS);
-	if (!ui->data) {
+	buf = kmemdup(value, size, GFP_NOFS);
+	if (!buf) {
 		err = -ENOMEM;
 		goto out_free;
 	}
+	mutex_lock(&ui->ui_mutex);
+	kfree(ui->data);
+	ui->data = buf;
 	inode->i_size = ui->ui_size = size;
 	ui->data_len = size;
+	mutex_unlock(&ui->ui_mutex);
 
 	mutex_lock(&host_ui->ui_mutex);
 	host->i_ctime = ubifs_current_time(host);
@@ -257,7 +261,7 @@ static int check_namespace(const struct qstr *nm)
 
 	if (!strncmp(nm->name, XATTR_TRUSTED_PREFIX,
 		     XATTR_TRUSTED_PREFIX_LEN)) {
-		if (nm->name[sizeof(XATTR_TRUSTED_PREFIX) - 1] == '\0')
+		if (nm->name[XATTR_TRUSTED_PREFIX_LEN] == '\0')
 			return -EINVAL;
 		type = TRUSTED_XATTR;
 	} else if (!strncmp(nm->name, XATTR_USER_PREFIX,
@@ -267,7 +271,7 @@ static int check_namespace(const struct qstr *nm)
 		type = USER_XATTR;
 	} else if (!strncmp(nm->name, XATTR_SECURITY_PREFIX,
 				     XATTR_SECURITY_PREFIX_LEN)) {
-		if (nm->name[sizeof(XATTR_SECURITY_PREFIX) - 1] == '\0')
+		if (nm->name[XATTR_SECURITY_PREFIX_LEN] == '\0')
 			return -EINVAL;
 		type = SECURITY_XATTR;
 	} else
@@ -396,6 +400,7 @@ ssize_t ubifs_getxattr(struct dentry *dentry, const char *name, void *buf,
 	ubifs_assert(inode->i_size == ui->data_len);
 	ubifs_assert(ubifs_inode(host)->xattr_size > ui->data_len);
 
+	mutex_lock(&ui->ui_mutex);
 	if (buf) {
 		/* If @buf is %NULL we are supposed to return the length */
 		if (ui->data_len > size) {
@@ -410,6 +415,7 @@ ssize_t ubifs_getxattr(struct dentry *dentry, const char *name, void *buf,
 	err = ui->data_len;
 
 out_iput:
+	mutex_unlock(&ui->ui_mutex);
 	iput(inode);
 out_unlock:
 	kfree(xent);
@@ -569,3 +575,46 @@ out_free:
 	kfree(xent);
 	return err;
 }
+<<<<<<< HEAD
+=======
+
+static int init_xattrs(struct inode *inode, const struct xattr *xattr_array,
+		      void *fs_info)
+{
+	const struct xattr *xattr;
+	char *name;
+	int err = 0;
+
+	for (xattr = xattr_array; xattr->name != NULL; xattr++) {
+		name = kmalloc(XATTR_SECURITY_PREFIX_LEN +
+			       strlen(xattr->name) + 1, GFP_NOFS);
+		if (!name) {
+			err = -ENOMEM;
+			break;
+		}
+		strcpy(name, XATTR_SECURITY_PREFIX);
+		strcpy(name + XATTR_SECURITY_PREFIX_LEN, xattr->name);
+		err = setxattr(inode, name, xattr->value, xattr->value_len, 0);
+		kfree(name);
+		if (err < 0)
+			break;
+	}
+
+	return err;
+}
+
+int ubifs_init_security(struct inode *dentry, struct inode *inode,
+			const struct qstr *qstr)
+{
+	int err;
+
+	err = security_inode_init_security(inode, dentry, qstr,
+					   &init_xattrs, 0);
+	if (err) {
+		struct ubifs_info *c = dentry->i_sb->s_fs_info;
+		ubifs_err(c, "cannot initialize security for inode %lu, error %d",
+			  inode->i_ino, err);
+	}
+	return err;
+}
+>>>>>>> 0e91d2a... Nougat

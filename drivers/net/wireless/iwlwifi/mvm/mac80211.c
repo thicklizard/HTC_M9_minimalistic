@@ -1102,7 +1102,72 @@ static void iwl_mvm_mac_mgd_prepare_tx(struct ieee80211_hw *hw,
 
 	mutex_lock(&mvm->mutex);
 	/* Try really hard to protect the session and hear a beacon */
+<<<<<<< HEAD
 	iwl_mvm_protect_session(mvm, vif, duration, min_duration);
+=======
+	iwl_mvm_protect_session(mvm, vif, duration, min_duration, 500, false);
+	mutex_unlock(&mvm->mutex);
+
+	iwl_mvm_unref(mvm, IWL_MVM_REF_PREPARE_TX);
+}
+
+static int iwl_mvm_mac_sched_scan_start(struct ieee80211_hw *hw,
+					struct ieee80211_vif *vif,
+					struct cfg80211_sched_scan_request *req,
+					struct ieee80211_scan_ies *ies)
+{
+	struct iwl_mvm *mvm = IWL_MAC80211_GET_MVM(hw);
+	int ret;
+
+	/* we don't support "match all" in the firmware */
+	if (!req->n_match_sets)
+		return -EOPNOTSUPP;
+
+	ret = iwl_mvm_cancel_scan_wait_notif(mvm, IWL_MVM_SCAN_OS);
+	if (ret)
+		return ret;
+
+	mutex_lock(&mvm->mutex);
+
+	/* Newest FW fixes sched scan while connected on another interface */
+	if (mvm->fw->ucode_capa.api[0] & IWL_UCODE_TLV_API_LMAC_SCAN) {
+		if (!vif->bss_conf.idle) {
+			ret = -EBUSY;
+			goto out;
+		}
+	} else if (!iwl_mvm_is_idle(mvm)) {
+		ret = -EBUSY;
+		goto out;
+	}
+
+	if (mvm->scan_status != IWL_MVM_SCAN_NONE) {
+		ret = -EBUSY;
+		goto out;
+	}
+
+	mvm->scan_status = IWL_MVM_SCAN_SCHED;
+
+	if (!(mvm->fw->ucode_capa.api[0] & IWL_UCODE_TLV_API_LMAC_SCAN)) {
+		ret = iwl_mvm_config_sched_scan(mvm, vif, req, ies);
+		if (ret)
+			goto err;
+	}
+
+	ret = iwl_mvm_config_sched_scan_profiles(mvm, req);
+	if (ret)
+		goto err;
+
+	if (mvm->fw->ucode_capa.api[0] & IWL_UCODE_TLV_API_LMAC_SCAN)
+		ret = iwl_mvm_unified_sched_scan_lmac(mvm, vif, req, ies);
+	else
+		ret = iwl_mvm_sched_scan_start(mvm, req);
+
+	if (!ret)
+		goto out;
+err:
+	mvm->scan_status = IWL_MVM_SCAN_NONE;
+out:
+>>>>>>> 0e91d2a... Nougat
 	mutex_unlock(&mvm->mutex);
 }
 

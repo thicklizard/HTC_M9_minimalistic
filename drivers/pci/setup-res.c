@@ -115,16 +115,28 @@ int pci_claim_resource(struct pci_dev *dev, int resource)
 
 	root = pci_find_parent_resource(dev, res);
 	if (!root) {
+<<<<<<< HEAD
 		dev_info(&dev->dev, "no compatible bridge window for %pR\n",
 			 res);
+=======
+		dev_info(&dev->dev, "can't claim BAR %d %pR: no compatible bridge window\n",
+			 resource, res);
+		res->flags |= IORESOURCE_UNSET;
+>>>>>>> 0e91d2a... Nougat
 		return -EINVAL;
 	}
 
 	conflict = request_resource_conflict(root, res);
 	if (conflict) {
+<<<<<<< HEAD
 		dev_info(&dev->dev,
 			 "address space collision: %pR conflicts with %s %pR\n",
 			 res, conflict->name, conflict);
+=======
+		dev_info(&dev->dev, "can't claim BAR %d %pR: address conflict with %s %pR\n",
+			 resource, res, conflict->name, conflict);
+		res->flags |= IORESOURCE_UNSET;
+>>>>>>> 0e91d2a... Nougat
 		return -EBUSY;
 	}
 

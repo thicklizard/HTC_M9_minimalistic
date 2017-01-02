@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -61,6 +61,93 @@ struct msm_l2ccc_of_info {
 };
 
 
+<<<<<<< HEAD
+=======
+static int power_on_l2_msm8953(struct device_node *l2ccc_node, u32 pon_mask,
+				int cpu)
+{
+	u32 pon_status;
+	void __iomem *l2_base;
+
+	l2_base = of_iomap(l2ccc_node, 0);
+	if (!l2_base)
+		return -ENOMEM;
+
+	/* Skip power-on sequence if l2 cache is already powered up */
+	pon_status = (__raw_readl(l2_base + L2_PWR_STATUS) & pon_mask)
+				== pon_mask;
+	if (pon_status) {
+		iounmap(l2_base);
+		return 0;
+	}
+
+	/* Close Few of the head-switches for L2SCU logic */
+	writel_relaxed(0x10F700, l2_base + L2_PWR_CTL);
+	mb();
+	udelay(2);
+
+	/* Close Rest of the head-switches for L2SCU logic */
+	writel_relaxed(0x410F700, l2_base + L2_PWR_CTL);
+	mb();
+	udelay(2);
+
+	/* Assert PRESETDBG */
+	writel_relaxed(0x400000, l2_base + L2_PWR_CTL_OVERRIDE);
+	mb();
+	udelay(2);
+
+	/* De-assert L2/SCU memory Clamp */
+	writel_relaxed(0x4103700, l2_base + L2_PWR_CTL);
+	mb();
+	/* Assert L2 memory slp_nret_n */
+	writel_relaxed(0x4103703, l2_base + L2_PWR_CTL);
+	mb();
+	udelay(4);
+	/* Assert L2 memory slp_ret_n */
+	writel_relaxed(0x4101703, l2_base + L2_PWR_CTL);
+	mb();
+	udelay(4);
+
+	/* Assert L2 memory wl_en_clk */
+	writel_relaxed(0x4101783, l2_base + L2_PWR_CTL);
+	mb();
+	udelay(1);
+	/* De-assert L2 memory wl_en_clk */
+	writel_relaxed(0x4101703, l2_base + L2_PWR_CTL);
+	mb();
+
+
+	/* Enable clocks via SW_CLK_EN */
+	writel_relaxed(0x01, l2_base + L2_CORE_CBCR);
+	mb();
+
+	/* De-assert L2/SCU logic clamp */
+	writel_relaxed(0x4101603, l2_base + L2_PWR_CTL);
+	mb();
+	udelay(2);
+
+	/* De-assert PRESETDBG */
+	writel_relaxed(0x0, l2_base + L2_PWR_CTL_OVERRIDE);
+	mb();
+
+	/* De-assert L2/SCU Logic reset */
+	writel_relaxed(0x4100203, l2_base + L2_PWR_CTL);
+	mb();
+	udelay(54);
+
+	/* Turn on the PMIC_APC */
+	writel_relaxed(0x14100203, l2_base + L2_PWR_CTL);
+	mb();
+
+	/* Set H/W clock control for the cluster CBC block */
+	writel_relaxed(0x03, l2_base + L2_CORE_CBCR);
+	mb();
+	iounmap(l2_base);
+
+	return 0;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static int power_on_l2_msm8916(struct device_node *l2ccc_node, u32 pon_mask,
 				int cpu)
 {
@@ -266,6 +353,19 @@ static const struct msm_l2ccc_of_info l2ccc_info[] = {
 		.l2_power_on = power_on_l2_msm8916,
 		.l2_power_on_mask = BIT(9),
 	},
+<<<<<<< HEAD
+=======
+	{
+		.compat = "qcom,8953-l2ccc",
+		.l2_power_on = power_on_l2_msm8953,
+		.l2_power_on_mask = BIT(9) | BIT(28),
+	},
+	{
+		.compat = "qcom,8937-l2ccc",
+		.l2_power_on = power_on_l2_msm8937,
+		.l2_power_on_mask = BIT(9) | BIT(28),
+	},
+>>>>>>> 0e91d2a... Nougat
 };
 
 static int power_on_l2_cache(struct device_node *l2ccc_node, int cpu)
@@ -288,7 +388,11 @@ static int power_on_l2_cache(struct device_node *l2ccc_node, int cpu)
 	return -EIO;
 }
 
+<<<<<<< HEAD
 int msm8994_cpu_ldo_config(unsigned int cpu)
+=======
+static inline void msm8953_unclamp_cpu(void __iomem *reg)
+>>>>>>> 0e91d2a... Nougat
 {
 	struct device_node *cpu_node, *ldo_node;
 	void __iomem *ldo_bhs_reg_base;
@@ -374,7 +478,11 @@ exit_cpu_node:
 	return ret;
 }
 
+<<<<<<< HEAD
 int msm8994_unclamp_secondary_arm_cpu(unsigned int cpu)
+=======
+int msm8953_unclamp_secondary_arm_cpu(unsigned int cpu)
+>>>>>>> 0e91d2a... Nougat
 {
 
 	int ret = 0;
@@ -422,11 +530,29 @@ int msm8994_unclamp_secondary_arm_cpu(unsigned int cpu)
 		goto out_bhs_reg;
 	}
 
+<<<<<<< HEAD
 	acc_reg = of_iomap(acc_node, 1);
 	if (!acc_reg) {
 		ret = -ENOMEM;
 		goto out_acc_reg;
 	}
+=======
+	msm8953_unclamp_cpu(reg);
+
+	/* Secondary CPU-N is now alive */
+	iounmap(reg);
+out_acc_reg:
+	of_node_put(l2ccc_node);
+out_l2ccc:
+	of_node_put(l2_node);
+out_l2:
+	of_node_put(acc_node);
+out_acc:
+	of_node_put(cpu_node);
+
+	return ret;
+}
+>>>>>>> 0e91d2a... Nougat
 
 	/* Assert head switch enable few */
 	writel_relaxed(0x00000001, acc_reg + CPU_PWR_GATE_CTL);

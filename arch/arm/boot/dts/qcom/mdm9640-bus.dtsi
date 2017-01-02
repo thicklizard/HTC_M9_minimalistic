@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -68,12 +68,20 @@
 			clocks = <&clock_gcc  clk_snoc_msmbus_clk>,
 				<&clock_gcc  clk_snoc_msmbus_a_clk>;
 
+<<<<<<< HEAD
 			coresight-id = <50>;
 			coresight-name = "coresight-snoc";
 			coresight-nr-inports = <0>;
 			coresight-outports = <0>;
 			coresight-child-list = <&funnel_in0>;
 			coresight-child-ports = <5>;
+=======
+			qcom,node-qos-clks {
+				clock-names = "snoc-usb3-axi-no-rate";
+				clocks =
+				<&clock_gcc clk_gcc_sys_noc_usb3_axi_clk>;
+			};
+>>>>>>> 0e91d2a... Nougat
 		};
 
 		/*Masters*/

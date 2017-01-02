@@ -72,6 +72,77 @@ static inline void bpf_jit_compile(struct sk_filter *fp)
 }
 static inline void bpf_jit_free(struct sk_filter *fp)
 {
+<<<<<<< HEAD
+=======
+	bpf_prog_unlock_free(fp);
+}
+#endif /* CONFIG_BPF_JIT */
+
+#define BPF_ANC		BIT(15)
+
+static inline bool bpf_needs_clear_a(const struct sock_filter *first)
+{
+	switch (first->code) {
+	case BPF_RET | BPF_K:
+	case BPF_LD | BPF_W | BPF_LEN:
+		return false;
+
+	case BPF_LD | BPF_W | BPF_ABS:
+	case BPF_LD | BPF_H | BPF_ABS:
+	case BPF_LD | BPF_B | BPF_ABS:
+		if (first->k == SKF_AD_OFF + SKF_AD_ALU_XOR_X)
+			return true;
+		return false;
+
+	default:
+		return true;
+	}
+}
+
+static inline u16 bpf_anc_helper(const struct sock_filter *ftest)
+{
+	BUG_ON(ftest->code & BPF_ANC);
+
+	switch (ftest->code) {
+	case BPF_LD | BPF_W | BPF_ABS:
+	case BPF_LD | BPF_H | BPF_ABS:
+	case BPF_LD | BPF_B | BPF_ABS:
+#define BPF_ANCILLARY(CODE)	case SKF_AD_OFF + SKF_AD_##CODE:	\
+				return BPF_ANC | SKF_AD_##CODE
+		switch (ftest->k) {
+		BPF_ANCILLARY(PROTOCOL);
+		BPF_ANCILLARY(PKTTYPE);
+		BPF_ANCILLARY(IFINDEX);
+		BPF_ANCILLARY(NLATTR);
+		BPF_ANCILLARY(NLATTR_NEST);
+		BPF_ANCILLARY(MARK);
+		BPF_ANCILLARY(QUEUE);
+		BPF_ANCILLARY(HATYPE);
+		BPF_ANCILLARY(RXHASH);
+		BPF_ANCILLARY(CPU);
+		BPF_ANCILLARY(ALU_XOR_X);
+		BPF_ANCILLARY(VLAN_TAG);
+		BPF_ANCILLARY(VLAN_TAG_PRESENT);
+		BPF_ANCILLARY(PAY_OFFSET);
+		BPF_ANCILLARY(RANDOM);
+		}
+		/* Fallthrough. */
+	default:
+		return ftest->code;
+	}
+}
+
+void *bpf_internal_load_pointer_neg_helper(const struct sk_buff *skb,
+					   int k, unsigned int size);
+
+static inline void *bpf_load_pointer(const struct sk_buff *skb, int k,
+				     unsigned int size, void *buffer)
+{
+	if (k >= 0)
+		return skb_header_pointer(skb, k, size, buffer);
+
+	return bpf_internal_load_pointer_neg_helper(skb, k, size);
+>>>>>>> 0e91d2a... Nougat
 }
 #define SK_RUN_FILTER(FILTER, SKB) sk_run_filter(SKB, FILTER->insns)
 #endif

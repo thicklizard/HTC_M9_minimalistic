@@ -311,6 +311,13 @@ struct sdhci_ops {
 					  u32 type);
 	int	(*enable_controller_clock)(struct sdhci_host *host);
 	void	(*reset_workaround)(struct sdhci_host *host, u32 enable);
+<<<<<<< HEAD
+=======
+	void	(*init)(struct sdhci_host *host);
+	void	(*pre_req)(struct sdhci_host *host, struct mmc_request *req);
+	void	(*post_req)(struct sdhci_host *host, struct mmc_request *req);
+	unsigned int	(*get_current_limit)(struct sdhci_host *host);
+>>>>>>> 0e91d2a... Nougat
 };
 
 #ifdef CONFIG_MMC_SDHCI_IO_ACCESSORS

@@ -1,7 +1,11 @@
 /*
  * Copyright (C) 2008 Google, Inc.
  * Copyright (C) 2008 HTC Corporation
+<<<<<<< HEAD
  * Copyright (c) 2012-2014 The Linux Foundation. All rights reserved.
+=======
+ * Copyright (c) 2012-2016 The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -52,6 +56,23 @@ struct audio_locks {
 	wait_queue_head_t flush_wait;
 };
 
+<<<<<<< HEAD
+=======
+struct msm_audio_in_frame_info {
+	uint32_t size;
+	uint32_t offset;
+};
+
+#define PLAYBACK_MIN_NUM_PERIODS    2
+#define PLAYBACK_MAX_NUM_PERIODS    8
+#define PLAYBACK_MAX_PERIOD_SIZE    61440
+#define PLAYBACK_MIN_PERIOD_SIZE    128
+#define CAPTURE_MIN_NUM_PERIODS     2
+#define CAPTURE_MAX_NUM_PERIODS     8
+#define CAPTURE_MAX_PERIOD_SIZE     61440
+#define CAPTURE_MIN_PERIOD_SIZE     320
+
+>>>>>>> 0e91d2a... Nougat
 struct msm_audio {
 	struct snd_pcm_substream *substream;
 	unsigned int pcm_size;

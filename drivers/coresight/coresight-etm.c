@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1973,6 +1977,10 @@ static void etm_init_arch_data(void *info)
 	 */
 	etm_set_prog(drvdata);
 
+	/* check the state of the fuse */
+	if (!coresight_authstatus_enabled(drvdata->base))
+			goto out;
+
 	/* find all capabilities */
 	etmidr = etm_readl(drvdata, ETMIDR);
 	drvdata->arch = BMVAL(etmidr, 4, 11);
@@ -2027,7 +2035,7 @@ static void etm_init_arch_data(void *info)
 			drvdata->data_trace_support = false;
 	} else
 		drvdata->data_trace_support = false;
-
+out:
 	etm_set_pwrdwn(drvdata);
 	ETM_LOCK(drvdata);
 }
@@ -2381,6 +2389,12 @@ static int etm_probe(struct platform_device *pdev)
 	if (ret)
 		goto err0;
 
+<<<<<<< HEAD
+=======
+	if (count++ == 0)
+		register_hotcpu_notifier(&etm_cpu_notifier);
+
+>>>>>>> 0e91d2a... Nougat
 	get_online_cpus();
 
 	/*

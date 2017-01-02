@@ -130,6 +130,7 @@ static void sysrq_handle_crash(int key)
 {
 	char *killer = NULL;
 
+	rcu_read_unlock();
 	panic_on_oops = 1;	
 	wmb();
 	*killer = 1;

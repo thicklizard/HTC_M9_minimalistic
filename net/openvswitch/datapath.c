@@ -973,7 +973,13 @@ static int ovs_flow_cmd_new_or_set(struct sk_buff *skb, struct genl_info *info)
 		goto error;
 	error = ovs_flow_from_nlattrs(&key, &key_len, a[OVS_FLOW_ATTR_KEY]);
 	if (error)
+<<<<<<< HEAD
 		goto error;
+=======
+		goto err_kfree_flow;
+
+	ovs_flow_mask_key(&new_flow->key, &new_flow->unmasked_key, true, &mask);
+>>>>>>> 0e91d2a... Nougat
 
 	/* Validate actions. */
 	if (a[OVS_FLOW_ATTR_ACTIONS]) {
@@ -1054,6 +1060,7 @@ static int ovs_flow_cmd_new_or_set(struct sk_buff *skb, struct genl_info *info)
 
 		/* Update actions. */
 		old_acts = ovsl_dereference(flow->sf_acts);
+<<<<<<< HEAD
 		acts_attrs = a[OVS_FLOW_ATTR_ACTIONS];
 		if (acts_attrs &&
 		   (old_acts->actions_len != nla_len(acts_attrs) ||
@@ -1065,6 +1072,94 @@ static int ovs_flow_cmd_new_or_set(struct sk_buff *skb, struct genl_info *info)
 			error = PTR_ERR(new_acts);
 			if (IS_ERR(new_acts))
 				goto err_unlock_ovs;
+=======
+		rcu_assign_pointer(flow->sf_acts, acts);
+
+		if (unlikely(reply)) {
+			error = ovs_flow_cmd_fill_info(flow,
+						       ovs_header->dp_ifindex,
+						       reply, info->snd_portid,
+						       info->snd_seq, 0,
+						       OVS_FLOW_CMD_NEW);
+			BUG_ON(error < 0);
+		}
+		ovs_unlock();
+
+		ovs_nla_free_flow_actions(old_acts);
+		ovs_flow_free(new_flow, false);
+	}
+
+	if (reply)
+		ovs_notify(&dp_flow_genl_family, reply, info);
+	return 0;
+
+err_unlock_ovs:
+	ovs_unlock();
+	kfree_skb(reply);
+err_kfree_acts:
+	kfree(acts);
+err_kfree_flow:
+	ovs_flow_free(new_flow, false);
+error:
+	return error;
+}
+
+static struct sw_flow_actions *get_flow_actions(const struct nlattr *a,
+						const struct sw_flow_key *key,
+						const struct sw_flow_mask *mask)
+{
+	struct sw_flow_actions *acts;
+	struct sw_flow_key masked_key;
+	int error;
+
+	acts = ovs_nla_alloc_flow_actions(nla_len(a));
+	if (IS_ERR(acts))
+		return acts;
+
+	ovs_flow_mask_key(&masked_key, key, true, mask);
+	error = ovs_nla_copy_actions(a, &masked_key, 0, &acts);
+	if (error) {
+		OVS_NLERR("Flow actions may not be safe on all matching packets.\n");
+		kfree(acts);
+		return ERR_PTR(error);
+	}
+
+	return acts;
+}
+
+static int ovs_flow_cmd_set(struct sk_buff *skb, struct genl_info *info)
+{
+	struct nlattr **a = info->attrs;
+	struct ovs_header *ovs_header = info->userhdr;
+	struct sw_flow_key key;
+	struct sw_flow *flow;
+	struct sw_flow_mask mask;
+	struct sk_buff *reply = NULL;
+	struct datapath *dp;
+	struct sw_flow_actions *old_acts = NULL, *acts = NULL;
+	struct sw_flow_match match;
+	int error;
+
+	/* Extract key. */
+	error = -EINVAL;
+	if (!a[OVS_FLOW_ATTR_KEY])
+		goto error;
+
+	ovs_match_init(&match, &key, &mask);
+	error = ovs_nla_get_match(&match,
+				  a[OVS_FLOW_ATTR_KEY], a[OVS_FLOW_ATTR_MASK]);
+	if (error)
+		goto error;
+
+	/* Validate actions. */
+	if (a[OVS_FLOW_ATTR_ACTIONS]) {
+		acts = get_flow_actions(a[OVS_FLOW_ATTR_ACTIONS], &key, &mask);
+		if (IS_ERR(acts)) {
+			error = PTR_ERR(acts);
+			goto error;
+		}
+	}
+>>>>>>> 0e91d2a... Nougat
 
 			rcu_assign_pointer(flow->sf_acts, new_acts);
 			ovs_flow_deferred_free_acts(old_acts);

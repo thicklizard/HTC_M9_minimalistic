@@ -1,4 +1,4 @@
-/* Copyright (c) 2002,2007-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2002,2007-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -24,13 +24,17 @@
 #include "kgsl_pwrctrl.h"
 
 #include "adreno.h"
+#include "adreno_iommu.h"
 #include "adreno_pm4types.h"
 #include "adreno_ringbuffer.h"
 
 #include "a3xx_reg.h"
 
+<<<<<<< HEAD
 #define GSL_RB_NOP_SIZEDWORDS				2
 
+=======
+>>>>>>> 0e91d2a... Nougat
 #define RB_HOSTPTR(_rb, _pos) \
 	((unsigned int *) ((_rb)->buffer_desc.hostptr + \
 		((_pos) * sizeof(unsigned int))))
@@ -40,32 +44,44 @@
 
 static void _cff_write_ringbuffer(struct adreno_ringbuffer *rb)
 {
+<<<<<<< HEAD
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(rb->device);
 	struct kgsl_device *device = &adreno_dev->dev;
 	unsigned int gpuaddr;
+=======
+	struct adreno_device *adreno_dev = ADRENO_RB_DEVICE(rb);
+	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
+	uint64_t gpuaddr;
+>>>>>>> 0e91d2a... Nougat
 	unsigned int *hostptr;
 	size_t size;
 
 	if (device->cff_dump_enable == 0)
 		return;
 
+<<<<<<< HEAD
 	/*
 	 * This code is predicated on the fact that we write a full block of
 	 * stuff without wrapping
 	 */
 	BUG_ON(rb->wptr < rb->last_wptr);
+=======
+	BUG_ON(rb->_wptr < rb->last_wptr);
+>>>>>>> 0e91d2a... Nougat
 
-	size = (rb->wptr - rb->last_wptr) * sizeof(unsigned int);
+	size = (rb->_wptr - rb->last_wptr) * sizeof(unsigned int);
 
 	hostptr = RB_HOSTPTR(rb, rb->last_wptr);
 	gpuaddr = RB_GPUADDR(rb, rb->last_wptr);
 
 	kgsl_cffdump_memcpy(device, gpuaddr, hostptr, size);
+	rb->last_wptr = rb->_wptr;
 }
 
-void adreno_ringbuffer_submit(struct adreno_ringbuffer *rb,
+static void adreno_get_submit_time(struct adreno_device *adreno_dev,
 		struct adreno_submit_time *time)
 {
+<<<<<<< HEAD
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(rb->device);
 	struct adreno_gpudev *gpudev = ADRENO_GPU_DEVICE(adreno_dev);
 	BUG_ON(rb->wptr == 0);
@@ -122,12 +138,39 @@ void adreno_ringbuffer_submit(struct adreno_ringbuffer *rb,
 	mb();
 
 	adreno_writereg(adreno_dev, ADRENO_REG_CP_RB_WPTR, rb->wptr);
+=======
+	unsigned long flags;
+
+	local_irq_save(flags);
+
+	
+	if (!adreno_is_a3xx(adreno_dev)) {
+		adreno_readreg64(adreno_dev,
+			ADRENO_REG_RBBM_ALWAYSON_COUNTER_LO,
+			ADRENO_REG_RBBM_ALWAYSON_COUNTER_HI,
+			&time->ticks);
+
+		
+		if (ADRENO_GPUREV(adreno_dev) >= 400 &&
+				ADRENO_GPUREV(adreno_dev) <= ADRENO_REV_A530)
+				time->ticks &= 0xFFFFFFFF;
+	} else
+		time->ticks = 0;
+
+	
+	time->ktime = local_clock();
+
+	
+	getnstimeofday(&time->utime);
+
+	local_irq_restore(flags);
+>>>>>>> 0e91d2a... Nougat
 }
 
-static int
-adreno_ringbuffer_waitspace(struct adreno_ringbuffer *rb,
-				unsigned int numcmds, int wptr_ahead)
+void adreno_ringbuffer_wptr(struct adreno_device *adreno_dev,
+		struct adreno_ringbuffer *rb)
 {
+<<<<<<< HEAD
 	int nopcount;
 	unsigned int freecmds;
 	unsigned int *cmds;
@@ -164,9 +207,14 @@ adreno_ringbuffer_waitspace(struct adreno_ringbuffer *rb,
 	/* wait for space in ringbuffer */
 	while (1) {
 		rptr = adreno_get_rptr(rb);
+=======
+	unsigned long flags;
+>>>>>>> 0e91d2a... Nougat
 
-		freecmds = rptr - rb->wptr;
+	spin_lock_irqsave(&rb->preempt_lock, flags);
+	if (adreno_in_preempt_state(adreno_dev, ADRENO_PREEMPT_NONE)) {
 
+<<<<<<< HEAD
 		if (freecmds == 0 || freecmds > numcmds)
 			break;
 
@@ -176,19 +224,25 @@ adreno_ringbuffer_waitspace(struct adreno_ringbuffer *rb,
 			"rptr: 0x%x, wptr: 0x%x\n", rptr, rb->wptr);
 			return -ETIMEDOUT;
 		}
-
+=======
+		if (adreno_dev->cur_rb == rb) {
+			kgsl_pwrscale_busy(KGSL_DEVICE(adreno_dev));
+			adreno_writereg(adreno_dev, ADRENO_REG_CP_RB_WPTR,
+				rb->_wptr);
+		}
 	}
-	return 0;
+>>>>>>> 0e91d2a... Nougat
+
+	rb->wptr = rb->_wptr;
+	spin_unlock_irqrestore(&rb->preempt_lock, flags);
 }
 
-unsigned int *adreno_ringbuffer_allocspace(struct adreno_ringbuffer *rb,
-					unsigned int numcmds)
+void adreno_ringbuffer_submit(struct adreno_ringbuffer *rb,
+		struct adreno_submit_time *time)
 {
-	unsigned int *ptr = NULL;
-	int ret = 0;
-	unsigned int rptr;
-	BUG_ON(numcmds >= KGSL_RB_DWORDS);
+	struct adreno_device *adreno_dev = ADRENO_RB_DEVICE(rb);
 
+<<<<<<< HEAD
 	rptr = adreno_get_rptr(rb);
 	/* check for available space */
 	if (rb->wptr >= rptr) {
@@ -207,18 +261,18 @@ unsigned int *adreno_ringbuffer_allocspace(struct adreno_ringbuffer *rb,
 				GSL_RB_NOP_SIZEDWORDS))
 			ret = adreno_ringbuffer_waitspace(rb, numcmds, 1);
 	}
+=======
+	
+	_cff_write_ringbuffer(rb);
+>>>>>>> 0e91d2a... Nougat
 
-	if (!ret) {
-		rb->last_wptr = rb->wptr;
+	if (time != NULL)
+		adreno_get_submit_time(adreno_dev, time);
 
-		ptr = (unsigned int *)rb->buffer_desc.hostptr + rb->wptr;
-		rb->wptr += numcmds;
-	} else
-		ptr = ERR_PTR(ret);
-
-	return ptr;
+	adreno_ringbuffer_wptr(adreno_dev, rb);
 }
 
+<<<<<<< HEAD
 static int _load_firmware(struct kgsl_device *device, const char *fwfile,
 			  void **data, int *len)
 {
@@ -535,11 +589,25 @@ static void _ringbuffer_setup_common(struct adreno_ringbuffer *rb)
 	 * Also disable the host RPTR shadow register as it might be unreliable
 	 * in certain circumstances.
 	 */
+=======
+int adreno_ringbuffer_submit_spin(struct adreno_ringbuffer *rb,
+		struct adreno_submit_time *time, unsigned int timeout)
+{
+	struct adreno_device *adreno_dev = ADRENO_RB_DEVICE(rb);
 
-	adreno_writereg(adreno_dev, ADRENO_REG_CP_RB_CNTL,
-		(ilog2(KGSL_RB_DWORDS >> 1) & 0x3F) |
-		(1 << 27));
+	adreno_ringbuffer_submit(rb, time);
+	return adreno_spin_idle(adreno_dev, timeout);
+}
+>>>>>>> 0e91d2a... Nougat
 
+unsigned int *adreno_ringbuffer_allocspace(struct adreno_ringbuffer *rb,
+		unsigned int dwords)
+{
+	struct adreno_device *adreno_dev = ADRENO_RB_DEVICE(rb);
+	unsigned int rptr = adreno_get_rptr(rb);
+	unsigned int ret;
+
+<<<<<<< HEAD
 	adreno_writereg(adreno_dev, ADRENO_REG_CP_RB_BASE,
 					rb->buffer_desc.gpuaddr);
 
@@ -579,6 +647,33 @@ static int _ringbuffer_start_common(struct adreno_ringbuffer *rb)
 		kgsl_device_snapshot(device, NULL);
 	}
 	return status;
+=======
+	if (rptr <= rb->_wptr) {
+		unsigned int *cmds;
+
+		if (rb->_wptr + dwords <= (KGSL_RB_DWORDS - 2)) {
+			ret = rb->_wptr;
+			rb->_wptr = (rb->_wptr + dwords) % KGSL_RB_DWORDS;
+			return RB_HOSTPTR(rb, ret);
+		}
+
+		if (dwords < rptr) {
+			cmds = RB_HOSTPTR(rb, rb->_wptr);
+			*cmds = cp_packet(adreno_dev, CP_NOP,
+				KGSL_RB_DWORDS - rb->_wptr - 1);
+			rb->_wptr = dwords;
+			return RB_HOSTPTR(rb, 0);
+		}
+	}
+
+	if (rb->_wptr + dwords < rptr) {
+		ret = rb->_wptr;
+		rb->_wptr = (rb->_wptr + dwords) % KGSL_RB_DWORDS;
+		return RB_HOSTPTR(rb, ret);
+	}
+
+	return ERR_PTR(-ENOSPC);
+>>>>>>> 0e91d2a... Nougat
 }
 
 /**
@@ -592,6 +687,7 @@ static int _ringbuffer_start_common(struct adreno_ringbuffer *rb)
  */
 int adreno_ringbuffer_warm_start(struct adreno_device *adreno_dev)
 {
+<<<<<<< HEAD
 	int status;
 	struct adreno_ringbuffer *rb = ADRENO_CURRENT_RINGBUFFER(adreno_dev);
 	struct kgsl_device *device = rb->device;
@@ -684,63 +780,110 @@ int adreno_ringbuffer_cold_start(struct adreno_device *adreno_dev)
 
 		/* clear ME_HALT to start micro engine */
 		adreno_writereg(adreno_dev, ADRENO_REG_CP_ME_CNTL, 0);
+=======
+	struct adreno_gpudev *gpudev = ADRENO_GPU_DEVICE(adreno_dev);
+	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
+	struct adreno_ringbuffer *rb;
+	int i;
+
+	
+	FOR_EACH_RINGBUFFER(adreno_dev, rb, i) {
+		kgsl_sharedmem_set(device, &(rb->buffer_desc),
+				0, 0xAA, KGSL_RB_SIZE);
+		kgsl_sharedmem_writel(device, &device->scratch,
+				SCRATCH_RPTR_OFFSET(rb->id), 0);
+		rb->wptr = 0;
+		rb->_wptr = 0;
+		rb->wptr_preempt_end = 0xFFFFFFFF;
+		rb->starve_timer_state =
+			ADRENO_DISPATCHER_RB_STARVE_TIMER_UNINIT;
+>>>>>>> 0e91d2a... Nougat
 	}
 
-	return _ringbuffer_start_common(rb);
+	
+	return gpudev->rb_start(adreno_dev, start_type);
 }
 
 void adreno_ringbuffer_stop(struct adreno_device *adreno_dev)
 {
-	struct kgsl_device *device = &adreno_dev->dev;
 	struct adreno_ringbuffer *rb;
 	int i;
+
 	FOR_EACH_RINGBUFFER(adreno_dev, rb, i)
-		kgsl_cancel_events(device, &(rb->events));
+		kgsl_cancel_events(KGSL_DEVICE(adreno_dev), &(rb->events));
 }
 
-static int _adreno_ringbuffer_init(struct adreno_device *adreno_dev,
-				struct adreno_ringbuffer *rb, int id)
+static int _rb_readtimestamp(struct kgsl_device *device,
+		void *priv, enum kgsl_timestamp_type type,
+		unsigned int *timestamp)
 {
+	return adreno_rb_readtimestamp(ADRENO_DEVICE(device), priv, type,
+		timestamp);
+}
+
+static int _adreno_ringbuffer_probe(struct adreno_device *adreno_dev,
+		int id)
+{
+	struct adreno_ringbuffer *rb = &adreno_dev->ringbuffers[id];
 	int ret;
 	char name[64];
 
-	rb->device = &adreno_dev->dev;
 	rb->id = id;
 
 	snprintf(name, sizeof(name), "rb_events-%d", id);
 	kgsl_add_event_group(&rb->events, NULL, name,
-		adreno_rb_readtimestamp, rb);
+		_rb_readtimestamp, rb);
 	rb->timestamp = 0;
 	init_waitqueue_head(&rb->ts_expire_waitq);
 
+<<<<<<< HEAD
 	/*
 	 * Allocate mem for storing RB pagetables and commands to
 	 * switch pagetable
 	 */
 	ret = kgsl_allocate_global(&adreno_dev->dev, &rb->pagetable_desc,
+=======
+	spin_lock_init(&rb->preempt_lock);
+
+	ret = kgsl_allocate_global(KGSL_DEVICE(adreno_dev), &rb->pagetable_desc,
+>>>>>>> 0e91d2a... Nougat
 		PAGE_SIZE, 0, KGSL_MEMDESC_PRIVILEGED);
 	if (ret)
 		return ret;
 
-	ret = kgsl_allocate_global(&adreno_dev->dev, &rb->buffer_desc,
+	return kgsl_allocate_global(KGSL_DEVICE(adreno_dev), &rb->buffer_desc,
 			KGSL_RB_SIZE, KGSL_MEMFLAGS_GPUREADONLY, 0);
-	return ret;
 }
 
+<<<<<<< HEAD
 int adreno_ringbuffer_init(struct kgsl_device *device)
+=======
+int adreno_ringbuffer_probe(struct adreno_device *adreno_dev, bool nopreempt)
+>>>>>>> 0e91d2a... Nougat
 {
 	int status = 0;
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
 	struct adreno_gpudev *gpudev = ADRENO_GPU_DEVICE(adreno_dev);
-	struct adreno_ringbuffer *rb;
 	int i;
 
+<<<<<<< HEAD
 	adreno_dev->num_ringbuffers = gpudev->num_prio_levels;
 	FOR_EACH_RINGBUFFER(adreno_dev, rb, i) {
 		status = _adreno_ringbuffer_init(adreno_dev, rb, i);
 		if (status)
+=======
+	if (nopreempt == false && ADRENO_FEATURE(adreno_dev, ADRENO_PREEMPTION))
+		adreno_dev->num_ringbuffers = gpudev->num_prio_levels;
+	else
+		adreno_dev->num_ringbuffers = 1;
+
+	for (i = 0; i < adreno_dev->num_ringbuffers; i++) {
+		status = _adreno_ringbuffer_probe(adreno_dev, i);
+		if (status != 0)
+>>>>>>> 0e91d2a... Nougat
 			break;
 	}
+
 	if (status)
 		adreno_ringbuffer_close(adreno_dev);
 	else
@@ -749,15 +892,25 @@ int adreno_ringbuffer_init(struct kgsl_device *device)
 	return status;
 }
 
-static void _adreno_ringbuffer_close(struct adreno_ringbuffer *rb)
+static void _adreno_ringbuffer_close(struct adreno_device *adreno_dev,
+		struct adreno_ringbuffer *rb)
 {
+<<<<<<< HEAD
 	if (rb->pagetable_desc.hostptr)
 		kgsl_free_global(&rb->pagetable_desc);
+=======
+	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
+>>>>>>> 0e91d2a... Nougat
 
-	memset(&rb->pt_update_desc, 0, sizeof(struct kgsl_memdesc));
+	kgsl_free_global(device, &rb->pagetable_desc);
+	kgsl_free_global(device, &rb->preemption_desc);
 
+<<<<<<< HEAD
 	if (rb->buffer_desc.hostptr)
 		kgsl_free_global(&rb->buffer_desc);
+=======
+	kgsl_free_global(device, &rb->buffer_desc);
+>>>>>>> 0e91d2a... Nougat
 	kgsl_del_event_group(&rb->events);
 	memset(rb, 0, sizeof(struct adreno_ringbuffer));
 }
@@ -767,8 +920,19 @@ void adreno_ringbuffer_close(struct adreno_device *adreno_dev)
 	struct adreno_ringbuffer *rb;
 	int i;
 
+<<<<<<< HEAD
 	kfree(adreno_dev->pfp_fw);
 	kfree(adreno_dev->pm4_fw);
+=======
+	FOR_EACH_RINGBUFFER(adreno_dev, rb, i)
+		_adreno_ringbuffer_close(adreno_dev, rb);
+}
+
+int cp_secure_mode(struct adreno_device *adreno_dev, uint *cmds,
+				int set)
+{
+	uint *start = cmds;
+>>>>>>> 0e91d2a... Nougat
 
 	adreno_dev->pfp_fw = NULL;
 	adreno_dev->pm4_fw = NULL;
@@ -777,25 +941,55 @@ void adreno_ringbuffer_close(struct adreno_device *adreno_dev)
 		_adreno_ringbuffer_close(rb);
 }
 
+static inline int cp_mem_write(struct adreno_device *adreno_dev,
+		unsigned int *cmds, uint64_t gpuaddr, unsigned int value)
+{
+	int dwords = 0;
+
+	cmds[dwords++] = cp_mem_packet(adreno_dev, CP_MEM_WRITE, 2, 1);
+	dwords += cp_gpuaddr(adreno_dev, &cmds[dwords], gpuaddr);
+	cmds[dwords++] = value;
+
+	return dwords;
+}
+
 static int
 adreno_ringbuffer_addcmds(struct adreno_ringbuffer *rb,
 				unsigned int flags, unsigned int *cmds,
 				int sizedwords, uint32_t timestamp,
 				struct adreno_submit_time *time)
 {
+<<<<<<< HEAD
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(rb->device);
 	unsigned int *ringcmds;
 	unsigned int total_sizedwords = sizedwords;
 	unsigned int i;
 	unsigned int context_id = 0;
 	unsigned int gpuaddr = rb->device->memstore.gpuaddr;
+=======
+	struct adreno_device *adreno_dev = ADRENO_RB_DEVICE(rb);
+	struct adreno_gpudev *gpudev = ADRENO_GPU_DEVICE(adreno_dev);
+	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
+	unsigned int *ringcmds, *start;
+	unsigned int total_sizedwords = sizedwords;
+	unsigned int i;
+	unsigned int context_id = 0;
+>>>>>>> 0e91d2a... Nougat
 	bool profile_ready;
 	struct adreno_context *drawctxt = rb->drawctxt_active;
 	bool secured_ctxt = false;
+<<<<<<< HEAD
+=======
+	static unsigned int _seq_cnt;
+>>>>>>> 0e91d2a... Nougat
 
 	if (drawctxt != NULL && kgsl_context_detached(&drawctxt->base) &&
 		!(flags & KGSL_CMD_FLAGS_INTERNAL_ISSUE))
 		return -ENOENT;
+
+	
+	if (adreno_gpu_fault(adreno_dev) != 0)
+		return -EPROTO;
 
 	rb->timestamp++;
 
@@ -840,7 +1034,14 @@ adreno_ringbuffer_addcmds(struct adreno_ringbuffer *rb,
 
 	total_sizedwords += (secured_ctxt) ? 26 : 0;
 
+<<<<<<< HEAD
 	/* context rollover */
+=======
+	
+	total_sizedwords += 4;
+
+	
+>>>>>>> 0e91d2a... Nougat
 	if (adreno_is_a3xx(adreno_dev))
 		total_sizedwords += 3;
 
@@ -848,8 +1049,21 @@ adreno_ringbuffer_addcmds(struct adreno_ringbuffer *rb,
 	if (adreno_is_a4xx(adreno_dev) || adreno_is_a3xx(adreno_dev))
 		total_sizedwords += 4;
 
+<<<<<<< HEAD
 	total_sizedwords += 3; /* sop timestamp */
 	total_sizedwords += 4; /* eop timestamp */
+=======
+	if (gpudev->preemption_pre_ibsubmit &&
+				adreno_is_preemption_enabled(adreno_dev))
+		total_sizedwords += 22;
+
+	if (gpudev->preemption_post_ibsubmit &&
+				adreno_is_preemption_enabled(adreno_dev))
+		total_sizedwords += 5;
+
+	total_sizedwords += 8; 
+	total_sizedwords += 5; 
+>>>>>>> 0e91d2a... Nougat
 
 	if (drawctxt && !(flags & KGSL_CMD_FLAGS_INTERNAL_ISSUE)) {
 		total_sizedwords += 3; /* global timestamp without cache
@@ -873,6 +1087,14 @@ adreno_ringbuffer_addcmds(struct adreno_ringbuffer *rb,
 	*ringcmds++ = cp_nop_packet(1);
 	*ringcmds++ = KGSL_CMD_IDENTIFIER;
 
+<<<<<<< HEAD
+=======
+	if (adreno_is_preemption_enabled(adreno_dev) &&
+				gpudev->preemption_pre_ibsubmit)
+		ringcmds += gpudev->preemption_pre_ibsubmit(
+					adreno_dev, rb, ringcmds, context);
+
+>>>>>>> 0e91d2a... Nougat
 	if (flags & KGSL_CMD_FLAGS_INTERNAL_ISSUE) {
 		*ringcmds++ = cp_nop_packet(1);
 		*ringcmds++ = KGSL_CMD_INTERNAL_IDENTIFIER;
@@ -899,6 +1121,7 @@ adreno_ringbuffer_addcmds(struct adreno_ringbuffer *rb,
 		adreno_profile_preib_processing(adreno_dev, drawctxt,
 				&flags, &ringcmds);
 
+<<<<<<< HEAD
 	/* start-of-pipeline timestamp */
 	*ringcmds++ = cp_type3_packet(CP_MEM_WRITE, 2);
 	if (drawctxt && !(flags & KGSL_CMD_FLAGS_INTERNAL_ISSUE))
@@ -908,6 +1131,17 @@ adreno_ringbuffer_addcmds(struct adreno_ringbuffer *rb,
 		*ringcmds++ = gpuaddr +
 			KGSL_MEMSTORE_RB_OFFSET(rb, soptimestamp);
 	*ringcmds++ = timestamp;
+=======
+	
+	if (drawctxt && !(flags & KGSL_CMD_FLAGS_INTERNAL_ISSUE))
+		ringcmds += cp_mem_write(adreno_dev, ringcmds,
+			MEMSTORE_ID_GPU_ADDR(device, context_id, soptimestamp),
+			timestamp);
+
+	
+	ringcmds += cp_mem_write(adreno_dev, ringcmds,
+		MEMSTORE_RB_GPU_ADDR(device, rb, soptimestamp), rb->timestamp);
+>>>>>>> 0e91d2a... Nougat
 
 	if (secured_ctxt) {
 		*ringcmds++ = cp_type3_packet(CP_WAIT_FOR_IDLE, 1);
@@ -973,12 +1207,21 @@ adreno_ringbuffer_addcmds(struct adreno_ringbuffer *rb,
 	 */
 	*ringcmds++ = cp_type3_packet(CP_EVENT_WRITE, 3);
 
+<<<<<<< HEAD
+=======
+	ringcmds += cp_mem_write(adreno_dev, ringcmds,
+		MEMSTORE_ID_GPU_ADDR(device, KGSL_MEMSTORE_GLOBAL,
+			ref_wait_ts), ++_seq_cnt);
+
+	*ringcmds++ = cp_mem_packet(adreno_dev, CP_EVENT_WRITE, 3, 1);
+>>>>>>> 0e91d2a... Nougat
 	if (drawctxt || (flags & KGSL_CMD_FLAGS_INTERNAL_ISSUE))
 		*ringcmds++ = CACHE_FLUSH_TS | (1 << 31);
 	else
 		*ringcmds++ = CACHE_FLUSH_TS;
 
 	if (drawctxt && !(flags & KGSL_CMD_FLAGS_INTERNAL_ISSUE)) {
+<<<<<<< HEAD
 		*ringcmds++ = gpuaddr + KGSL_MEMSTORE_OFFSET(context_id,
 							eoptimestamp);
 		*ringcmds++ = timestamp;
@@ -989,6 +1232,19 @@ adreno_ringbuffer_addcmds(struct adreno_ringbuffer *rb,
 	} else {
 		*ringcmds++ = gpuaddr + KGSL_MEMSTORE_RB_OFFSET(rb,
 							eoptimestamp);
+=======
+		ringcmds += cp_gpuaddr(adreno_dev, ringcmds,
+			MEMSTORE_ID_GPU_ADDR(device, context_id, eoptimestamp));
+		*ringcmds++ = timestamp;
+
+		
+		ringcmds += cp_mem_write(adreno_dev, ringcmds,
+			MEMSTORE_RB_GPU_ADDR(device, rb, eoptimestamp),
+			rb->timestamp);
+	} else {
+		ringcmds += cp_gpuaddr(adreno_dev, ringcmds,
+			MEMSTORE_RB_GPU_ADDR(device, rb, eoptimestamp));
+>>>>>>> 0e91d2a... Nougat
 		*ringcmds++ = timestamp;
 	}
 
@@ -1005,6 +1261,7 @@ adreno_ringbuffer_addcmds(struct adreno_ringbuffer *rb,
 		*ringcmds++ = 0x00000000;
 	}
 
+<<<<<<< HEAD
 	if (secured_ctxt) {
 		*ringcmds++ = cp_type3_packet(CP_WAIT_FOR_IDLE, 1);
 		*ringcmds++ = 0x00000000;
@@ -1020,6 +1277,19 @@ adreno_ringbuffer_addcmds(struct adreno_ringbuffer *rb,
 		*ringcmds++ = cp_type3_packet(CP_WAIT_FOR_ME, 1);
 		*ringcmds++ = 0x00000000;
 	}
+=======
+	if (secured_ctxt)
+		ringcmds += cp_secure_mode(adreno_dev, ringcmds, 0);
+
+	if (gpudev->preemption_post_ibsubmit &&
+				adreno_is_preemption_enabled(adreno_dev))
+		ringcmds += gpudev->preemption_post_ibsubmit(adreno_dev,
+			ringcmds);
+
+	if ((ringcmds - start) > total_sizedwords)
+		BUG();
+	rb->_wptr = rb->_wptr - (total_sizedwords - (ringcmds - start));
+>>>>>>> 0e91d2a... Nougat
 
 	adreno_ringbuffer_submit(rb, time);
 
@@ -1291,7 +1561,16 @@ adreno_ringbuffer_issueibcmds(struct kgsl_device_private *dev_priv,
 		&& !(cmdbatch->flags & KGSL_CMDBATCH_SYNC))
 		device->flags &= ~KGSL_FLAG_WAKE_ON_TOUCH;
 
+<<<<<<< HEAD
 	/* Queue the command in the ringbuffer */
+=======
+	
+	if (adreno_is_a3xx(adreno_dev) &&
+			(cmdbatch->flags & KGSL_CMDBATCH_PROFILING))
+		return -EOPNOTSUPP;
+
+	
+>>>>>>> 0e91d2a... Nougat
 	ret = adreno_dispatcher_queue_cmd(adreno_dev, drawctxt, cmdbatch,
 		timestamp);
 
@@ -1348,7 +1627,8 @@ static inline int _get_alwayson_counter(struct adreno_device *adreno_dev,
 int adreno_ringbuffer_submitcmd(struct adreno_device *adreno_dev,
 		struct kgsl_cmdbatch *cmdbatch, struct adreno_submit_time *time)
 {
-	struct kgsl_device *device = &adreno_dev->dev;
+	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
+	struct adreno_gpudev *gpudev = ADRENO_GPU_DEVICE(adreno_dev);
 	struct kgsl_memobj_node *ib;
 	unsigned int numibs = 0;
 	unsigned int *link;
@@ -1397,8 +1677,13 @@ int adreno_ringbuffer_submitcmd(struct adreno_device *adreno_dev,
 		cmdbatch->fault_policy = drawctxt->fault_policy;
 		set_bit(CMDBATCH_FLAG_FORCE_PREAMBLE, &cmdbatch->priv);
 
+<<<<<<< HEAD
 		/* if context is detached print fault recovery */
 		adreno_fault_skipcmd_detached(device, drawctxt, cmdbatch);
+=======
+		
+		adreno_fault_skipcmd_detached(adreno_dev, drawctxt, cmdbatch);
+>>>>>>> 0e91d2a... Nougat
 
 		/* clear the drawctxt flags */
 		clear_bit(ADRENO_CONTEXT_SKIP_CMD, &drawctxt->base.priv);
@@ -1452,6 +1737,10 @@ int adreno_ringbuffer_submitcmd(struct adreno_device *adreno_dev,
 		dwords += 6;
 	}
 
+	if (gpudev->preemption_yield_enable &&
+				adreno_is_preemption_enabled(adreno_dev))
+		dwords += 8;
+
 	link = kzalloc(sizeof(unsigned int) *  dwords, GFP_KERNEL);
 	if (!link) {
 		ret = -ENOMEM;
@@ -1502,6 +1791,10 @@ int adreno_ringbuffer_submitcmd(struct adreno_device *adreno_dev,
 		}
 	}
 
+	if (gpudev->preemption_yield_enable &&
+				adreno_is_preemption_enabled(adreno_dev))
+		cmds += gpudev->preemption_yield_enable(cmds);
+
 	if (cmdbatch_kernel_profiling) {
 		cmds += _get_alwayson_counter(adreno_dev, cmds,
 			adreno_dev->cmdbatch_profile_buffer.gpuaddr +
@@ -1523,14 +1816,24 @@ int adreno_ringbuffer_submitcmd(struct adreno_device *adreno_dev,
 	*cmds++ = cp_nop_packet(1);
 	*cmds++ = KGSL_END_OF_IB_IDENTIFIER;
 
-	ret = adreno_drawctxt_switch(adreno_dev, rb, drawctxt, cmdbatch->flags);
+	
+	ret = adreno_drawctxt_switch(adreno_dev, rb, drawctxt,
+		ADRENO_CONTEXT_SWITCH_FORCE_GPU);
 
+<<<<<<< HEAD
 	/*
 	 * In the unlikely event of an error in the drawctxt switch,
 	 * treat it like a hang
 	 */
 	if (ret)
+=======
+	if (ret) {
+		if (ret != -ENOSPC && ret != -ENOENT)
+			KGSL_DRV_ERR(device,
+				"Unable to switch draw context: %d\n", ret);
+>>>>>>> 0e91d2a... Nougat
 		goto done;
+	}
 
 	if (test_bit(CMDBATCH_FLAG_WFI, &cmdbatch->priv))
 		flags = KGSL_CMD_FLAGS_WFI;
@@ -1560,8 +1863,18 @@ int adreno_ringbuffer_submitcmd(struct adreno_device *adreno_dev,
 
 		/* Put the timevalues in the profiling buffer */
 		if (cmdbatch_user_profiling) {
-			profile_buffer->wall_clock_s = time->utime.tv_sec;
-			profile_buffer->wall_clock_ns = time->utime.tv_nsec;
+			if (cmdbatch->flags & KGSL_CMDBATCH_PROFILING_KTIME) {
+				uint64_t secs = time->ktime;
+
+				profile_buffer->wall_clock_ns =
+					do_div(secs, NSEC_PER_SEC);
+				profile_buffer->wall_clock_s = secs;
+			} else {
+				profile_buffer->wall_clock_s =
+					time->utime.tv_sec;
+				profile_buffer->wall_clock_ns =
+					time->utime.tv_nsec;
+			}
 			profile_buffer->gpu_ticks_queued = time->ticks;
 		}
 	}
@@ -1582,6 +1895,7 @@ done:
 	return ret;
 }
 
+<<<<<<< HEAD
 /**
  * adreno_ringbuffer_mmu_clk_disable_event() - Callback function that
  * disables the MMU clocks.
@@ -1644,6 +1958,8 @@ adreno_ringbuffer_mmu_disable_clk_on_ts(struct kgsl_device *device,
  * @priv: The private parameter of the event
  * @result: Result of the event trigger
  */
+=======
+>>>>>>> 0e91d2a... Nougat
 static void adreno_ringbuffer_wait_callback(struct kgsl_device *device,
 		struct kgsl_event_group *group,
 		void *priv, int result)
@@ -1652,17 +1968,33 @@ static void adreno_ringbuffer_wait_callback(struct kgsl_device *device,
 	wake_up_all(&rb->ts_expire_waitq);
 }
 
+<<<<<<< HEAD
 /**
  * adreno_ringbuffer_waittimestamp() - Wait for a RB timestamp
  * @rb: The ringbuffer to wait on
  * @timestamp: The timestamp to wait for
  * @msecs: The wait timeout period
  */
+=======
+static inline int adreno_ringbuffer_check_timestamp(
+			struct adreno_ringbuffer *rb,
+			unsigned int timestamp, int type)
+{
+	struct adreno_device *adreno_dev = ADRENO_RB_DEVICE(rb);
+	unsigned int ts;
+
+	adreno_rb_readtimestamp(adreno_dev, rb, type, &ts);
+	return (timestamp_cmp(ts, timestamp) >= 0);
+}
+
+
+>>>>>>> 0e91d2a... Nougat
 int adreno_ringbuffer_waittimestamp(struct adreno_ringbuffer *rb,
 					unsigned int timestamp,
 					unsigned int msecs)
 {
-	struct kgsl_device *device = rb->device;
+	struct adreno_device *adreno_dev = ADRENO_RB_DEVICE(rb);
+	struct kgsl_device *device = KGSL_DEVICE(adreno_dev);
 	int ret;
 	unsigned long wait_time;
 
@@ -1695,4 +2027,7 @@ int adreno_ringbuffer_waittimestamp(struct adreno_ringbuffer *rb,
 
 	return ret;
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0e91d2a... Nougat

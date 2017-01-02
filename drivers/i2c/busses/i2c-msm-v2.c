@@ -100,6 +100,7 @@ static void i2c_msm_dbg_dump_diag(struct i2c_msm_ctrl *ctrl,
 		str = buf;
 	}
 
+<<<<<<< HEAD
 	
 	dev_err(ctrl->dev,
 		"%s: msgs(n:%d cur:%d %s) bc(rx:%zu tx:%zu) mode:%s slv_addr:0x%0x MSTR_STS:0x%08x OPER:0x%08x\n",
@@ -107,6 +108,18 @@ static void i2c_msm_dbg_dump_diag(struct i2c_msm_ctrl *ctrl,
 		xfer->cur_buf.is_rx ? "rx" : "tx", xfer->rx_cnt, xfer->tx_cnt,
 		i2c_msm_mode_str_tbl[xfer->mode_id], xfer->msgs->addr,
 		status, qup_op);
+=======
+	if ((xfer->err == I2C_MSM_ERR_NACK) && (xfer->msgs->addr == ctrl->rsrcs.nack_as_normal)) {
+	} else {
+		
+		dev_err(ctrl->dev,
+			"%s: msgs(n:%d cur:%d %s) bc(rx:%zu tx:%zu) mode:%s slv_addr:0x%0x MSTR_STS:0x%08x OPER:0x%08x\n",
+			str, xfer->msg_cnt, xfer->cur_buf.msg_idx,
+			xfer->cur_buf.is_rx ? "rx" : "tx", xfer->rx_cnt, xfer->tx_cnt,
+			i2c_msm_mode_str_tbl[xfer->mode_id], xfer->msgs->addr,
+			status, qup_op);
+	}
+>>>>>>> 0e91d2a... Nougat
 }
 
 static u32 i2c_msm_reg_io_modes_out_blk_sz(u32 qup_io_modes)
@@ -927,6 +940,19 @@ static int i2c_msm_dma_xfer_prepare(struct i2c_msm_ctrl *ctrl)
 		} else {
 			buf_dma_dirctn  = DMA_TO_DEVICE;
 			tx->desc_cnt_cur += 2; 
+<<<<<<< HEAD
+=======
+		}
+
+		
+		if (buf->is_last) {
+			
+			ctrl->xfer.rx_ovrhd_cnt += 2; 
+			ctrl->xfer.tx_ovrhd_cnt += 2; 
+
+			tx->desc_cnt_cur++;
+			rx->desc_cnt_cur++;
+>>>>>>> 0e91d2a... Nougat
 		}
 
 		if ((rx->desc_cnt_cur >= I2C_MSM_DMA_RX_SZ) ||
@@ -986,6 +1012,7 @@ static void i2c_msm_dma_callback_xfer_complete(void *dma_async_param)
 	complete(&ctrl->xfer.complete);
 }
 
+<<<<<<< HEAD
 static int i2c_msm_dma_xfer_buf(struct i2c_msm_ctrl *ctrl,
 	struct i2c_msm_dma_chan *chan, phys_addr_t buf_phys_addr, u32 buf_len,
 								u32 flags)
@@ -1029,6 +1056,8 @@ static int i2c_msm_dma_xfer_rmv_inp_fifo_tag(struct i2c_msm_ctrl *ctrl, u32 len)
 	return ret;
 }
 
+=======
+>>>>>>> 0e91d2a... Nougat
 static int i2c_msm_dma_xfer_process(struct i2c_msm_ctrl *ctrl)
 {
 	struct i2c_msm_xfer_mode_dma *dma = &ctrl->xfer.dma;
@@ -1057,6 +1086,7 @@ static int i2c_msm_dma_xfer_process(struct i2c_msm_ctrl *ctrl)
 
 	for (i = 0; i < dma->buf_arr_cnt ; ++i, ++buf_itr) {
 		
+<<<<<<< HEAD
 		i2c_msm_dbg(ctrl, MSM_DBG, "queueing dma tag %s",
 			i2c_msm_dbg_dma_tag_to_str(&buf_itr->tag, str,
 							ARRAY_SIZE(str)));
@@ -1074,8 +1104,30 @@ static int i2c_msm_dma_xfer_process(struct i2c_msm_ctrl *ctrl)
 			ret = i2c_msm_dma_xfer_rmv_inp_fifo_tag(ctrl, 2);
 			if (ret)
 				goto dma_xfer_end;
+=======
+		sg_dma_address(sg_tx_itr) = buf_itr->tag.buf;
+		sg_dma_len(sg_tx_itr) = buf_itr->tag.len;
+		++sg_tx_itr;
+
+		if (buf_itr->is_rx) {
+			
+			sg_dma_address(sg_rx_itr) =
+					ctrl->xfer.dma.input_tag.phy_addr;
+			sg_dma_len(sg_rx_itr)     = QUP_BUF_OVERHD_BC;
+			++sg_rx_itr;
+
+			
+			sg_dma_address(sg_rx_itr) = buf_itr->ptr.phy_addr;
+			sg_dma_len(sg_rx_itr)     = buf_itr->len;
+			++sg_rx_itr;
+		} else {
+			sg_dma_address(sg_tx_itr) = buf_itr->ptr.phy_addr;
+			sg_dma_len(sg_tx_itr)     = buf_itr->len;
+			++sg_tx_itr;
+>>>>>>> 0e91d2a... Nougat
 		}
 
+<<<<<<< HEAD
 		
 		if (buf_itr->is_last && !ctrl->xfer.last_is_rx)
 			dma_flags = (SPS_IOVEC_FLAG_EOT | SPS_IOVEC_FLAG_NWD);
@@ -1098,6 +1150,45 @@ static int i2c_msm_dma_xfer_process(struct i2c_msm_ctrl *ctrl)
 				ret, chan->name);
 			goto dma_xfer_end;
 		}
+=======
+	
+	sg_dma_address(sg_tx_itr) = dma->eot_n_flush_stop_tags.phy_addr;
+	sg_dma_len(sg_tx_itr)     = QUP_BUF_OVERHD_BC;
+	++sg_tx_itr;
+
+	sg_dma_address(sg_rx_itr) = ctrl->xfer.dma.input_tag.phy_addr;
+	sg_dma_len(sg_rx_itr)     = QUP_BUF_OVERHD_BC;
+	++sg_rx_itr;
+
+	dma_desc_tx = dmaengine_prep_slave_sg(tx->dma_chan,
+						sg_tx,
+						sg_tx_itr - sg_tx,
+						tx->dir,
+						(SPS_IOVEC_FLAG_EOT |
+							SPS_IOVEC_FLAG_NWD));
+	if (dma_desc_tx < 0) {
+		dev_err(ctrl->dev, "error dmaengine_prep_slave_sg tx:%ld\n",
+							PTR_ERR(dma_desc_tx));
+		ret = PTR_ERR(dma_desc_tx);
+		goto dma_xfer_end;
+	}
+
+	
+	dma_desc_tx->callback       = i2c_msm_dma_callback_xfer_complete;
+	dma_desc_tx->callback_param = ctrl;
+	dmaengine_submit(dma_desc_tx);
+	dma_async_issue_pending(tx->dma_chan);
+
+	
+	dma_desc_rx = dmaengine_prep_slave_sg(rx->dma_chan, sg_rx,
+					sg_rx_itr - sg_rx, rx->dir, 0);
+	if (dma_desc_rx < 0) {
+		dev_err(ctrl->dev,
+			"error dmaengine_prep_slave_sg rx:%ld\n",
+						PTR_ERR(dma_desc_rx));
+		ret = PTR_ERR(dma_desc_rx);
+		goto dma_xfer_end;
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	if (ctrl->xfer.last_is_rx) {
@@ -1107,6 +1198,7 @@ static int i2c_msm_dma_xfer_process(struct i2c_msm_ctrl *ctrl)
 
 		dma_flags = (SPS_IOVEC_FLAG_EOT | SPS_IOVEC_FLAG_NWD);
 
+<<<<<<< HEAD
 		
 		ret = i2c_msm_dma_xfer_buf(ctrl, tx,
 			dma->eot_n_flush_stop_tags.phy_addr, 2, dma_flags);
@@ -1118,6 +1210,8 @@ static int i2c_msm_dma_xfer_process(struct i2c_msm_ctrl *ctrl)
 		}
 	}
 
+=======
+>>>>>>> 0e91d2a... Nougat
 	
 	ret = i2c_msm_qup_state_set(ctrl, QUP_STATE_RUN);
 	if (ret) {
@@ -1129,6 +1223,13 @@ static int i2c_msm_dma_xfer_process(struct i2c_msm_ctrl *ctrl)
 	ret = i2c_msm_xfer_wait_for_completion(ctrl, &ctrl->xfer.complete);
 
 dma_xfer_end:
+<<<<<<< HEAD
+=======
+	
+	kfree(sg_tx);
+	kfree(sg_rx);
+
+>>>>>>> 0e91d2a... Nougat
 	return ret;
 }
 
@@ -1264,11 +1365,14 @@ static int i2c_msm_dma_xfer(struct i2c_msm_ctrl *ctrl)
 		return ret;
 	}
 
+<<<<<<< HEAD
 	if (ctrl->xfer.last_is_rx) {
 		ctrl->xfer.rx_ovrhd_cnt += 2; 
 		ctrl->xfer.tx_ovrhd_cnt += 2; 
 	}
 
+=======
+>>>>>>> 0e91d2a... Nougat
 	
 	ret = i2c_msm_dma_xfer_prepare(ctrl);
 	if (ret < 0) {
@@ -1719,11 +1823,16 @@ static int i2c_msm_qup_post_xfer(struct i2c_msm_ctrl *ctrl, int err)
 				qup_i2c_recover_bus_busy(ctrl);
 
 			
+<<<<<<< HEAD
 			if (!err) {
 				dev_info(ctrl->dev, "Assign rc to %d\n",
 					 (-EPROTO));
 				err = -EPROTO;
 			}
+=======
+			if (!err)
+				err = -EIO;
+>>>>>>> 0e91d2a... Nougat
 		}
 	}
 
@@ -2062,7 +2171,10 @@ enum i2c_msm_dt_entry_type {
 	DT_U32,
 	DT_BOOL,
 	DT_ID,   
+<<<<<<< HEAD
 	DT_GPIO,
+=======
+>>>>>>> 0e91d2a... Nougat
 };
 
 struct i2c_msm_dt_to_pdata_map {
@@ -2160,10 +2272,15 @@ static int i2c_msm_rsrcs_process_dt(struct i2c_msm_ctrl *ctrl,
 							DT_OPT,  DT_U32,  0},
 	{"qcom,fs-clk-div",		&fs_clk_div,
 							DT_OPT,  DT_U32,  0},
+<<<<<<< HEAD
 	{"qcom,sda-gpio",		&(ctrl->sda_gpio),
 							DT_OPT,  DT_GPIO,  0},
 	{"qcom,scl-gpio",		&(ctrl->scl_gpio),
 							DT_OPT,  DT_GPIO,  0},
+=======
+	{"qcom,nack-as-normal",		&(ctrl->rsrcs.nack_as_normal),
+							DT_OPT,  DT_U32,  0},
+>>>>>>> 0e91d2a... Nougat
 	{NULL,  NULL,					0,       0,       0},
 	};
 

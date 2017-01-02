@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -133,7 +137,7 @@ int diagfwd_bridge_register(int id, int ctxt, struct diag_remote_dev_ops *ops)
 	char wq_name[DIAG_BRIDGE_NAME_SZ + 10];
 
 	if (!ops) {
-		pr_err("diag: Invalid pointers ops: %p ctxt: %d\n", ops, ctxt);
+		pr_err("diag: Invalid pointers ops: %pK ctxt: %d\n", ops, ctxt);
 		return -EINVAL;
 	}
 

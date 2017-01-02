@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -17,7 +21,17 @@
 #include <media/v4l2-fh.h>
 #include <media/v4l2-ctrls.h>
 #include <media/msm_fd.h>
+<<<<<<< HEAD
 
+=======
+#include <linux/dma-buf.h>
+#include <linux/msm_ion.h>
+#include "cam_soc_api.h"
+#include "cam_hw_ops.h"
+#include "msm_cpp.h"
+
+/* Maximum number of result buffers */
+>>>>>>> 0e91d2a... Nougat
 #define MSM_FD_MAX_RESULT_BUFS 5
 #define MSM_FD_MAX_CLK_NUM 10
 #define MSM_FD_MAX_CLK_RATES 5
@@ -102,14 +116,47 @@ enum msm_fd_mem_resources {
 	MSM_FD_IOMEM_LAST
 };
 
+<<<<<<< HEAD
+=======
+/*
+ * struct msm_fd_device - FD device structure.
+ * @hw_revision: Face detection hw revision.
+ * @lock: Lock used for reference count.
+ * @slock: Spinlock used to protect FD device struct.
+ * @irq_num: Face detection irq number.
+ * @ref_count: Device reference count.
+ * @res_mem: Array of memory resources used by FD device.
+ * @iomem_base: Array of register mappings used by FD device.
+ * @vdd: Pointer to vdd regulator.
+ * @clk_num: Number of clocks attached to the device.
+ * @clk: Array of clock resources used by fd device.
+ * @clk_rates: Array of clock rates set.
+ * @bus_vectors: Pointer to bus vectors array.
+ * @bus_paths: Pointer to bus paths array.
+ * @bus_scale_data: Memory access bus scale data.
+ * @bus_client: Memory access bus client.
+ * @iommu_attached_cnt: Iommu attached devices reference count.
+ * @iommu_hdl: reference for iommu context.
+ * @dev: Pointer to device struct.
+ * @v4l2_dev: V4l2 device.
+ * @video: Video device.
+ * @state: FD device state.
+ * @buf_queue: FD device processing queue.
+ * @work_queue: Pointer to FD device IRQ bottom half workqueue.
+ * @work: IRQ bottom half work struct.
+ * @hw_halt_completion: Completes when face detection hw halt completes.
+ * @recovery_mode: Indicates if FD is in recovery mode
+ */
+>>>>>>> 0e91d2a... Nougat
 struct msm_fd_device {
 	struct mutex lock;
 	spinlock_t slock;
+	struct mutex recovery_lock;
 	int ref_count;
 
 	int irq_num;
-	struct resource *res_mem[MSM_FD_IOMEM_LAST];
 	void __iomem *iomem_base[MSM_FD_IOMEM_LAST];
+<<<<<<< HEAD
 	struct resource *ioarea[MSM_FD_IOMEM_LAST];
 	struct regulator *vdd;
 
@@ -118,6 +165,17 @@ struct msm_fd_device {
 	unsigned int clk_rates_num;
 	unsigned int clk_rates[MSM_FD_MAX_CLK_RATES][MSM_FD_MAX_CLK_NUM];
 
+=======
+	struct msm_cam_clk_info *clk_info;
+	struct msm_cam_regulator *vdd_info;
+	int num_reg;
+	struct resource *irq;
+
+	size_t clk_num;
+	size_t clk_rates_num;
+	struct clk **clk;
+	uint32_t **clk_rates;
+>>>>>>> 0e91d2a... Nougat
 	uint32_t bus_client;
 
 	struct iommu_domain *iommu_domain;
@@ -126,6 +184,7 @@ struct msm_fd_device {
 
 	struct device *iommu_dev;
 	struct device *dev;
+	struct platform_device *pdev;
 	struct v4l2_device v4l2_dev;
 	struct video_device video;
 
@@ -133,6 +192,12 @@ struct msm_fd_device {
 	struct list_head buf_queue;
 	struct workqueue_struct *work_queue;
 	struct work_struct work;
+<<<<<<< HEAD
+=======
+	struct completion hw_halt_completion;
+	int recovery_mode;
+	uint32_t clk_rate_idx;
+>>>>>>> 0e91d2a... Nougat
 };
 
 #endif 

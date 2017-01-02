@@ -59,6 +59,7 @@ int migrate_prep_local(void)
 	return 0;
 }
 
+<<<<<<< HEAD
 void putback_lru_pages(struct list_head *l)
 {
 	struct page *page;
@@ -72,6 +73,8 @@ void putback_lru_pages(struct list_head *l)
 	}
 }
 
+=======
+>>>>>>> 0e91d2a... Nougat
 void putback_movable_pages(struct list_head *l)
 {
 	struct page *page;
@@ -128,6 +131,13 @@ static int remove_migration_pte(struct page *new, struct vm_area_struct *vma,
 
 	get_page(new);
 	pte = pte_mkold(mk_pte(new, vma->vm_page_prot));
+<<<<<<< HEAD
+=======
+	if (pte_swp_soft_dirty(*ptep))
+		pte = pte_mksoft_dirty(pte);
+
+	
+>>>>>>> 0e91d2a... Nougat
 	if (is_write_migration_entry(entry))
 		pte = pte_mkwrite(pte);
 #ifdef CONFIG_HUGETLB_PAGE
@@ -157,12 +167,37 @@ out:
 	return SWAP_AGAIN;
 }
 
+<<<<<<< HEAD
+=======
+static int remove_linear_migration_ptes_from_nonlinear(struct page *page,
+		struct address_space *mapping, void *arg)
+{
+	struct vm_area_struct *vma;
+	
+	pgoff_t pgoff = page->index << (PAGE_CACHE_SHIFT - PAGE_SHIFT);
+	unsigned long addr;
+
+	list_for_each_entry(vma,
+		&mapping->i_mmap_nonlinear, shared.nonlinear) {
+
+		addr = vma->vm_start + ((pgoff - vma->vm_pgoff) << PAGE_SHIFT);
+		if (addr >= vma->vm_start && addr < vma->vm_end)
+			remove_migration_pte(page, vma, addr, arg);
+	}
+	return SWAP_AGAIN;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static void remove_migration_ptes(struct page *old, struct page *new)
 {
 	rmap_walk(new, remove_migration_pte, old);
 }
 
+<<<<<<< HEAD
 static void __migration_entry_wait(struct mm_struct *mm, pte_t *ptep,
+=======
+void __migration_entry_wait(struct mm_struct *mm, pte_t *ptep,
+>>>>>>> 0e91d2a... Nougat
 				spinlock_t *ptl)
 {
 	pte_t pte;
@@ -249,7 +284,11 @@ static inline bool buffer_migrate_lock_buffers(struct buffer_head *head,
 }
 #endif 
 
+<<<<<<< HEAD
 static int migrate_page_move_mapping(struct address_space *mapping,
+=======
+int migrate_page_move_mapping(struct address_space *mapping,
+>>>>>>> 0e91d2a... Nougat
 		struct page *newpage, struct page *page,
 		struct buffer_head *head, enum migrate_mode mode)
 {
@@ -258,7 +297,11 @@ static int migrate_page_move_mapping(struct address_space *mapping,
 
 	if (!mapping) {
 		
+<<<<<<< HEAD
 		if (page_count(page) != 1)
+=======
+		if (page_count(page) != expected_count)
+>>>>>>> 0e91d2a... Nougat
 			return -EAGAIN;
 		return MIGRATEPAGE_SUCCESS;
 	}
@@ -347,6 +390,52 @@ int migrate_huge_page_move_mapping(struct address_space *mapping,
 	return MIGRATEPAGE_SUCCESS;
 }
 
+<<<<<<< HEAD
+=======
+static void __copy_gigantic_page(struct page *dst, struct page *src,
+				int nr_pages)
+{
+	int i;
+	struct page *dst_base = dst;
+	struct page *src_base = src;
+
+	for (i = 0; i < nr_pages; ) {
+		cond_resched();
+		copy_highpage(dst, src);
+
+		i++;
+		dst = mem_map_next(dst, dst_base, i);
+		src = mem_map_next(src, src_base, i);
+	}
+}
+
+static void copy_huge_page(struct page *dst, struct page *src)
+{
+	int i;
+	int nr_pages;
+
+	if (PageHuge(src)) {
+		
+		struct hstate *h = page_hstate(src);
+		nr_pages = pages_per_huge_page(h);
+
+		if (unlikely(nr_pages > MAX_ORDER_NR_PAGES)) {
+			__copy_gigantic_page(dst, src, nr_pages);
+			return;
+		}
+	} else {
+		
+		BUG_ON(!PageTransHuge(src));
+		nr_pages = hpage_nr_pages(src);
+	}
+
+	for (i = 0; i < nr_pages; i++) {
+		cond_resched();
+		copy_highpage(dst + i, src + i);
+	}
+}
+
+>>>>>>> 0e91d2a... Nougat
 void migrate_page_copy(struct page *newpage, struct page *page)
 {
 #ifdef CONFIG_HTC_DEBUG_PAGE_USER_TRACE
@@ -383,6 +472,12 @@ void migrate_page_copy(struct page *newpage, struct page *page)
 			__set_page_dirty_nobuffers(newpage);
  	}
 
+<<<<<<< HEAD
+=======
+	cpupid = page_cpupid_xchg_last(page, -1);
+	page_cpupid_xchg_last(newpage, cpupid);
+
+>>>>>>> 0e91d2a... Nougat
 	mlock_migrate_page(newpage, page);
 	ksm_migrate_page(newpage, page);
 	ClearPageSwapCache(page);
@@ -394,6 +489,7 @@ void migrate_page_copy(struct page *newpage, struct page *page)
 }
 
 
+<<<<<<< HEAD
 int fail_migrate_page(struct address_space *mapping,
 			struct page *newpage, struct page *page)
 {
@@ -401,6 +497,8 @@ int fail_migrate_page(struct address_space *mapping,
 }
 EXPORT_SYMBOL(fail_migrate_page);
 
+=======
+>>>>>>> 0e91d2a... Nougat
 int migrate_page(struct address_space *mapping,
 		struct page *newpage, struct page *page,
 		enum migrate_mode mode)
@@ -593,7 +691,11 @@ static int __unmap_and_move(struct page *page, struct page *newpage,
 		}
 	}
 
+<<<<<<< HEAD
 	if (unlikely(balloon_page_movable(page))) {
+=======
+	if (unlikely(isolated_balloon_page(page))) {
+>>>>>>> 0e91d2a... Nougat
 		rc = balloon_page_migrate(newpage, page, mode);
 		goto uncharge;
 	}
@@ -608,7 +710,12 @@ static int __unmap_and_move(struct page *page, struct page *newpage,
 	}
 
 	
+<<<<<<< HEAD
 	try_to_unmap(page, TTU_MIGRATION|TTU_IGNORE_MLOCK|TTU_IGNORE_ACCESS);
+=======
+	try_to_unmap(page, TTU_MIGRATION|TTU_IGNORE_MLOCK|TTU_IGNORE_ACCESS,
+			NULL);
+>>>>>>> 0e91d2a... Nougat
 
 skip_unmap:
 	if (!page_mapped(page))
@@ -630,8 +737,14 @@ out:
 	return rc;
 }
 
+<<<<<<< HEAD
 static int unmap_and_move(new_page_t get_new_page, unsigned long private,
 			struct page *page, int force, enum migrate_mode mode)
+=======
+static int unmap_and_move(new_page_t get_new_page, free_page_t put_new_page,
+			unsigned long private, struct page *page, int force,
+			enum migrate_mode mode)
+>>>>>>> 0e91d2a... Nougat
 {
 	int rc = 0;
 	int *result = NULL;
@@ -664,7 +777,20 @@ out:
 				page_is_file_cache(page));
 		putback_lru_page(page);
 	}
+<<<<<<< HEAD
 	putback_lru_page(newpage);
+=======
+
+	if (rc != MIGRATEPAGE_SUCCESS && put_new_page) {
+		ClearPageSwapBacked(newpage);
+		put_new_page(newpage, private);
+	} else if (unlikely(__is_movable_balloon_page(newpage))) {
+		
+		put_page(newpage);
+	} else
+		putback_lru_page(newpage);
+
+>>>>>>> 0e91d2a... Nougat
 	if (result) {
 		if (rc)
 			*result = rc;
@@ -683,7 +809,12 @@ static int unmap_and_move_huge_page(new_page_t get_new_page,
 	struct page *new_hpage = get_new_page(hpage, private, &result);
 	struct anon_vma *anon_vma = NULL;
 
+<<<<<<< HEAD
 	if (!hugepage_migration_support(page_hstate(hpage)))
+=======
+	if (!hugepage_migration_supported(page_hstate(hpage))) {
+		putback_active_hugepage(hpage);
+>>>>>>> 0e91d2a... Nougat
 		return -ENOSYS;
 
 	if (!new_hpage)
@@ -716,7 +847,18 @@ static int unmap_and_move_huge_page(new_page_t get_new_page,
 
 	unlock_page(hpage);
 out:
+<<<<<<< HEAD
 	put_page(new_hpage);
+=======
+	if (rc != -EAGAIN)
+		putback_active_hugepage(hpage);
+
+	if (rc != MIGRATEPAGE_SUCCESS && put_new_page)
+		put_new_page(new_hpage, private);
+	else
+		put_page(new_hpage);
+
+>>>>>>> 0e91d2a... Nougat
 	if (result) {
 		if (rc)
 			*result = rc;
@@ -762,7 +904,10 @@ int migrate_pages(struct list_head *from, new_page_t get_new_page,
 				nr_succeeded++;
 				break;
 			default:
+<<<<<<< HEAD
 				
+=======
+>>>>>>> 0e91d2a... Nougat
 				nr_failed++;
 				break;
 			}
@@ -1189,16 +1334,23 @@ bool migrate_ratelimited(int node)
 	return true;
 }
 
+<<<<<<< HEAD
 bool numamigrate_update_ratelimit(pg_data_t *pgdat, unsigned long nr_pages)
 {
 	bool rate_limited = false;
 
 	spin_lock(&pgdat->numabalancing_migrate_lock);
+=======
+static bool numamigrate_update_ratelimit(pg_data_t *pgdat,
+					unsigned long nr_pages)
+{
+>>>>>>> 0e91d2a... Nougat
 	if (time_after(jiffies, pgdat->numabalancing_migrate_next_window)) {
 		pgdat->numabalancing_migrate_nr_pages = 0;
 		pgdat->numabalancing_migrate_next_window = jiffies +
 			msecs_to_jiffies(migrate_interval_millisecs);
 	}
+<<<<<<< HEAD
 	if (pgdat->numabalancing_migrate_nr_pages > ratelimit_pages)
 		rate_limited = true;
 	else
@@ -1206,6 +1358,16 @@ bool numamigrate_update_ratelimit(pg_data_t *pgdat, unsigned long nr_pages)
 	spin_unlock(&pgdat->numabalancing_migrate_lock);
 	
 	return rate_limited;
+=======
+	if (pgdat->numabalancing_migrate_nr_pages > ratelimit_pages) {
+		trace_mm_numa_migrate_ratelimit(current, pgdat->node_id,
+								nr_pages);
+		return true;
+	}
+
+	pgdat->numabalancing_migrate_nr_pages += nr_pages;
+	return false;
+>>>>>>> 0e91d2a... Nougat
 }
 
 int numamigrate_isolate_page(pg_data_t *pgdat, struct page *page)
@@ -1234,14 +1396,36 @@ int numamigrate_isolate_page(pg_data_t *pgdat, struct page *page)
 	return 1;
 }
 
+<<<<<<< HEAD
 int migrate_misplaced_page(struct page *page, int node)
+=======
+bool pmd_trans_migrating(pmd_t pmd)
+{
+	struct page *page = pmd_page(pmd);
+	return PageLocked(page);
+}
+
+void wait_migrate_huge_page(struct anon_vma *anon_vma, pmd_t *pmd)
+{
+	struct page *page = pmd_page(*pmd);
+	wait_on_page_locked(page);
+}
+
+int migrate_misplaced_page(struct page *page, struct vm_area_struct *vma,
+			   int node)
+>>>>>>> 0e91d2a... Nougat
 {
 	pg_data_t *pgdat = NODE_DATA(node);
 	int isolated;
 	int nr_remaining;
 	LIST_HEAD(migratepages);
 
+<<<<<<< HEAD
 	if (page_mapcount(page) != 1)
+=======
+	if (page_mapcount(page) != 1 && page_is_file_cache(page) &&
+	    (vma->vm_flags & VM_EXEC))
+>>>>>>> 0e91d2a... Nougat
 		goto out;
 
 	if (numamigrate_update_ratelimit(pgdat, 1))
@@ -1281,9 +1465,15 @@ int migrate_misplaced_transhuge_page(struct mm_struct *mm,
 	struct page *new_page = NULL;
 	struct mem_cgroup *memcg = NULL;
 	int page_lru = page_is_file_cache(page);
+<<<<<<< HEAD
 
 	if (page_mapcount(page) != 1)
 		goto out_dropref;
+=======
+	unsigned long mmun_start = address & HPAGE_PMD_MASK;
+	unsigned long mmun_end = mmun_start + HPAGE_PMD_SIZE;
+	pmd_t orig_entry;
+>>>>>>> 0e91d2a... Nougat
 
 	if (numamigrate_update_ratelimit(pgdat, HPAGE_PMD_NR))
 		goto out_dropref;
@@ -1301,6 +1491,12 @@ int migrate_misplaced_transhuge_page(struct mm_struct *mm,
 		goto out_fail;
 	}
 
+<<<<<<< HEAD
+=======
+	if (mm_tlb_flush_pending(mm))
+		flush_tlb_range(vma, mmun_start, mmun_end);
+
+>>>>>>> 0e91d2a... Nougat
 	
 	__set_page_locked(new_page);
 	SetPageSwapBacked(new_page);
@@ -1312,9 +1508,18 @@ int migrate_misplaced_transhuge_page(struct mm_struct *mm,
 	WARN_ON(PageLRU(new_page));
 
 	
+<<<<<<< HEAD
 	spin_lock(&mm->page_table_lock);
 	if (unlikely(!pmd_same(*pmd, entry))) {
 		spin_unlock(&mm->page_table_lock);
+=======
+	mmu_notifier_invalidate_range_start(mm, mmun_start, mmun_end);
+	ptl = pmd_lock(mm, pmd);
+	if (unlikely(!pmd_same(*pmd, entry) || page_count(page) != 2)) {
+fail_putback:
+		spin_unlock(ptl);
+		mmu_notifier_invalidate_range_end(mm, mmun_start, mmun_end);
+>>>>>>> 0e91d2a... Nougat
 
 		
 		if (TestClearPageActive(new_page))
@@ -1342,13 +1547,31 @@ int migrate_misplaced_transhuge_page(struct mm_struct *mm,
 	entry = maybe_pmd_mkwrite(pmd_mkdirty(entry), vma);
 	entry = pmd_mkhuge(entry);
 
+<<<<<<< HEAD
 	pmdp_clear_flush(vma, haddr, pmd);
 	set_pmd_at(mm, haddr, pmd, entry);
 	page_add_new_anon_rmap(new_page, vma, haddr);
+=======
+	flush_cache_range(vma, mmun_start, mmun_end);
+	page_add_anon_rmap(new_page, vma, mmun_start);
+	pmdp_clear_flush(vma, mmun_start, pmd);
+	set_pmd_at(mm, mmun_start, pmd, entry);
+	flush_tlb_range(vma, mmun_start, mmun_end);
+>>>>>>> 0e91d2a... Nougat
 	update_mmu_cache_pmd(vma, address, &entry);
 	page_remove_rmap(page);
+<<<<<<< HEAD
 	mem_cgroup_end_migration(memcg, page, new_page, true);
 	spin_unlock(&mm->page_table_lock);
+=======
+
+	spin_unlock(ptl);
+	mmu_notifier_invalidate_range_end(mm, mmun_start, mmun_end);
+
+	
+	get_page(new_page);
+	putback_lru_page(new_page);
+>>>>>>> 0e91d2a... Nougat
 
 	unlock_page(new_page);
 	unlock_page(page);

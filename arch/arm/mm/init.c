@@ -440,7 +440,12 @@ void __init bootmem_init(void)
 
 	find_limits(&min, &max_low, &max_high);
 
+<<<<<<< HEAD
 	arm_bootmem_init(min, max_low);
+=======
+	early_memtest((phys_addr_t)min << PAGE_SHIFT,
+		      (phys_addr_t)max_low << PAGE_SHIFT);
+>>>>>>> 0e91d2a... Nougat
 
 	/*
 	 * Sparsemem tries to allocate bootmem in memory_present(),
@@ -817,7 +822,193 @@ void __init mem_init(void)
 #undef MLK
 #undef MLM
 #undef MLK_ROUNDUP
+<<<<<<< HEAD
 void free_initmem(void)
+=======
+
+#ifdef CONFIG_ARM_KERNMEM_PERMS
+struct section_perm {
+	unsigned long start;
+	unsigned long end;
+	pmdval_t mask;
+	pmdval_t prot;
+	pmdval_t clear;
+	pteval_t ptemask;
+	pteval_t pteprot;
+	pteval_t pteclear;
+};
+
+static struct section_perm nx_perms[] = {
+	/* Make pages tables, etc before _stext RW (set NX). */
+	{
+		.start	= PAGE_OFFSET,
+		.end	= (unsigned long)_stext,
+		.mask	= ~PMD_SECT_XN,
+		.prot	= PMD_SECT_XN,
+		.ptemask = ~L_PTE_XN,
+		.pteprot = L_PTE_XN,
+	},
+	/* Make init RW (set NX). */
+	{
+		.start	= (unsigned long)__init_begin,
+		.end	= (unsigned long)_sdata,
+		.mask	= ~PMD_SECT_XN,
+		.prot	= PMD_SECT_XN,
+		.ptemask = ~L_PTE_XN,
+		.pteprot = L_PTE_XN,
+	},
+#ifdef CONFIG_DEBUG_RODATA
+	/* Make rodata NX (set RO in ro_perms below). */
+	{
+		.start  = (unsigned long)__start_rodata,
+		.end    = (unsigned long)__init_begin,
+		.mask   = ~PMD_SECT_XN,
+		.prot   = PMD_SECT_XN,
+		.ptemask = ~L_PTE_XN,
+		.pteprot = L_PTE_XN,
+	},
+#endif
+};
+
+#ifdef CONFIG_DEBUG_RODATA
+static struct section_perm ro_perms[] = {
+	/* Make kernel code and rodata RX (set RO). */
+	{
+		.start  = (unsigned long)_stext,
+		.end    = (unsigned long)__init_begin,
+#ifdef CONFIG_ARM_LPAE
+		.mask   = ~PMD_SECT_RDONLY,
+		.prot   = PMD_SECT_RDONLY,
+#else
+		.mask   = ~(PMD_SECT_APX | PMD_SECT_AP_WRITE),
+		.prot   = PMD_SECT_APX | PMD_SECT_AP_WRITE,
+		.clear  = PMD_SECT_AP_WRITE,
+#endif
+		.ptemask = ~L_PTE_RDONLY,
+		.pteprot = L_PTE_RDONLY,
+	},
+};
+#endif
+
+/*
+ * Updates section permissions only for the current mm (sections are
+ * copied into each mm). During startup, this is the init_mm. Is only
+ * safe to be called with preemption disabled, as under stop_machine().
+ */
+struct pte_data {
+	pteval_t mask;
+	pteval_t val;
+};
+
+static int __pte_update(pte_t *ptep, pgtable_t token, unsigned long addr,
+			void *d)
+{
+	struct pte_data *data = d;
+	pte_t pte = *ptep;
+
+	pte = __pte((pte_val(*ptep) & data->mask) | data->val);
+	set_pte_ext(ptep, pte, 0);
+
+	return 0;
+}
+
+static inline void pte_update(unsigned long addr, pteval_t mask,
+				  pteval_t prot)
+{
+	struct pte_data data;
+	struct mm_struct *mm;
+
+	data.mask = mask;
+	data.val = prot;
+	mm = current->active_mm;
+
+	apply_to_page_range(mm, addr, SECTION_SIZE, __pte_update, &data);
+	flush_tlb_kernel_range(addr, addr + SECTION_SIZE);
+}
+
+static inline void section_update(unsigned long addr, pmdval_t mask,
+				  pmdval_t prot)
+{
+	struct mm_struct *mm;
+	pmd_t *pmd;
+
+	mm = current->active_mm;
+	pmd = pmd_offset(pud_offset(pgd_offset(mm, addr), addr), addr);
+
+#ifdef CONFIG_ARM_LPAE
+	pmd[0] = __pmd((pmd_val(pmd[0]) & mask) | prot);
+#else
+	if (addr & SECTION_SIZE)
+		pmd[1] = __pmd((pmd_val(pmd[1]) & mask) | prot);
+	else
+		pmd[0] = __pmd((pmd_val(pmd[0]) & mask) | prot);
+#endif
+	flush_pmd_entry(pmd);
+	local_flush_tlb_kernel_range(addr, addr + SECTION_SIZE);
+}
+
+/* Make sure extended page tables are in use. */
+static inline bool arch_has_strict_perms(void)
+{
+	if (cpu_architecture() < CPU_ARCH_ARMv6)
+		return false;
+
+	return !!(get_cr() & CR_XP);
+}
+
+#define set_section_perms(perms, field)	{				\
+	size_t i;							\
+	unsigned long addr;						\
+									\
+	if (!arch_has_strict_perms())					\
+		return;							\
+									\
+	for (i = 0; i < ARRAY_SIZE(perms); i++) {			\
+		if (!IS_ALIGNED(perms[i].start, SECTION_SIZE) ||	\
+		    !IS_ALIGNED(perms[i].end, SECTION_SIZE)) {		\
+			pr_err("BUG: section %lx-%lx not aligned to %lx\n", \
+				perms[i].start, perms[i].end,		\
+				SECTION_SIZE);				\
+			continue;					\
+		}							\
+									\
+		for (addr = perms[i].start;				\
+		     addr < perms[i].end;				\
+		     addr += SECTION_SIZE) {				\
+			pmd_t *pmd;					\
+			struct mm_struct *mm;				\
+									\
+			mm = current->active_mm;			\
+			pmd = pmd_offset(pud_offset(pgd_offset(mm, addr), \
+						addr), addr);		\
+			if (pmd_bad(*pmd))				\
+				section_update(addr, perms[i].mask,	\
+					       perms[i].field);		\
+			else						\
+				pte_update(addr, perms[i].ptemask,	\
+					       perms[i].pte##field);	\
+		}							\
+	}								\
+}
+
+static inline void fix_kernmem_perms(void)
+{
+	set_section_perms(nx_perms, prot);
+}
+
+#ifdef CONFIG_DEBUG_RODATA
+void mark_rodata_ro(void)
+{
+	set_section_perms(ro_perms, prot);
+}
+
+void set_kernel_text_rw(void)
+{
+	set_section_perms(ro_perms, clear);
+}
+
+void set_kernel_text_ro(void)
+>>>>>>> 0e91d2a... Nougat
 {
 	unsigned long reclaimed_initmem;
 

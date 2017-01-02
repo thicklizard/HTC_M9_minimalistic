@@ -124,3 +124,40 @@ void led_set_brightness(struct led_classdev *led_cdev,
 	__led_set_brightness(led_cdev, brightness);
 }
 EXPORT_SYMBOL(led_set_brightness);
+<<<<<<< HEAD
+=======
+
+int led_update_brightness(struct led_classdev *led_cdev)
+{
+	int ret = 0;
+
+	if (led_cdev->brightness_get) {
+		ret = led_cdev->brightness_get(led_cdev);
+		if (ret >= 0) {
+			led_cdev->brightness = ret;
+			return 0;
+		}
+	}
+
+	return ret;
+}
+EXPORT_SYMBOL(led_update_brightness);
+
+/* Caller must ensure led_cdev->led_access held */
+void led_sysfs_disable(struct led_classdev *led_cdev)
+{
+	lockdep_assert_held(&led_cdev->led_access);
+
+	led_cdev->flags |= LED_SYSFS_DISABLE;
+}
+EXPORT_SYMBOL_GPL(led_sysfs_disable);
+
+/* Caller must ensure led_cdev->led_access held */
+void led_sysfs_enable(struct led_classdev *led_cdev)
+{
+	lockdep_assert_held(&led_cdev->led_access);
+
+	led_cdev->flags &= ~LED_SYSFS_DISABLE;
+}
+EXPORT_SYMBOL_GPL(led_sysfs_enable);
+>>>>>>> 0e91d2a... Nougat

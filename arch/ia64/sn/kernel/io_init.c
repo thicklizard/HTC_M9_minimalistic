@@ -325,6 +325,7 @@ sn_pci_controller_fixup(int segment, int busnum, struct pci_bus *bus)
 					controller->window[i].offset);
 	bus = pci_scan_root_bus(NULL, busnum, &pci_root_ops, controller,
 				&resources);
+<<<<<<< HEAD
  	if (bus == NULL)
  		goto error_return; /* error, or bus already scanned */
 
@@ -336,6 +337,14 @@ error_return:
 
 	kfree(controller);
 	return;
+=======
+ 	if (bus == NULL) {
+		kfree(res);
+		kfree(controller);
+		return;
+	}
+	pci_bus_add_devices(bus);
+>>>>>>> 0e91d2a... Nougat
 }
 
 /*

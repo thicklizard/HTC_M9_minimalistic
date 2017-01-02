@@ -320,12 +320,6 @@ static u64 __get_spte_lockless(u64 *sptep)
 {
 	return ACCESS_ONCE(*sptep);
 }
-
-static bool __check_direct_spte_mmio_pf(u64 spte)
-{
-	/* It is valid if the spte is zapped. */
-	return spte == 0ull;
-}
 #else
 union split_spte {
 	struct {
@@ -429,23 +423,6 @@ retry:
 		goto retry;
 
 	return spte.spte;
-}
-
-static bool __check_direct_spte_mmio_pf(u64 spte)
-{
-	union split_spte sspte = (union split_spte)spte;
-	u32 high_mmio_mask = shadow_mmio_mask >> 32;
-
-	/* It is valid if the spte is zapped. */
-	if (spte == 0ull)
-		return true;
-
-	/* It is valid if the spte is being zapped. */
-	if (sspte.spte_low == 0ull &&
-	    (sspte.spte_high & high_mmio_mask) == high_mmio_mask)
-		return true;
-
-	return false;
 }
 #endif
 
@@ -3125,21 +3102,6 @@ static bool quickly_check_mmio_pf(struct kvm_vcpu *vcpu, u64 addr, bool direct)
 	return vcpu_match_mmio_gva(vcpu, addr);
 }
 
-
-/*
- * On direct hosts, the last spte is only allows two states
- * for mmio page fault:
- *   - It is the mmio spte
- *   - It is zapped or it is being zapped.
- *
- * This function completely checks the spte when the last spte
- * is not the mmio spte.
- */
-static bool check_direct_spte_mmio_pf(u64 spte)
-{
-	return __check_direct_spte_mmio_pf(spte);
-}
-
 static u64 walk_shadow_page_get_mmio_spte(struct kvm_vcpu *vcpu, u64 addr)
 {
 	struct kvm_shadow_walk_iterator iterator;
@@ -3184,6 +3146,7 @@ int handle_mmio_page_fault_common(struct kvm_vcpu *vcpu, u64 addr, bool direct)
 	}
 
 	/*
+<<<<<<< HEAD
 	 * It's ok if the gva is remapped by other cpus on shadow guest,
 	 * it's a BUG if the gfn is not a mmio page.
 	 */
@@ -3191,6 +3154,8 @@ int handle_mmio_page_fault_common(struct kvm_vcpu *vcpu, u64 addr, bool direct)
 		return -1;
 
 	/*
+=======
+>>>>>>> 0e91d2a... Nougat
 	 * If the page table is zapped by other cpus, let CPU fault again on
 	 * the address.
 	 */

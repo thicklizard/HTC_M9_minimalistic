@@ -13,10 +13,15 @@
 &mdss_mdp {
 	dsi_truly_wvga_cmd: qcom,mdss_dsi_truly_wvga_cmd {
 		qcom,mdss-dsi-panel-name = "Truly WVGA command mode dsi panel";
+<<<<<<< HEAD
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
 		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
 		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-panel-mode-gpio-state = "low";
+=======
+		qcom,mdss-dsi-panel-type = "dsi_cmd_mode";
+		qcom,mdss-dsi-mode-sel-gpio-state = "low";
+>>>>>>> 0e91d2a... Nougat
 		qcom,mdss-dsi-panel-framerate = <60>;
 		qcom,mdss-dsi-virtual-channel-id = <0>;
 		qcom,mdss-dsi-stream = <0>;
@@ -167,6 +172,10 @@
 		qcom,mdss-tear-check-sync-threshold-continue = <0x4>;
 		qcom,mdss-tear-check-start-pos = <0x18>;
 		qcom,partial-update-enabled;
+<<<<<<< HEAD
 		qcom,panel-roi-alignment = <16 16 16 16 0 0>;
+=======
+		qcom,panel-roi-alignment = <32 32 32 32 0 0>;
+>>>>>>> 0e91d2a... Nougat
 	};
 };

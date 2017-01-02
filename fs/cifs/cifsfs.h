@@ -31,10 +31,18 @@
 static inline ino_t
 cifs_uniqueid_to_ino_t(u64 fileid)
 {
+<<<<<<< HEAD
 	ino_t ino = (ino_t) fileid;
 	if (sizeof(ino_t) < sizeof(u64))
 		ino ^= fileid >> (sizeof(u64)-sizeof(ino_t)) * 8;
 	return ino;
+=======
+	if ((sizeof(ino_t)) < (sizeof(u64)))
+		return (ino_t)hash_64(fileid, (sizeof(ino_t) * 8) - 1) + 1;
+
+	return (ino_t)fileid;
+
+>>>>>>> 0e91d2a... Nougat
 }
 
 extern struct file_system_type cifs_fs_type;

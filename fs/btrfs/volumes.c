@@ -101,6 +101,33 @@ void btrfs_cleanup_fs_uuids(void)
 	}
 }
 
+<<<<<<< HEAD
+=======
+static struct btrfs_device *__alloc_device(void)
+{
+	struct btrfs_device *dev;
+
+	dev = kzalloc(sizeof(*dev), GFP_NOFS);
+	if (!dev)
+		return ERR_PTR(-ENOMEM);
+
+	INIT_LIST_HEAD(&dev->dev_list);
+	INIT_LIST_HEAD(&dev->dev_alloc_list);
+	INIT_LIST_HEAD(&dev->resized_list);
+
+	spin_lock_init(&dev->io_lock);
+
+	spin_lock_init(&dev->reada_lock);
+	atomic_set(&dev->reada_in_flight, 0);
+	atomic_set(&dev->dev_stats_ccnt, 0);
+	btrfs_device_data_ordered_init(dev);
+	INIT_RADIX_TREE(&dev->reada_zones, GFP_NOFS & ~__GFP_WAIT);
+	INIT_RADIX_TREE(&dev->reada_extents, GFP_NOFS & ~__GFP_WAIT);
+
+	return dev;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static noinline struct btrfs_device *__find_device(struct list_head *head,
 						   u64 devid, u8 *uuid)
 {

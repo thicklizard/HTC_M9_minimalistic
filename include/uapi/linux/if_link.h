@@ -336,6 +336,14 @@ enum {
 	IFLA_VF_VLAN,
 	IFLA_VF_TX_RATE,	/* TX Bandwidth Allocation */
 	IFLA_VF_SPOOFCHK,	/* Spoof Checking on/off switch */
+<<<<<<< HEAD
+=======
+	IFLA_VF_LINK_STATE,	/* link state enable/disable/auto switch */
+	IFLA_VF_RATE,		/* Min and Max TX Bandwidth Allocation */
+	IFLA_VF_RSS_QUERY_EN,	/* RSS Redirection Table and Hash Key query
+				 * on/off switch
+				 */
+>>>>>>> 0e91d2a... Nougat
 	__IFLA_VF_MAX,
 };
 
@@ -362,6 +370,26 @@ struct ifla_vf_spoofchk {
 	__u32 setting;
 };
 
+<<<<<<< HEAD
+=======
+enum {
+	IFLA_VF_LINK_STATE_AUTO,	/* link state of the uplink */
+	IFLA_VF_LINK_STATE_ENABLE,	/* link always up */
+	IFLA_VF_LINK_STATE_DISABLE,	/* link always down */
+	__IFLA_VF_LINK_STATE_MAX,
+};
+
+struct ifla_vf_link_state {
+	__u32 vf;
+	__u32 link_state;
+};
+
+struct ifla_vf_rss_query_en {
+	__u32 vf;
+	__u32 setting;
+};
+
+>>>>>>> 0e91d2a... Nougat
 /* VF ports management section
  *
  *	Nested layout of set/get msg is:

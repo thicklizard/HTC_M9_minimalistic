@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -21,6 +25,7 @@
 #include "msm_isp.h"
 #include "msm.h"
 #include "msm_camera_io_util.h"
+#include "msm_isp47.h"
 
 #undef CDBG
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
@@ -90,8 +95,33 @@ static uint8_t stats_pingpong_offset_map[] = {
 #define VFE40_BUS_BDG_QOS_CFG_6     0x000002DC
 #define VFE40_BUS_BDG_QOS_CFG_7     0x000002E0
 
+<<<<<<< HEAD
 #define VFE40_CLK_IDX 1
 static struct msm_cam_clk_info msm_vfe40_clk_info[VFE_CLK_INFO_MAX];
+=======
+#define VFE40_CLK_IDX 2
+
+static void msm_vfe40_config_irq(struct vfe_device *vfe_dev,
+		uint32_t irq0_mask, uint32_t irq1_mask,
+		enum msm_isp_irq_operation oper)
+{
+	switch (oper) {
+	case MSM_ISP_IRQ_ENABLE:
+		vfe_dev->irq0_mask |= irq0_mask;
+		vfe_dev->irq1_mask |= irq1_mask;
+		break;
+	case MSM_ISP_IRQ_DISABLE:
+		vfe_dev->irq0_mask &= ~irq0_mask;
+		vfe_dev->irq1_mask &= ~irq1_mask;
+		break;
+	case MSM_ISP_IRQ_SET:
+		vfe_dev->irq0_mask = irq0_mask;
+		vfe_dev->irq1_mask = irq1_mask;
+	}
+	msm_camera_io_w_mb(vfe_dev->irq0_mask, vfe_dev->vfe_base + 0x28);
+	msm_camera_io_w_mb(vfe_dev->irq1_mask, vfe_dev->vfe_base + 0x2C);
+}
+>>>>>>> 0e91d2a... Nougat
 
 static int32_t msm_vfe40_init_qos_parms(struct vfe_device *vfe_dev,
 				struct msm_vfe_hw_init_parms *qos_parms,
@@ -256,6 +286,7 @@ static int32_t msm_vfe40_init_vbif_parms(struct vfe_device *vfe_dev,
 	return 0;
 }
 
+<<<<<<< HEAD
 static int msm_vfe40_init_hardware(struct vfe_device *vfe_dev)
 {
 	int rc = -1;
@@ -353,6 +384,8 @@ static void msm_vfe40_release_hardware(struct vfe_device *vfe_dev)
 	msm_isp_deinit_bandwidth_mgr(ISP_VFE0 + vfe_dev->pdev->id);
 }
 
+=======
+>>>>>>> 0e91d2a... Nougat
 static void msm_vfe40_init_hardware_reg(struct vfe_device *vfe_dev)
 {
 	struct msm_vfe_hw_init_parms qos_parms;
@@ -388,6 +421,12 @@ static void msm_vfe40_init_hardware_reg(struct vfe_device *vfe_dev)
 		vbif_parms.regs = "vbif-v2-regs";
 		vbif_parms.settings = "vbif-v2-settings";
 		break;
+<<<<<<< HEAD
+=======
+	case VFE40_8937_VERSION:
+	case VFE40_8953_VERSION:
+	case VFE40_8917_VERSION:
+>>>>>>> 0e91d2a... Nougat
 	default:
 		pr_err("%s: QOS and VBIF is NOT configured for HW Version %x\n",
 			__func__, vfe_dev->vfe_hw_version);
@@ -397,11 +436,12 @@ static void msm_vfe40_init_hardware_reg(struct vfe_device *vfe_dev)
 	msm_vfe40_init_vbif_parms(vfe_dev, &vbif_parms);
 	
 	msm_camera_io_w(0x10000001, vfe_dev->vfe_base + 0x50);
-	msm_camera_io_w(0xE00000F1, vfe_dev->vfe_base + 0x28);
-	msm_camera_io_w_mb(0xFEFFFFFF, vfe_dev->vfe_base + 0x2C);
+	msm_vfe40_config_irq(vfe_dev, 0x800000E0, 0xFEFFFF7E,
+			MSM_ISP_IRQ_ENABLE);
 	msm_camera_io_w(0xFFFFFFFF, vfe_dev->vfe_base + 0x30);
 	msm_camera_io_w_mb(0xFEFFFFFF, vfe_dev->vfe_base + 0x34);
 	msm_camera_io_w(1, vfe_dev->vfe_base + 0x24);
+
 	msm_camera_io_w(0, vfe_dev->vfe_base + 0x30);
 	msm_camera_io_w_mb(0, vfe_dev->vfe_base + 0x34);
 	msm_camera_io_w(1, vfe_dev->vfe_base + 0x24);
@@ -409,8 +449,10 @@ static void msm_vfe40_init_hardware_reg(struct vfe_device *vfe_dev)
 
 static void msm_vfe40_clear_status_reg(struct vfe_device *vfe_dev)
 {
-	msm_camera_io_w((1 << 31), vfe_dev->vfe_base + 0x28);
-	msm_camera_io_w_mb(0x0, vfe_dev->vfe_base + 0x2C);
+	vfe_dev->irq0_mask = (1 << 31);
+	vfe_dev->irq1_mask = 0;
+	msm_vfe40_config_irq(vfe_dev, (1 << 31), 0,
+			MSM_ISP_IRQ_SET);
 	msm_camera_io_w(0xFFFFFFFF, vfe_dev->vfe_base + 0x30);
 	msm_camera_io_w_mb(0xFFFFFFFF, vfe_dev->vfe_base + 0x34);
 	msm_camera_io_w_mb(0x1, vfe_dev->vfe_base + 0x24);
@@ -617,10 +659,16 @@ static void msm_vfe40_process_error_status(struct vfe_device *vfe_dev)
 			__func__);
 	}
 
+<<<<<<< HEAD
 	
 	if ((error_status1 >> 9) & 0x7FFF) {
 		msm_isp_util_update_last_overflow_ab_ib(vfe_dev);
 	}
+=======
+	/* Update ab/ib values for any overflow that may have occured*/
+	if ((error_status1 >> 9) & 0x7FFF)
+		msm_isp_update_last_overflow_ab_ib(vfe_dev);
+>>>>>>> 0e91d2a... Nougat
 }
 
 static void msm_vfe40_read_irq_status(struct vfe_device *vfe_dev,
@@ -638,9 +686,20 @@ static void msm_vfe40_read_irq_status(struct vfe_device *vfe_dev,
 		*irq_status0 &= ~(0x18000000);
 	}
 
+<<<<<<< HEAD
 	if (*irq_status1 & (1 << 0))
 		vfe_dev->error_info.camif_status =
 		msm_camera_io_r(vfe_dev->vfe_base + 0x31C);
+=======
+	*irq_status0 &= vfe_dev->irq0_mask;
+	*irq_status1 &= vfe_dev->irq1_mask;
+
+	if (*irq_status1 & (1 << 0)) {
+		vfe_dev->error_info.camif_status =
+		msm_camera_io_r(vfe_dev->vfe_base + 0x31C);
+		msm_vfe40_config_irq(vfe_dev, 0, (1 << 0), MSM_ISP_IRQ_DISABLE);
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	if (*irq_status1 & (1 << 7))
 		vfe_dev->error_info.violation_status |=
@@ -687,6 +746,7 @@ static void msm_vfe40_process_reg_update(struct vfe_device *vfe_dev,
 			}
 			if (vfe_dev->axi_data.stream_update[i])
 				msm_isp_axi_stream_update(vfe_dev, i);
+			msm_isp_save_framedrop_values(vfe_dev, i);
 			if (atomic_read(&vfe_dev->axi_data.axi_cfg_update[i])) {
 				msm_isp_axi_cfg_update(vfe_dev, i);
 				if (atomic_read(
@@ -800,13 +860,13 @@ static void msm_vfe40_axi_cfg_comp_mask(struct vfe_device *vfe_dev,
 	struct msm_vfe_axi_shared_data *axi_data = &vfe_dev->axi_data;
 	uint32_t comp_mask, comp_mask_index =
 		stream_info->comp_mask_index;
-	uint32_t irq_mask;
 
 	comp_mask = msm_camera_io_r(vfe_dev->vfe_base + 0x40);
 	comp_mask &= ~(0x7F << (comp_mask_index * 8));
 	comp_mask |= (axi_data->composite_info[comp_mask_index].
 		stream_composite_mask << (comp_mask_index * 8));
 
+<<<<<<< HEAD
 	irq_mask = msm_camera_io_r(vfe_dev->vfe_base + 0x28);
 	irq_mask |= 1 << (comp_mask_index + 25);
 
@@ -824,8 +884,11 @@ static void msm_vfe40_axi_cfg_comp_mask(struct vfe_device *vfe_dev,
 		irq_mask |= BIT(28);
 	}
 
+=======
+>>>>>>> 0e91d2a... Nougat
 	msm_camera_io_w(comp_mask, vfe_dev->vfe_base + 0x40);
-	msm_camera_io_w(irq_mask, vfe_dev->vfe_base + 0x28);
+	msm_vfe40_config_irq(vfe_dev, 1 << (comp_mask_index + 25), 0,
+			MSM_ISP_IRQ_ENABLE);
 }
 
 static void msm_vfe40_axi_clear_comp_mask(struct vfe_device *vfe_dev,
@@ -833,11 +896,12 @@ static void msm_vfe40_axi_clear_comp_mask(struct vfe_device *vfe_dev,
 {
 	struct msm_vfe_axi_shared_data *axi_data = &vfe_dev->axi_data;
 	uint32_t comp_mask, comp_mask_index = stream_info->comp_mask_index;
-	uint32_t irq_mask;
+		vfe_dev->irq0_mask &= ~BIT(27);
 
 	comp_mask = msm_camera_io_r(vfe_dev->vfe_base + 0x40);
 	comp_mask &= ~(0x7F << (comp_mask_index * 8));
 
+<<<<<<< HEAD
 	irq_mask = msm_camera_io_r(vfe_dev->vfe_base + 0x28);
 	irq_mask &= ~(1 << (comp_mask_index + 25));
 
@@ -855,26 +919,26 @@ static void msm_vfe40_axi_clear_comp_mask(struct vfe_device *vfe_dev,
 		irq_mask &= ~BIT(28);
 	}
 
+=======
+>>>>>>> 0e91d2a... Nougat
 	msm_camera_io_w(comp_mask, vfe_dev->vfe_base + 0x40);
-	msm_camera_io_w(irq_mask, vfe_dev->vfe_base + 0x28);
+	msm_vfe40_config_irq(vfe_dev, (1 << (comp_mask_index + 25)), 0,
+				MSM_ISP_IRQ_DISABLE);
 }
 
 static void msm_vfe40_axi_cfg_wm_irq_mask(struct vfe_device *vfe_dev,
 	struct msm_vfe_axi_stream *stream_info)
 {
-	uint32_t irq_mask;
-	irq_mask = msm_camera_io_r(vfe_dev->vfe_base + 0x28);
-	irq_mask |= 1 << (stream_info->wm[0] + 8);
-	msm_camera_io_w(irq_mask, vfe_dev->vfe_base + 0x28);
+	msm_vfe40_config_irq(vfe_dev, 1 << (stream_info->wm[0] + 8), 0,
+				MSM_ISP_IRQ_ENABLE);
 }
 
 static void msm_vfe40_axi_clear_wm_irq_mask(struct vfe_device *vfe_dev,
 	struct msm_vfe_axi_stream *stream_info)
 {
-	uint32_t irq_mask;
-	irq_mask = msm_camera_io_r(vfe_dev->vfe_base + 0x28);
-	irq_mask &= ~(1 << (stream_info->wm[0] + 8));
-	msm_camera_io_w(irq_mask, vfe_dev->vfe_base + 0x28);
+	vfe_dev->irq0_mask &= ~(1 << (stream_info->wm[0] + 8));
+	msm_vfe40_config_irq(vfe_dev, (1 << (stream_info->wm[0] + 8)), 0,
+				MSM_ISP_IRQ_DISABLE);
 }
 
 static void msm_vfe40_cfg_framedrop(struct vfe_device *vfe_dev,
@@ -1067,11 +1131,71 @@ static int msm_vfe40_start_fetch_engine(struct vfe_device *vfe_dev,
 	return 0;
 }
 
+static int msm_vfe40_start_fetch_engine_multi_pass(struct vfe_device *vfe_dev,
+	void *arg)
+{
+	int rc = 0;
+	uint32_t bufq_handle = 0;
+	struct msm_isp_buffer *buf = NULL;
+	struct msm_vfe_fetch_eng_multi_pass_start *fe_cfg = arg;
+	struct msm_isp_buffer_mapped_info mapped_info;
+
+	if (vfe_dev->fetch_engine_info.is_busy == 1) {
+		pr_err("%s: fetch engine busy\n", __func__);
+		return -EINVAL;
+	}
+	memset(&mapped_info, 0, sizeof(struct msm_isp_buffer_mapped_info));
+	/* There is other option of passing buffer address from user,
+		in such case, driver needs to map the buffer and use it*/
+	vfe_dev->fetch_engine_info.session_id = fe_cfg->session_id;
+	vfe_dev->fetch_engine_info.stream_id = fe_cfg->stream_id;
+	vfe_dev->fetch_engine_info.offline_mode = fe_cfg->offline_mode;
+	vfe_dev->fetch_engine_info.fd = fe_cfg->fd;
+
+	if (!fe_cfg->offline_mode) {
+		bufq_handle = vfe_dev->buf_mgr->ops->get_bufq_handle(
+				vfe_dev->buf_mgr, fe_cfg->session_id,
+				fe_cfg->stream_id);
+		vfe_dev->fetch_engine_info.bufq_handle = bufq_handle;
+
+		rc = vfe_dev->buf_mgr->ops->get_buf_by_index(
+			vfe_dev->buf_mgr, bufq_handle, fe_cfg->buf_idx, &buf);
+		if (rc < 0 || !buf) {
+			pr_err("%s: No fetch buffer rc= %d buf= %p\n",
+				__func__, rc, buf);
+			return -EINVAL;
+		}
+		mapped_info = buf->mapped_info[0];
+		buf->state = MSM_ISP_BUFFER_STATE_DISPATCHED;
+	} else {
+		rc = vfe_dev->buf_mgr->ops->map_buf(vfe_dev->buf_mgr,
+			&mapped_info, fe_cfg->fd);
+		if (rc < 0) {
+			pr_err("%s: can not map buffer\n", __func__);
+			return -EINVAL;
+		}
+	}
+	vfe_dev->fetch_engine_info.buf_idx = fe_cfg->buf_idx;
+	vfe_dev->fetch_engine_info.is_busy = 1;
+
+	msm_camera_io_w(mapped_info.paddr + fe_cfg->input_buf_offset,
+		vfe_dev->vfe_base + 0x228);
+
+	msm_camera_io_w_mb(0x1, vfe_dev->vfe_base + 0x378);
+
+	msm_camera_io_w_mb(0x10000, vfe_dev->vfe_base + 0x4C);
+	msm_camera_io_w_mb(0x20000, vfe_dev->vfe_base + 0x4C);
+
+	ISP_DBG("%s:VFE%d Fetch Engine ready\n", __func__, vfe_dev->pdev->id);
+	return 0;
+}
+
 static void msm_vfe40_cfg_fetch_engine(struct vfe_device *vfe_dev,
 	struct msm_vfe_pix_cfg *pix_cfg)
 {
 	uint32_t x_size_word;
 	uint32_t temp = 0;
+	uint32_t main_unpack_pattern = 0;
 	struct msm_vfe_fetch_engine_cfg *fe_cfg = NULL;
 
 	if (pix_cfg->input_mux != EXTERNAL_READ) {
@@ -1093,10 +1217,8 @@ static void msm_vfe40_cfg_fetch_engine(struct vfe_device *vfe_dev,
 	temp |= (1 << 1);
 	msm_camera_io_w(temp, vfe_dev->vfe_base + 0x50);
 
-	temp = msm_camera_io_r(vfe_dev->vfe_base + 0x28);
-	temp &= 0xFEFFFFFF;
-	temp |= (1 << 24);
-	msm_camera_io_w(temp, vfe_dev->vfe_base + 0x28);
+	msm_vfe40_config_irq(vfe_dev, (1 << 24), 0,
+			MSM_ISP_IRQ_ENABLE);
 
 	msm_camera_io_w((fe_cfg->fetch_height - 1),
 			vfe_dev->vfe_base + 0x238);
@@ -1104,9 +1226,13 @@ static void msm_vfe40_cfg_fetch_engine(struct vfe_device *vfe_dev,
 	
 	x_size_word = msm_isp_cal_word_per_line(
 		vfe_dev->axi_data.src_info[VFE_PIX_0].input_format,
-		fe_cfg->fetch_width);
+		fe_cfg->buf_width);
 
 	msm_camera_io_w((x_size_word - 1) << 16, vfe_dev->vfe_base + 0x23C);
+
+	x_size_word = msm_isp_cal_word_per_line(
+		vfe_dev->axi_data.src_info[VFE_PIX_0].input_format,
+		fe_cfg->fetch_width);
 
 	temp = msm_camera_io_r(vfe_dev->vfe_base + 0x1C);
 	temp |= 2 << 16;
@@ -1116,6 +1242,7 @@ static void msm_vfe40_cfg_fetch_engine(struct vfe_device *vfe_dev,
 		(fe_cfg->buf_height-1) << 4 |
 		VFE40_FETCH_BURST_LEN, vfe_dev->vfe_base + 0x240);
 
+<<<<<<< HEAD
 	msm_camera_io_w(0 << 28 | 2 << 25 |
 		(fe_cfg->buf_width - 1)  << 12 |
 		(fe_cfg->buf_height - 1)
@@ -1123,6 +1250,22 @@ static void msm_vfe40_cfg_fetch_engine(struct vfe_device *vfe_dev,
 
 	
 	msm_camera_io_w(0xF6543210, vfe_dev->vfe_base + 0x248);
+=======
+	/* need to use formulae to calculate MAIN_UNPACK_PATTERN*/
+	switch (vfe_dev->axi_data.src_info[VFE_PIX_0].input_format) {
+	case V4L2_PIX_FMT_P16BGGR10:
+	case V4L2_PIX_FMT_P16GBRG10:
+	case V4L2_PIX_FMT_P16GRBG10:
+	case V4L2_PIX_FMT_P16RGGB10:
+		main_unpack_pattern = 0xB210;
+		break;
+	default:
+		main_unpack_pattern = 0xF6543210;
+		break;
+	}
+	msm_camera_io_w(main_unpack_pattern,
+		vfe_dev->vfe_base + 0x248);
+>>>>>>> 0e91d2a... Nougat
 	msm_camera_io_w(0xF, vfe_dev->vfe_base + 0x264);
 
 	return;
@@ -1157,6 +1300,60 @@ static void msm_vfe40_cfg_camif(struct vfe_device *vfe_dev,
 	val = msm_camera_io_r(vfe_dev->vfe_base + 0x2E8);
 	val |= camif_cfg->camif_input;
 	msm_camera_io_w(val, vfe_dev->vfe_base + 0x2E8);
+<<<<<<< HEAD
+=======
+
+	if (subsample_cfg->pixel_skip || subsample_cfg->line_skip) {
+		bus_sub_en = 1;
+		val = msm_camera_io_r(vfe_dev->vfe_base + 0x2F8);
+		val &= 0xFFFFFFDF;
+		val = val | bus_sub_en << 5;
+		msm_camera_io_w(val, vfe_dev->vfe_base + 0x2F8);
+		subsample_cfg->pixel_skip &= 0x0000FFFF;
+		subsample_cfg->line_skip  &= 0x0000FFFF;
+		msm_camera_io_w((subsample_cfg->line_skip << 16) |
+			subsample_cfg->pixel_skip,
+			vfe_dev->vfe_base + 0x30C);
+		if (subsample_cfg->first_pixel ||
+			subsample_cfg->last_pixel ||
+			subsample_cfg->first_line ||
+			subsample_cfg->last_line) {
+			msm_camera_io_w(
+			subsample_cfg->first_pixel << 16 |
+				subsample_cfg->last_pixel,
+				vfe_dev->vfe_base + 0x8A4);
+			msm_camera_io_w(
+			subsample_cfg->first_line << 16 |
+				subsample_cfg->last_line,
+				vfe_dev->vfe_base + 0x8A8);
+			val = msm_camera_io_r(
+				vfe_dev->vfe_base + 0x2F8);
+			val |= 1 << 22;
+			msm_camera_io_w(val,
+				vfe_dev->vfe_base + 0x2F8);
+		}
+
+		ISP_DBG("%s:camif raw op fmt %d\n",
+			__func__, subsample_cfg->output_format);
+		/* Pdaf output will be sent in PLAIN16 format*/
+		val = msm_camera_io_r(vfe_dev->vfe_base + 0x54);
+		switch (subsample_cfg->output_format) {
+		case CAMIF_PLAIN_8:
+			val |= 4 << 9;
+			break;
+		case CAMIF_PLAIN_16:
+			val |= 5 << 9;
+			break;
+		case CAMIF_MIPI_RAW:
+			val |= 1 << 9;
+			break;
+		case CAMIF_QCOM_RAW:
+		default:
+			break;
+		}
+		msm_camera_io_w(val, vfe_dev->vfe_base + 0x54);
+	}
+>>>>>>> 0e91d2a... Nougat
 }
 
 static void msm_vfe40_cfg_input_mux(struct vfe_device *vfe_dev,
@@ -1207,9 +1404,18 @@ static void msm_vfe40_update_camif_state(struct vfe_device *vfe_dev,
 		return;
 
 	if (update_state == ENABLE_CAMIF) {
+<<<<<<< HEAD
 		val = msm_camera_io_r(vfe_dev->vfe_base + 0x28);
 		val |= 0xF1;
 		msm_camera_io_w_mb(val, vfe_dev->vfe_base + 0x28);
+=======
+		msm_camera_io_w(0x0, vfe_dev->vfe_base + 0x30);
+		msm_camera_io_w_mb(0x81, vfe_dev->vfe_base + 0x34);
+		msm_camera_io_w_mb(0x1, vfe_dev->vfe_base + 0x24);
+		msm_vfe40_config_irq(vfe_dev, 0xF7, 0x81,
+				MSM_ISP_IRQ_ENABLE);
+		msm_camera_io_w_mb(0x140000, vfe_dev->vfe_base + 0x318);
+>>>>>>> 0e91d2a... Nougat
 
 		bus_en =
 			((vfe_dev->axi_data.
@@ -1221,21 +1427,30 @@ static void msm_vfe40_update_camif_state(struct vfe_device *vfe_dev,
 		val &= 0xFFFFFF3F;
 		val = val | bus_en << 7 | vfe_en << 6;
 		msm_camera_io_w(val, vfe_dev->vfe_base + 0x2F8);
+<<<<<<< HEAD
 		msm_camera_io_w_mb(0x4, vfe_dev->vfe_base + 0x2F4);
 		msm_camera_io_w_mb(0x1, vfe_dev->vfe_base + 0x2F4);
 		vfe_dev->axi_data.src_info[VFE_PIX_0].active = 1;
 		
+=======
+		/* testgen GO*/
+>>>>>>> 0e91d2a... Nougat
 		if (vfe_dev->axi_data.src_info[VFE_PIX_0].input_mux == TESTGEN)
 			msm_camera_io_w(1, vfe_dev->vfe_base + 0x93C);
-	} else if (update_state == DISABLE_CAMIF) {
-		msm_camera_io_w_mb(0x0, vfe_dev->vfe_base + 0x2F4);
+		msm_camera_io_w_mb(0x4, vfe_dev->vfe_base + 0x2F4);
+		msm_camera_io_w_mb(0x1, vfe_dev->vfe_base + 0x2F4);
+		vfe_dev->axi_data.src_info[VFE_PIX_0].active = 1;
+	} else if (update_state == DISABLE_CAMIF ||
+		DISABLE_CAMIF_IMMEDIATELY == update_state) {
+		msm_vfe40_config_irq(vfe_dev, 0, 0x81,
+				MSM_ISP_IRQ_DISABLE);
+		val = msm_camera_io_r(vfe_dev->vfe_base + 0x464);
+		/* disable danger signal */
+		msm_camera_io_w_mb(val & ~(1 << 8), vfe_dev->vfe_base + 0x464);
+		msm_camera_io_w_mb((update_state == DISABLE_CAMIF ? 0x0 : 0x6),
+				vfe_dev->vfe_base + 0x2F4);
 		vfe_dev->axi_data.src_info[VFE_PIX_0].active = 0;
 		
-		if (vfe_dev->axi_data.src_info[VFE_PIX_0].input_mux == TESTGEN)
-			msm_camera_io_w(1 << 1, vfe_dev->vfe_base + 0x93C);
-	} else if (update_state == DISABLE_CAMIF_IMMEDIATELY) {
-		msm_camera_io_w_mb(0x6, vfe_dev->vfe_base + 0x2F4);
-		vfe_dev->axi_data.src_info[VFE_PIX_0].active = 0;
 		if (vfe_dev->axi_data.src_info[VFE_PIX_0].input_mux == TESTGEN)
 			msm_camera_io_w(1 << 1, vfe_dev->vfe_base + 0x93C);
 	}
@@ -1274,7 +1489,21 @@ static void msm_vfe40_axi_cfg_wm_reg(
 	if (vfe_dev->vfe_hw_version == VFE40_8916_VERSION ||
 	    vfe_dev->vfe_hw_version == VFE40_8939_VERSION)
 		burst_len = VFE40_BURST_LEN_8916_VERSION;
+<<<<<<< HEAD
 	else
+=======
+		wm_bit_shift = VFE40_WM_BIT_SHIFT;
+	} else if (vfe_dev->vfe_hw_version == VFE40_8952_VERSION) {
+		burst_len = VFE40_BURST_LEN_8952_VERSION;
+		wm_bit_shift = VFE40_WM_BIT_SHIFT;
+	} else if (vfe_dev->vfe_hw_version == VFE40_8976_VERSION ||
+		vfe_dev->vfe_hw_version == VFE40_8937_VERSION ||
+		vfe_dev->vfe_hw_version == VFE40_8917_VERSION ||
+		vfe_dev->vfe_hw_version == VFE40_8953_VERSION) {
+		burst_len = VFE40_BURST_LEN_8952_VERSION;
+		wm_bit_shift = VFE40_WM_BIT_SHIFT_8976_VERSION;
+	} else {
+>>>>>>> 0e91d2a... Nougat
 		burst_len = VFE40_BURST_LEN;
 
 	if (!stream_info->frame_based) {
@@ -1512,16 +1741,28 @@ static void msm_vfe40_update_ping_pong_addr(
 		VFE40_PING_PONG_BASE(wm_idx, pingpong_status));
 }
 
+static void msm_vfe40_set_halt_restart_mask(struct vfe_device *vfe_dev)
+{
+	msm_vfe40_config_irq(vfe_dev, BIT(31), BIT(8), MSM_ISP_IRQ_SET);
+}
+
 static int msm_vfe40_axi_halt(struct vfe_device *vfe_dev,
 	uint32_t blocking)
 {
 	int rc = 0;
 	enum msm_vfe_input_src i;
 
+<<<<<<< HEAD
 	
 	msm_camera_io_w(BIT(31), vfe_dev->vfe_base + 0x28);
 	msm_camera_io_w(BIT(8), vfe_dev->vfe_base + 0x2C);
 	
+=======
+	/* Keep only halt and restart mask */
+	msm_vfe40_set_halt_restart_mask(vfe_dev);
+
+	/*Clear IRQ Status */
+>>>>>>> 0e91d2a... Nougat
 	msm_camera_io_w(0x7FFFFFFF, vfe_dev->vfe_base + 0x30);
 	msm_camera_io_w(0xFEFFFEFF, vfe_dev->vfe_base + 0x34);
 	msm_camera_io_w(0x1, vfe_dev->vfe_base + 0x24);
@@ -1567,14 +1808,21 @@ static int msm_vfe40_axi_halt(struct vfe_device *vfe_dev,
 static int msm_vfe40_axi_restart(struct vfe_device *vfe_dev,
 	uint32_t blocking, uint32_t enable_camif)
 {
+<<<<<<< HEAD
 	vfe_dev->hw_info->vfe_ops.core_ops.restore_irq_mask(vfe_dev);
 	
+=======
+	/* Clear IRQ Status */
+>>>>>>> 0e91d2a... Nougat
 	msm_camera_io_w(0x7FFFFFFF, vfe_dev->vfe_base + 0x30);
 	msm_camera_io_w(0xFEFFFEFF, vfe_dev->vfe_base + 0x34);
 	msm_camera_io_w(0x1, vfe_dev->vfe_base + 0x24);
 
 	
 	msm_camera_io_w(0x0, vfe_dev->vfe_base + 0x2C0);
+
+	msm_vfe40_config_irq(vfe_dev, vfe_dev->recovery_irq0_mask,
+		vfe_dev->recovery_irq1_mask, MSM_ISP_IRQ_SET);
 
 	vfe_dev->hw_info->vfe_ops.core_ops.reg_update(vfe_dev, VFE_SRC_MAX);
 	memset(&vfe_dev->error_info, 0, sizeof(vfe_dev->error_info));
@@ -1663,9 +1911,31 @@ static void msm_vfe40_stats_cfg_comp_mask(struct vfe_device *vfe_dev,
 		comp_stats_mask = reg_mask & (STATS_COMP_BIT_MASK << (i*8));
 		stats_comp = &stats_data->stats_comp_mask[i];
 
+<<<<<<< HEAD
 		if (enable) {
 			if (comp_stats_mask)
 				continue;
+=======
+	if (enable) {
+		comp_mask_reg |= mask_bf_scale << (16 + request_comp_index * 8);
+		atomic_set(stats_comp_mask, stats_mask |
+				atomic_read(stats_comp_mask));
+		msm_vfe40_config_irq(vfe_dev,
+			1 << (request_comp_index + 29), 0,
+			MSM_ISP_IRQ_ENABLE);
+	} else {
+		if (!(atomic_read(stats_comp_mask) & stats_mask))
+			return;
+		atomic_set(stats_comp_mask,
+				~stats_mask & atomic_read(stats_comp_mask));
+		comp_mask_reg &= ~(mask_bf_scale <<
+			(16 + request_comp_index * 8));
+		msm_vfe40_config_irq(vfe_dev,
+			1 << (request_comp_index + 29), 0,
+			MSM_ISP_IRQ_DISABLE);
+	}
+	msm_camera_io_w(comp_mask_reg, vfe_dev->vfe_base + 0x44);
+>>>>>>> 0e91d2a... Nougat
 
 			reg_mask |= (stats_mask << (16 + i*8));
 			atomic_add(stats_mask, stats_comp);
@@ -1691,20 +1961,18 @@ static void msm_vfe40_stats_cfg_wm_irq_mask(
 	struct vfe_device *vfe_dev,
 	struct msm_vfe_stats_stream *stream_info)
 {
-	uint32_t irq_mask;
-	irq_mask = msm_camera_io_r(vfe_dev->vfe_base + 0x28);
-	irq_mask |= 1 << (STATS_IDX(stream_info->stream_handle) + 16);
-	msm_camera_io_w(irq_mask, vfe_dev->vfe_base + 0x28);
+	msm_vfe40_config_irq(vfe_dev,
+			1 << (STATS_IDX(stream_info->stream_handle) + 16), 0,
+			MSM_ISP_IRQ_ENABLE);
 }
 
 static void msm_vfe40_stats_clear_wm_irq_mask(
 	struct vfe_device *vfe_dev,
 	struct msm_vfe_stats_stream *stream_info)
 {
-	uint32_t irq_mask;
-	irq_mask = msm_camera_io_r(vfe_dev->vfe_base + 0x28);
-	irq_mask &= ~(1 << (STATS_IDX(stream_info->stream_handle) + 16));
-	msm_camera_io_w(irq_mask, vfe_dev->vfe_base + 0x28);
+	msm_vfe40_config_irq(vfe_dev,
+			(1 << (STATS_IDX(stream_info->stream_handle) + 16)), 0,
+			MSM_ISP_IRQ_DISABLE);
 }
 
 static void msm_vfe40_stats_cfg_wm_reg(
@@ -1758,7 +2026,14 @@ static void msm_vfe40_stats_cfg_ub(struct vfe_device *vfe_dev)
 	};
 
 	if (vfe_dev->vfe_hw_version == VFE40_8916_VERSION ||
+<<<<<<< HEAD
 	    vfe_dev->vfe_hw_version == VFE40_8939_VERSION) {
+=======
+		vfe_dev->vfe_hw_version == VFE40_8939_VERSION ||
+		vfe_dev->vfe_hw_version == VFE40_8937_VERSION ||
+		vfe_dev->vfe_hw_version == VFE40_8917_VERSION ||
+		vfe_dev->vfe_hw_version == VFE40_8953_VERSION) {
+>>>>>>> 0e91d2a... Nougat
 		stats_burst_len = VFE40_STATS_BURST_LEN_8916_VERSION;
 		ub_offset = VFE40_UB_SIZE_8916;
 	} else {
@@ -1889,6 +2164,7 @@ static uint32_t msm_vfe40_stats_get_frame_id(
 	return vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id;
 }
 
+<<<<<<< HEAD
 static int msm_vfe40_get_platform_data(struct vfe_device *vfe_dev)
 {
 	int rc = 0;
@@ -1945,6 +2221,8 @@ vfe_no_resource:
 	return rc;
 }
 
+=======
+>>>>>>> 0e91d2a... Nougat
 static void msm_vfe40_get_error_mask(
 	uint32_t *error_mask0, uint32_t *error_mask1)
 {
@@ -1966,19 +2244,9 @@ static void msm_vfe40_get_rdi_wm_mask(struct vfe_device *vfe_dev,
 static void msm_vfe40_get_irq_mask(struct vfe_device *vfe_dev,
 	uint32_t *irq0_mask, uint32_t *irq1_mask)
 {
-	*irq0_mask = msm_camera_io_r(vfe_dev->vfe_base + 0x28);
-	*irq1_mask = msm_camera_io_r(vfe_dev->vfe_base + 0x2C);
+	*irq0_mask = vfe_dev->irq0_mask;
+	*irq1_mask = vfe_dev->irq1_mask;
 }
-
-
-static void msm_vfe40_restore_irq_mask(struct vfe_device *vfe_dev)
-{
-	msm_camera_io_w(vfe_dev->error_info.overflow_recover_irq_mask0,
-		vfe_dev->vfe_base + 0x28);
-	msm_camera_io_w(vfe_dev->error_info.overflow_recover_irq_mask1,
-		vfe_dev->vfe_base + 0x2C);
-}
-
 
 static void msm_vfe40_get_halt_restart_mask(uint32_t *irq0_mask,
 	uint32_t *irq1_mask)
@@ -1993,6 +2261,10 @@ static struct msm_vfe_axi_hardware_info msm_vfe40_axi_hw_info = {
 	.num_rdi = 3,
 	.num_rdi_master = 3,
 	.min_wm_ub = 64,
+<<<<<<< HEAD
+=======
+	.scratch_buf_range = SZ_32M + SZ_4M,
+>>>>>>> 0e91d2a... Nougat
 };
 
 static struct msm_vfe_stats_hardware_info msm_vfe40_stats_hw_info = {
@@ -2025,6 +2297,12 @@ struct msm_vfe_hardware_info vfe40_hw_info = {
 	.num_iommu_ctx = 1,
 	.num_iommu_secure_ctx = 1,
 	.vfe_clk_idx = VFE40_CLK_IDX,
+<<<<<<< HEAD
+=======
+	.runtime_axi_update = 0,
+	.min_ab = 12000000,
+	.min_ib = 12000000,
+>>>>>>> 0e91d2a... Nougat
 	.vfe_ops = {
 		.irq_ops = {
 			.read_irq_status = msm_vfe40_read_irq_status,
@@ -2036,6 +2314,10 @@ struct msm_vfe_hardware_info vfe40_hw_info = {
 			.process_axi_irq = msm_isp_process_axi_irq,
 			.process_stats_irq = msm_isp_process_stats_irq,
 			.process_epoch_irq = msm_vfe40_process_epoch_irq,
+<<<<<<< HEAD
+=======
+			.config_irq = msm_vfe40_config_irq,
+>>>>>>> 0e91d2a... Nougat
 		},
 		.axi_ops = {
 			.reload_wm = msm_vfe40_axi_reload_wm,
@@ -2069,19 +2351,27 @@ struct msm_vfe_hardware_info vfe40_hw_info = {
 			.start_fetch_eng = msm_vfe40_start_fetch_engine,
 			.cfg_rdi_reg = msm_vfe40_cfg_rdi_reg,
 			.reset_hw = msm_vfe40_reset_hardware,
-			.init_hw = msm_vfe40_init_hardware,
+			.init_hw = msm_vfe47_init_hardware,
 			.init_hw_reg = msm_vfe40_init_hardware_reg,
 			.clear_status_reg = msm_vfe40_clear_status_reg,
-			.release_hw = msm_vfe40_release_hardware,
-			.get_platform_data = msm_vfe40_get_platform_data,
+			.release_hw = msm_vfe47_release_hardware,
 			.get_error_mask = msm_vfe40_get_error_mask,
 			.get_overflow_mask = msm_vfe40_get_overflow_mask,
 			.get_rdi_wm_mask = msm_vfe40_get_rdi_wm_mask,
 			.get_irq_mask = msm_vfe40_get_irq_mask,
-			.restore_irq_mask = msm_vfe40_restore_irq_mask,
 			.get_halt_restart_mask =
 				msm_vfe40_get_halt_restart_mask,
 			.process_error_status = msm_vfe40_process_error_status,
+<<<<<<< HEAD
+=======
+			.is_module_cfg_lock_needed =
+				msm_vfe40_is_module_cfg_lock_needed,
+			.ahb_clk_cfg = NULL,
+			.set_halt_restart_mask =
+				msm_vfe40_set_halt_restart_mask,
+			.start_fetch_eng_multi_pass =
+				msm_vfe40_start_fetch_engine_multi_pass,
+>>>>>>> 0e91d2a... Nougat
 		},
 		.stats_ops = {
 			.get_stats_idx = msm_vfe40_get_stats_idx,
@@ -2101,12 +2391,32 @@ struct msm_vfe_hardware_info vfe40_hw_info = {
 			.get_pingpong_status = msm_vfe40_get_pingpong_status,
 			.update_cgc_override =
 				msm_vfe40_stats_update_cgc_override,
+			.enable_stats_wm = NULL,
 		},
+		.platform_ops = {
+			.get_platform_data = msm_vfe47_get_platform_data,
+			.enable_regulators = msm_vfe47_enable_regulators,
+			.get_regulators = msm_vfe47_get_regulators,
+			.put_regulators = msm_vfe47_put_regulators,
+			.enable_clks = msm_vfe47_enable_clks,
+			.get_clks = msm_vfe47_get_clks,
+			.put_clks = msm_vfe47_put_clks,
+			.get_clk_rates = msm_vfe47_get_clk_rates,
+			.get_max_clk_rate = msm_vfe47_get_max_clk_rate,
+			.set_clk_rate = msm_vfe47_set_clk_rate,
+			.init_bw_mgr = msm_vfe47_init_bandwidth_mgr,
+			.deinit_bw_mgr = msm_vfe47_deinit_bandwidth_mgr,
+			.update_bw = msm_vfe47_update_bandwidth,
+		}
 	},
 	.dmi_reg_offset = 0x918,
 	.axi_hw_info = &msm_vfe40_axi_hw_info,
 	.stats_hw_info = &msm_vfe40_stats_hw_info,
+<<<<<<< HEAD
 	.subdev_ops = &msm_vfe40_subdev_ops,
 	.subdev_internal_ops = &msm_vfe40_internal_ops,
+=======
+	.regulator_names = {"vdd"},
+>>>>>>> 0e91d2a... Nougat
 };
 EXPORT_SYMBOL(vfe40_hw_info);

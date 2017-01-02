@@ -285,10 +285,15 @@ int __cfg80211_mlme_auth(struct cfg80211_registered_device *rdev,
 	req.sae_data_len = sae_data_len;
 	req.auth_type = auth_type;
 	req.bss = cfg80211_get_bss(&rdev->wiphy, chan, bssid, ssid, ssid_len,
+<<<<<<< HEAD
 				   WLAN_CAPABILITY_ESS, WLAN_CAPABILITY_ESS);
 	req.key = key;
 	req.key_len = key_len;
 	req.key_idx = key_idx;
+=======
+				   IEEE80211_BSS_TYPE_ESS,
+				   IEEE80211_PRIVACY_ANY);
+>>>>>>> 0e91d2a... Nougat
 	if (!req.bss)
 		return -ENOENT;
 
@@ -392,10 +397,16 @@ int __cfg80211_mlme_assoc(struct cfg80211_registered_device *rdev,
 				   rdev->wiphy.vht_capa_mod_mask);
 
 	req->bss = cfg80211_get_bss(&rdev->wiphy, chan, bssid, ssid, ssid_len,
+<<<<<<< HEAD
 				    WLAN_CAPABILITY_ESS, WLAN_CAPABILITY_ESS);
 	if (!req->bss) {
 		if (was_connected)
 			wdev->sme_state = CFG80211_SME_CONNECTED;
+=======
+				    IEEE80211_BSS_TYPE_ESS,
+				    IEEE80211_PRIVACY_ANY);
+	if (!req->bss)
+>>>>>>> 0e91d2a... Nougat
 		return -ENOENT;
 	}
 

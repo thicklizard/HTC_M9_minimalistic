@@ -1373,6 +1373,12 @@ static void __init kmap_init(void)
 	pkmap_page_table = early_pte_alloc(pmd_off_k(PKMAP_BASE),
 		PKMAP_BASE, _PAGE_KERNEL_TABLE);
 #endif
+<<<<<<< HEAD
+=======
+
+	early_pte_alloc(pmd_off_k(FIXADDR_START), FIXADDR_START,
+			_PAGE_KERNEL_TABLE);
+>>>>>>> 0e91d2a... Nougat
 }
 
 #ifdef CONFIG_STRICT_MEMORY_RWX

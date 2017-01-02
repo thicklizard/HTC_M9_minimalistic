@@ -1017,6 +1017,20 @@ static int atmel_startup(struct uart_port *port)
 }
 
 /*
+ * Flush any TX data submitted for DMA. Called when the TX circular
+ * buffer is reset.
+ */
+static void atmel_flush_buffer(struct uart_port *port)
+{
+	struct atmel_uart_port *atmel_port = to_atmel_uart_port(port);
+
+	if (atmel_use_pdc_tx(port)) {
+		UART_PUT_TCR(port, 0);
+		atmel_port->pdc_tx.ofs = 0;
+	}
+}
+
+/*
  * Disable the port
  */
 static void atmel_shutdown(struct uart_port *port)
@@ -1070,6 +1084,7 @@ static void atmel_shutdown(struct uart_port *port)
 	 */
 	free_irq(port->irq, port);
 
+<<<<<<< HEAD
 	/*
 	 * If there is a specific "close" function (to unregister
 	 * control line interrupts)
@@ -1090,6 +1105,11 @@ static void atmel_flush_buffer(struct uart_port *port)
 		UART_PUT_TCR(port, 0);
 		atmel_port->pdc_tx.ofs = 0;
 	}
+=======
+	atmel_port->ms_irq_enabled = false;
+
+	atmel_flush_buffer(port);
+>>>>>>> 0e91d2a... Nougat
 }
 
 /*

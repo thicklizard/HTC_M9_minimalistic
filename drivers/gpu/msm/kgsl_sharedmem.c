@@ -1,4 +1,4 @@
-/* Copyright (c) 2002,2007-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2002,2007-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -25,6 +25,14 @@
 #include "kgsl_cffdump.h"
 #include "kgsl_device.h"
 #include "kgsl_log.h"
+<<<<<<< HEAD
+=======
+#include "kgsl_mmu.h"
+#include "kgsl_pool.h"
+
+
+static bool sharedmem_noretry_flag;
+>>>>>>> 0e91d2a... Nougat
 
 static DEFINE_MUTEX(kernel_map_global_lock);
 
@@ -335,12 +343,56 @@ kgsl_sharedmem_init_sysfs(void)
 		drv_attr_list);
 }
 
+<<<<<<< HEAD
+=======
+static int kgsl_cma_alloc_secure(struct kgsl_device *device,
+			struct kgsl_memdesc *memdesc, uint64_t size);
+
+static int kgsl_allocate_secure(struct kgsl_device *device,
+				struct kgsl_memdesc *memdesc,
+				struct kgsl_pagetable *pagetable,
+				uint64_t size) {
+	int ret;
+
+	if (MMU_FEATURE(&device->mmu, KGSL_MMU_HYP_SECURE_ALLOC))
+		ret = kgsl_sharedmem_page_alloc_user(memdesc, pagetable, size);
+	else
+		ret = kgsl_cma_alloc_secure(device, memdesc, size);
+
+	return ret;
+}
+
+int kgsl_allocate_user(struct kgsl_device *device,
+		struct kgsl_memdesc *memdesc,
+		struct kgsl_pagetable *pagetable,
+		uint64_t size, uint64_t flags)
+{
+	int ret;
+
+	memdesc->flags = flags;
+
+	if (kgsl_mmu_get_mmutype(device) == KGSL_MMU_TYPE_NONE)
+		ret = kgsl_sharedmem_alloc_contig(device, memdesc,
+				pagetable, size);
+	else if (flags & KGSL_MEMFLAGS_SECURE)
+		ret = kgsl_allocate_secure(device, memdesc, pagetable, size);
+	else
+		ret = kgsl_sharedmem_page_alloc_user(memdesc, pagetable, size);
+
+	return ret;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static int kgsl_page_alloc_vmfault(struct kgsl_memdesc *memdesc,
 				struct vm_area_struct *vma,
 				struct vm_fault *vmf)
 {
+<<<<<<< HEAD
 	int i, pgoff;
 	struct scatterlist *s = memdesc->sg;
+=======
+	int pgoff;
+>>>>>>> 0e91d2a... Nougat
 	unsigned int offset;
 
 	offset = ((unsigned long) vmf->virtual_address - vma->vm_start);
@@ -350,6 +402,7 @@ static int kgsl_page_alloc_vmfault(struct kgsl_memdesc *memdesc,
 
 	pgoff = offset >> PAGE_SHIFT;
 
+<<<<<<< HEAD
 	/*
 	 * The sglist might be comprised of mixed blocks of memory depending
 	 * on how many 64K pages were allocated.  This means we have to do math
@@ -363,15 +416,17 @@ static int kgsl_page_alloc_vmfault(struct kgsl_memdesc *memdesc,
 			struct page *page = sg_page(s);
 
 			page = nth_page(page, pgoff);
+=======
+	if (pgoff < memdesc->page_count) {
+		struct page *page = memdesc->pages[pgoff];
 
-			get_page(page);
-			vmf->page = page;
+		get_page(page);
+		vmf->page = page;
+>>>>>>> 0e91d2a... Nougat
 
-			return 0;
-		}
+		memdesc->mapsize += PAGE_SIZE;
 
-		pgoff -= npages;
-		s = sg_next(s);
+		return 0;
 	}
 
 	return VM_FAULT_SIGBUS;
@@ -403,9 +458,12 @@ done:
 
 static void kgsl_page_alloc_free(struct kgsl_memdesc *memdesc)
 {
+<<<<<<< HEAD
 	int i = 0;
 	struct scatterlist *sg;
 	int sglen = memdesc->sglen;
+=======
+>>>>>>> 0e91d2a... Nougat
 	struct kgsl_process_private *priv = memdesc->private;
 
 	kgsl_driver.stats.page_alloc -= memdesc->size;
@@ -417,9 +475,31 @@ static void kgsl_page_alloc_free(struct kgsl_memdesc *memdesc)
 	if (sglen <= 0)
 		pr_warn("kgsl: Prabably pages are already freed: sglen=%d\n", sglen);
 
+<<<<<<< HEAD
 	if ((sglen > 0) && memdesc->sg)
 		for_each_sg(memdesc->sg, sg, sglen, i)
 			__free_pages(sg_page(sg), get_order(sg->length));
+=======
+		atomic_long_sub(memdesc->size, &kgsl_driver.stats.secure);
+	} else {
+		atomic_long_sub(memdesc->size, &kgsl_driver.stats.page_alloc);
+	}
+
+	if (memdesc->priv & KGSL_MEMDESC_TZ_LOCKED) {
+		struct sg_page_iter sg_iter;
+
+		for_each_sg_page(memdesc->sgt->sgl, &sg_iter,
+					memdesc->sgt->nents, 0)
+			ClearPagePrivate(sg_page_iter_page(&sg_iter));
+
+	}
+>>>>>>> 0e91d2a... Nougat
+
+	
+	if (memdesc->pages != NULL)
+		kgsl_pool_free_pages(memdesc->pages, memdesc->page_count);
+	else
+		kgsl_pool_free_sgt(memdesc->sgt);
 
 	if (priv)
 		kgsl_process_sub_stats(priv, KGSL_MEM_ENTRY_PAGE_ALLOC, memdesc->size);
@@ -438,8 +518,9 @@ static int kgsl_page_alloc_map_kernel(struct kgsl_memdesc *memdesc)
 	int ret = 0;
 
 	mutex_lock(&kernel_map_global_lock);
-	if (!memdesc->hostptr) {
+	if ((!memdesc->hostptr) && (memdesc->pages != NULL)) {
 		pgprot_t page_prot = pgprot_writecombine(PAGE_KERNEL);
+<<<<<<< HEAD
 		struct page **pages = NULL;
 		struct scatterlist *sg;
 		int npages = PAGE_ALIGN(memdesc->size) >> PAGE_SHIFT;
@@ -463,17 +544,20 @@ static int kgsl_page_alloc_map_kernel(struct kgsl_memdesc *memdesc)
 
 
 		memdesc->hostptr = vmap(pages, count,
+=======
+
+		memdesc->hostptr = vmap(memdesc->pages, memdesc->page_count,
+>>>>>>> 0e91d2a... Nougat
 					VM_IOREMAP, page_prot);
 		if (memdesc->hostptr)
 			KGSL_STATS_ADD(memdesc->size, kgsl_driver.stats.vmalloc,
 				kgsl_driver.stats.vmalloc_max);
 		else
 			ret = -ENOMEM;
-		kgsl_free(pages);
 	}
 	if (memdesc->hostptr)
 		memdesc->hostptr_count++;
-done:
+
 	mutex_unlock(&kernel_map_global_lock);
 
 	return ret;
@@ -496,6 +580,8 @@ static int kgsl_contiguous_vmfault(struct kgsl_memdesc *memdesc,
 		return VM_FAULT_OOM;
 	else if (ret == -EFAULT)
 		return VM_FAULT_SIGBUS;
+
+	memdesc->mapsize += PAGE_SIZE;
 
 	return VM_FAULT_NOPAGE;
 }
@@ -613,19 +699,67 @@ static inline int get_page_size(size_t size, unsigned int align)
 }
 #endif
 
+<<<<<<< HEAD
 static int
 _kgsl_sharedmem_page_alloc(struct kgsl_memdesc *memdesc,
+=======
+static void kgsl_zero_pages(struct page **pages, unsigned int pcount)
+{
+	unsigned int j;
+	unsigned int step = ((VMALLOC_END - VMALLOC_START)/8) >> PAGE_SHIFT;
+	pgprot_t page_prot = pgprot_writecombine(PAGE_KERNEL);
+	void *ptr;
+
+	for (j = 0; j < pcount; j += step) {
+		step = min(step, pcount - j);
+
+		ptr = vmap(&pages[j], step, VM_IOREMAP, page_prot);
+
+		if (ptr != NULL) {
+			memset(ptr, 0, step * PAGE_SIZE);
+			dmac_flush_range(ptr, ptr + step * PAGE_SIZE);
+			vunmap(ptr);
+		} else {
+			int k;
+			
+
+			for (k = j; k < j + step; k++) {
+				ptr = kmap_atomic(pages[k]);
+				memset(ptr, 0, PAGE_SIZE);
+				dmac_flush_range(ptr, ptr + PAGE_SIZE);
+				kunmap_atomic(ptr);
+			}
+			
+			if (step > 1)
+				step >>= 1;
+		}
+	}
+}
+
+int
+kgsl_sharedmem_page_alloc_user(struct kgsl_memdesc *memdesc,
+>>>>>>> 0e91d2a... Nougat
 			struct kgsl_pagetable *pagetable,
 			size_t size)
 {
+<<<<<<< HEAD
 	int pcount = 0, ret = 0;
 	int j, page_size, sglen_alloc, sglen = 0;
+=======
+	int ret = 0;
+	unsigned int j, page_size, len_alloc;
+	unsigned int pcount = 0;
+>>>>>>> 0e91d2a... Nougat
 	size_t len;
-	struct page **pages = NULL;
-	pgprot_t page_prot = pgprot_writecombine(PAGE_KERNEL);
-	void *ptr;
 	unsigned int align;
+<<<<<<< HEAD
 	int step = ((VMALLOC_END - VMALLOC_START)/8) >> PAGE_SHIFT;
+=======
+
+	size = PAGE_ALIGN(size);
+	if (size == 0 || size > UINT_MAX)
+		return -EINVAL;
+>>>>>>> 0e91d2a... Nougat
 
 	align = (memdesc->flags & KGSL_MEMALIGN_MASK) >> KGSL_MEMALIGN_SHIFT;
 
@@ -649,6 +783,7 @@ _kgsl_sharedmem_page_alloc(struct kgsl_memdesc *memdesc,
 	memdesc->pagetable = pagetable;
 	memdesc->ops = &kgsl_page_alloc_ops;
 
+<<<<<<< HEAD
 	memdesc->sg = kgsl_malloc(sglen_alloc * sizeof(struct scatterlist));
 
 	if (memdesc->sg == NULL) {
@@ -662,8 +797,12 @@ _kgsl_sharedmem_page_alloc(struct kgsl_memdesc *memdesc,
 	 */
 
 	pages = kgsl_malloc(sglen_alloc * sizeof(struct page *));
+=======
 
-	if (pages == NULL) {
+	memdesc->pages = kgsl_malloc(len_alloc * sizeof(struct page *));
+>>>>>>> 0e91d2a... Nougat
+
+	if (memdesc->pages == NULL) {
 		ret = -ENOMEM;
 		goto done;
 	}
@@ -676,14 +815,19 @@ _kgsl_sharedmem_page_alloc(struct kgsl_memdesc *memdesc,
 	len = size;
 
 	while (len > 0) {
+<<<<<<< HEAD
 		struct page *page;
 		unsigned int gfp_mask = __GFP_HIGHMEM;
 		int j;
+=======
+		int page_count;
+>>>>>>> 0e91d2a... Nougat
 
 		/* don't waste space at the end of the allocation*/
 		if (len < page_size)
 			page_size = PAGE_SIZE;
 
+<<<<<<< HEAD
 		/*
 		 * Don't do some of the more aggressive memory recovery
 		 * techniques for large order allocations
@@ -697,6 +841,12 @@ _kgsl_sharedmem_page_alloc(struct kgsl_memdesc *memdesc,
 		page = alloc_pages(gfp_mask, get_order(page_size));
 
 		if (page == NULL) {
+=======
+		page_count = kgsl_pool_alloc_page(page_size,
+					memdesc->pages + pcount,
+					len_alloc - pcount);
+		if (page_count <= 0) {
+>>>>>>> 0e91d2a... Nougat
 			if (page_size != PAGE_SIZE) {
 				page_size = PAGE_SIZE;
 				continue;
@@ -723,6 +873,7 @@ _kgsl_sharedmem_page_alloc(struct kgsl_memdesc *memdesc,
 			goto done;
 		}
 
+<<<<<<< HEAD
 		for (j = 0; j < page_size >> PAGE_SHIFT; j++)
 			pages[pcount++] = nth_page(page, j);
 
@@ -781,6 +932,83 @@ done:
 		kgsl_driver.stats.page_alloc_max);
 
 	kgsl_free(pages);
+=======
+		pcount += page_count;
+		len -= page_size;
+		memdesc->size += page_size;
+		memdesc->page_count += page_count;
+	}
+
+	
+	if (memdesc->flags & KGSL_MEMFLAGS_SECURE) {
+		unsigned int i;
+		struct scatterlist *sg;
+		int dest_perms = PERM_READ | PERM_WRITE;
+		int source_vm = VMID_HLOS;
+		int dest_vm = VMID_CP_PIXEL;
+
+		memdesc->sgt = kmalloc(sizeof(struct sg_table), GFP_KERNEL);
+		if (memdesc->sgt == NULL) {
+			ret = -ENOMEM;
+			goto done;
+		}
+
+		ret = sg_alloc_table_from_pages(memdesc->sgt, memdesc->pages,
+			memdesc->page_count, 0, memdesc->size, GFP_KERNEL);
+		if (ret) {
+			kfree(memdesc->sgt);
+			goto done;
+		}
+
+		ret = hyp_assign_table(memdesc->sgt, &source_vm, 1,
+					&dest_vm, &dest_perms, 1);
+		if (ret) {
+			sg_free_table(memdesc->sgt);
+			kfree(memdesc->sgt);
+			memdesc->sgt = NULL;
+			goto done;
+		}
+
+		
+		for_each_sg(memdesc->sgt->sgl, sg, memdesc->sgt->nents, i)
+			SetPagePrivate(sg_page(sg));
+
+		memdesc->priv |= KGSL_MEMDESC_TZ_LOCKED;
+
+		
+		KGSL_STATS_ADD(memdesc->size, &kgsl_driver.stats.secure,
+			&kgsl_driver.stats.secure_max);
+
+		kgsl_free(memdesc->pages);
+		memdesc->pages = NULL;
+		memdesc->page_count = 0;
+
+		
+		goto done;
+	}
+
+	KGSL_STATS_ADD(memdesc->size, &kgsl_driver.stats.page_alloc,
+		&kgsl_driver.stats.page_alloc_max);
+	if (memdesc->private)
+		kgsl_process_add_stats(memdesc->private, KGSL_MEM_ENTRY_PAGE_ALLOC, size);
+
+	kgsl_zero_pages(memdesc->pages, pcount);
+
+done:
+	if (ret) {
+		if (memdesc->pages) {
+			unsigned int count = 1;
+
+			for (j = 0; j < pcount; j += count) {
+				count = 1 << compound_order(memdesc->pages[j]);
+				kgsl_pool_free_page(memdesc->pages[j]);
+			}
+		}
+
+		kgsl_free(memdesc->pages);
+		memset(memdesc, 0, sizeof(*memdesc));
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	if (ret)
 		kgsl_sharedmem_free(memdesc);
@@ -823,6 +1051,9 @@ void kgsl_sharedmem_free(struct kgsl_memdesc *memdesc)
 
 	kgsl_free(memdesc->sg);
 
+	if (memdesc->pages)
+		kgsl_free(memdesc->pages);
+
 	memset(memdesc, 0, sizeof(*memdesc));
 }
 EXPORT_SYMBOL(kgsl_sharedmem_free);
@@ -838,8 +1069,8 @@ kgsl_sharedmem_readl(const struct kgsl_memdesc *memdesc,
 	if (offsetbytes % sizeof(uint32_t) != 0)
 		return -EINVAL;
 
-	WARN_ON(offsetbytes + sizeof(uint32_t) > memdesc->size);
-	if (offsetbytes + sizeof(uint32_t) > memdesc->size)
+	WARN_ON(offsetbytes > (memdesc->size - sizeof(uint32_t)));
+	if (offsetbytes > (memdesc->size - sizeof(uint32_t)))
 		return -ERANGE;
 
 	rmb();
@@ -861,8 +1092,8 @@ kgsl_sharedmem_writel(struct kgsl_device *device,
 	if (offsetbytes % sizeof(uint32_t) != 0)
 		return -EINVAL;
 
-	WARN_ON(offsetbytes + sizeof(uint32_t) > memdesc->size);
-	if (offsetbytes + sizeof(uint32_t) > memdesc->size)
+	WARN_ON(offsetbytes > (memdesc->size - sizeof(uint32_t)));
+	if (offsetbytes > (memdesc->size - sizeof(uint32_t)))
 		return -ERANGE;
 	kgsl_cffdump_write(device,
 		memdesc->gpuaddr + offsetbytes,
@@ -877,6 +1108,59 @@ kgsl_sharedmem_writel(struct kgsl_device *device,
 EXPORT_SYMBOL(kgsl_sharedmem_writel);
 
 int
+<<<<<<< HEAD
+=======
+kgsl_sharedmem_readq(const struct kgsl_memdesc *memdesc,
+			uint64_t *dst,
+			uint64_t offsetbytes)
+{
+	uint64_t *src;
+	BUG_ON(memdesc == NULL || memdesc->hostptr == NULL || dst == NULL);
+	WARN_ON(offsetbytes % sizeof(uint32_t) != 0);
+	if (offsetbytes % sizeof(uint32_t) != 0)
+		return -EINVAL;
+
+	WARN_ON(offsetbytes > (memdesc->size - sizeof(uint32_t)));
+	if (offsetbytes > (memdesc->size - sizeof(uint32_t)))
+		return -ERANGE;
+
+	rmb();
+	src = (uint64_t *)(memdesc->hostptr + offsetbytes);
+	*dst = *src;
+	return 0;
+}
+EXPORT_SYMBOL(kgsl_sharedmem_readq);
+
+int
+kgsl_sharedmem_writeq(struct kgsl_device *device,
+			const struct kgsl_memdesc *memdesc,
+			uint64_t offsetbytes,
+			uint64_t src)
+{
+	uint64_t *dst;
+	BUG_ON(memdesc == NULL || memdesc->hostptr == NULL);
+	WARN_ON(offsetbytes % sizeof(uint32_t) != 0);
+	if (offsetbytes % sizeof(uint32_t) != 0)
+		return -EINVAL;
+
+	WARN_ON(offsetbytes > (memdesc->size - sizeof(uint32_t)));
+	if (offsetbytes > (memdesc->size - sizeof(uint32_t)))
+		return -ERANGE;
+	kgsl_cffdump_write(device,
+		lower_32_bits(memdesc->gpuaddr + offsetbytes), src);
+	kgsl_cffdump_write(device,
+		upper_32_bits(memdesc->gpuaddr + offsetbytes), src);
+	dst = (uint64_t *)(memdesc->hostptr + offsetbytes);
+	*dst = src;
+
+	wmb();
+
+	return 0;
+}
+EXPORT_SYMBOL(kgsl_sharedmem_writeq);
+
+int
+>>>>>>> 0e91d2a... Nougat
 kgsl_sharedmem_set(struct kgsl_device *device,
 		const struct kgsl_memdesc *memdesc, unsigned int offsetbytes,
 		unsigned int value, unsigned int sizebytes)
@@ -959,8 +1243,16 @@ int kgsl_cma_alloc_coherent(struct kgsl_device *device,
 
 	/* Record statistics */
 
+<<<<<<< HEAD
 	KGSL_STATS_ADD(size, kgsl_driver.stats.coherent,
 		       kgsl_driver.stats.coherent_max);
+=======
+	if (kgsl_mmu_get_mmutype(device) == KGSL_MMU_TYPE_NONE)
+		memdesc->gpuaddr = memdesc->physaddr;
+
+	KGSL_STATS_ADD(size, &kgsl_driver.stats.coherent,
+		&kgsl_driver.stats.coherent_max);
+>>>>>>> 0e91d2a... Nougat
 
 err:
 	if (result)
@@ -1021,9 +1313,13 @@ static int scm_lock_chunk(struct kgsl_memdesc *memdesc, int lock)
 int kgsl_cma_alloc_secure(struct kgsl_device *device,
 			struct kgsl_memdesc *memdesc, size_t size)
 {
+<<<<<<< HEAD
 	struct kgsl_iommu *iommu = device->mmu.priv;
 	struct kgsl_iommu_unit *iommu_unit =
 			&iommu->iommu_units[KGSL_IOMMU_UNIT_0];
+=======
+	struct kgsl_iommu *iommu = KGSL_IOMMU_PRIV(device);
+>>>>>>> 0e91d2a... Nougat
 	int result = 0;
 	struct kgsl_pagetable *pagetable = device->mmu.securepagetable;
 

@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -20,6 +24,7 @@
 #include <media/msm_cam_sensor.h>
 #include <soc/qcom/camera2.h>
 #include "msm_sd.h"
+#include "cam_soc_api.h"
 
 #define NUM_MASTERS 2
 #define NUM_QUEUES 2
@@ -72,7 +77,7 @@ struct msm_camera_cci_gpio_cfg {
 };
 
 struct msm_camera_cci_i2c_read_cfg {
-	uint16_t addr;
+	uint32_t addr;
 	enum msm_camera_i2c_reg_addr_type addr_type;
 	uint8_t *data;
 	uint16_t num_byte;
@@ -126,17 +131,23 @@ struct cci_device {
 	struct platform_device *pdev;
 	struct msm_sd_subdev msm_sd;
 	struct v4l2_subdev subdev;
-	struct resource *mem;
 	struct resource *irq;
-	struct resource *io;
 	void __iomem *base;
 
 	uint32_t hw_version;
 	uint8_t ref_count;
 	enum msm_cci_state_t cci_state;
+<<<<<<< HEAD
 	uint32_t num_clk;
 
 	struct clk *cci_clk[CCI_NUM_CLK_MAX];
+=======
+	size_t num_clk;
+	size_t num_clk_cases;
+	struct clk **cci_clk;
+	uint32_t **cci_clk_rates;
+	struct msm_cam_clk_info *cci_clk_info;
+>>>>>>> 0e91d2a... Nougat
 	struct msm_camera_cci_i2c_queue_info
 		cci_i2c_queue_info[NUM_MASTERS][NUM_QUEUES];
 	struct msm_camera_cci_master_info cci_master_info[NUM_MASTERS];

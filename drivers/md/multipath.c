@@ -131,8 +131,15 @@ static void multipath_make_request(struct mddev *mddev, struct bio * bio)
 	}
 	multipath = conf->multipaths + mp_bh->path;
 
+<<<<<<< HEAD
 	mp_bh->bio = *bio;
 	mp_bh->bio.bi_sector += multipath->rdev->data_offset;
+=======
+	bio_init(&mp_bh->bio);
+	__bio_clone_fast(&mp_bh->bio, bio);
+
+	mp_bh->bio.bi_iter.bi_sector += multipath->rdev->data_offset;
+>>>>>>> 0e91d2a... Nougat
 	mp_bh->bio.bi_bdev = multipath->rdev->bdev;
 	mp_bh->bio.bi_rw |= REQ_FAILFAST_TRANSPORT;
 	mp_bh->bio.bi_end_io = multipath_end_request;

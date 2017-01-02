@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007 Google, Inc.
- * Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1561,6 +1561,11 @@ static int msm_nand_read_partial_page(struct mtd_info *mtd,
 	loff_t offset;
 	size_t len;
 	size_t actual_len, ret_len;
+<<<<<<< HEAD
+=======
+	int is_euclean = 0;
+	int is_ebadmsg = 0;
+>>>>>>> 0e91d2a... Nougat
 
 	actual_len = ops->len;
 	ret_len = 0;
@@ -1594,7 +1599,23 @@ static int msm_nand_read_partial_page(struct mtd_info *mtd,
 
 		ops->datbuf = no_copy ? actual_buf : bounce_buf;
 		err = msm_nand_read_oob(mtd, aligned_from, ops);
+<<<<<<< HEAD
 		if (err < 0) {
+=======
+		if (err == -EUCLEAN) {
+			is_euclean = 1;
+			err = 0;
+		}
+
+		if (err == -EBADMSG) {
+			is_ebadmsg = 1;
+			err = 0;
+		}
+
+		if (err < 0) {
+			/* Clear previously set EUCLEAN / EBADMSG */
+			is_euclean = 0;
+>>>>>>> 0e91d2a... Nougat
 			ret_len = ops->retlen;
 			break;
 		}
@@ -1616,6 +1637,15 @@ static int msm_nand_read_partial_page(struct mtd_info *mtd,
 	ops->retlen = ret_len;
 	kfree(bounce_buf);
 out:
+<<<<<<< HEAD
+=======
+	if (is_euclean == 1)
+		err = -EUCLEAN;
+
+	/* Snub EUCLEAN if we also have EBADMSG */
+	if (is_ebadmsg == 1)
+		err = -EBADMSG;
+>>>>>>> 0e91d2a... Nougat
 	return err;
 }
 
@@ -2870,7 +2900,12 @@ static int msm_nand_probe(struct platform_device *pdev)
 	struct msm_nand_info *info;
 	struct resource *res;
 	int i, err, nr_parts;
+<<<<<<< HEAD
 
+=======
+	struct device *dev;
+	u32 adjustment_offset;
+>>>>>>> 0e91d2a... Nougat
 	/*
 	 * The partition information can also be passed from kernel command
 	 * line. Also, the MTD core layer supports adding the whole device as
@@ -2891,6 +2926,18 @@ static int msm_nand_probe(struct platform_device *pdev)
 		goto out;
 	}
 	info->nand_phys = res->start;
+
+	err = of_property_read_u32(pdev->dev.of_node,
+				   "qcom,reg-adjustment-offset",
+				   &adjustment_offset);
+	if (err) {
+		pr_err("adjustment_offset not found, err = %d\n", err);
+		WARN_ON(1);
+		return err;
+	}
+
+	info->nand_phys_adjusted = info->nand_phys + adjustment_offset;
+
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 						"bam_phys");
 	if (!res || !res->start) {

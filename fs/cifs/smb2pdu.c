@@ -882,6 +882,7 @@ static __u8
 parse_lease_state(struct smb2_create_rsp *rsp)
 {
 	char *data_offset;
+<<<<<<< HEAD
 	struct create_lease *lc;
 	bool found = false;
 
@@ -901,6 +902,31 @@ parse_lease_state(struct smb2_create_rsp *rsp)
 		found = true;
 		break;
 	} while (le32_to_cpu(lc->ccontext.Next) != 0);
+=======
+	struct create_context *cc;
+	unsigned int next;
+	unsigned int remaining;
+	char *name;
+
+	data_offset = (char *)rsp + 4 + le32_to_cpu(rsp->CreateContextsOffset);
+	remaining = le32_to_cpu(rsp->CreateContextsLength);
+	cc = (struct create_context *)data_offset;
+	while (remaining >= sizeof(struct create_context)) {
+		name = le16_to_cpu(cc->NameOffset) + (char *)cc;
+		if (le16_to_cpu(cc->NameLength) == 4 &&
+		    strncmp(name, "RqLs", 4) == 0)
+			return server->ops->parse_lease_buf(cc, epoch);
+
+		next = le32_to_cpu(cc->Next);
+		if (!next)
+			break;
+		remaining -= next;
+		cc = (struct create_context *)((char *)cc + next);
+	}
+
+	return 0;
+}
+>>>>>>> 0e91d2a... Nougat
 
 	if (!found)
 		return 0;

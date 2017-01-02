@@ -183,7 +183,7 @@ static void slave_event(struct mlx4_dev *dev, u8 slave, struct mlx4_eqe *eqe)
 		return;
 	}
 
-	memcpy(s_eqe, eqe, dev->caps.eqe_size - 1);
+	memcpy(s_eqe, eqe, sizeof(struct mlx4_eqe) - 1);
 	s_eqe->slave_id = slave;
 	/* ensure all information is written before setting the ownersip bit */
 	wmb();
@@ -556,7 +556,18 @@ static int mlx4_eq_int(struct mlx4_dev *dev, struct mlx4_eq *eq)
 						mlx4_dbg(dev, "%s: Sending MLX4_PORT_CHANGE_SUBTYPE_DOWN"
 							 " to slave: %d, port:%d\n",
 							 __func__, i, port);
+<<<<<<< HEAD
 						mlx4_slave_event(dev, i, eqe);
+=======
+						s_info = &priv->mfunc.master.vf_oper[i].vport[port].state;
+						if (IFLA_VF_LINK_STATE_AUTO == s_info->link_state) {
+							eqe->event.port_change.port =
+								cpu_to_be32(
+								(be32_to_cpu(eqe->event.port_change.port) & 0xFFFFFFF)
+								| (mlx4_phys_to_slave_port(dev, i, port) << 28));
+							mlx4_slave_event(dev, i, eqe);
+						}
+>>>>>>> 0e91d2a... Nougat
 					} else {  /* IB port */
 						set_and_calc_slave_port_state(dev, i, port,
 									      MLX4_PORT_STATE_DEV_EVENT_PORT_DOWN,
@@ -580,7 +591,18 @@ static int mlx4_eq_int(struct mlx4_dev *dev, struct mlx4_eq *eq)
 					for (i = 0; i < dev->num_slaves; i++) {
 						if (i == mlx4_master_func_num(dev))
 							continue;
+<<<<<<< HEAD
 						mlx4_slave_event(dev, i, eqe);
+=======
+						s_info = &priv->mfunc.master.vf_oper[i].vport[port].state;
+						if (IFLA_VF_LINK_STATE_AUTO == s_info->link_state) {
+							eqe->event.port_change.port =
+								cpu_to_be32(
+								(be32_to_cpu(eqe->event.port_change.port) & 0xFFFFFFF)
+								| (mlx4_phys_to_slave_port(dev, i, port) << 28));
+							mlx4_slave_event(dev, i, eqe);
+						}
+>>>>>>> 0e91d2a... Nougat
 					}
 				else /* IB port */
 					/* port-up event will be sent to a slave when the

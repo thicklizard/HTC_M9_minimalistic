@@ -157,6 +157,7 @@ static inline int mem_words_used(struct jit_ctx *ctx)
 	return fls(ctx->seen & SEEN_MEM);
 }
 
+<<<<<<< HEAD
 static inline bool is_load_to_a(u16 inst)
 {
 	switch (inst) {
@@ -176,12 +177,19 @@ static inline bool is_load_to_a(u16 inst)
 	default:
 		return false;
 	}
+=======
+static void jit_fill_hole(void *area, unsigned int size)
+{
+	u32 *ptr;
+	/* We are guaranteed to have aligned memory. */
+	for (ptr = area; size >= sizeof(u32); size -= sizeof(u32))
+		*ptr++ = __opcode_to_mem_arm(ARM_INST_UDF);
+>>>>>>> 0e91d2a... Nougat
 }
 
 static void build_prologue(struct jit_ctx *ctx)
 {
 	u16 reg_set = saved_regs(ctx);
-	u16 first_inst = ctx->skf->insns[0].code;
 	u16 off;
 
 #ifdef CONFIG_FRAME_POINTER
@@ -211,7 +219,11 @@ static void build_prologue(struct jit_ctx *ctx)
 		emit(ARM_MOV_I(r_X, 0), ctx);
 
 	/* do not leak kernel data to userspace */
+<<<<<<< HEAD
 	if ((first_inst != BPF_S_RET_K) && !(is_load_to_a(first_inst)))
+=======
+	if (bpf_needs_clear_a(&ctx->skf->insns[0]))
+>>>>>>> 0e91d2a... Nougat
 		emit(ARM_MOV_I(r_A, 0), ctx);
 
 	/* stack space for the BPF_MEM words */

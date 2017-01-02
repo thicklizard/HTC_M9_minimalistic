@@ -145,7 +145,11 @@ int bt_info(const char *format, ...)
 	vaf.fmt = format;
 	vaf.va = &args;
 
+<<<<<<< HEAD
 	r = pr_info("%pV", &vaf);
+=======
+	pr_info("%pKV", &vaf);
+>>>>>>> 0e91d2a... Nougat
 
 	va_end(args);
 
@@ -164,7 +168,11 @@ int bt_err(const char *format, ...)
 	vaf.fmt = format;
 	vaf.va = &args;
 
+<<<<<<< HEAD
 	r = pr_err("%pV", &vaf);
+=======
+	pr_err("%pKV", &vaf);
+>>>>>>> 0e91d2a... Nougat
 
 	va_end(args);
 

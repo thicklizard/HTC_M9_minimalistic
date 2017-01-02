@@ -69,6 +69,7 @@ static unsigned long mmap_rnd(void)
 {
 	unsigned long rnd = 0;
 
+<<<<<<< HEAD
 	/*
 	*  8 bits of randomness in 32bit mmaps, 20 address space bits
 	* 28 bits of randomness in 64bit mmaps, 40 address space bits
@@ -78,6 +79,17 @@ static unsigned long mmap_rnd(void)
 			rnd = get_random_int() % (1<<8);
 		else
 			rnd = get_random_int() % (1<<28);
+=======
+	if (current->flags & PF_RANDOMIZE) {
+		if (mmap_is_ia32())
+#ifdef CONFIG_COMPAT
+			rnd = get_random_long() & ((1UL << mmap_rnd_compat_bits) - 1);
+#else
+			rnd = get_random_long() & ((1UL << mmap_rnd_bits) - 1);
+#endif
+		else
+			rnd = get_random_long() & ((1UL << mmap_rnd_bits) - 1);
+>>>>>>> 0e91d2a... Nougat
 	}
 	return rnd << PAGE_SHIFT;
 }

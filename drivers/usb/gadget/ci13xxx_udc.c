@@ -388,20 +388,31 @@ static int hw_device_reset(struct ci13xxx *udc)
 static int hw_device_state(u32 dma)
 {
 	struct ci13xxx *udc = _udc;
+<<<<<<< HEAD
 	struct usb_gadget *gadget = &udc->gadget;
+=======
+>>>>>>> 0e91d2a... Nougat
 
 	if (dma) {
-		if (gadget->streaming_enabled || !(udc->udc_driver->flags &
-				CI13XXX_DISABLE_STREAMING)) {
+		if (!(udc->udc_driver->flags & CI13XXX_DISABLE_STREAMING)) {
 			hw_cwrite(CAP_USBMODE, USBMODE_SDIS, 0);
 			pr_debug("%s(): streaming mode is enabled. USBMODE:%x\n",
 				 __func__, hw_cread(CAP_USBMODE, ~0));
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0e91d2a... Nougat
 		} else {
 			hw_cwrite(CAP_USBMODE, USBMODE_SDIS, USBMODE_SDIS);
 			pr_debug("%s(): streaming mode is disabled. USBMODE:%x\n",
 				__func__, hw_cread(CAP_USBMODE, ~0));
+<<<<<<< HEAD
 
 		}
+=======
+		}
+
+>>>>>>> 0e91d2a... Nougat
 		hw_cwrite(CAP_ENDPTLISTADDR, ~0, dma);
 
 
@@ -2089,9 +2100,33 @@ static int _hardware_enqueue(struct ci13xxx_ep *mEp, struct ci13xxx_req *mReq)
 
 	/*  QH configuration */
 	if (!list_empty(&mEp->qh.queue)) {
+<<<<<<< HEAD
 		struct ci13xxx_req *mReq = \
 			list_entry(mEp->qh.queue.next,
 				   struct ci13xxx_req, queue);
+=======
+		struct ci13xxx_req *mReq_active, *mReq_next;
+		u32 i = 0;
+
+		/* Nothing to be done if hardware already finished this TD */
+		if ((TD_STATUS_ACTIVE & mReq->ptr->token) == 0)
+			goto done;
+
+		/* Iterate forward to find first TD with ACTIVE bit set */
+		mReq_active = mReq;
+		list_for_each_entry(mReq_next, &mEp->qh.queue, queue) {
+			i++;
+			mEp->dTD_active_re_q_count++;
+			if (TD_STATUS_ACTIVE & mReq_next->ptr->token) {
+				mReq_active = mReq_next;
+				dbg_event(_usb_addr(mEp), "ReQUE",
+					  mReq_next->ptr->token);
+				pr_debug("!!ReQ(%u-%u-%x)-%u!!\n", mEp->num,
+					 mEp->dir, mReq_next->ptr->token, i);
+				break;
+			}
+		}
+>>>>>>> 0e91d2a... Nougat
 
 		if (TD_STATUS_ACTIVE & mReq->ptr->token) {
 			mEp->qh.ptr->td.next   = mReq->dma;
@@ -2485,6 +2520,9 @@ __acquires(udc->lock)
 	if (retval)
 		goto done;
 
+	if (udc->rw_pending)
+		purge_rw_queue(udc);
+
 	_udc->skip_flush = false;
 	retval = hw_usb_reset();
 	if (retval)
@@ -2513,13 +2551,13 @@ static void isr_resume_handler(struct ci13xxx *udc)
 			  CI13XXX_CONTROLLER_RESUME_EVENT);
 		if (udc->transceiver)
 			usb_phy_set_suspend(udc->transceiver, 0);
+		udc->suspended = 0;
 		udc->driver->resume(&udc->gadget);
 		spin_lock(udc->lock);
 
 		if (udc->rw_pending)
 			purge_rw_queue(udc);
 
-		udc->suspended = 0;
 	}
 }
 
@@ -3376,6 +3414,15 @@ static int ep_dequeue(struct usb_ep *ep, struct usb_request *req)
 
 	trace("%p, %p", ep, req);
 
+<<<<<<< HEAD
+=======
+	if (udc->udc_driver->in_lpm && udc->udc_driver->in_lpm(udc)) {
+		dev_err(udc->transceiver->dev,
+				"%s: Unable to dequeue while in LPM\n",
+				__func__);
+		return -EAGAIN;
+	}
+>>>>>>> 0e91d2a... Nougat
 	spin_lock_irqsave(mEp->lock, flags);
 	/*
 	 * Only ep0 IN is exposed to composite.  When a req is dequeued
@@ -3625,9 +3672,11 @@ static int ci13xxx_pullup(struct usb_gadget *_gadget, int is_active)
 	}
 
 	if (is_active) {
+		spin_unlock(udc->lock);
 		if (udc->udc_driver->notify_event)
 			udc->udc_driver->notify_event(udc,
 				CI13XXX_CONTROLLER_CONNECT_EVENT);
+		spin_lock(udc->lock);
 		hw_device_state(udc->ep0out.qh.dma);
 	} else {
 		hw_device_state(0);
@@ -3989,6 +4038,12 @@ static int udc_probe(struct ci13xxx_udc_driver *driver, struct device *dev,
 	pdata = dev->platform_data;
 	if (pdata)
 		udc->gadget.usb_core_id = pdata->usb_core_id;
+<<<<<<< HEAD
+=======
+		if (pdata->enable_axi_prefetch)
+			udc->gadget.extra_buf_alloc = EXTRA_ALLOCATION_SIZE;
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	if (udc->udc_driver->flags & CI13XXX_REQUIRE_TRANSCEIVER) {
 		udc->transceiver = usb_get_phy(USB_PHY_TYPE_USB2);

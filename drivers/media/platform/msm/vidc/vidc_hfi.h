@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -86,6 +90,7 @@
 #define HFI_EXTRADATA_STREAM_USERDATA		0x0000000E
 #define HFI_EXTRADATA_FRAME_QP			0x0000000F
 #define HFI_EXTRADATA_FRAME_BITS_INFO		0x00000010
+#define HFI_EXTRADATA_VPX_COLORSPACE		0x00000014
 #define HFI_EXTRADATA_MULTISLICE_INFO		0x7F100000
 #define HFI_EXTRADATA_NUM_CONCEALED_MB		0x7F100001
 #define HFI_EXTRADATA_INDEX					0x7F100002
@@ -93,7 +98,11 @@
 #define HFI_EXTRADATA_METADATA_FILLER		0x7FE00002
 
 #define HFI_INDEX_EXTRADATA_INPUT_CROP		0x0700000E
+<<<<<<< HEAD
 #define HFI_INDEX_EXTRADATA_DIGITAL_ZOOM	0x07000010
+=======
+#define HFI_INDEX_EXTRADATA_OUTPUT_CROP		0x0700000F
+>>>>>>> 0e91d2a... Nougat
 #define HFI_INDEX_EXTRADATA_ASPECT_RATIO	0x7F100003
 
 struct hfi_buffer_alloc_mode {
@@ -212,6 +221,19 @@ struct hfi_extradata_header {
 	(HFI_PROPERTY_PARAM_VDEC_OX_START + 0x019)
 #define HFI_PROPERTY_PARAM_VDEC_SCS_THRESHOLD \
 	(HFI_PROPERTY_PARAM_VDEC_OX_START + 0x01A)
+<<<<<<< HEAD
+=======
+#define HFI_PROPERTY_PARAM_VUI_DISPLAY_INFO_EXTRADATA \
+	(HFI_PROPERTY_PARAM_VDEC_OX_START + 0x01B)
+#define HFI_PROPERTY_PARAM_VDEC_VQZIP_SEI_EXTRADATA \
+	(HFI_PROPERTY_PARAM_VDEC_OX_START + 0x001C)
+#define HFI_PROPERTY_PARAM_VDEC_VPX_COLORSPACE_EXTRADATA \
+	(HFI_PROPERTY_PARAM_VDEC_OX_START + 0x001D)
+#define HFI_PROPERTY_PARAM_VDEC_MASTERING_DISPLAY_COLOUR_SEI_EXTRADATA \
+	(HFI_PROPERTY_PARAM_VDEC_OX_START + 0x001E)
+#define HFI_PROPERTY_PARAM_VDEC_CONTENT_LIGHT_LEVEL_SEI_EXTRADATA \
+	(HFI_PROPERTY_PARAM_VDEC_OX_START + 0x001F)
+>>>>>>> 0e91d2a... Nougat
 
 #define HFI_PROPERTY_CONFIG_VDEC_OX_START				\
 	(HFI_DOMAIN_BASE_VDEC + HFI_ARCH_OX_OFFSET + 0x0000)
@@ -232,6 +254,17 @@ struct hfi_extradata_header {
 	(HFI_PROPERTY_PARAM_VENC_OX_START + 0x003)
 #define  HFI_PROPERTY_PARAM_VENC_MBI_DUMPING				\
 	(HFI_PROPERTY_PARAM_VENC_OX_START + 0x005)
+<<<<<<< HEAD
+=======
+#define HFI_PROPERTY_PARAM_VENC_FRAME_QP_EXTRADATA		\
+	(HFI_PROPERTY_PARAM_VENC_OX_START + 0x006)
+#define  HFI_PROPERTY_PARAM_VENC_YUVSTAT_INFO_EXTRADATA		\
+	(HFI_PROPERTY_PARAM_VENC_OX_START + 0x007)
+#define  HFI_PROPERTY_PARAM_VENC_ROI_QP_EXTRADATA		\
+	(HFI_PROPERTY_PARAM_VENC_OX_START + 0x008)
+#define  HFI_PROPERTY_PARAM_VENC_OVERRIDE_QP_EXTRADATA		\
+	(HFI_PROPERTY_PARAM_VENC_OX_START + 0x009)
+>>>>>>> 0e91d2a... Nougat
 
 #define HFI_PROPERTY_CONFIG_VENC_OX_START				\
 	(HFI_DOMAIN_BASE_VENC + HFI_ARCH_OX_OFFSET + 0x6000)
@@ -337,6 +370,9 @@ struct hfi_hybrid_hierp {
 #define HFI_RATE_CONTROL_VBR_CFR	(HFI_OX_BASE + 0x3)
 #define HFI_RATE_CONTROL_CBR_VFR	(HFI_OX_BASE + 0x4)
 #define HFI_RATE_CONTROL_CBR_CFR	(HFI_OX_BASE + 0x5)
+#define HFI_RATE_CONTROL_MBR_CFR	(HFI_OX_BASE + 0x6)
+#define HFI_RATE_CONTROL_MBR_VFR	(HFI_OX_BASE + 0x7)
+
 
 struct hfi_uncompressed_plane_actual_constraints_info {
 	u32 buffer_type;
@@ -817,6 +853,18 @@ struct hfi_index_extradata_input_crop_payload {
 	u32 port_index;
 	u32 left;
 	u32 top;
+	u32 width;
+	u32 height;
+};
+
+struct hfi_index_extradata_output_crop_payload {
+	u32 size;
+	u32 version;
+	u32 port_index;
+	u32 left;
+	u32 top;
+	u32 display_width;
+	u32 display_height;
 	u32 width;
 	u32 height;
 };

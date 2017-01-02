@@ -87,6 +87,152 @@ static void armada_370_xp_irq_unmask(struct irq_data *d)
 				ARMADA_370_XP_INT_CLEAR_MASK_OFFS);
 }
 
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_PCI_MSI
+
+static int armada_370_xp_alloc_msi(void)
+{
+	int hwirq;
+
+	mutex_lock(&msi_used_lock);
+	hwirq = find_first_zero_bit(&msi_used, PCI_MSI_DOORBELL_NR);
+	if (hwirq >= PCI_MSI_DOORBELL_NR)
+		hwirq = -ENOSPC;
+	else
+		set_bit(hwirq, msi_used);
+	mutex_unlock(&msi_used_lock);
+
+	return hwirq;
+}
+
+static void armada_370_xp_free_msi(int hwirq)
+{
+	mutex_lock(&msi_used_lock);
+	if (!test_bit(hwirq, msi_used))
+		pr_err("trying to free unused MSI#%d\n", hwirq);
+	else
+		clear_bit(hwirq, msi_used);
+	mutex_unlock(&msi_used_lock);
+}
+
+static int armada_370_xp_setup_msi_irq(struct msi_controller *chip,
+				       struct pci_dev *pdev,
+				       struct msi_desc *desc)
+{
+	struct msi_msg msg;
+	int virq, hwirq;
+
+	/* We support MSI, but not MSI-X */
+	if (desc->msi_attrib.is_msix)
+		return -EINVAL;
+
+	hwirq = armada_370_xp_alloc_msi();
+	if (hwirq < 0)
+		return hwirq;
+
+	virq = irq_create_mapping(armada_370_xp_msi_domain, hwirq);
+	if (!virq) {
+		armada_370_xp_free_msi(hwirq);
+		return -EINVAL;
+	}
+
+	irq_set_msi_desc(virq, desc);
+
+	msg.address_lo = msi_doorbell_addr;
+	msg.address_hi = 0;
+	msg.data = 0xf00 | (hwirq + 16);
+
+	pci_write_msi_msg(virq, &msg);
+	return 0;
+}
+
+static void armada_370_xp_teardown_msi_irq(struct msi_controller *chip,
+					   unsigned int irq)
+{
+	struct irq_data *d = irq_get_irq_data(irq);
+	unsigned long hwirq = d->hwirq;
+
+	irq_dispose_mapping(irq);
+	armada_370_xp_free_msi(hwirq);
+}
+
+static struct irq_chip armada_370_xp_msi_irq_chip = {
+	.name = "armada_370_xp_msi_irq",
+	.irq_enable = pci_msi_unmask_irq,
+	.irq_disable = pci_msi_mask_irq,
+	.irq_mask = pci_msi_mask_irq,
+	.irq_unmask = pci_msi_unmask_irq,
+};
+
+static int armada_370_xp_msi_map(struct irq_domain *domain, unsigned int virq,
+				 irq_hw_number_t hw)
+{
+	irq_set_chip_and_handler(virq, &armada_370_xp_msi_irq_chip,
+				 handle_simple_irq);
+	set_irq_flags(virq, IRQF_VALID);
+
+	return 0;
+}
+
+static const struct irq_domain_ops armada_370_xp_msi_irq_ops = {
+	.map = armada_370_xp_msi_map,
+};
+
+static int armada_370_xp_msi_init(struct device_node *node,
+				  phys_addr_t main_int_phys_base)
+{
+	struct msi_controller *msi_chip;
+	u32 reg;
+	int ret;
+
+	msi_doorbell_addr = main_int_phys_base +
+		ARMADA_370_XP_SW_TRIG_INT_OFFS;
+
+	msi_chip = kzalloc(sizeof(*msi_chip), GFP_KERNEL);
+	if (!msi_chip)
+		return -ENOMEM;
+
+	msi_chip->setup_irq = armada_370_xp_setup_msi_irq;
+	msi_chip->teardown_irq = armada_370_xp_teardown_msi_irq;
+	msi_chip->of_node = node;
+
+	armada_370_xp_msi_domain =
+		irq_domain_add_linear(NULL, PCI_MSI_DOORBELL_NR,
+				      &armada_370_xp_msi_irq_ops,
+				      NULL);
+	if (!armada_370_xp_msi_domain) {
+		kfree(msi_chip);
+		return -ENOMEM;
+	}
+
+	ret = of_pci_msi_chip_add(msi_chip);
+	if (ret < 0) {
+		irq_domain_remove(armada_370_xp_msi_domain);
+		kfree(msi_chip);
+		return ret;
+	}
+
+	reg = readl(per_cpu_int_base + ARMADA_370_XP_IN_DRBEL_MSK_OFFS)
+		| PCI_MSI_DOORBELL_MASK;
+
+	writel(reg, per_cpu_int_base +
+	       ARMADA_370_XP_IN_DRBEL_MSK_OFFS);
+
+	/* Unmask IPI interrupt */
+	writel(1, per_cpu_int_base + ARMADA_370_XP_INT_CLEAR_MASK_OFFS);
+
+	return 0;
+}
+#else
+static inline int armada_370_xp_msi_init(struct device_node *node,
+					 phys_addr_t main_int_phys_base)
+{
+	return 0;
+}
+#endif
+
+>>>>>>> 0e91d2a... Nougat
 #ifdef CONFIG_SMP
 static int armada_xp_set_affinity(struct irq_data *d,
 				  const struct cpumask *mask_val, bool force)

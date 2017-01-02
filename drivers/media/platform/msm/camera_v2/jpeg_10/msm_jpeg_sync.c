@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -310,6 +314,16 @@ int msm_jpeg_evt_get(struct msm_jpeg_device *pgmn_dev,
 	ctrl_cmd.type = buf_p->vbuf.type;
 	kfree(buf_p);
 
+<<<<<<< HEAD
+=======
+	if (ctrl_cmd.type == MSM_JPEG_EVT_SESSION_DONE) {
+		/* update the bw with zeroth vector */
+		msm_camera_update_bus_vector(pgmn_dev->bus_client, 0);
+		JPEG_BUS_UNVOTED(pgmn_dev);
+		JPEG_DBG("%s:%d] Bus unvoted\n", __func__, __LINE__);
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	JPEG_DBG("%s:%d] 0x%08lx %d\n", __func__, __LINE__,
 		(unsigned long) ctrl_cmd.value, ctrl_cmd.len);
 
@@ -716,6 +730,20 @@ int __msm_jpeg_open(struct msm_jpeg_device *pgmn_dev)
 		return -EBUSY;
 	}
 	pgmn_dev->open_count++;
+<<<<<<< HEAD
+=======
+	if (pgmn_dev->open_count == 1)
+		pgmn_dev->state = MSM_JPEG_INIT;
+
+	mutex_unlock(&pgmn_dev->lock);
+
+	rc = cam_config_ahb_clk(NULL, 0, CAM_AHB_CLIENT_JPEG,
+			CAM_AHB_SVS_VOTE);
+	if (rc < 0) {
+		pr_err("%s: failed to vote for AHB\n", __func__);
+		return rc;
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	msm_jpeg_core_irq_install(msm_jpeg_irq);
 	if (pgmn_dev->core_type == MSM_JPEG_CORE_CODEC)
@@ -723,21 +751,22 @@ int __msm_jpeg_open(struct msm_jpeg_device *pgmn_dev)
 	else
 		core_irq = msm_jpegdma_core_irq;
 
-	rc = msm_jpeg_platform_init(pgmn_dev->pdev,
-		&pgmn_dev->mem, &pgmn_dev->base,
-		&pgmn_dev->irq, core_irq, pgmn_dev);
+	/* initialize the platform resources */
+	rc = msm_jpeg_platform_init(core_irq, pgmn_dev);
 	if (rc) {
 		JPEG_PR_ERR("%s:%d] platform_init fail %d\n", __func__,
 			__LINE__, rc);
 		mutex_unlock(&pgmn_dev->lock);
 		return rc;
 	}
+<<<<<<< HEAD
 
 	JPEG_PR_ERR("%s:%d] platform resources - mem %p, base %p, irq %d\n",
+=======
+	JPEG_DBG("%s:%d] platform resources - base %pK, irq %d\n",
+>>>>>>> 0e91d2a... Nougat
 		__func__, __LINE__,
-		pgmn_dev->mem, pgmn_dev->base, pgmn_dev->irq);
-	pgmn_dev->res_size = resource_size(pgmn_dev->mem);
-
+		pgmn_dev->base, (int)pgmn_dev->jpeg_irq_res->start);
 	msm_jpeg_q_cleanup(&pgmn_dev->evt_q);
 	msm_jpeg_q_cleanup(&pgmn_dev->output_rtn_q);
 	msm_jpeg_outbuf_q_cleanup(pgmn_dev, &pgmn_dev->output_buf_q,
@@ -746,8 +775,18 @@ int __msm_jpeg_open(struct msm_jpeg_device *pgmn_dev)
 	msm_jpeg_q_cleanup(&pgmn_dev->input_buf_q);
 	msm_jpeg_core_init(pgmn_dev);
 
+<<<<<<< HEAD
 	JPEG_PR_ERR("%s:%d] success\n", __func__, __LINE__);
 	mutex_unlock(&pgmn_dev->lock);
+=======
+	JPEG_DBG("%s:%d] success\n", __func__, __LINE__);
+	return rc;
+
+platform_init_fail:
+	if (cam_config_ahb_clk(NULL, 0, CAM_AHB_CLIENT_JPEG,
+		CAM_AHB_SUSPEND_VOTE) < 0)
+		pr_err("%s: failed to remove vote for AHB\n", __func__);
+>>>>>>> 0e91d2a... Nougat
 	return rc;
 }
 
@@ -775,11 +814,20 @@ int __msm_jpeg_release(struct msm_jpeg_device *pgmn_dev)
 	if (pgmn_dev->open_count)
 		JPEG_PR_ERR(KERN_ERR "%s: multiple opens\n", __func__);
 
-	msm_jpeg_platform_release(pgmn_dev->mem, pgmn_dev->base,
-		pgmn_dev->irq, pgmn_dev);
+	/* release the platform resources */
+	msm_jpeg_platform_release(pgmn_dev);
 
+<<<<<<< HEAD
 	JPEG_PR_ERR("%s:%d]\n", __func__, __LINE__);
 	mutex_unlock(&pgmn_dev->lock);
+=======
+	JPEG_DBG("%s:%d]\n", __func__, __LINE__);
+
+	if (cam_config_ahb_clk(NULL, 0, CAM_AHB_CLIENT_JPEG,
+		CAM_AHB_SUSPEND_VOTE) < 0)
+		pr_err("%s: failed to remove vote for AHB\n", __func__);
+
+>>>>>>> 0e91d2a... Nougat
 	return 0;
 }
 
@@ -875,6 +923,16 @@ int msm_jpeg_start(struct msm_jpeg_device *pgmn_dev, void * __user arg,
 
 	JPEG_DBG("%s:%d] Enter\n", __func__, __LINE__);
 
+<<<<<<< HEAD
+=======
+	msm_jpeg_platform_set_dt_config(pgmn_dev);
+
+	/* update the bw with vector index "1" */
+	msm_camera_update_bus_vector(pgmn_dev->bus_client, 1);
+	JPEG_BUS_VOTED(pgmn_dev);
+	JPEG_DBG("%s:%d] Bus Voted\n", __func__, __LINE__);
+
+>>>>>>> 0e91d2a... Nougat
 	pgmn_dev->release_buf = 1;
 	for (i = 0; i < 2; i++) {
 		buf_out = msm_jpeg_q_out(&pgmn_dev->input_buf_q);
@@ -930,7 +988,7 @@ int msm_jpeg_ioctl_reset(struct msm_jpeg_device *pgmn_dev, void * __user arg)
 		pgmn_dev->op_mode = p_ctrl_cmd->type;
 
 		rc = msm_jpeg_core_reset(pgmn_dev, pgmn_dev->op_mode,
-			pgmn_dev->base, resource_size(pgmn_dev->mem));
+			pgmn_dev->base, pgmn_dev->res_size);
 	} else {
 		JPEG_PR_ERR("%s:%d] JPEG not been initialized Wrong state\n",
 			__func__, __LINE__);
@@ -1529,6 +1587,7 @@ int __msm_jpeg_init(struct msm_jpeg_device *pgmn_dev)
 	msm_jpeg_q_init("input_rtn_q", &pgmn_dev->input_rtn_q);
 	msm_jpeg_q_init("input_buf_q", &pgmn_dev->input_buf_q);
 
+<<<<<<< HEAD
 #ifdef CONFIG_MSM_IOMMU
 	j = (pgmn_dev->iommu_cnt <= 1) ? idx : 0;
 	
@@ -1550,6 +1609,16 @@ int __msm_jpeg_init(struct msm_jpeg_device *pgmn_dev)
 	if (pgmn_dev->domain_num < 0) {
 		JPEG_PR_ERR("%s: could not register domain\n", __func__);
 		goto error;
+=======
+	/*get device context for IOMMU*/
+	rc = cam_smmu_get_handle(iommu_name[idx], &pgmn_dev->iommu_hdl);
+	JPEG_DBG("%s:%d] hdl %d", __func__, __LINE__,
+			pgmn_dev->iommu_hdl);
+	if (rc < 0) {
+		JPEG_PR_ERR("%s: No iommu fw context found\n",
+				__func__);
+		goto err_smmu;
+>>>>>>> 0e91d2a... Nougat
 	}
 	pgmn_dev->domain = msm_get_iommu_domain(pgmn_dev->domain_num);
 	JPEG_DBG("%s:%d] dom 0x%lx", __func__, __LINE__,
@@ -1560,16 +1629,31 @@ int __msm_jpeg_init(struct msm_jpeg_device *pgmn_dev)
 	}
 #endif
 
+<<<<<<< HEAD
 	return rc;
 #ifdef CONFIG_MSM_IOMMU
 error:
 #endif
+=======
+	/* setup all the resources for the jpeg driver */
+	rc = msm_jpeg_platform_setup(pgmn_dev);
+	if (rc < 0) {
+		JPEG_PR_ERR("%s: setup failed\n",
+				__func__);
+		goto err_setup;
+	}
+
+	return rc;
+err_setup:
+err_smmu:
+>>>>>>> 0e91d2a... Nougat
 	mutex_destroy(&pgmn_dev->lock);
 	return -EFAULT;
 }
 
 int __msm_jpeg_exit(struct msm_jpeg_device *pgmn_dev)
 {
+	msm_jpeg_platform_cleanup(pgmn_dev);
 	mutex_destroy(&pgmn_dev->lock);
 	kfree(pgmn_dev);
 	return 0;

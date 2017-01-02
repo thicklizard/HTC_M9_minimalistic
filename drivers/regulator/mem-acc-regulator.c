@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -550,7 +550,177 @@ static int override_mem_acc_custom_data(struct platform_device *pdev,
 	rc = populate_acc_data(mem_acc_vreg, custom_apc_data_str,
 				&mem_acc_vreg->acc_custom_data[mem_type], &len);
 	if (rc) {
+<<<<<<< HEAD
 		pr_err("Unable to find %s rc=%d\n", custom_apc_data_str, rc);
+=======
+		pr_err("could not read %s rc=%d\n", prop_str, rc);
+		goto done;
+	}
+
+	for (i = 0; i < mem_acc_vreg->override_map_count; i++) {
+		if (tmp[i * tuple_size] != mem_acc_vreg->override_fuse_value
+		    && tmp[i * tuple_size] != FUSE_PARAM_MATCH_ANY) {
+			continue;
+		} else {
+			mem_acc_vreg->override_map_match = i;
+			break;
+		}
+	}
+
+	if (mem_acc_vreg->override_map_match != FUSE_MAP_NO_MATCH)
+		pr_debug("%s tuple match found: %d\n", prop_str,
+				mem_acc_vreg->override_map_match);
+	else
+		pr_err("%s tuple match not found\n", prop_str);
+
+done:
+	kfree(tmp);
+	return rc;
+}
+
+#define MAX_CHARS_PER_INT	20
+
+static int mem_acc_reg_addr_val_dump(struct mem_acc_regulator *mem_acc_vreg,
+			struct corner_acc_reg_config *corner_acc_reg_config,
+			u32 corner)
+{
+	int i, k, index, pos = 0;
+	u32 addr_index;
+	size_t buflen;
+	char *buf;
+	struct acc_reg_value *reg_config_list =
+					corner_acc_reg_config->reg_config_list;
+	int max_reg_config_len = corner_acc_reg_config->max_reg_config_len;
+	int num_corners = mem_acc_vreg->num_corners;
+
+	/*
+	 * Log register and value mapping since they are useful for
+	 * baseline MEM ACC logging.
+	 */
+	buflen = max_reg_config_len * (MAX_CHARS_PER_INT + 6) * sizeof(*buf);
+	buf = kzalloc(buflen, GFP_KERNEL);
+	if (buf == NULL) {
+		pr_err("Could not allocate memory for acc register and value logging\n");
+		return -ENOMEM;
+	}
+
+	for (i = 0; i < num_corners; i++) {
+		if (corner == i + 1)
+			continue;
+
+		pr_debug("Corner: %d --> %d:\n", corner, i + 1);
+		pos = 0;
+		for (k = 0; k < max_reg_config_len; k++) {
+			index = i * max_reg_config_len + k;
+			addr_index = reg_config_list[index].addr_index;
+			if (addr_index == PARAM_MATCH_ANY)
+				break;
+
+			pos += scnprintf(buf + pos, buflen - pos,
+				"<0x%x 0x%x> ",
+				mem_acc_vreg->phys_reg_addr_list[addr_index],
+				reg_config_list[index].reg_val);
+		}
+		buf[pos] = '\0';
+		pr_debug("%s\n", buf);
+	}
+
+	kfree(buf);
+	return 0;
+}
+
+static int mem_acc_get_reg_addr_val(struct device_node *of_node,
+		const char *prop_str, struct acc_reg_value *reg_config_list,
+		int list_offset, int list_size, u32 max_reg_index)
+{
+
+	int i, index, rc  = 0;
+
+	for (i = 0; i < list_size / 2; i++) {
+		index = (list_offset * list_size) + i * 2;
+		rc = of_property_read_u32_index(of_node, prop_str, index,
+					&reg_config_list[i].addr_index);
+		rc |= of_property_read_u32_index(of_node, prop_str, index + 1,
+					&reg_config_list[i].reg_val);
+		if (rc) {
+			pr_err("could not read %s at tuple %u: rc=%d\n",
+				prop_str, index, rc);
+			return rc;
+		}
+
+		if (reg_config_list[i].addr_index == PARAM_MATCH_ANY)
+			continue;
+
+		if ((!reg_config_list[i].addr_index) ||
+			reg_config_list[i].addr_index > max_reg_index) {
+			pr_err("Invalid register index %u in %s at tuple %u\n",
+				reg_config_list[i].addr_index, prop_str, index);
+			return -EINVAL;
+		}
+	}
+
+	return rc;
+}
+
+static int mem_acc_init_reg_config(struct mem_acc_regulator *mem_acc_vreg)
+{
+	struct device_node *of_node = mem_acc_vreg->dev->of_node;
+	int i, size, len = 0, rc = 0;
+	u32 addr_index, reg_val, index;
+	char *prop_str = "qcom,acc-init-reg-config";
+
+	if (!of_find_property(of_node, prop_str, &len)) {
+		/* Initial acc register configuration not specified */
+		return rc;
+	}
+
+	size = len / sizeof(u32);
+	if ((!size) || (size % 2)) {
+		pr_err("%s specified with invalid length: %d\n",
+			prop_str, size);
+		return -EINVAL;
+	}
+
+	for (i = 0; i < size / 2; i++) {
+		index = i * 2;
+		rc = of_property_read_u32_index(of_node, prop_str, index,
+						&addr_index);
+		rc |= of_property_read_u32_index(of_node, prop_str, index + 1,
+						&reg_val);
+		if (rc) {
+			pr_err("could not read %s at tuple %u: rc=%d\n",
+				prop_str, index, rc);
+			return rc;
+		}
+
+		if ((!addr_index) || addr_index > mem_acc_vreg->num_acc_reg) {
+			pr_err("Invalid register index %u in %s at tuple %u\n",
+				addr_index, prop_str, index);
+			return -EINVAL;
+		}
+
+		writel_relaxed(reg_val,
+				mem_acc_vreg->remap_reg_addr_list[addr_index]);
+		/* make sure write complete */
+		mb();
+
+		pr_debug("acc initial config: register:0x%x value:0x%x\n",
+			mem_acc_vreg->phys_reg_addr_list[addr_index], reg_val);
+	}
+
+	return rc;
+}
+
+static int mem_acc_get_reg_addr(struct mem_acc_regulator *mem_acc_vreg)
+{
+	struct device_node *of_node = mem_acc_vreg->dev->of_node;
+	void __iomem **remap_reg_addr_list;
+	u32 *phys_reg_addr_list;
+	int i, num_acc_reg, len = 0, rc = 0;
+
+	if (!of_find_property(of_node, "qcom,acc-reg-addr-list", &len)) {
+		/* acc register address list not specified */
+>>>>>>> 0e91d2a... Nougat
 		return rc;
 	}
 

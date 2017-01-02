@@ -43,7 +43,21 @@ static inline void of_device_node_put(struct device *dev)
 	of_node_put(dev->of_node);
 }
 
+<<<<<<< HEAD
 #else /* CONFIG_OF_DEVICE */
+=======
+static inline struct device_node *of_cpu_device_node_get(int cpu)
+{
+	struct device *cpu_dev;
+	cpu_dev = get_cpu_device(cpu);
+	if (!cpu_dev)
+		return NULL;
+	return of_node_get(cpu_dev->of_node);
+}
+
+void of_dma_configure(struct device *dev, struct device_node *np);
+#else /* CONFIG_OF */
+>>>>>>> 0e91d2a... Nougat
 
 static inline int of_driver_match_device(struct device *dev,
 					 struct device_driver *drv)
@@ -67,6 +81,19 @@ static inline const struct of_device_id *of_match_device(
 {
 	return NULL;
 }
+<<<<<<< HEAD
 #endif /* CONFIG_OF_DEVICE */
+=======
+#define of_match_device(matches, dev)	\
+	__of_match_device(of_match_ptr(matches), (dev))
+
+static inline struct device_node *of_cpu_device_node_get(int cpu)
+{
+	return NULL;
+}
+static inline void of_dma_configure(struct device *dev, struct device_node *np)
+{}
+#endif /* CONFIG_OF */
+>>>>>>> 0e91d2a... Nougat
 
 #endif /* _LINUX_OF_DEVICE_H */

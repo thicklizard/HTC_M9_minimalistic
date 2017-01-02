@@ -184,10 +184,14 @@ extern void usb_notify_remove_device(struct usb_device *udev);
 extern void usb_notify_config_device(struct usb_device *udev);
 extern void usb_notify_add_bus(struct usb_bus *ubus);
 extern void usb_notify_remove_bus(struct usb_bus *ubus);
+<<<<<<< HEAD
 extern enum usb_port_connect_type
 	usb_get_hub_port_connect_type(struct usb_device *hdev, int port1);
 extern void usb_set_hub_port_connect_type(struct usb_device *hdev, int port1,
 	enum usb_port_connect_type type);
+=======
+extern void usb_atomic_notify_dead_bus(struct usb_bus *ubus);
+>>>>>>> 0e91d2a... Nougat
 extern void usb_hub_adjust_deviceremovable(struct usb_device *hdev,
 		struct usb_hub_descriptor *desc);
 

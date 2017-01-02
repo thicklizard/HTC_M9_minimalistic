@@ -19,6 +19,7 @@
 
 #include <linux/cpu_pm.h>
 #include <linux/kernel.h>
+#include <linux/module.h>
 #include <linux/init.h>
 #include <linux/sched.h>
 #include <linux/signal.h>
@@ -34,19 +35,52 @@
 #define FPEXC_IXF	(1 << 4)
 #define FPEXC_IDF	(1 << 7)
 
+<<<<<<< HEAD
+=======
+#define FP_SIMD_BIT	31
 
-/*
- * Trapped FP/ASIMD access.
- */
-void do_fpsimd_acc(unsigned int esr, struct pt_regs *regs)
+static DEFINE_PER_CPU(struct fpsimd_state *, fpsimd_last_state);
+static DEFINE_PER_CPU(int, fpsimd_stg_enable);
+
+static int fpsimd_settings = 0x1; 
+module_param(fpsimd_settings, int, 0644);
+
+void fpsimd_settings_enable(void)
 {
-	/* TODO: implement lazy context saving/restoring */
-	WARN_ON(1);
+	set_app_setting_bit(FP_SIMD_BIT);
 }
 
-/*
- * Raise a SIGFPE for the current process.
- */
+void fpsimd_settings_disable(void)
+{
+	clear_app_setting_bit(FP_SIMD_BIT);
+}
+>>>>>>> 0e91d2a... Nougat
+
+void do_fpsimd_acc(unsigned int esr, struct pt_regs *regs)
+{
+<<<<<<< HEAD
+	/* TODO: implement lazy context saving/restoring */
+	WARN_ON(1);
+=======
+	if (!fpsimd_settings)
+		return;
+
+	fpsimd_disable_trap();
+	fpsimd_settings_disable();
+	this_cpu_write(fpsimd_stg_enable, 0);
+}
+
+void do_fpsimd_acc_compat(unsigned int esr, struct pt_regs *regs)
+{
+	if (!fpsimd_settings)
+		return;
+
+	fpsimd_disable_trap();
+	fpsimd_settings_enable();
+	this_cpu_write(fpsimd_stg_enable, 1);
+>>>>>>> 0e91d2a... Nougat
+}
+
 void do_fpsimd_exc(unsigned int esr, struct pt_regs *regs)
 {
 	siginfo_t info;
@@ -73,11 +107,41 @@ void do_fpsimd_exc(unsigned int esr, struct pt_regs *regs)
 
 void fpsimd_thread_switch(struct task_struct *next)
 {
+<<<<<<< HEAD
 	if (current->mm)
 		fpsimd_save_state(&current->thread.fpsimd_state);
 
 	if (next->mm)
 		fpsimd_load_state(&next->thread.fpsimd_state);
+=======
+	if (current->mm && !test_thread_flag(TIF_FOREIGN_FPSTATE))
+		fpsimd_save_state(&current->thread.fpsimd_state);
+
+	if (fpsimd_settings && __this_cpu_read(fpsimd_stg_enable)) {
+		fpsimd_settings_disable();
+		this_cpu_write(fpsimd_stg_enable, 0);
+	}
+
+	if (next->mm) {
+		struct fpsimd_state *st = &next->thread.fpsimd_state;
+
+		if (__this_cpu_read(fpsimd_last_state) == st
+		    && st->cpu == smp_processor_id())
+			clear_ti_thread_flag(task_thread_info(next),
+					     TIF_FOREIGN_FPSTATE);
+		else
+			set_ti_thread_flag(task_thread_info(next),
+					   TIF_FOREIGN_FPSTATE);
+
+		if (!fpsimd_settings)
+			return;
+
+		if (test_ti_thread_flag(task_thread_info(next), TIF_32BIT))
+			fpsimd_enable_trap();
+		else
+			fpsimd_disable_trap();
+	}
+>>>>>>> 0e91d2a... Nougat
 }
 
 void fpsimd_flush_thread(void)
@@ -88,13 +152,10 @@ void fpsimd_flush_thread(void)
 	preempt_enable();
 }
 
-/*
- * Save the userland FPSIMD state of 'current' to memory, but only if the state
- * currently held in the registers does in fact belong to 'current'
- */
 void fpsimd_preserve_current_state(void)
 {
 	preempt_disable();
+<<<<<<< HEAD
 	fpsimd_save_state(&current->thread.fpsimd_state);
 	preempt_enable();
 }
@@ -102,6 +163,26 @@ void fpsimd_preserve_current_state(void)
 /*
  * Load an updated userland FPSIMD state for 'current' from memory
  */
+=======
+	if (!test_thread_flag(TIF_FOREIGN_FPSTATE))
+		fpsimd_save_state(&current->thread.fpsimd_state);
+	preempt_enable();
+}
+
+void fpsimd_restore_current_state(void)
+{
+	preempt_disable();
+	if (test_and_clear_thread_flag(TIF_FOREIGN_FPSTATE)) {
+		struct fpsimd_state *st = &current->thread.fpsimd_state;
+
+		fpsimd_load_state(st);
+		this_cpu_write(fpsimd_last_state, st);
+		st->cpu = smp_processor_id();
+	}
+	preempt_enable();
+}
+
+>>>>>>> 0e91d2a... Nougat
 void fpsimd_update_current_state(struct fpsimd_state *state)
 {
 	preempt_disable();
@@ -109,14 +190,19 @@ void fpsimd_update_current_state(struct fpsimd_state *state)
 	preempt_enable();
 }
 
+<<<<<<< HEAD
+=======
+void fpsimd_flush_task_state(struct task_struct *t)
+{
+	t->thread.fpsimd_state.cpu = NR_CPUS;
+}
+
+>>>>>>> 0e91d2a... Nougat
 #ifdef CONFIG_KERNEL_MODE_NEON
 
 static DEFINE_PER_CPU(struct fpsimd_partial_state, hardirq_fpsimdstate);
 static DEFINE_PER_CPU(struct fpsimd_partial_state, softirq_fpsimdstate);
 
-/*
- * Kernel-side NEON support functions
- */
 void kernel_neon_begin_partial(u32 num_regs)
 {
 	if (in_interrupt()) {
@@ -126,12 +212,6 @@ void kernel_neon_begin_partial(u32 num_regs)
 		BUG_ON(num_regs > 32);
 		fpsimd_save_partial_state(s, roundup(num_regs, 2));
 	} else {
-		/*
-		 * Save the userland FPSIMD state if we have one and if we
-		 * haven't done so already. Clear fpsimd_last_state to indicate
-		 * that there is no longer userland FPSIMD state in the
-		 * registers.
-		 */
 		preempt_disable();
 		if (current->mm)
 			fpsimd_save_state(&current->thread.fpsimd_state);
@@ -154,7 +234,7 @@ void kernel_neon_end(void)
 }
 EXPORT_SYMBOL(kernel_neon_end);
 
-#endif /* CONFIG_KERNEL_MODE_NEON */
+#endif 
 
 #ifdef CONFIG_CPU_PM
 static int fpsimd_cpu_pm_notifier(struct notifier_block *self,
@@ -187,11 +267,43 @@ static void fpsimd_pm_init(void)
 
 #else
 static inline void fpsimd_pm_init(void) { }
-#endif /* CONFIG_CPU_PM */
+#endif 
 
+<<<<<<< HEAD
 /*
  * FP/SIMD support code initialisation.
  */
+=======
+#ifdef CONFIG_HOTPLUG_CPU
+static int fpsimd_cpu_hotplug_notifier(struct notifier_block *nfb,
+				       unsigned long action,
+				       void *hcpu)
+{
+	unsigned int cpu = (long)hcpu;
+
+	switch (action) {
+	case CPU_DEAD:
+	case CPU_DEAD_FROZEN:
+		per_cpu(fpsimd_last_state, cpu) = NULL;
+		break;
+	}
+	return NOTIFY_OK;
+}
+
+static struct notifier_block fpsimd_cpu_hotplug_notifier_block = {
+	.notifier_call = fpsimd_cpu_hotplug_notifier,
+};
+
+static inline void fpsimd_hotplug_init(void)
+{
+	register_cpu_notifier(&fpsimd_cpu_hotplug_notifier_block);
+}
+
+#else
+static inline void fpsimd_hotplug_init(void) { }
+#endif
+
+>>>>>>> 0e91d2a... Nougat
 static int __init fpsimd_init(void)
 {
 	u64 pfr = read_cpuid(ID_AA64PFR0_EL1);

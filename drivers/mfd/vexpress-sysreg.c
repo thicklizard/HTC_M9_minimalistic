@@ -472,10 +472,17 @@ static int vexpress_sysreg_probe(struct platform_device *pdev)
 		vexpress_sysreg_setup(pdev->dev.of_node);
 	}
 
+<<<<<<< HEAD
 	if (!vexpress_sysreg_base) {
 		dev_err(&pdev->dev, "Failed to obtain base address!\n");
 		return -EFAULT;
 	}
+=======
+	/* Confirm board type against DT property, if available */
+	if (of_property_read_u32(of_root, "arm,hbi", &dt_hbi) == 0) {
+		u32 id = vexpress_get_procid(VEXPRESS_SITE_MASTER);
+		u32 hbi = (id >> SYS_PROCIDx_HBI_SHIFT) & SYS_HBI_MASK;
+>>>>>>> 0e91d2a... Nougat
 
 	setup_timer(&vexpress_sysreg_config_timer,
 			vexpress_sysreg_config_complete, 0);

@@ -38,14 +38,16 @@ extern unsigned int sysctl_sched_child_runs_first;
 extern unsigned int sysctl_sched_wake_to_idle;
 extern unsigned int sysctl_sched_wakeup_load_threshold;
 extern unsigned int sysctl_sched_window_stats_policy;
-extern unsigned int sysctl_sched_account_wait_time;
 extern unsigned int sysctl_sched_ravg_hist_size;
 extern unsigned int sysctl_sched_cpu_high_irqload;
+<<<<<<< HEAD
 extern unsigned int sysctl_sched_freq_account_wait_time;
 extern unsigned int sysctl_sched_migration_fixup;
 extern unsigned int sysctl_sched_heavy_task_pct;
 extern unsigned int sysctl_sched_min_runtime;
 extern unsigned int sysctl_sched_enable_power_aware;
+=======
+>>>>>>> 0e91d2a... Nougat
 
 #if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
 extern unsigned int sysctl_sched_init_task_load_pct;
@@ -65,8 +67,38 @@ extern unsigned int sysctl_sched_downmigrate_pct;
 extern int sysctl_sched_upmigrate_min_nice;
 extern unsigned int sysctl_sched_powerband_limit_pct;
 extern unsigned int sysctl_sched_boost;
+<<<<<<< HEAD
 extern unsigned int sysctl_power_aware_timer_migration;
 #else /* CONFIG_SCHED_HMP */
+=======
+extern unsigned int sysctl_sched_small_wakee_task_load_pct;
+extern unsigned int sysctl_sched_big_waker_task_load_pct;
+extern unsigned int sysctl_sched_prefer_sync_wakee_to_waker;
+
+#ifdef CONFIG_SCHED_QHMP
+extern unsigned int sysctl_sched_min_runtime;
+extern unsigned int sysctl_sched_small_task_pct;
+extern unsigned int sysctl_sched_restrict_tasks_spread;
+extern unsigned int sysctl_sched_account_wait_time;
+extern unsigned int sysctl_sched_freq_account_wait_time;
+extern unsigned int sysctl_sched_enable_power_aware;
+extern unsigned int sysctl_sched_migration_fixup;
+extern unsigned int sysctl_sched_heavy_task_pct;
+#else
+extern unsigned int sysctl_sched_select_prev_cpu_us;
+extern unsigned int sysctl_sched_enable_colocation;
+extern unsigned int sysctl_sched_restrict_cluster_spill;
+extern unsigned int sysctl_sched_enable_thread_grouping;
+#if defined(CONFIG_SCHED_FREQ_INPUT)
+extern unsigned int sysctl_sched_new_task_windows;
+extern unsigned int sysctl_sched_pred_alert_freq;
+extern unsigned int sysctl_sched_freq_aggregate;
+extern unsigned int sysctl_sched_freq_aggregate_threshold_pct;
+#endif
+#endif
+
+#else 
+>>>>>>> 0e91d2a... Nougat
 
 #define sysctl_sched_enable_hmp_task_placement 0
 
@@ -140,6 +172,19 @@ extern unsigned int sysctl_sched_cfs_bandwidth_slice;
 extern unsigned int sysctl_sched_autogroup_enabled;
 #endif
 
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_SCHEDSTATS
+#ifdef CONFIG_SCHED_QHMP
+extern unsigned int sysctl_sched_latency_panic_threshold;
+extern unsigned int sysctl_sched_latency_warn_threshold;
+extern int sched_max_latency_sysctl(struct ctl_table *table, int write,
+				    void __user *buffer, size_t *lenp,
+				    loff_t *ppos);
+#endif
+#endif
+
+>>>>>>> 0e91d2a... Nougat
 extern int sched_rr_timeslice;
 
 extern int sched_rr_handler(struct ctl_table *table, int write,

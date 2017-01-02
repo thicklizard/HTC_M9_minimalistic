@@ -143,9 +143,14 @@ static inline u8 ip_tunnel_ecn_encap(u8 tos, const struct iphdr *iph,
 
 static inline void iptunnel_xmit(struct sk_buff *skb, struct net_device *dev)
 {
+<<<<<<< HEAD
 	int err;
 	int pkt_len = skb->len - skb_transport_offset(skb);
 	struct pcpu_tstats *tstats = this_cpu_ptr(dev->tstats);
+=======
+	if (err > 0) {
+		struct pcpu_sw_netstats *tstats = get_cpu_ptr(stats);
+>>>>>>> 0e91d2a... Nougat
 
 	nf_reset(skb);
 
@@ -155,6 +160,13 @@ static inline void iptunnel_xmit(struct sk_buff *skb, struct net_device *dev)
 		tstats->tx_bytes += pkt_len;
 		tstats->tx_packets++;
 		u64_stats_update_end(&tstats->syncp);
+<<<<<<< HEAD
+=======
+		put_cpu_ptr(tstats);
+	} else if (err < 0) {
+		err_stats->tx_errors++;
+		err_stats->tx_aborted_errors++;
+>>>>>>> 0e91d2a... Nougat
 	} else {
 		dev->stats.tx_errors++;
 		dev->stats.tx_aborted_errors++;

@@ -194,4 +194,9 @@ ENTRY(memmove)
 	tst	count, #0x3f
 	b.ne	.Ltail63
 	ret
+<<<<<<< HEAD
 ENDPROC(memmove)
+=======
+ENDPIPROC(memmove)
+ENDPROC(__memmove)
+>>>>>>> 0e91d2a... Nougat

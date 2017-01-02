@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -28,6 +28,12 @@ struct hdmi_edid_init_data {
 int hdmi_edid_read(void *edid_ctrl, u8 write_burst_vic);
 u8 hdmi_edid_get_sink_scaninfo(void *edid_ctrl, u32 resolution);
 u32 hdmi_edid_get_sink_mode(void *edid_ctrl);
+<<<<<<< HEAD
+=======
+bool hdmi_edid_sink_scramble_override(void *input);
+bool hdmi_edid_get_sink_scrambler_support(void *input);
+bool hdmi_edid_get_scdc_support(void *input);
+>>>>>>> 0e91d2a... Nougat
 int hdmi_edid_get_audio_blk(void *edid_ctrl,
 	struct msm_hdmi_audio_edid_blk *blk);
 void hdmi_edid_set_video_resolution(void *edid_ctrl, u32 resolution);

@@ -72,6 +72,10 @@ n32_syscall_trace_entry:
 	SAVE_STATIC
 	move	s0, t2
 	move	a0, sp
+<<<<<<< HEAD
+=======
+	move	a1, v0
+>>>>>>> 0e91d2a... Nougat
 	jal	syscall_trace_enter
 
 	move	t0, s0

@@ -104,8 +104,12 @@ static int ni_tio_input_inttrig(struct comedi_device *dev,
 	int retval = 0;
 	struct ni_gpct *counter = s->private;
 
+<<<<<<< HEAD
 	BUG_ON(counter == NULL);
 	if (trignum != 0)
+=======
+	if (trig_num != cmd->start_arg)
+>>>>>>> 0e91d2a... Nougat
 		return -EINVAL;
 
 	spin_lock_irqsave(&counter->lock, flags);

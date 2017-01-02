@@ -123,11 +123,24 @@ int dwc3_gadget_ep0_set_halt(struct usb_ep *ep, int value);
 int dwc3_gadget_ep0_queue(struct usb_ep *ep, struct usb_request *request,
 		gfp_t gfp_flags);
 int __dwc3_gadget_ep_set_halt(struct dwc3_ep *dep, int value, int protocol);
+<<<<<<< HEAD
 int dwc3_send_gadget_ep_cmd(struct dwc3 *dwc, unsigned ep,
 		unsigned cmd, struct dwc3_gadget_ep_cmd_params *params);
 int dwc3_send_gadget_generic_command(struct dwc3 *dwc, int cmd, u32 param);
 dma_addr_t dwc3_trb_dma_offset(struct dwc3_ep *dep,
 		struct dwc3_trb *trb);
+=======
+void dwc3_stop_active_transfer(struct dwc3 *dwc, u32 epnum, bool force);
+irqreturn_t dwc3_interrupt(int irq, void *_dwc);
+
+static inline dma_addr_t dwc3_trb_dma_offset(struct dwc3_ep *dep,
+		struct dwc3_trb *trb)
+{
+	u32		offset = (char *) trb - (char *) dep->trb_pool;
+
+	return dep->trb_pool_dma + offset;
+}
+>>>>>>> 0e91d2a... Nougat
 
 /**
  * dwc3_gadget_ep_get_transfer_index - Gets transfer index from HW

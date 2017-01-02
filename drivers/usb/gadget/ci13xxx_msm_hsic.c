@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -68,8 +72,17 @@ struct msm_hsic_per {
 	struct msm_hsic_peripheral_platform_data *pdata;
 	u32			bus_perf_client;
 	struct msm_bus_scale_pdata	*bus_scale_table;
+<<<<<<< HEAD
 	enum usb_vdd_type	vdd_type;
 	bool connected;
+=======
+	enum usb_vdd_type		vdd_type;
+	bool				connected;
+	bool				disable_on_boot;
+	bool				sm_work_pending;
+	atomic_t			pm_suspended;
+
+>>>>>>> 0e91d2a... Nougat
 };
 
 #define NONE 0
@@ -357,7 +370,30 @@ static void msm_hsic_wakeup(void)
 
 static void msm_hsic_start(void)
 {
+<<<<<<< HEAD
 	int ret;
+=======
+	struct msm_hsic_per *mhsic = the_mhsic;
+	int ret, *seq, seq_count;
+	u32 val;
+
+	/* Program TLMM pad configuration for HSIC */
+	seq = mhsic->pdata->tlmm_init_seq;
+	seq_count = mhsic->pdata->tlmm_seq_count;
+	if (seq && seq_count) {
+		while (seq[0] >= 0 && seq_count > 0) {
+			val = readl_relaxed(mhsic->tlmm_regs + seq[0]);
+			val |= seq[1];
+			dev_dbg(mhsic->dev, "%s: writing %x to %p\n",
+				__func__, val, mhsic->tlmm_regs + seq[0]);
+			writel_relaxed(val, mhsic->tlmm_regs + seq[0]);
+			seq += 2;
+			seq_count -= 2;
+		}
+	}
+	/* ensure above writes are completed before programming PHY */
+	wmb();
+>>>>>>> 0e91d2a... Nougat
 
 	/* programmable length of connect signaling (33.2ns) */
 	ret = ulpi_write(the_mhsic, 3, HSIC_DBG1_REG);
@@ -559,22 +595,49 @@ skip_phy_resume:
 static int msm_hsic_pm_suspend(struct device *dev)
 {
 	struct msm_hsic_per *mhsic = dev_get_drvdata(dev);
+	int ret = 0;
 
 	dev_dbg(dev, "MSM HSIC Peripheral PM suspend\n");
 
-	return msm_hsic_suspend(mhsic);
+	if (!atomic_read(&mhsic->in_lpm)) {
+		dev_err(dev, "Abort PM suspend!! (HSIC-USB is outside LPM)\n");
+		return -EBUSY;
+	}
+
+	atomic_set(&mhsic->pm_suspended, 1);
+	ret = msm_hsic_suspend(mhsic);
+	if (ret)
+		atomic_set(&mhsic->pm_suspended, 0);
+
+	return ret;
 }
 
 #ifdef CONFIG_PM_RUNTIME
 static int msm_hsic_pm_resume(struct device *dev)
 {
+	struct msm_hsic_per *mhsic = dev_get_drvdata(dev);
+	int ret = 0;
+
 	dev_dbg(dev, "MSM HSIC Peripheral PM resume\n");
+
+	atomic_set(&mhsic->pm_suspended, 0);
+	if (mhsic->sm_work_pending) {
+		dev_dbg(dev, "MSM HSIC PM resume by USB\n");
+		mhsic->sm_work_pending = false;
+		pm_runtime_get_noresume(dev);
+		ret = msm_hsic_resume(mhsic);
+
+		/* Update runtime PM status */
+		pm_runtime_disable(dev);
+		pm_runtime_set_active(dev);
+		pm_runtime_enable(dev);
+	}
 
 	/*
 	 * Do not resume hardware as part of system resume,
 	 * rather, wait for the ASYNC INT from the h/w
 	 */
-	return 0;
+	return ret;
 }
 #else
 static int msm_hsic_pm_resume(struct device *dev)
@@ -654,7 +717,11 @@ static irqreturn_t msm_udc_hsic_irq(int irq, void *data)
 		pr_debug("%s(): HSIC IRQ:%d in LPM\n", __func__, irq);
 		disable_irq_nosync(irq);
 		mhsic->async_int = irq;
-		pm_request_resume(mhsic->dev);
+		if (atomic_read(&mhsic->pm_suspended))
+			mhsic->sm_work_pending = true;
+		else
+			pm_request_resume(mhsic->dev);
+
 		return IRQ_HANDLED;
 	}
 
@@ -682,7 +749,7 @@ static void ci13xxx_msm_hsic_notify_event(struct ci13xxx *udc, unsigned event)
 	case CI13XXX_CONTROLLER_CONNECT_EVENT:
 		dev_info(dev, "CI13XXX_CONTROLLER_CONNECT_EVENT received\n");
 		/* bring HSIC core out of LPM */
-		pm_runtime_get_sync(the_mhsic->dev);
+		pm_runtime_resume(the_mhsic->dev);
 		msm_hsic_start();
 		the_mhsic->connected = true;
 		break;
@@ -886,6 +953,9 @@ static int msm_hsic_probe(struct platform_device *pdev)
 	}
 
 	disable_irq(mhsic->async_irq_no);
+
+	/* Driver manages its own runtime PM state. Ignore any chidren votes */
+	pm_suspend_ignore_children(&pdev->dev, true);
 
 	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);

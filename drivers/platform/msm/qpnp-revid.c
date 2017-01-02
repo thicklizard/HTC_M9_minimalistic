@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -27,6 +31,7 @@
 #define QPNP_REVID_DEV_NAME "qcom,qpnp-revid"
 
 static const char *const pmic_names[] = {
+<<<<<<< HEAD
 	"Unknown PMIC",
 	"PM8941",
 	"PM8841",
@@ -41,6 +46,34 @@ static const char *const pmic_names[] = {
 	"PM8916",
 	"PM8004",
 	"PM8909",
+=======
+	[0] =	"Unknown PMIC",
+	[PM8941_SUBTYPE] = "PM8941",
+	[PM8841_SUBTYPE] = "PM8841",
+	[PM8019_SUBTYPE] = "PM8019",
+	[PM8226_SUBTYPE] = "PM8226",
+	[PM8110_SUBTYPE] = "PM8110",
+	[PMA8084_SUBTYPE] = "PMA8084",
+	[PMI8962_SUBTYPE] = "PMI8962",
+	[PMD9635_SUBTYPE] = "PMD9635",
+	[PM8994_SUBTYPE] = "PM8994",
+	[PMI8994_SUBTYPE] = "PMI8994",
+	[PM8916_SUBTYPE] = "PM8916",
+	[PM8004_SUBTYPE] = "PM8004",
+	[PM8909_SUBTYPE] = "PM8909",
+	[PM2433_SUBTYPE] = "PM2433",
+	[PMD9655_SUBTYPE] = "PMD9655",
+	[PM8950_SUBTYPE] = "PM8950",
+	[PMI8950_SUBTYPE] = "PMI8950",
+	[PMK8001_SUBTYPE] = "PMK8001",
+	[PMI8996_SUBTYPE] = "PMI8996",
+	[PMCOBALT_SUBTYPE] = "PMCOBALT",
+	[PMICOBALT_SUBTYPE] = "PMICOBALT",
+	[PM8005_SUBTYPE] = "PM8005",
+	[PM8937_SUBTYPE] = "PM8937",
+	[PMI8937_SUBTYPE] = "PMI8937",
+	[PMI8940_SUBTYPE] = "PMI8940",
+>>>>>>> 0e91d2a... Nougat
 };
 
 struct revid_chip {
@@ -101,6 +134,13 @@ EXPORT_SYMBOL(get_revid_data);
 
 #define PM8941_PERIPHERAL_SUBTYPE	0x01
 #define PM8226_PERIPHERAL_SUBTYPE	0x04
+<<<<<<< HEAD
+=======
+#define PMD9655_PERIPHERAL_SUBTYPE	0x0F
+#define PMI8950_PERIPHERAL_SUBTYPE	0x11
+#define PMI8937_PERIPHERAL_SUBTYPE	0x37
+#define PMI8940_PERIPHERAL_SUBTYPE	0x40
+>>>>>>> 0e91d2a... Nougat
 static size_t build_pmic_string(char *buf, size_t n, int sid,
 		u8 subtype, u8 rev1, u8 rev2, u8 rev3, u8 rev4)
 {
@@ -158,7 +198,34 @@ static int qpnp_revid_probe(struct spmi_device *spmi)
 	rev4 = qpnp_read_byte(spmi, resource->start + REVID_REVISION4);
 
 	pmic_subtype = qpnp_read_byte(spmi, resource->start + REVID_SUBTYPE);
+<<<<<<< HEAD
 	pmic_status = qpnp_read_byte(spmi, resource->start + REVID_STATUS1);
+=======
+	if (pmic_subtype != PMD9655_PERIPHERAL_SUBTYPE)
+		pmic_status = qpnp_read_byte(spmi,
+					     resource->start + REVID_STATUS1);
+	else
+		pmic_status = 0;
+
+	/* special case for PMI8937/PMI8940 */
+	if (pmic_subtype == PMI8950_PERIPHERAL_SUBTYPE) {
+		/* read spare register */
+		spare0 = qpnp_read_byte(spmi, resource->start + REVID_SPARE_0);
+		switch (spare0) {
+		case 0:
+			pmic_subtype = PMI8950_PERIPHERAL_SUBTYPE;
+			break;
+		case PMI8937_PERIPHERAL_SUBTYPE:
+			pmic_subtype = PMI8937_PERIPHERAL_SUBTYPE;
+			break;
+		case PMI8940_PERIPHERAL_SUBTYPE:
+			pmic_subtype = PMI8940_PERIPHERAL_SUBTYPE;
+			break;
+		default:
+			pr_warn("Invalid spare0 value=%x\n", spare0);
+		}
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	revid_chip = devm_kzalloc(&spmi->dev, sizeof(struct revid_chip),
 						GFP_KERNEL);

@@ -38,8 +38,12 @@ static void __init imx53_qsb_init(void)
 
 static void __init imx53_dt_init(void)
 {
+<<<<<<< HEAD
 	if (of_machine_is_compatible("fsl,imx53-qsb"))
 		imx53_qsb_init();
+=======
+	imx_src_init();
+>>>>>>> 0e91d2a... Nougat
 
 	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
 }
@@ -63,5 +67,4 @@ DT_MACHINE_START(IMX53_DT, "Freescale i.MX53 (Device Tree Support)")
 	.init_machine	= imx53_dt_init,
 	.init_late	= imx53_init_late,
 	.dt_compat	= imx53_dt_board_compat,
-	.restart	= mxc_restart,
 MACHINE_END

@@ -1405,6 +1405,19 @@ enum ieee80211_key_len {
 	WLAN_KEY_LEN_WAPI_SMS4 = 32,
 };
 
+<<<<<<< HEAD
+=======
+#define IEEE80211_WEP_IV_LEN		4
+#define IEEE80211_WEP_ICV_LEN		4
+#define IEEE80211_CCMP_HDR_LEN		8
+#define IEEE80211_CCMP_MIC_LEN		8
+#define IEEE80211_CCMP_PN_LEN		6
+#define IEEE80211_TKIP_IV_LEN		8
+#define IEEE80211_TKIP_ICV_LEN		4
+#define IEEE80211_CMAC_PN_LEN		6
+#define IEEE80211_GCMP_PN_LEN		6
+
+>>>>>>> 0e91d2a... Nougat
 enum ieee80211_pub_actioncode {
 	WLAN_PUB_ACTION_EXT_CHANSW_ANN = 4,
 	WLAN_PUB_ACTION_TDLS_DISCOVER_RES = 14,
@@ -1527,8 +1540,8 @@ enum ieee80211_sa_query_action {
 
 #define WLAN_CIPHER_SUITE_PMK       0x00904C00
 
-#define WLAN_AKM_SUITE_WAPI_PSK         0x000FAC11
-#define WLAN_AKM_SUITE_WAPI_CERT        0x000FAC12
+#define WLAN_AKM_SUITE_WAPI_PSK         0x000FAC13
+#define WLAN_AKM_SUITE_WAPI_CERT        0x000FAC14
 
 #define WLAN_MAX_KEY_LEN		32
 

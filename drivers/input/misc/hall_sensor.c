@@ -442,6 +442,12 @@ static int hall_sensor_suspend(struct device *dev)
 		HL_LOG("disable_irq");
 	}
 
+<<<<<<< HEAD
+=======
+	if (!hl->hall_enable || hl->irq_enable)
+		HL_LOG("Hall enable: %d, irq_enable: %d",hl->hall_enable, hl->irq_enable);
+
+>>>>>>> 0e91d2a... Nougat
 	return 0;
 }
 
@@ -461,6 +467,12 @@ static int hall_sensor_resume(struct device *dev)
 		HL_LOG("enable_irq");
 	}
 
+<<<<<<< HEAD
+=======
+	if (!hl->hall_enable || !hl->irq_enable)
+		HL_LOG("Hall enable: %d, irq_enable: %d",hl->hall_enable, hl->irq_enable);
+
+>>>>>>> 0e91d2a... Nougat
 	return 0;
 }
 

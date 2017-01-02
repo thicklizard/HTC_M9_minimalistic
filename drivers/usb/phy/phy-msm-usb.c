@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2015, Linux Foundation. All rights reserved.
+/* Copyright (c) 2009-2016, Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -76,6 +76,14 @@
 
 #define USB_SUSPEND_DELAY_TIME	(500 * HZ/1000) /* 500 msec */
 
+<<<<<<< HEAD
+=======
+#define USB_DEFAULT_SYSTEM_CLOCK 80000000	/* 80 MHz */
+
+#define PM_QOS_SAMPLE_SEC	2
+#define PM_QOS_THRESHOLD	400
+
+>>>>>>> 0e91d2a... Nougat
 enum msm_otg_phy_reg_mode {
 	USB_PHY_REG_OFF,
 	USB_PHY_REG_ON,
@@ -123,7 +131,7 @@ static inline bool aca_enabled(void)
 }
 
 static int vdd_val[VDD_VAL_MAX];
-static u32 bus_freqs[USB_NUM_BUS_CLOCKS];	/* bimc, snoc, pcnoc clk */;
+static u32 bus_freqs[USB_NOC_NUM_VOTE][USB_NUM_BUS_CLOCKS]  /*bimc,snoc,pcnoc*/;
 static char bus_clkname[USB_NUM_BUS_CLOCKS][20] = {"bimc_clk", "snoc_clk",
 						"pcnoc_clk"};
 static bool bus_clk_rate_set;
@@ -793,6 +801,7 @@ static const char *timer_string(int bit)
 	}
 }
 
+<<<<<<< HEAD
 static enum hrtimer_restart msm_otg_timer_func(struct hrtimer *hrtimer)
 {
 	struct msm_otg *motg = container_of(hrtimer, struct msm_otg, timer);
@@ -835,6 +844,18 @@ static void msm_otg_del_timer(struct msm_otg *motg)
 	hrtimer_cancel(&motg->timer);
 	clear_bit(bit, &motg->tmouts);
 }
+=======
+	/*
+	 * Enable USB BAM if USB BAM is enabled already before block reset as
+	 * block reset also resets USB BAM registers.
+	 */
+	if (test_bit(ID, &motg->inputs)) {
+		msm_usb_bam_enable(CI_CTRL,
+				   phy->otg->gadget->bam2bam_func_enabled);
+	} else {
+		dev_dbg(phy->dev, "host mode BAM not enabled\n");
+	}
+>>>>>>> 0e91d2a... Nougat
 
 static void msm_otg_start_timer(struct msm_otg *motg, int time, int bit)
 {
@@ -1014,30 +1035,71 @@ static int msm_otg_set_suspend(struct usb_phy *phy, int suspend)
 	return 0;
 }
 
-static int msm_otg_bus_freq_get(struct device *dev, struct msm_otg *motg)
+static int msm_otg_bus_freq_set(struct msm_otg *motg, enum usb_noc_mode mode)
 {
+	int i, ret;
+	long rate;
+
+	for (i = 0; i < USB_NUM_BUS_CLOCKS; i++) {
+		rate = bus_freqs[mode][i];
+		if (!rate) {
+			pr_debug("%s rate not available\n", bus_clkname[i]);
+			continue;
+		}
+
+		ret = clk_set_rate(motg->bus_clks[i], rate);
+		if (ret) {
+			pr_err("%s set rate failed: %d\n", bus_clkname[i], ret);
+			return ret;
+		}
+		pr_debug("%s set to %lu Hz\n", bus_clkname[i],
+			 clk_get_rate(motg->bus_clks[i]));
+		msm_otg_dbg_log_event(&motg->phy, "OTG BUS FREQ SET", i, rate);
+	}
+
+	bus_clk_rate_set = true;
+
+	return 0;
+}
+
+static int msm_otg_bus_freq_get(struct msm_otg *motg)
+{
+	struct device *dev = motg->phy.dev;
 	struct device_node *np = dev->of_node;
-	int len = 0;
-	int i;
-	int ret;
+	int len = 0, i, count = USB_NUM_BUS_CLOCKS;
 
 	if (!np)
 		return -EINVAL;
 
 	of_find_property(np, "qcom,bus-clk-rate", &len);
-	if (!len || (len / sizeof(u32) != USB_NUM_BUS_CLOCKS)) {
-		pr_err("Invalid bus clock rate parameters\n");
+	/* SVS requires extra set of frequencies for perf_mode sysfs node */
+	if (motg->default_noc_mode == USB_NOC_SVS_VOTE)
+		count *= 2;
+
+	if (!len || (len / sizeof(u32) != count)) {
+		pr_err("Invalid bus rate:%d %u\n", len, motg->default_noc_mode);
 		return -EINVAL;
 	}
-	of_property_read_u32_array(np, "qcom,bus-clk-rate", bus_freqs,
-		USB_NUM_BUS_CLOCKS);
+	of_property_read_u32_array(np, "qcom,bus-clk-rate", bus_freqs[0],
+				   count);
 	for (i = 0; i < USB_NUM_BUS_CLOCKS; i++) {
+<<<<<<< HEAD
 		motg->bus_clks[i] = devm_clk_get(motg->phy.dev,
 				bus_clkname[i]);
+=======
+		if (bus_freqs[0][i] == 0) {
+			motg->bus_clks[i] = NULL;
+			pr_debug("%s not available\n", bus_clkname[i]);
+			continue;
+		}
+
+		motg->bus_clks[i] = devm_clk_get(dev, bus_clkname[i]);
+>>>>>>> 0e91d2a... Nougat
 		if (IS_ERR(motg->bus_clks[i])) {
 			pr_err("%s get failed\n", bus_clkname[i]);
 			return PTR_ERR(motg->bus_clks[i]);
 		}
+<<<<<<< HEAD
 		ret = clk_set_rate(motg->bus_clks[i], bus_freqs[i]);
 		if (ret) {
 			pr_err("%s set rate failed: %d\n", bus_clkname[i],
@@ -1046,8 +1108,9 @@ static int msm_otg_bus_freq_get(struct device *dev, struct msm_otg *motg)
 		}
 		pr_debug("%s set at %lu Hz\n", bus_clkname[i],
 			clk_get_rate(motg->bus_clks[i]));
+=======
+>>>>>>> 0e91d2a... Nougat
 	}
-	bus_clk_rate_set = true;
 	return 0;
 }
 
@@ -1102,11 +1165,12 @@ static void msm_otg_bus_vote(struct msm_otg *motg, enum usb_bus_vote vote)
 		if (ret)
 			dev_err(motg->phy.dev, "%s: Failed to vote (%d)\n"
 				   "for bus bw %d\n", __func__, vote, ret);
-		if (vote == USB_MAX_PERF_VOTE)
-			msm_otg_bus_clks_enable(motg);
-		else
-			msm_otg_bus_clks_disable(motg);
 	}
+
+	if (vote == USB_MAX_PERF_VOTE)
+		msm_otg_bus_clks_enable(motg);
+	else
+		msm_otg_bus_clks_disable(motg);
 }
 
 static void msm_otg_enable_phy_hv_int(struct msm_otg *motg)
@@ -1265,6 +1329,12 @@ static irqreturn_t msm_otg_phy_irq_handler(int irq, void *data)
 
 #define PHY_SUSPEND_RETRIES_MAX 3
 
+<<<<<<< HEAD
+=======
+static void msm_otg_set_vbus_state(int online);
+static void msm_otg_perf_vote_update(struct msm_otg *motg, bool perf_mode);
+
+>>>>>>> 0e91d2a... Nougat
 #ifdef CONFIG_PM_SLEEP
 static int msm_otg_suspend(struct msm_otg *motg)
 {
@@ -1285,6 +1355,7 @@ static int msm_otg_suspend(struct msm_otg *motg)
 	if (atomic_read(&motg->in_lpm))
 		return 0;
 
+<<<<<<< HEAD
 	/*
 	 * Don't allow low power mode if bam pipes are still connected.
 	 * Otherwise it could lead to unclocked access when sps driver
@@ -1296,6 +1367,10 @@ static int msm_otg_suspend(struct msm_otg *motg)
 	}
 
 	motg->ui_enabled = 0;
+=======
+	cancel_delayed_work_sync(&motg->perf_vote_work);
+
+>>>>>>> 0e91d2a... Nougat
 	disable_irq(motg->irq);
 lpm_start:
 	host_bus_suspend = !test_bit(MHL, &motg->inputs) && phy->otg->host &&
@@ -1303,7 +1378,18 @@ lpm_start:
 	device_bus_suspend = phy->otg->gadget && test_bit(ID, &motg->inputs) &&
 		test_bit(A_BUS_SUSPEND, &motg->inputs) &&
 		motg->caps & ALLOW_LPM_ON_DEV_SUSPEND;
+<<<<<<< HEAD
 	dcp = motg->chg_type == USB_DCP_CHARGER;
+=======
+
+	if (host_bus_suspend)
+		msm_otg_perf_vote_update(motg, false);
+	/*
+	 * Allow putting PHY into SIDDQ with wall charger connected in
+	 * case of external charger detection.
+	 */
+	dcp = (motg->chg_type == USB_DCP_CHARGER) && !motg->is_ext_chg_dcp;
+>>>>>>> 0e91d2a... Nougat
 	prop_charger = motg->chg_type == USB_PROPRIETARY_CHARGER;
 	floated_charger = motg->chg_type == USB_FLOATED_CHARGER;
 
@@ -1790,8 +1876,11 @@ skip_phy_resume:
 		msm_id_status_w(&motg->id_status_work.work);
 	}
 
-	if (motg->host_bus_suspend)
+	if (motg->host_bus_suspend) {
 		usb_hcd_resume_root_hub(hcd);
+		schedule_delayed_work(&motg->perf_vote_work,
+			msecs_to_jiffies(1000 * PM_QOS_SAMPLE_SEC));
+	}
 
 	dev_info(phy->dev, "USB exited from low power mode\n");
 
@@ -1934,9 +2023,11 @@ static void msm_otg_notify_charger(struct msm_otg *motg, unsigned mA)
 
 	/*
 	 * This condition will be true when usb cable is disconnected
-	 * during bootup before charger detection mechanism starts.
+	 * during bootup before enumeration. Check charger type also
+	 * to avoid clearing online flag in case of valid charger.
 	 */
-	if (motg->online && motg->cur_power == 0 && mA == 0)
+	if (motg->online && motg->cur_power == 0 && mA == 0 &&
+			(motg->chg_type == USB_INVALID_CHARGER))
 		msm_otg_set_online_status(motg);
 
 	if (motg->cur_power == mA)
@@ -1971,6 +2062,65 @@ static int msm_otg_set_power(struct usb_phy *phy, unsigned mA)
 	return 0;
 }
 
+<<<<<<< HEAD
+=======
+static void msm_hsusb_vbus_power(struct msm_otg *motg, bool on);
+
+static void msm_otg_perf_vote_update(struct msm_otg *motg, bool perf_mode)
+{
+	static bool curr_perf_mode;
+	int ret, latency = motg->pm_qos_latency;
+	long clk_rate;
+
+	if (curr_perf_mode == perf_mode)
+		return;
+
+	if (perf_mode) {
+		if (latency)
+			pm_qos_update_request(&motg->pm_qos_req_dma, latency);
+		msm_otg_bus_vote(motg, USB_MAX_PERF_VOTE);
+		clk_rate = motg->core_clk_rate;
+	} else {
+		if (latency)
+			pm_qos_update_request(&motg->pm_qos_req_dma,
+						PM_QOS_DEFAULT_VALUE);
+		msm_otg_bus_vote(motg, USB_MIN_PERF_VOTE);
+		clk_rate = motg->core_clk_svs_rate;
+	}
+
+	if (clk_rate) {
+		ret = clk_set_rate(motg->core_clk, clk_rate);
+		if (ret)
+			dev_err(motg->phy.dev, "sys_clk set_rate fail:%d %ld\n",
+					ret, clk_rate);
+	}
+	curr_perf_mode = perf_mode;
+	pr_debug("%s: latency updated to: %d, core_freq to: %ld\n", __func__,
+					latency, clk_rate);
+}
+
+static void msm_otg_perf_vote_work(struct work_struct *w)
+{
+	struct msm_otg *motg = container_of(w, struct msm_otg,
+						perf_vote_work.work);
+	unsigned curr_sample_int_count;
+	bool in_perf_mode = false;
+
+	curr_sample_int_count = motg->usb_irq_count;
+	motg->usb_irq_count = 0;
+
+	if (curr_sample_int_count >= PM_QOS_THRESHOLD)
+		in_perf_mode = true;
+
+	msm_otg_perf_vote_update(motg, in_perf_mode);
+	pr_debug("%s: in_perf_mode:%u, interrupts in last sample:%u\n",
+		 __func__, in_perf_mode, curr_sample_int_count);
+
+	schedule_delayed_work(&motg->perf_vote_work,
+			msecs_to_jiffies(1000 * PM_QOS_SAMPLE_SEC));
+}
+
+>>>>>>> 0e91d2a... Nougat
 static void msm_otg_start_host(struct usb_otg *otg, int on)
 {
 	struct msm_otg *motg = container_of(otg->phy, struct msm_otg, phy);
@@ -1984,14 +2134,48 @@ static void msm_otg_start_host(struct usb_otg *otg, int on)
 
 	if (on) {
 		dev_dbg(otg->phy->dev, "host on\n");
+<<<<<<< HEAD
+=======
+		msm_otg_dbg_log_event(&motg->phy, "HOST ON",
+				motg->inputs, otg->phy->state);
+		msm_hsusb_vbus_power(motg, 1);
+		msm_otg_reset(&motg->phy);
+>>>>>>> 0e91d2a... Nougat
 
 		if (pdata->otg_control == OTG_PHY_CONTROL)
 			ulpi_write(otg->phy, OTG_COMP_DISABLE,
 				ULPI_SET(ULPI_PWR_CLK_MNG_REG));
 
 		usb_add_hcd(hcd, hcd->irq, IRQF_SHARED);
+#ifdef CONFIG_SMP
+		motg->pm_qos_req_dma.type = PM_QOS_REQ_AFFINE_IRQ;
+		motg->pm_qos_req_dma.irq = motg->irq;
+#endif
+		pm_qos_add_request(&motg->pm_qos_req_dma,
+				PM_QOS_CPU_DMA_LATENCY, PM_QOS_DEFAULT_VALUE);
+		/* start in perf mode for better performance initially */
+		msm_otg_perf_vote_update(motg, true);
+		schedule_delayed_work(&motg->perf_vote_work,
+				msecs_to_jiffies(1000 * PM_QOS_SAMPLE_SEC));
 	} else {
 		dev_dbg(otg->phy->dev, "host off\n");
+<<<<<<< HEAD
+=======
+		msm_otg_dbg_log_event(&motg->phy, "HOST OFF",
+				motg->inputs, otg->phy->state);
+		msm_hsusb_vbus_power(motg, 0);
+
+		cancel_delayed_work_sync(&motg->perf_vote_work);
+		msm_otg_perf_vote_update(motg, false);
+		pm_qos_remove_request(&motg->pm_qos_req_dma);
+
+		usb_remove_hcd(hcd);
+		msm_otg_reset(&motg->phy);
+
+		if (pdata->enable_axi_prefetch)
+			writel_relaxed(readl_relaxed(USB_HS_APF_CTRL)
+					| (APF_CTRL_EN), USB_HS_APF_CTRL);
+>>>>>>> 0e91d2a... Nougat
 
 		wake_up(&motg->host_suspend_wait);
 		usb_remove_hcd(hcd);
@@ -2200,6 +2384,8 @@ static void msm_otg_start_peripheral(struct usb_otg *otg, int on)
 		/* Configure BUS performance parameters for MAX bandwidth */
 		if (debug_bus_voting_enabled)
 			msm_otg_bus_vote(motg, USB_MAX_PERF_VOTE);
+		/* bump up usb core_clk to default */
+		clk_set_rate(motg->core_clk, motg->core_clk_rate);
 
 		usb_gadget_vbus_connect(otg->gadget);
 
@@ -2765,10 +2951,10 @@ static void msm_chg_enable_dcd(struct msm_otg *motg)
 		 * may be incorrectly interpreted. Also
 		 * BC1.2 compliance testers expect Rdm_down
 		 * to enabled during DCD. Enable Rdm_down
-		 * explicitly after enabling the DCD.
+		 * explicitly before enabling the DCD.
 		 */
-		ulpi_write(phy, 0x10, 0x85);
 		ulpi_write(phy, 0x04, 0x0B);
+		ulpi_write(phy, 0x10, 0x85);
 		break;
 	default:
 		break;
@@ -3100,6 +3286,13 @@ static void msm_otg_init_sm(struct msm_otg *motg)
 	default:
 		break;
 	}
+<<<<<<< HEAD
+=======
+	msm_otg_dbg_log_event(&motg->phy, "SM INIT", pdata->mode, motg->inputs);
+	if (motg->id_state != USB_ID_GROUND)
+		motg->id_state = (test_bit(ID, &motg->inputs)) ? USB_ID_FLOAT :
+							USB_ID_GROUND;
+>>>>>>> 0e91d2a... Nougat
 }
 
 static void msm_otg_wait_for_ext_chg_done(struct msm_otg *motg)
@@ -3146,10 +3339,29 @@ static void msm_otg_sm_work(struct work_struct *w)
 	struct usb_otg *otg = motg->phy.otg;
 	bool work = 0, srp_reqd, dcp;
 
+<<<<<<< HEAD
 	pm_runtime_resume(otg->phy->dev);
 	if (motg->pm_done) {
 		pm_runtime_get_sync(otg->phy->dev);
 		motg->pm_done = 0;
+=======
+	pr_debug("%s work\n", usb_otg_state_string(otg->phy->state));
+	msm_otg_dbg_log_event(&motg->phy, "SM WORK:",
+			otg->phy->state, motg->inputs);
+
+	/* Just resume h/w if reqd, pm_count is handled based on state/inputs */
+	if (motg->resume_pending) {
+		pm_runtime_get_sync(otg->phy->dev);
+		if (atomic_read(&motg->in_lpm)) {
+			dev_err(dev, "SM WORK: USB is in LPM\n");
+			msm_otg_dbg_log_event(&motg->phy,
+					"SM WORK: USB IS IN LPM",
+					otg->phy->state, motg->inputs);
+			msm_otg_resume(motg);
+		}
+		motg->resume_pending = false;
+		pm_runtime_put_noidle(otg->phy->dev);
+>>>>>>> 0e91d2a... Nougat
 	}
 	pr_debug("%s work\n", usb_otg_state_string(otg->phy->state));
 	switch (otg->phy->state) {
@@ -3781,6 +3993,7 @@ static irqreturn_t msm_otg_irq(int irq, void *data)
 		}
 		return IRQ_HANDLED;
 	}
+	motg->usb_irq_count++;
 
 	usbsts = readl(USB_USBSTS);
 	otgsc = readl(USB_OTGSC);
@@ -4559,6 +4772,39 @@ static void msm_otg_debugfs_cleanup(void)
 	debugfs_remove_recursive(msm_otg_dbg_root);
 }
 
+static ssize_t
+set_msm_otg_perf_mode(struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+	struct msm_otg *motg = the_msm_otg;
+	int ret;
+	long clk_rate;
+
+	pr_debug("%s: enable:%d\n", __func__, !strnicmp(buf, "enable", 6));
+
+	if (!strnicmp(buf, "enable", 6)) {
+		clk_rate = motg->core_clk_nominal_rate;
+		msm_otg_bus_freq_set(motg, USB_NOC_NOM_VOTE);
+	} else {
+		clk_rate = motg->core_clk_svs_rate;
+		msm_otg_bus_freq_set(motg, USB_NOC_SVS_VOTE);
+	}
+
+	if (clk_rate) {
+		pr_debug("Set usb sys_clk rate:%ld\n", clk_rate);
+		ret = clk_set_rate(motg->core_clk, clk_rate);
+		if (ret)
+			pr_err("sys_clk set_rate fail:%d %ld\n", ret, clk_rate);
+	} else {
+		pr_err("usb sys_clk rate is undefined\n");
+	}
+	msm_otg_dbg_log_event(&motg->phy, "OTG PERF SET", clk_rate, ret);
+
+	return count;
+}
+
+static DEVICE_ATTR(perf_mode, S_IWUSR, NULL, set_msm_otg_perf_mode);
+
 #define MSM_OTG_CMD_ID		0x09
 #define MSM_OTG_DEVICE_ID	0x04
 #define MSM_OTG_VMID_IDX	0xFF
@@ -4626,6 +4872,11 @@ static struct platform_device *msm_otg_add_pdev(
 		ci_pdata.l1_supported = otg_pdata->l1_supported;
 		ci_pdata.enable_ahb2ahb_bypass =
 				otg_pdata->enable_ahb2ahb_bypass;
+<<<<<<< HEAD
+=======
+		ci_pdata.enable_streaming = otg_pdata->enable_streaming;
+		ci_pdata.enable_axi_prefetch = otg_pdata->enable_axi_prefetch;
+>>>>>>> 0e91d2a... Nougat
 		retval = platform_device_add_data(pdev, &ci_pdata,
 			sizeof(ci_pdata));
 		if (retval)
@@ -4653,8 +4904,11 @@ static int msm_otg_setup_devices(struct platform_device *ofdev,
 	int retval = 0;
 
 	if (!init) {
-		if (gadget_pdev)
+		if (gadget_pdev) {
 			platform_device_unregister(gadget_pdev);
+			device_remove_file(&gadget_pdev->dev,
+					   &dev_attr_perf_mode);
+		}
 		if (host_pdev)
 			platform_device_unregister(host_pdev);
 		return 0;
@@ -4669,6 +4923,8 @@ static int msm_otg_setup_devices(struct platform_device *ofdev,
 			retval = PTR_ERR(gadget_pdev);
 			break;
 		}
+		if (device_create_file(&gadget_pdev->dev, &dev_attr_perf_mode))
+			dev_err(&gadget_pdev->dev, "perf_mode file failed\n");
 		if (mode == USB_PERIPHERAL)
 			break;
 		/* fall through */
@@ -4676,8 +4932,11 @@ static int msm_otg_setup_devices(struct platform_device *ofdev,
 		host_pdev = msm_otg_add_pdev(ofdev, host_name);
 		if (IS_ERR(host_pdev)) {
 			retval = PTR_ERR(host_pdev);
-			if (mode == USB_OTG)
+			if (mode == USB_OTG) {
 				platform_device_unregister(gadget_pdev);
+				device_remove_file(&gadget_pdev->dev,
+						   &dev_attr_perf_mode);
+			}
 		}
 		break;
 	default:
@@ -5067,7 +5326,38 @@ static int msm_otg_probe(struct platform_device *pdev)
 	 * Get Max supported clk frequency for USB Core CLK and request
 	 * to set the same.
 	 */
+<<<<<<< HEAD
 	motg->core_clk_rate = clk_round_rate(motg->core_clk, LONG_MAX);
+=======
+	if (of_property_read_u32(pdev->dev.of_node,
+					"qcom,max-nominal-sysclk-rate", &ret)) {
+		ret = -EINVAL;
+		goto put_core_clk;
+	} else {
+		motg->core_clk_nominal_rate = clk_round_rate(motg->core_clk,
+							     ret);
+	}
+
+	if (of_property_read_u32(pdev->dev.of_node,
+					"qcom,max-svs-sysclk-rate", &ret)) {
+		dev_dbg(&pdev->dev, "core_clk svs freq not specified\n");
+	} else {
+		motg->core_clk_svs_rate = clk_round_rate(motg->core_clk, ret);
+	}
+
+	motg->default_noc_mode = USB_NOC_NOM_VOTE;
+	if (of_property_read_bool(pdev->dev.of_node, "qcom,default-mode-svs")) {
+		motg->core_clk_rate = motg->core_clk_svs_rate;
+		motg->default_noc_mode = USB_NOC_SVS_VOTE;
+	} else if (of_property_read_bool(pdev->dev.of_node,
+					"qcom,boost-sysclk-with-streaming")) {
+		motg->core_clk_rate = motg->core_clk_nominal_rate;
+	} else {
+		motg->core_clk_rate = clk_round_rate(motg->core_clk,
+						USB_DEFAULT_SYSTEM_CLOCK);
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	if (IS_ERR_VALUE(motg->core_clk_rate)) {
 		dev_err(&pdev->dev, "fail to get core clk max freq.\n");
 	} else {
@@ -5164,26 +5454,19 @@ static int msm_otg_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (pdev->dev.of_node) {
-		dev_dbg(&pdev->dev, "device tree enabled\n");
-		pdata = msm_otg_dt_to_pdata(pdev);
-		if (!pdata) {
-			ret = -ENOMEM;
-			goto disable_phy_csr_clk;
-		}
+	of_property_read_u32(pdev->dev.of_node, "qcom,pm-qos-latency",
+				&motg->pm_qos_latency);
 
-		pdata->bus_scale_table = msm_bus_cl_get_pdata(pdev);
-		if (!pdata->bus_scale_table)
-			dev_dbg(&pdev->dev, "bus scaling is disabled\n");
-
-		pdev->dev.platform_data = pdata;
-	} else if (!pdev->dev.platform_data) {
-		dev_err(&pdev->dev, "No platform data given. Bailing out\n");
-		ret = -ENODEV;
+	pdata = msm_otg_dt_to_pdata(pdev);
+	if (!pdata) {
+		ret = -ENOMEM;
 		goto disable_phy_csr_clk;
-	} else {
-		pdata = pdev->dev.platform_data;
 	}
+	pdev->dev.platform_data = pdata;
+
+	pdata->bus_scale_table = msm_bus_cl_get_pdata(pdev);
+	if (!pdata->bus_scale_table)
+		dev_dbg(&pdev->dev, "bus scaling is disabled\n");
 
 	if (pdata->phy_type == QUSB_ULPI_PHY) {
 		if (of_property_match_string(pdev->dev.of_node,
@@ -5231,9 +5514,20 @@ static int msm_otg_probe(struct platform_device *pdev)
 		}
 	}
 
+<<<<<<< HEAD
 	ret = msm_otg_bus_freq_get(motg->phy.dev, motg);
 	if (ret)
 		pr_err("failed to vote for explicit noc rates: %d\n", ret);
+=======
+	ret = msm_otg_bus_freq_get(motg);
+	if (ret) {
+		pr_err("failed to get noc clocks: %d\n", ret);
+	} else {
+		ret = msm_otg_bus_freq_set(motg, motg->default_noc_mode);
+		if (ret)
+			pr_err("failed to vote explicit noc rates: %d\n", ret);
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	/*
 	 * ACA ID_GND threshold range is overlapped with OTG ID_FLOAT.  Hence
@@ -5439,9 +5733,13 @@ static int msm_otg_probe(struct platform_device *pdev)
 	INIT_WORK(&motg->sm_work, msm_otg_sm_work);
 	INIT_DELAYED_WORK(&motg->chg_work, msm_chg_detect_work);
 	INIT_DELAYED_WORK(&motg->id_status_work, msm_id_status_w);
+<<<<<<< HEAD
 	INIT_DELAYED_WORK(&motg->suspend_work, msm_otg_suspend_work);
 	setup_timer(&motg->id_timer, msm_otg_id_timer_func,
 				(unsigned long) motg);
+=======
+	INIT_DELAYED_WORK(&motg->perf_vote_work, msm_otg_perf_vote_work);
+>>>>>>> 0e91d2a... Nougat
 	setup_timer(&motg->chg_check_timer, msm_otg_chg_check_timer_func,
 				(unsigned long) motg);
 	motg->otg_wq = alloc_ordered_workqueue("k_otg", 0);
@@ -5455,7 +5753,7 @@ static int msm_otg_probe(struct platform_device *pdev)
 					"msm_otg", motg);
 	if (ret) {
 		dev_err(&pdev->dev, "request irq failed\n");
-		goto destroy_wlock;
+		goto destroy_wq;
 	}
 
 	motg->phy_irq = platform_get_irq_byname(pdev, "phy_irq");
@@ -5538,6 +5836,46 @@ static int msm_otg_probe(struct platform_device *pdev)
 				motg->pdata->usb_id_gpio = 0;
 				goto remove_phy;
 			}
+<<<<<<< HEAD
+=======
+
+			/* The following code implements switch between the HOST
+			 * mode to device mode when used diferent HW components
+			 * on the same port: USB HUB and the usb jack type B
+			 * for device mode In this case HUB should be gone
+			 * only once out of reset at the boot time and after
+			 * that always stay on*/
+			if (gpio_is_valid(motg->pdata->hub_reset_gpio)) {
+				ret = devm_gpio_request(&pdev->dev,
+						motg->pdata->hub_reset_gpio,
+						"qcom,hub-reset-gpio");
+				if (ret < 0) {
+					dev_err(&pdev->dev, "gpio req failed for hub reset\n");
+					goto remove_phy;
+				}
+				gpio_direction_output(
+					motg->pdata->hub_reset_gpio, 1);
+			}
+
+			if (gpio_is_valid(motg->pdata->switch_sel_gpio)) {
+				ret = devm_gpio_request(&pdev->dev,
+						motg->pdata->switch_sel_gpio,
+						"qcom,sw-sel-gpio");
+				if (ret < 0) {
+					dev_err(&pdev->dev, "gpio req failed for switch sel\n");
+					goto remove_phy;
+				}
+				if (gpio_get_value(motg->pdata->usb_id_gpio))
+					gpio_direction_input(
+						motg->pdata->switch_sel_gpio);
+
+				else
+					gpio_direction_output(
+					    motg->pdata->switch_sel_gpio,
+					    1);
+			}
+
+>>>>>>> 0e91d2a... Nougat
 			/* usb_id_gpio to irq */
 			id_irq = gpio_to_irq(motg->pdata->usb_id_gpio);
 			motg->ext_id_irq = id_irq;
@@ -5672,11 +6010,12 @@ free_phy_irq:
 		free_irq(motg->phy_irq, motg);
 free_irq:
 	free_irq(motg->irq, motg);
+destroy_wq:
+	destroy_workqueue(motg->otg_wq);
 destroy_wlock:
 	wake_lock_destroy(&motg->wlock);
 	clk_disable_unprepare(motg->core_clk);
 	msm_hsusb_ldo_enable(motg, USB_PHY_REG_OFF);
-	destroy_workqueue(motg->otg_wq);
 free_ldo_init:
 	msm_hsusb_ldo_init(motg, 0);
 free_hsusb_vdd:
@@ -5752,7 +6091,12 @@ static int msm_otg_remove(struct platform_device *pdev)
 	msm_otg_debugfs_cleanup();
 	cancel_delayed_work_sync(&motg->chg_work);
 	cancel_delayed_work_sync(&motg->id_status_work);
+<<<<<<< HEAD
 	cancel_delayed_work_sync(&motg->suspend_work);
+=======
+	cancel_delayed_work_sync(&motg->perf_vote_work);
+	msm_otg_perf_vote_update(motg, false);
+>>>>>>> 0e91d2a... Nougat
 	cancel_work_sync(&motg->sm_work);
 	destroy_workqueue(motg->otg_wq);
 

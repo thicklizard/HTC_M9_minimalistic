@@ -60,4 +60,15 @@ obj-$(CONFIG_SB105X)		+= sb105x/
 obj-$(CONFIG_FIREWIRE_SERIAL)	+= fwserial/
 obj-$(CONFIG_ZCACHE)		+= zcache/
 obj-$(CONFIG_GOLDFISH)		+= goldfish/
+<<<<<<< HEAD
 obj-$(CONFIG_USB_DWC2)		+= dwc2/
+=======
+obj-$(CONFIG_LUSTRE_FS)		+= lustre/
+obj-$(CONFIG_DGNC)			+= dgnc/
+obj-$(CONFIG_DGAP)			+= dgap/
+obj-$(CONFIG_MTD_SPINAND_MT29F)	+= mt29f_spinand/
+obj-$(CONFIG_GS_FPGABOOT)	+= gs_fpgaboot/
+obj-$(CONFIG_CRYPTO_SKEIN)	+= skein/
+obj-$(CONFIG_UNISYSSPAR)	+= unisys/
+obj-$(CONFIG_NANOHUB)           += nanohub/
+>>>>>>> 0e91d2a... Nougat

@@ -185,6 +185,7 @@ static int parse_dt(struct device *dev, struct synaptics_dsx_board_data *bdata)
 		bdata->power_gpio = -1;
 	}
 
+<<<<<<< HEAD
 	if (of_property_read_bool(np, "synaptics,power-delay-ms")) {
 		retval = of_property_read_u32(np, "synaptics,power-delay-ms",
 				&value);
@@ -193,6 +194,11 @@ static int parse_dt(struct device *dev, struct synaptics_dsx_board_data *bdata)
 		else
 			bdata->power_delay_ms = value;
 	} else {
+=======
+	retval = of_property_read_u32(np, "synaptics,power-delay-ms",
+			&value);
+	if (retval < 0)
+>>>>>>> 0e91d2a... Nougat
 		bdata->power_delay_ms = 0;
 	}
 
@@ -443,6 +449,7 @@ static int synaptics_rmi4_i2c_write(struct synaptics_rmi4_data *rmi4_data,
 {
 	int retval;
 	unsigned char retry;
+<<<<<<< HEAD
 	unsigned char buf[length + 1];
 	struct i2c_client *i2c = to_i2c_client(rmi4_data->pdev->dev.parent);
 	struct i2c_msg msg[] = {
@@ -453,6 +460,36 @@ static int synaptics_rmi4_i2c_write(struct synaptics_rmi4_data *rmi4_data,
 			.buf = buf,
 		}
 	};
+=======
+#if GTP_SUPPORT_I2C_DMA
+	unsigned char *buf = gpDMABuf_va;
+#else
+	unsigned char *buf;
+#endif
+	struct i2c_client *i2c = to_i2c_client(rmi4_data->pdev->dev.parent);
+#if GTP_SUPPORT_I2C_DMA
+	struct i2c_msg msg[] = {
+		{
+			.addr = (i2c->addr & I2C_MASK_FLAG),
+			.ext_flag = (i2c->ext_flag | I2C_ENEXT_FLAG | I2C_DMA_FLAG),
+			.flags = 0,
+			.len = length + 1,
+			.buf = gpDMABuf_pa,
+			.timing = I2C_MASTER_CLOCK,
+		}
+	};
+#else
+	struct i2c_msg msg[1];
+
+	buf = kzalloc(length + 1, GFP_KERNEL);
+	if (!buf) {
+		dev_err(rmi4_data->pdev->dev.parent,
+				"%s: Failed to alloc mem for buffer\n",
+				__func__);
+		return -ENOMEM;
+	}
+#endif
+>>>>>>> 0e91d2a... Nougat
 
 	mutex_lock(&rmi4_data->rmi4_io_ctrl_mutex);
 
@@ -461,7 +498,12 @@ static int synaptics_rmi4_i2c_write(struct synaptics_rmi4_data *rmi4_data,
 		retval = -EIO;
 		goto exit;
 	}
-
+#if !GTP_SUPPORT_I2C_DMA
+	msg[0].addr = i2c->addr;
+	msg[0].flags = 0;
+	msg[0].len = length + 1;
+	msg[0].buf = buf;
+#endif
 	buf[0] = addr & MASK_8BIT;
 	memcpy(&buf[1], &data[0], length);
 
@@ -485,7 +527,9 @@ static int synaptics_rmi4_i2c_write(struct synaptics_rmi4_data *rmi4_data,
 
 exit:
 	mutex_unlock(&rmi4_data->rmi4_io_ctrl_mutex);
-
+#if !GTP_SUPPORT_I2C_DMA
+	kfree(buf);
+#endif
 	return retval;
 }
 

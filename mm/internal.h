@@ -125,8 +125,9 @@ __find_buddy_index(unsigned long page_idx, unsigned int order)
 }
 
 extern int __isolate_free_page(struct page *page, unsigned int order);
-extern void __free_pages_bootmem(struct page *page, unsigned int order);
-extern void prep_compound_page(struct page *page, unsigned long order);
+extern void __free_pages_bootmem(struct page *page, unsigned long pfn,
+					unsigned int order);
+extern void prep_compound_page(struct page *page, unsigned int order);
 #ifdef CONFIG_MEMORY_FAILURE
 extern bool is_free_buddy_page(struct page *page);
 #endif
@@ -172,12 +173,16 @@ isolate_migratepages_range(struct zone *zone, struct compact_control *cc,
 
 #endif
 
+<<<<<<< HEAD
 /*
  * function for dealing with page's order in buddy system.
  * zone->lock is already acquired when we use these.
  * So, we don't need atomic page->flags operations here.
  */
 static inline unsigned long page_order(struct page *page)
+=======
+static inline unsigned int page_order(struct page *page)
+>>>>>>> 0e91d2a... Nougat
 {
 	/* PageBuddy() must be checked by the caller */
 	return page_private(page);

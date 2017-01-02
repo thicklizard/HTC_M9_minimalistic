@@ -148,10 +148,15 @@ struct ci13xxx_udc_driver {
 #define CI13XXX_CONTROLLER_UDC_STARTED_EVENT		6
 #define CI13XXX_CONTROLLER_ERROR_EVENT			7
 
+<<<<<<< HEAD
 	void	(*notify_event) (struct ci13xxx *udc, unsigned event);
 	bool (*cancel_pending_suspend)(struct ci13xxx *udc);
 	bool    (*in_lpm) (struct ci13xxx *udc);
 	void    (*set_fpr_flag) (struct ci13xxx *udc);
+=======
+	void	(*notify_event)(struct ci13xxx *udc, unsigned event);
+	bool    (*in_lpm)(struct ci13xxx *udc);
+>>>>>>> 0e91d2a... Nougat
 };
 
 /* CI13XXX UDC descriptor & global resources */

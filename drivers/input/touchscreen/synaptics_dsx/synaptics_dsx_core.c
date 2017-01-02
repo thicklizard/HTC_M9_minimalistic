@@ -5,7 +5,11 @@
  *
  * Copyright (C) 2012 Alexandra Chin <alexandra.chin@tw.synaptics.com>
  * Copyright (C) 2012 Scott Lin <scott.lin@tw.synaptics.com>
+<<<<<<< HEAD
  * Copyright (c) 2014, The Linux Foundation. All rights reserved.
+=======
+ * Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -105,6 +109,7 @@ static ssize_t synaptics_rmi4_full_pm_cycle_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count);
 
 #if defined(CONFIG_FB)
+static void fb_notify_resume_work(struct work_struct *work);
 static int fb_notifier_callback(struct notifier_block *self,
 				unsigned long event, void *data);
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
@@ -457,6 +462,31 @@ DEFINE_SIMPLE_ATTRIBUTE(debug_suspend_fops, synaptics_rmi4_debug_suspend_get,
 			synaptics_rmi4_debug_suspend_set, "%lld\n");
 
 #if defined(CONFIG_SECURE_TOUCH)
+<<<<<<< HEAD
+=======
+static int synaptics_i2c_change_pipe_owner(
+	struct synaptics_rmi4_data *rmi4_data, enum subsystem subsystem)
+{
+	/*scm call descriptor */
+	struct scm_desc desc;
+	struct i2c_client *i2c = to_i2c_client(rmi4_data->pdev->dev.parent);
+	int ret = 0;
+
+	/* number of arguments */
+	desc.arginfo = SCM_ARGS(2);
+	/* BLSPID (1-12) */
+	desc.args[0] = i2c->adapter->nr - 1;
+	 /* Owner if TZ or APSS */
+	desc.args[1] = subsystem;
+	ret = scm_call2(SCM_SIP_FNID(SCM_SVC_TZ, TZ_BLSP_MODIFY_OWNERSHIP_ID),
+			&desc);
+	if (ret)
+		return ret;
+
+	return desc.ret[0];
+}
+
+>>>>>>> 0e91d2a... Nougat
 static void synaptics_secure_touch_init(struct synaptics_rmi4_data *data)
 {
 	int ret = 0;
@@ -3502,6 +3532,12 @@ static int synaptics_rmi4_probe(struct platform_device *pdev)
 	rmi4_data->fingers_on_2d = false;
 	rmi4_data->update_coords = true;
 
+	rmi4_data->write_buf = devm_kzalloc(&pdev->dev, I2C_WRITE_BUF_MAX_LEN,
+					GFP_KERNEL);
+	if (!rmi4_data->write_buf)
+		return -ENOMEM;
+	rmi4_data->write_buf_len = I2C_WRITE_BUF_MAX_LEN;
+
 	rmi4_data->irq_enable = synaptics_rmi4_irq_enable;
 	rmi4_data->reset_device = synaptics_rmi4_reset_device;
 
@@ -3576,6 +3612,7 @@ static int synaptics_rmi4_probe(struct platform_device *pdev)
 	}
 
 #ifdef CONFIG_FB
+	INIT_WORK(&rmi4_data->fb_notify_work, fb_notify_resume_work);
 	rmi4_data->fb_notif.notifier_call = fb_notifier_callback;
 
 	retval = fb_register_client(&rmi4_data->fb_notif);
@@ -3817,6 +3854,13 @@ static int synaptics_rmi4_remove(struct platform_device *pdev)
 }
 
 #if defined(CONFIG_FB)
+static void fb_notify_resume_work(struct work_struct *work)
+{
+	struct synaptics_rmi4_data *rmi4_data =
+		container_of(work, struct synaptics_rmi4_data, fb_notify_work);
+	synaptics_rmi4_resume(&(rmi4_data->input_dev->dev));
+}
+
 static int fb_notifier_callback(struct notifier_block *self,
 				unsigned long event, void *data)
 {
@@ -3826,16 +3870,31 @@ static int fb_notifier_callback(struct notifier_block *self,
 		container_of(self, struct synaptics_rmi4_data, fb_notif);
 
 	if (evdata && evdata->data && rmi4_data) {
-		if (event == FB_EARLY_EVENT_BLANK)
-			synaptics_secure_touch_stop(rmi4_data, 0);
-		else if (event == FB_EVENT_BLANK) {
-			blank = evdata->data;
-			if (*blank == FB_BLANK_UNBLANK)
-				synaptics_rmi4_resume(
-					&(rmi4_data->input_dev->dev));
-			else if (*blank == FB_BLANK_POWERDOWN)
-				synaptics_rmi4_suspend(
-					&(rmi4_data->input_dev->dev));
+		blank = evdata->data;
+		if (rmi4_data->hw_if->board_data->resume_in_workqueue) {
+			if (event == FB_EARLY_EVENT_BLANK) {
+				synaptics_secure_touch_stop(rmi4_data, 0);
+				if (*blank == FB_BLANK_UNBLANK)
+					schedule_work(
+						&(rmi4_data->fb_notify_work));
+			} else if (event == FB_EVENT_BLANK &&
+					*blank == FB_BLANK_POWERDOWN) {
+					flush_work(
+						&(rmi4_data->fb_notify_work));
+					synaptics_rmi4_suspend(
+						&(rmi4_data->input_dev->dev));
+			}
+		} else {
+			if (event == FB_EARLY_EVENT_BLANK) {
+				synaptics_secure_touch_stop(rmi4_data, 0);
+			} else if (event == FB_EVENT_BLANK) {
+				if (*blank == FB_BLANK_UNBLANK)
+					synaptics_rmi4_resume(
+						&(rmi4_data->input_dev->dev));
+				else if (*blank == FB_BLANK_POWERDOWN)
+					synaptics_rmi4_suspend(
+						&(rmi4_data->input_dev->dev));
+			}
 		}
 	}
 

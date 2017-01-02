@@ -1669,7 +1669,12 @@ static struct ceph_msg *create_request_message(struct ceph_mds_client *mdsc,
 	}
 
 	len = sizeof(*head) +
+<<<<<<< HEAD
 		pathlen1 + pathlen2 + 2*(1 + sizeof(u32) + sizeof(u64));
+=======
+		pathlen1 + pathlen2 + 2*(1 + sizeof(u32) + sizeof(u64)) +
+		sizeof(struct ceph_timespec);
+>>>>>>> 0e91d2a... Nougat
 
 	/* calculate (max) length for cap releases */
 	len += sizeof(struct ceph_mds_request_release) *

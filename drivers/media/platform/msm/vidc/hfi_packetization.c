@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -78,7 +82,11 @@ static int nal_type[] = {
 
 static inline int hal_to_hfi_type(int property, int hal_type)
 {
+<<<<<<< HEAD
 	if (hal_type && (roundup_pow_of_two(hal_type) != hal_type)) {
+=======
+	if (hal_type <= 0 || roundup_pow_of_two(hal_type) != hal_type) {
+>>>>>>> 0e91d2a... Nougat
 		/* Not a power of 2, it's not going
 		 * to be in any of the tables anyway */
 		return -EINVAL;
@@ -463,6 +471,7 @@ static int get_hfi_extradata_index(enum hal_extradata_id index)
 	case HAL_EXTRADATA_ASPECT_RATIO:
 	case HAL_EXTRADATA_INPUT_CROP:
 	case HAL_EXTRADATA_DIGITAL_ZOOM:
+	case HAL_EXTRADATA_OUTPUT_CROP:
 		ret = HFI_PROPERTY_PARAM_INDEX_EXTRADATA;
 		break;
 	case HAL_EXTRADATA_MPEG2_SEQDISP:
@@ -483,6 +492,34 @@ static int get_hfi_extradata_index(enum hal_extradata_id index)
 	case HAL_EXTRADATA_METADATA_MBI:
 		ret = HFI_PROPERTY_PARAM_VENC_MBI_DUMPING;
 		break;
+<<<<<<< HEAD
+=======
+	case HAL_EXTRADATA_VQZIP_SEI:
+		ret = HFI_PROPERTY_PARAM_VDEC_VQZIP_SEI_EXTRADATA;
+		break;
+	case HAL_EXTRADATA_YUV_STATS:
+		ret = HFI_PROPERTY_PARAM_VENC_YUVSTAT_INFO_EXTRADATA;
+		break;
+	case HAL_EXTRADATA_ROI_QP:
+		ret = HFI_PROPERTY_PARAM_VENC_ROI_QP_EXTRADATA;
+		break;
+	case HAL_EXTRADATA_MASTERING_DISPLAY_COLOUR_SEI:
+		ret =
+		HFI_PROPERTY_PARAM_VDEC_MASTERING_DISPLAY_COLOUR_SEI_EXTRADATA;
+		break;
+	case HAL_EXTRADATA_CONTENT_LIGHT_LEVEL_SEI:
+		ret = HFI_PROPERTY_PARAM_VDEC_CONTENT_LIGHT_LEVEL_SEI_EXTRADATA;
+		break;
+	case HAL_EXTRADATA_VUI_DISPLAY_INFO:
+		ret = HFI_PROPERTY_PARAM_VUI_DISPLAY_INFO_EXTRADATA;
+		break;
+	case HAL_EXTRADATA_VPX_COLORSPACE:
+		ret = HFI_PROPERTY_PARAM_VDEC_VPX_COLORSPACE_EXTRADATA;
+		break;
+	case HAL_EXTRADATA_PQ_INFO:
+		ret = HFI_PROPERTY_PARAM_VENC_OVERRIDE_QP_EXTRADATA;
+		break;
+>>>>>>> 0e91d2a... Nougat
 	default:
 		dprintk(VIDC_WARN, "Extradata index not found: %d\n", index);
 		break;
@@ -502,6 +539,9 @@ static int get_hfi_extradata_id(enum hal_extradata_id index)
 		break;
 	case HAL_EXTRADATA_DIGITAL_ZOOM:
 		ret = MSM_VIDC_EXTRADATA_DIGITAL_ZOOM;
+		break;
+	case HAL_EXTRADATA_OUTPUT_CROP:
+		ret = MSM_VIDC_EXTRADATA_OUTPUT_CROP;
 		break;
 	default:
 		ret = get_hfi_extradata_index(index);
@@ -1250,9 +1290,19 @@ int create_pkt_cmd_session_set_property(
 		case HAL_RATE_CONTROL_VBR_VFR:
 			pkt->rg_property_data[1] = HFI_RATE_CONTROL_VBR_VFR;
 			break;
+		case HAL_RATE_CONTROL_MBR_CFR:
+			pkt->rg_property_data[1] = HFI_RATE_CONTROL_MBR_CFR;
+			break;
+		case HAL_RATE_CONTROL_MBR_VFR:
+			pkt->rg_property_data[1] = HFI_RATE_CONTROL_MBR_VFR;
+			break;
 		default:
 			dprintk(VIDC_ERR,
+<<<<<<< HEAD
 					"Invalid Rate control setting: 0x%p\n",
+=======
+					"Invalid Rate control setting: %pK\n",
+>>>>>>> 0e91d2a... Nougat
 					pdata);
 			break;
 		}
@@ -1355,6 +1405,25 @@ int create_pkt_cmd_session_set_property(
 		 * pp = qp range for P-frames, etc. */
 		hfi->min_qp = min_qp | min_qp << 8 | min_qp << 16;
 		hfi->max_qp = max_qp | max_qp << 8 | max_qp << 16;
+		hfi->layer_id = hal_range->layer_id;
+
+		pkt->size += sizeof(u32) +
+			sizeof(struct hfi_quantization_range);
+		break;
+	}
+	case HAL_PARAM_VENC_SESSION_QP_RANGE_PACKED:
+	{
+		struct hfi_quantization_range *hfi;
+		struct hfi_quantization_range *hal_range =
+			(struct hfi_quantization_range *) pdata;
+
+		pkt->rg_property_data[0] =
+			HFI_PROPERTY_PARAM_VENC_SESSION_QP_RANGE;
+		hfi = (struct hfi_quantization_range *)
+				&pkt->rg_property_data[1];
+
+		hfi->min_qp = hal_range->min_qp;
+		hfi->max_qp = hal_range->max_qp;
 		hfi->layer_id = hal_range->layer_id;
 
 		pkt->size += sizeof(u32) +
@@ -1850,6 +1919,94 @@ int create_pkt_cmd_session_set_property(
 			sizeof(struct hfi_hybrid_hierp);
 		break;
 	}
+<<<<<<< HEAD
+=======
+	case HAL_PARAM_VENC_MBI_STATISTICS_MODE:
+	{
+		pkt->rg_property_data[0] =
+			HFI_PROPERTY_PARAM_VENC_MBI_DUMPING;
+		pkt->rg_property_data[1] = hal_to_hfi_type(
+			HAL_PARAM_VENC_MBI_STATISTICS_MODE,
+				*(u32 *)pdata);
+		pkt->size += sizeof(u32) * 2;
+		break;
+	}
+	case HAL_CONFIG_VENC_FRAME_QP:
+	{
+		pkt->rg_property_data[0] =
+			HFI_PROPERTY_CONFIG_VENC_FRAME_QP;
+		pkt->rg_property_data[1] = *(u32 *)pdata;
+		pkt->size += sizeof(u32) * 2;
+		break;
+	}
+	case HAL_CONFIG_VENC_BASELAYER_PRIORITYID:
+	{
+		pkt->rg_property_data[0] =
+			HFI_PROPERTY_CONFIG_VENC_BASELAYER_PRIORITYID;
+		pkt->rg_property_data[1] = *(u32 *)pdata;
+		pkt->size += sizeof(u32) * 2;
+		break;
+	}
+	case HAL_PROPERTY_PARAM_VENC_ASPECT_RATIO:
+	{
+		struct hfi_aspect_ratio *hfi = NULL;
+		struct hal_aspect_ratio *hal = pdata;
+
+		pkt->rg_property_data[0] =
+			HFI_PROPERTY_PARAM_VENC_ASPECT_RATIO;
+		hfi = (struct hfi_aspect_ratio *)
+			&pkt->rg_property_data[1];
+		memcpy(hfi, hal,
+			sizeof(struct hfi_aspect_ratio));
+		pkt->size += sizeof(u32) +
+				sizeof(struct hfi_aspect_ratio);
+		break;
+	}
+	case HAL_PARAM_VENC_BITRATE_TYPE:
+	{
+		create_pkt_enable(pkt->rg_property_data,
+			HFI_PROPERTY_PARAM_VENC_BITRATE_TYPE,
+			((struct hal_enable *)pdata)->enable);
+		pkt->size += sizeof(u32) + sizeof(struct hfi_enable);
+		break;
+	}
+	case HAL_PARAM_VENC_CONSTRAINED_INTRA_PRED:
+	{
+		create_pkt_enable(pkt->rg_property_data,
+			HFI_PROPERTY_PARAM_VENC_CONSTRAINED_INTRA_PRED,
+			((struct hal_enable *)pdata)->enable);
+		pkt->size += sizeof(u32) + sizeof(struct hfi_enable);
+		break;
+	}
+	case HAL_PARAM_VENC_VIDEO_SIGNAL_INFO:
+	{
+		struct hal_video_signal_info *hal = pdata;
+		struct hfi_video_signal_metadata *signal_info =
+			(struct hfi_video_signal_metadata *)
+			&pkt->rg_property_data[1];
+
+		signal_info->enable = true;
+		signal_info->video_format = MSM_VIDC_NTSC;
+		signal_info->video_full_range = hal->full_range;
+		signal_info->color_description = MSM_VIDC_COLOR_DESC_PRESENT;
+		signal_info->color_primaries = hal->color_space;
+		signal_info->transfer_characteristics = hal->transfer_chars;
+		signal_info->matrix_coeffs = hal->matrix_coeffs;
+
+		pkt->rg_property_data[0] =
+			HFI_PROPERTY_PARAM_VENC_VIDEO_SIGNAL_INFO;
+		pkt->size += sizeof(u32) + sizeof(*signal_info);
+		break;
+	}
+	case HAL_PARAM_VENC_H264_TRANSFORM_8x8:
+	{
+		create_pkt_enable(pkt->rg_property_data,
+			HFI_PROPERTY_PARAM_VENC_H264_8X8_TRANSFORM,
+			((struct hal_enable *)pdata)->enable);
+		pkt->size += sizeof(u32) + sizeof(struct hfi_enable);
+		break;
+	}
+>>>>>>> 0e91d2a... Nougat
 	/* FOLLOWING PROPERTIES ARE NOT IMPLEMENTED IN CORE YET */
 	case HAL_CONFIG_BUFFER_REQUIREMENTS:
 	case HAL_CONFIG_PRIORITY:
@@ -1908,7 +2065,7 @@ int create_pkt_ssr_cmd(enum hal_ssr_trigger_type type,
 		struct hfi_cmd_sys_test_ssr_packet *pkt)
 {
 	if (!pkt) {
-		dprintk(VIDC_ERR, "Invalid params, device: %p\n", pkt);
+		dprintk(VIDC_ERR, "Invalid params, device: %pK\n", pkt);
 		return -EINVAL;
 	}
 	pkt->size = sizeof(struct hfi_cmd_sys_test_ssr_packet);
@@ -1921,7 +2078,7 @@ int create_pkt_cmd_sys_image_version(
 		struct hfi_cmd_sys_get_property_packet *pkt)
 {
 	if (!pkt) {
-		dprintk(VIDC_ERR, "%s invalid param :%p\n", __func__, pkt);
+		dprintk(VIDC_ERR, "%s invalid param :%pK\n", __func__, pkt);
 		return -EINVAL;
 	}
 	pkt->size = sizeof(struct hfi_cmd_sys_get_property_packet);
@@ -1931,6 +2088,195 @@ int create_pkt_cmd_sys_image_version(
 	return 0;
 }
 
+<<<<<<< HEAD
+=======
+static int create_3x_pkt_cmd_session_set_property(
+		struct hfi_cmd_session_set_property_packet *pkt,
+		struct hal_session *session,
+		enum hal_property ptype, void *pdata)
+{
+	int rc = 0;
+
+	if (!pkt || !session || !pdata)
+		return -EINVAL;
+
+	pkt->size = sizeof(struct hfi_cmd_session_set_property_packet);
+	pkt->packet_type = HFI_CMD_SESSION_SET_PROPERTY;
+	pkt->session_id = hash32_ptr(session);
+	pkt->num_properties = 1;
+
+	/*
+	 * Any session set property which is different in 3XX packetization
+	 * should be added as a new case below. All unchanged session set
+	 * properties will be handled in the default case.
+	 */
+	switch (ptype) {
+	case HAL_PARAM_VDEC_MULTI_STREAM:
+	{
+		u32 buffer_type;
+		struct hfi_3x_multi_stream *hfi;
+		struct hal_multi_stream *prop =
+			(struct hal_multi_stream *) pdata;
+		pkt->rg_property_data[0] =
+			HFI_PROPERTY_PARAM_VDEC_MULTI_STREAM;
+		hfi = (struct hfi_3x_multi_stream *) &pkt->rg_property_data[1];
+
+		buffer_type = get_hfi_buffer(prop->buffer_type);
+		if (buffer_type)
+			hfi->buffer_type = buffer_type;
+		else
+			return -EINVAL;
+		hfi->enable = prop->enable;
+		pkt->size += sizeof(u32) + sizeof(struct hfi_3x_multi_stream);
+		break;
+	}
+	case HAL_PARAM_VENC_INTRA_REFRESH:
+	{
+		struct hfi_3x_intra_refresh *hfi;
+		struct hal_intra_refresh *prop =
+			(struct hal_intra_refresh *) pdata;
+		pkt->rg_property_data[0] =
+			HFI_PROPERTY_PARAM_VENC_INTRA_REFRESH;
+		hfi = (struct hfi_3x_intra_refresh *) &pkt->rg_property_data[1];
+		hfi->mbs = 0;
+		switch (prop->mode) {
+		case HAL_INTRA_REFRESH_NONE:
+			hfi->mode = HFI_INTRA_REFRESH_NONE;
+			break;
+		case HAL_INTRA_REFRESH_ADAPTIVE:
+			hfi->mode = HFI_INTRA_REFRESH_ADAPTIVE;
+			hfi->mbs = prop->air_mbs;
+			break;
+		case HAL_INTRA_REFRESH_CYCLIC:
+			hfi->mode = HFI_INTRA_REFRESH_CYCLIC;
+			hfi->mbs = prop->cir_mbs;
+			break;
+		case HAL_INTRA_REFRESH_CYCLIC_ADAPTIVE:
+			hfi->mode = HFI_INTRA_REFRESH_CYCLIC_ADAPTIVE;
+			hfi->mbs = prop->air_mbs;
+			break;
+		case HAL_INTRA_REFRESH_RANDOM:
+			hfi->mode = HFI_INTRA_REFRESH_RANDOM;
+			hfi->mbs = prop->air_mbs;
+			break;
+		default:
+			dprintk(VIDC_ERR,
+				"Invalid intra refresh setting: %d\n",
+				prop->mode);
+			break;
+		}
+		pkt->size += sizeof(u32) + sizeof(struct hfi_3x_intra_refresh);
+		break;
+	}
+	case HAL_PARAM_SYNC_BASED_INTERRUPT:
+	{
+		create_pkt_enable(pkt->rg_property_data,
+				HFI_PROPERTY_PARAM_SYNC_BASED_INTERRUPT,
+				((struct hal_enable *)pdata)->enable);
+		pkt->size += sizeof(u32) + sizeof(struct hfi_enable);
+		break;
+	}
+	case HAL_PARAM_VENC_VQZIP_SEI:
+	{
+		create_pkt_enable(pkt->rg_property_data,
+				HFI_PROPERTY_PARAM_VENC_VQZIP_SEI_TYPE,
+				((struct hal_enable *)pdata)->enable);
+		pkt->size += sizeof(u32) + sizeof(struct hfi_enable);
+		break;
+	}
+	/* Deprecated param on Venus 3xx */
+	case HAL_PARAM_VDEC_CONTINUE_DATA_TRANSFER:
+	{
+		rc = -ENOTSUPP;
+		break;
+	}
+	case HAL_PARAM_BUFFER_SIZE_MINIMUM:
+	{
+		struct hfi_buffer_size_minimum *hfi;
+		struct hal_buffer_size_minimum *prop =
+			(struct hal_buffer_size_minimum *) pdata;
+		u32 buffer_type;
+
+		pkt->rg_property_data[0] =
+			HFI_PROPERTY_PARAM_BUFFER_SIZE_MINIMUM;
+
+		hfi = (struct hfi_buffer_size_minimum *)
+			&pkt->rg_property_data[1];
+		hfi->buffer_size = prop->buffer_size;
+
+		buffer_type = get_hfi_buffer(prop->buffer_type);
+		if (buffer_type)
+			hfi->buffer_type = buffer_type;
+		else
+			return -EINVAL;
+
+		pkt->size += sizeof(u32) + sizeof(struct
+				hfi_buffer_count_actual);
+		break;
+	}
+	case HAL_PARAM_VENC_H264_PIC_ORDER_CNT:
+	{
+		pkt->rg_property_data[0] =
+			HFI_PROPERTY_PARAM_VENC_H264_PICORDER_CNT_TYPE;
+		pkt->rg_property_data[1] = *(u32 *)pdata;
+		pkt->size += sizeof(u32) * 2;
+		break;
+	}
+	case HAL_PARAM_VENC_LOW_LATENCY:
+	{
+		struct hfi_enable *hfi;
+
+		pkt->rg_property_data[0] =
+			HFI_PROPERTY_PARAM_VENC_LOW_LATENCY_MODE;
+		hfi = (struct hfi_enable *) &pkt->rg_property_data[1];
+		hfi->enable = ((struct hal_enable *) pdata)->enable;
+		pkt->size += sizeof(u32) * 2;
+		break;
+	}
+	case HAL_CONFIG_VENC_BLUR_RESOLUTION:
+	{
+		struct hfi_frame_size *hfi;
+		struct hal_frame_size *prop = (struct hal_frame_size *) pdata;
+		u32 buffer_type;
+
+		pkt->rg_property_data[0] =
+			HFI_PROPERTY_CONFIG_VENC_BLUR_FRAME_SIZE;
+		hfi = (struct hfi_frame_size *) &pkt->rg_property_data[1];
+		buffer_type = get_hfi_buffer(prop->buffer_type);
+		if (buffer_type)
+			hfi->buffer_type = buffer_type;
+		else
+			return -EINVAL;
+
+		hfi->height = prop->height;
+		hfi->width = prop->width;
+		pkt->size += sizeof(u32) + sizeof(struct hfi_frame_size);
+		break;
+	}
+	default:
+		rc = create_pkt_cmd_session_set_property(pkt,
+				session, ptype, pdata);
+	}
+	return rc;
+}
+
+int create_pkt_cmd_session_sync_process(
+		struct hfi_cmd_session_sync_process_packet *pkt,
+		struct hal_session *session)
+{
+	if (!pkt || !session)
+		return -EINVAL;
+
+	*pkt = (struct hfi_cmd_session_sync_process_packet) {0};
+	pkt->size = sizeof(*pkt);
+	pkt->packet_type = HFI_CMD_SESSION_SYNC;
+	pkt->session_id = hash32_ptr(session);
+	pkt->sync_id = 0;
+
+	return 0;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static struct hfi_packetization_ops hfi_default = {
 	.sys_init = create_pkt_cmd_sys_init,
 	.sys_pc_prep = create_pkt_cmd_sys_pc_prep,

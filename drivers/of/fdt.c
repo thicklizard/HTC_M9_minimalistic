@@ -99,15 +99,15 @@ static void *unflatten_dt_alloc(void **mem, unsigned long size,
  * @mem: Memory chunk to use for allocating device nodes and properties
  * @p: pointer to node in flat tree
  * @dad: Parent struct device_node
- * @allnextpp: pointer to ->allnext from last allocated device_node
  * @fpsize: Size of the node path up at the current depth.
  */
 static void * unflatten_dt_node(void *blob,
 				void *mem,
 				int *poffset,
 				struct device_node *dad,
-				struct device_node ***allnextpp,
-				unsigned long fpsize)
+				struct device_node **nodepp,
+				unsigned long fpsize,
+				bool dryrun)
 {
 	const __be32 *p;
 	struct device_node *np;
@@ -154,7 +154,7 @@ static void * unflatten_dt_node(void *blob,
 
 	np = unflatten_dt_alloc(&mem, sizeof(struct device_node) + allocl,
 				__alignof__(struct device_node));
-	if (allnextpp) {
+	if (!dryrun) {
 		char *fn;
 		memset(np, 0, sizeof(*np));
 		np->full_name = fn = ((char *)np) + sizeof(*np);
@@ -176,16 +176,10 @@ static void * unflatten_dt_node(void *blob,
 		memcpy(fn, pathp, l);
 
 		prev_pp = &np->properties;
-		**allnextpp = np;
-		*allnextpp = &np->allnext;
 		if (dad != NULL) {
 			np->parent = dad;
-			/* we temporarily use the next field as `last_child'*/
-			if (dad->next == NULL)
-				dad->child = np;
-			else
-				dad->next->sibling = np;
-			dad->next = np;
+			np->sibling = dad->child;
+			dad->child = np;
 		}
 		kref_init(&np->kref);
 	}
@@ -209,7 +203,7 @@ static void * unflatten_dt_node(void *blob,
 			has_name = 1;
 		pp = unflatten_dt_alloc(&mem, sizeof(struct property),
 					__alignof__(struct property));
-		if (allnextpp) {
+		if (!dryrun) {
 			/* We accept flattened tree phandles either in
 			 * ePAPR-style "phandle" properties, or the
 			 * legacy "linux,phandle" properties.  If both
@@ -251,7 +245,7 @@ static void * unflatten_dt_node(void *blob,
 		sz = (pa - ps) + 1;
 		pp = unflatten_dt_alloc(&mem, sizeof(struct property) + sz,
 					__alignof__(struct property));
-		if (allnextpp) {
+		if (!dryrun) {
 			pp->name = "name";
 			pp->length = sz;
 			pp->value = pp + 1;
@@ -263,7 +257,7 @@ static void * unflatten_dt_node(void *blob,
 				(char *)pp->value);
 		}
 	}
-	if (allnextpp) {
+	if (!dryrun) {
 		*prev_pp = NULL;
 		np->name = of_get_property(np, "name", NULL);
 		np->type = of_get_property(np, "device_type", NULL);
@@ -279,11 +273,29 @@ static void * unflatten_dt_node(void *blob,
 	if (depth < 0)
 		depth = 0;
 	while (*poffset > 0 && depth > old_depth)
-		mem = unflatten_dt_node(blob, mem, poffset, np, allnextpp,
-					fpsize);
+		mem = unflatten_dt_node(blob, mem, poffset, np, NULL,
+					fpsize, dryrun);
 
 	if (*poffset < 0 && *poffset != -FDT_ERR_NOTFOUND)
 		pr_err("unflatten: error %d processing FDT\n", *poffset);
+
+	/*
+	 * Reverse the child list. Some drivers assumes node order matches .dts
+	 * node order
+	 */
+	if (!dryrun && np->child) {
+		struct device_node *child = np->child;
+		np->child = NULL;
+		while (child) {
+			struct device_node *next = child->sibling;
+			child->sibling = np->child;
+			np->child = child;
+			child = next;
+		}
+	}
+
+	if (nodepp)
+		*nodepp = np;
 
 	return mem;
 }
@@ -307,7 +319,6 @@ static void __unflatten_device_tree(void *blob,
 	unsigned long size;
 	int start;
 	void *mem;
-	struct device_node **allnextp = mynodes;
 
 	pr_debug(" -> unflatten_device_tree()\n");
 
@@ -328,7 +339,7 @@ static void __unflatten_device_tree(void *blob,
 
 	/* First pass, scan for size */
 	start = 0;
-	size = (unsigned long)unflatten_dt_node(blob, NULL, &start, NULL, NULL, 0);
+	size = (unsigned long)unflatten_dt_node(blob, NULL, &start, NULL, NULL, 0, true);
 	size = ALIGN(size, 4);
 
 	pr_debug("  size is %lx, allocating...\n", size);
@@ -343,11 +354,10 @@ static void __unflatten_device_tree(void *blob,
 
 	/* Second pass, do actual unflattening */
 	start = 0;
-	unflatten_dt_node(blob, mem, &start, NULL, &allnextp, 0);
+	unflatten_dt_node(blob, mem, &start, NULL, mynodes, 0, false);
 	if (be32_to_cpup(mem + size) != 0xdeadbeef)
 		pr_warning("End of tree marker overwritten: %08x\n",
 			   be32_to_cpup(mem + size));
-	*allnextp = NULL;
 
 	pr_debug(" <- unflatten_device_tree()\n");
 }
@@ -693,7 +703,7 @@ inline void early_init_dt_check_for_initrd(unsigned long node)
 #ifdef CONFIG_SERIAL_EARLYCON
 extern struct of_device_id __earlycon_of_table[];
 
-int __init early_init_dt_scan_chosen_serial(void)
+static int __init early_init_dt_scan_chosen_serial(void)
 {
 	int offset;
 	const char *p;
@@ -856,7 +866,11 @@ static const char *config_cmdline = "";
 int __init early_init_dt_scan_chosen(unsigned long node, const char *uname,
 				     int depth, void *data)
 {
+<<<<<<< HEAD
 	int l;
+=======
+	int l = 0;
+>>>>>>> 0e91d2a... Nougat
 	const char *p = NULL;
 	char *cmdline = data;
 
@@ -901,7 +915,20 @@ int __init early_init_dt_scan_chosen(unsigned long node, const char *uname,
 void __init __weak early_init_dt_add_memory_arch(u64 base, u64 size)
 {
 	const u64 phys_offset = __pa(PAGE_OFFSET);
+<<<<<<< HEAD
 	base &= PAGE_MASK;
+=======
+
+	if (!PAGE_ALIGNED(base)) {
+		if (size < PAGE_SIZE - (base & ~PAGE_MASK)) {
+			pr_warn("Ignoring memory block 0x%llx - 0x%llx\n",
+				base, base + size);
+			return;
+		}
+		size -= PAGE_SIZE - (base & ~PAGE_MASK);
+		base = PAGE_ALIGN(base);
+	}
+>>>>>>> 0e91d2a... Nougat
 	size &= PAGE_MASK;
 	if (base + size < phys_offset) {
 		pr_warning("Ignoring memory block 0x%llx - 0x%llx\n",
@@ -950,17 +977,22 @@ bool __init early_init_dt_scan(void *params)
 	if (!params)
 		return false;
 
-	/* Setup flat device-tree pointer */
-	initial_boot_params = params;
-
 	/* check device tree validity */
-	if (fdt_check_header(params)) {
-		initial_boot_params = NULL;
+	if (fdt_check_header(params))
 		return false;
-	}
 
+<<<<<<< HEAD
 	of_fdt_crc32 = crc32_be(~0, initial_boot_params,
 				fdt_totalsize(initial_boot_params));
+=======
+	/* Setup flat device-tree pointer */
+	initial_boot_params = params;
+	of_fdt_crc32 = crc32_be(~0, initial_boot_params,
+				fdt_totalsize(initial_boot_params));
+	return true;
+}
+
+>>>>>>> 0e91d2a... Nougat
 
 	/* Retrieve various information from the /chosen node */
 	of_scan_flat_dt(early_init_dt_scan_chosen, boot_command_line);
@@ -984,7 +1016,7 @@ bool __init early_init_dt_scan(void *params)
  */
 void __init unflatten_device_tree(void)
 {
-	__unflatten_device_tree(initial_boot_params, &of_allnodes,
+	__unflatten_device_tree(initial_boot_params, &of_root,
 				early_init_dt_alloc_memory_arch);
 
 	/* Get pointer to "/chosen" and "/aliasas" nodes for use everywhere */
@@ -1031,6 +1063,7 @@ static ssize_t of_fdt_raw_read(struct file *filp, struct kobject *kobj,
 	memcpy(buf, initial_boot_params + off, count);
 	return count;
 }
+<<<<<<< HEAD
 static int __init of_fdt_raw_init(void)
 {
 	static struct bin_attribute of_fdt_raw_attr = {
@@ -1039,11 +1072,22 @@ static int __init of_fdt_raw_init(void)
 		.write = NULL,
 		.size = 0
 	};
+=======
+
+static int __init of_fdt_raw_init(void)
+{
+	static struct bin_attribute of_fdt_raw_attr =
+		__BIN_ATTR(fdt, S_IRUSR, of_fdt_raw_read, NULL, 0);
+>>>>>>> 0e91d2a... Nougat
 
 	if (!initial_boot_params)
 		return 0;
 
+<<<<<<< HEAD
 if (of_fdt_crc32 != crc32_be(~0, initial_boot_params,
+=======
+	if (of_fdt_crc32 != crc32_be(~0, initial_boot_params,
+>>>>>>> 0e91d2a... Nougat
 				     fdt_totalsize(initial_boot_params))) {
 		pr_warn("fdt: not creating '/sys/firmware/fdt': CRC check failed\n");
 		return 0;

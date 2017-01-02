@@ -1,7 +1,11 @@
 /*
  *  Copyright (C) 2002 ARM Ltd.
  *  All Rights Reserved
+<<<<<<< HEAD
  *  Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
+=======
+ *  Copyright (c) 2010-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -15,7 +19,10 @@
 #include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
+<<<<<<< HEAD
 #include <linux/regulator/krait-regulator.h>
+=======
+>>>>>>> 0e91d2a... Nougat
 #include <soc/qcom/pm.h>
 #include <soc/qcom/scm-boot.h>
 #include <soc/qcom/cpu_pwr_ctl.h>
@@ -26,6 +33,7 @@
 #include <asm/smp_plat.h>
 
 #include <soc/qcom/socinfo.h>
+<<<<<<< HEAD
 #include <mach/hardware.h>
 #include <mach/msm_iomap.h>
 
@@ -37,6 +45,13 @@
 #define MSM8960_SAW2_BASE_ADDR 0x02089000
 #define APCS_ALIAS0_BASE_ADDR 0xF9088000
 
+=======
+
+#include "platsmp.h"
+#include <asm/fixmap.h>
+
+#define MSM_APCS_IDR  0x0B011030
+>>>>>>> 0e91d2a... Nougat
 /*
  * Write pen_release in a way that is guaranteed to be visible to all
  * observers, irrespective of whether they're taking part in coherency
@@ -83,6 +98,7 @@ static int __cpuinit release_secondary_sim(unsigned long base, unsigned int cpu)
 	return 0;
 }
 
+<<<<<<< HEAD
 static int __cpuinit scorpion_release_secondary(void)
 {
 	void *base_ptr = ioremap_nocache(0x00902000, SZ_4K*2);
@@ -156,6 +172,8 @@ static int __cpuinit msm8974_release_secondary(unsigned long base,
 	return 0;
 }
 
+=======
+>>>>>>> 0e91d2a... Nougat
 static int __cpuinit arm_release_secondary(unsigned long base, unsigned int cpu)
 {
 	void *base_ptr = ioremap_nocache(base + (cpu * 0x10000), SZ_4K);
@@ -241,6 +259,7 @@ static int __cpuinit release_from_pen(unsigned int cpu)
 
 DEFINE_PER_CPU(int, cold_boot_done);
 
+<<<<<<< HEAD
 int __cpuinit scorpion_boot_secondary(unsigned int cpu,
 				      struct task_struct *idle)
 {
@@ -280,6 +299,9 @@ int __cpuinit msm8974_boot_secondary(unsigned int cpu, struct task_struct *idle)
 }
 
 static int __cpuinit msm8916_boot_secondary(unsigned int cpu,
+=======
+static int __cpuinit msm8909_boot_secondary(unsigned int cpu,
+>>>>>>> 0e91d2a... Nougat
 						struct task_struct *idle)
 {
 	pr_debug("Starting secondary CPU %d\n", cpu);
@@ -295,6 +317,7 @@ static int __cpuinit msm8916_boot_secondary(unsigned int cpu,
 	return release_from_pen(cpu);
 }
 
+<<<<<<< HEAD
 static int __cpuinit msm8936_boot_secondary(unsigned int cpu,
 						struct task_struct *idle)
 {
@@ -332,10 +355,13 @@ int __cpuinit arm_boot_secondary(unsigned int cpu, struct task_struct *idle)
 	return release_from_pen(cpu);
 }
 
+=======
+>>>>>>> 0e91d2a... Nougat
 /*
  * Initialise the CPU possible map early - this describes the CPUs
  * which may be present or become present in the system.
  */
+<<<<<<< HEAD
 static void __init msm_smp_init_cpus(void)
 {
 	unsigned int i, ncores = get_core_count();
@@ -355,6 +381,18 @@ static void __init arm_smp_init_cpus(void)
 	unsigned int i, ncores;
 
 	ncores = (__raw_readl(MSM_APCS_GCC_BASE + 0x30)) & 0xF;
+=======
+static void __init arm_smp_init_cpus(void)
+{
+	unsigned int i, ncores;
+	void __iomem *base;
+
+	set_fixmap_io(FIX_SMP_MEM_BASE, MSM_APCS_IDR & PAGE_MASK);
+	base = (void __iomem *)__fix_to_virt(FIX_SMP_MEM_BASE);
+	base += MSM_APCS_IDR & ~PAGE_MASK;
+
+	ncores = (__raw_readl(base)) & 0xF;
+>>>>>>> 0e91d2a... Nougat
 
 	if (ncores > nr_cpu_ids) {
 		pr_warn("SMP: %u cores greater than maximum (%u), clipping\n",
@@ -362,8 +400,14 @@ static void __init arm_smp_init_cpus(void)
 		ncores = nr_cpu_ids;
 	}
 
+<<<<<<< HEAD
 	for (i = 0; i < ncores; i++)
 		set_cpu_possible(i, true);
+=======
+	for (i = 0; i < nr_cpu_ids; i++)
+		set_cpu_possible(i, true);
+
+>>>>>>> 0e91d2a... Nougat
 }
 
 static int cold_boot_flags[] __initdata = {
@@ -390,6 +434,12 @@ static void __init msm_platform_smp_prepare_cpus_mc(unsigned int max_cpus)
 	if (scm_set_boot_addr_mc(virt_to_phys(msm_secondary_startup),
 		aff0_mask, aff1_mask, aff2_mask, SCM_FLAG_COLDBOOT_MC))
 		pr_warn("Failed to set CPU boot address\n");
+<<<<<<< HEAD
+=======
+
+	/* Mark CPU0 cold boot flag as done */
+	per_cpu(cold_boot_done, 0) = true;
+>>>>>>> 0e91d2a... Nougat
 }
 
 static void __init msm_platform_smp_prepare_cpus(unsigned int max_cpus)
@@ -397,16 +447,23 @@ static void __init msm_platform_smp_prepare_cpus(unsigned int max_cpus)
 	int cpu, map;
 	unsigned int flags = 0;
 
+<<<<<<< HEAD
 #ifdef CONFIG_HTC_DEBUG_FOOTPRINT
 	init_cpu_debug_counter_for_cold_boot();
 #endif
 
+=======
+>>>>>>> 0e91d2a... Nougat
 	if (scm_is_mc_boot_available())
 		return msm_platform_smp_prepare_cpus_mc(max_cpus);
 
 	for_each_present_cpu(cpu) {
 		map = cpu_logical_map(cpu);
+<<<<<<< HEAD
 		if (map > ARRAY_SIZE(cold_boot_flags)) {
+=======
+		if (map >= ARRAY_SIZE(cold_boot_flags)) {
+>>>>>>> 0e91d2a... Nougat
 			set_cpu_present(cpu, false);
 			__WARN();
 			continue;
@@ -416,6 +473,12 @@ static void __init msm_platform_smp_prepare_cpus(unsigned int max_cpus)
 
 	if (scm_set_boot_addr(virt_to_phys(msm_secondary_startup), flags))
 		pr_warn("Failed to set CPU boot address\n");
+<<<<<<< HEAD
+=======
+
+	/* Mark CPU0 cold boot flag as done */
+	per_cpu(cold_boot_done, 0) = true;
+>>>>>>> 0e91d2a... Nougat
 }
 
 int  msm_cpu_disable(unsigned int cpu)
@@ -423,6 +486,7 @@ int  msm_cpu_disable(unsigned int cpu)
 	return 0; /* support hotplugging any cpu */
 }
 
+<<<<<<< HEAD
 struct smp_operations arm_smp_ops __initdata = {
 	.smp_init_cpus = arm_smp_init_cpus,
 	.smp_prepare_cpus = msm_platform_smp_prepare_cpus,
@@ -462,11 +526,20 @@ struct smp_operations msm8936_smp_ops __initdata = {
 	.smp_secondary_init = msm_secondary_init,
 	.smp_boot_secondary = msm8936_boot_secondary,
 #ifdef CONFIG_HOTPLUG
+=======
+struct smp_operations msm8909_smp_ops __initdata = {
+	.smp_init_cpus = arm_smp_init_cpus,
+	.smp_prepare_cpus = msm_platform_smp_prepare_cpus,
+	.smp_secondary_init = msm_secondary_init,
+	.smp_boot_secondary = msm8909_boot_secondary,
+#ifdef CONFIG_HOTPLUG_CPU
+>>>>>>> 0e91d2a... Nougat
 	.cpu_die = msm_cpu_die,
 	.cpu_kill = msm_cpu_kill,
 	.cpu_disable = msm_cpu_disable,
 #endif
 };
+<<<<<<< HEAD
 
 struct smp_operations msm8974_smp_ops __initdata = {
 	.smp_init_cpus = msm_smp_init_cpus,
@@ -500,3 +573,5 @@ struct smp_operations scorpion_smp_ops __initdata = {
 	.cpu_kill = msm_cpu_kill,
 #endif
 };
+=======
+>>>>>>> 0e91d2a... Nougat

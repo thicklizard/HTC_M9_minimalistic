@@ -618,6 +618,7 @@ config TI_DRV2667
 	  To compile this driver as a module, choose M here: the
 	  module will be called ti_drv2667.
 
+<<<<<<< HEAD
 config QCOM_LIQUID_DOCK
 	tristate "QTI LiQUID Docking Station USB/Ethernet support"
 	depends on OF_GPIO
@@ -635,6 +636,16 @@ config CABLE_DETECT_8XXX
 config CABLE_DETECT_ACCESSORY
 	boolean "CABLE ACCESSORY DETECT"
 	default n
+=======
+config QPNP_MISC
+	tristate "QPNP Misc Peripheral"
+	depends on SPMI || MSM_SPMI
+	help
+	  Say 'y' here to include support for the QTI QPNP MISC
+	  peripheral. The MISC peripheral holds the USB ID interrupt
+	  and the driver provides an API to check if this interrupt
+	  is available on the current PMIC chip.
+>>>>>>> 0e91d2a... Nougat
 
 config VIB_TRIGGERS
         boolean "Vibrator trigger interface support"

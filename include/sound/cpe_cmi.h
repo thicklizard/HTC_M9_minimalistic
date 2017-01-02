@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2016, Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -17,6 +17,11 @@
 #include <linux/types.h>
 
 #define CPE_AFE_PORT_1_TX 1
+<<<<<<< HEAD
+=======
+#define CPE_AFE_PORT_3_TX 3
+#define CPE_AFE_PORT_ID_2_OUT 0x02
+>>>>>>> 0e91d2a... Nougat
 #define CMI_INBAND_MESSAGE_SIZE 127
 
 /*
@@ -68,6 +73,12 @@
 #define CPE_LSM_PARAM_ID_LAB_ENABLE	0x00012C09
 /* used for T in LAB config DSP internal buffer*/
 #define CPE_LSM_PARAM_ID_LAB_CONFIG	0x00012C0A
+<<<<<<< HEAD
+=======
+#define CPE_LSM_PARAM_ID_REGISTER_SOUND_MODEL	(0x00012C14)
+#define CPE_LSM_PARAM_ID_DEREGISTER_SOUND_MODEL	(0x00012C15)
+#define CPE_LSM_PARAM_ID_MEDIA_FMT		(0x00012C1E)
+>>>>>>> 0e91d2a... Nougat
 
 /* AFE Service command opcodes */
 #define CPE_AFE_PORT_CMD_START			(0x1001)
@@ -111,7 +122,7 @@ enum {
 	CMI_CPE_SERVICE_ID_MAX,
 };
 
-#define CPE_LSM_SESSION_ID_MAX 1
+#define CPE_LSM_SESSION_ID_MAX 2
 
 #define IS_VALID_SESSION_ID(s_id) \
 	(s_id <= CPE_LSM_SESSION_ID_MAX)
@@ -350,6 +361,15 @@ struct cpe_lsm_lab_latency_config {
 	struct cpe_lsm_lab_config latency_cfg;
 } __packed;
 
+struct cpe_lsm_media_fmt_param {
+	struct cmi_hdr hdr;
+	struct cpe_param_data param;
+	u32 minor_version;
+	u32 sample_rate;
+	u16 num_channels;
+	u16 bit_width;
+} __packed;
+
 
 #define CPE_PARAM_LSM_LAB_LATENCY_SIZE (\
 				sizeof(struct cpe_lsm_lab_latency_config) - \
@@ -383,4 +403,39 @@ struct cpe_lsm_lab_latency_config {
 
 #define SHMEM_DEALLOC_CMD_PLD_SIZE (sizeof(struct cpe_cmd_shmem_dealloc) - \
 				      sizeof(struct cmi_hdr))
+<<<<<<< HEAD
+=======
+#define OUT_FMT_CFG_CMD_PAYLOAD_SIZE ( \
+		sizeof(struct cpe_lsm_output_format_cfg) - \
+		sizeof(struct cmi_hdr))
+
+#define CPE_AFE_CMD_PORT_CFG_PAYLOAD_SIZE \
+		(sizeof(struct cpe_afe_cmd_port_cfg) - \
+		 sizeof(struct cmi_hdr))
+
+#define CPE_AFE_CMD_MODE_PAYLOAD_SIZE \
+		(sizeof(struct cpe_afe_svc_cmd_mode) - \
+		 sizeof(struct cmi_hdr))
+#define CPE_CMD_EPD_THRES_PLD_SIZE (sizeof(struct cpe_lsm_param_epd_thres) - \
+				    sizeof(struct cmi_hdr))
+#define CPE_EPD_THRES_PARAM_SIZE ((CPE_CMD_EPD_THRES_PLD_SIZE) - \
+				  sizeof(struct cpe_param_data))
+#define CPE_CMD_OPMODE_PLD_SIZE (sizeof(struct cpe_lsm_param_opmode) - \
+				 sizeof(struct cmi_hdr))
+#define CPE_OPMODE_PARAM_SIZE ((CPE_CMD_OPMODE_PLD_SIZE) -\
+			       sizeof(struct cpe_param_data))
+#define CPE_CMD_CONNECTPORT_PLD_SIZE \
+	(sizeof(struct cpe_lsm_param_connectport) - \
+	 sizeof(struct cmi_hdr))
+#define CPE_CONNECTPORT_PARAM_SIZE ((CPE_CMD_CONNECTPORT_PLD_SIZE) - \
+				    sizeof(struct cpe_param_data))
+#define CPE_CMD_GAIN_PLD_SIZE (sizeof(struct cpe_lsm_param_gain) - \
+			       sizeof(struct cmi_hdr))
+#define CPE_GAIN_PARAM_SIZE ((CPE_CMD_GAIN_PLD_SIZE) - \
+			     sizeof(struct cpe_param_data))
+#define CPE_MEDIA_FMT_PLD_SIZE (sizeof(struct cpe_lsm_media_fmt_param) - \
+				sizeof(struct cmi_hdr))
+#define CPE_MEDIA_FMT_PARAM_SIZE ((CPE_MEDIA_FMT_PLD_SIZE) - \
+				  sizeof(struct cpe_param_data))
+>>>>>>> 0e91d2a... Nougat
 #endif /* __CPE_CMI_H__ */

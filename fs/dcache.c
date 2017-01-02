@@ -1350,7 +1350,8 @@ void d_set_d_op(struct dentry *dentry, const struct dentry_operations *op)
 				DCACHE_OP_COMPARE	|
 				DCACHE_OP_REVALIDATE	|
 				DCACHE_OP_WEAK_REVALIDATE	|
-				DCACHE_OP_DELETE ));
+				DCACHE_OP_DELETE	|
+				DCACHE_OP_SELECT_INODE));
 	dentry->d_op = op;
 	if (!op)
 		return;
@@ -1366,6 +1367,8 @@ void d_set_d_op(struct dentry *dentry, const struct dentry_operations *op)
 		dentry->d_flags |= DCACHE_OP_DELETE;
 	if (op->d_prune)
 		dentry->d_flags |= DCACHE_OP_PRUNE;
+	if (op->d_select_inode)
+		dentry->d_flags |= DCACHE_OP_SELECT_INODE;
 
 }
 EXPORT_SYMBOL(d_set_d_op);
@@ -2339,6 +2342,7 @@ struct dentry *d_ancestor(struct dentry *p1, struct dentry *p2)
 	return NULL;
 }
 
+<<<<<<< HEAD
 /*
  * This helper attempts to cope with remotely renamed directories
  *
@@ -2349,10 +2353,13 @@ struct dentry *d_ancestor(struct dentry *p1, struct dentry *p2)
  * remember to update this too...
  */
 static struct dentry *__d_unalias(struct inode *inode,
+=======
+static int __d_unalias(struct inode *inode,
+>>>>>>> 0e91d2a... Nougat
 		struct dentry *dentry, struct dentry *alias)
 {
 	struct mutex *m1 = NULL, *m2 = NULL;
-	struct dentry *ret = ERR_PTR(-EBUSY);
+	int ret = -EBUSY;
 
 	/* If alias and dentry share a parent, then no extra locks required */
 	if (alias->d_parent == dentry->d_parent)
@@ -2366,10 +2373,15 @@ static struct dentry *__d_unalias(struct inode *inode,
 		goto out_err;
 	m2 = &alias->d_parent->d_inode->i_mutex;
 out_unalias:
+<<<<<<< HEAD
 	if (likely(!d_mountpoint(alias))) {
 		__d_move(alias, dentry);
 		ret = alias;
 	}
+=======
+	__d_move(alias, dentry, false);
+	ret = 0;
+>>>>>>> 0e91d2a... Nougat
 out_err:
 	spin_unlock(&inode->i_lock);
 	if (m2)
@@ -2386,6 +2398,7 @@ out_err:
  */
 static void __d_materialise_dentry(struct dentry *dentry, struct dentry *anon)
 {
+<<<<<<< HEAD
 	struct dentry *dparent;
 
 	dentry_lock_for_move(anon, dentry);
@@ -2426,18 +2439,20 @@ struct dentry *d_materialise_unique(struct dentry *dentry, struct inode *inode)
 {
 	struct dentry *actual;
 
+=======
+	if (IS_ERR(inode))
+		return ERR_CAST(inode);
+
+>>>>>>> 0e91d2a... Nougat
 	BUG_ON(!d_unhashed(dentry));
 
 	if (!inode) {
-		actual = dentry;
 		__d_instantiate(dentry, NULL);
-		d_rehash(actual);
-		goto out_nolock;
+		goto out;
 	}
-
 	spin_lock(&inode->i_lock);
-
 	if (S_ISDIR(inode->i_mode)) {
+<<<<<<< HEAD
 		struct dentry *alias;
 
 		/* Does an aliased dentry already exist? */
@@ -2472,10 +2487,40 @@ struct dentry *d_materialise_unique(struct dentry *dentry, struct inode *inode)
 						inode->i_sb->s_type->name,
 						inode->i_sb->s_id);
 				dput(alias);
+=======
+		struct dentry *new = __d_find_any_alias(inode);
+		if (unlikely(new)) {
+			write_seqlock(&rename_lock);
+			if (unlikely(d_ancestor(new, dentry))) {
+				write_sequnlock(&rename_lock);
+				spin_unlock(&inode->i_lock);
+				dput(new);
+				new = ERR_PTR(-ELOOP);
+				pr_warn_ratelimited(
+					"VFS: Lookup of '%s' in %s %s"
+					" would have caused loop\n",
+					dentry->d_name.name,
+					inode->i_sb->s_type->name,
+					inode->i_sb->s_id);
+			} else if (!IS_ROOT(new)) {
+				int err = __d_unalias(inode, dentry, new);
+				write_sequnlock(&rename_lock);
+				if (err) {
+					dput(new);
+					new = ERR_PTR(err);
+				}
+			} else {
+				__d_move(new, dentry, false);
+				write_sequnlock(&rename_lock);
+				spin_unlock(&inode->i_lock);
+				security_d_instantiate(new, inode);
+>>>>>>> 0e91d2a... Nougat
 			}
-			goto out_nolock;
+			iput(inode);
+			return new;
 		}
 	}
+<<<<<<< HEAD
 
 	/* Add a unique reference */
 	actual = __d_instantiate_unique(dentry, inode);
@@ -2488,17 +2533,17 @@ struct dentry *d_materialise_unique(struct dentry *dentry, struct inode *inode)
 found:
 	_d_rehash(actual);
 	spin_unlock(&actual->d_lock);
+=======
+	
+	__d_instantiate(dentry, inode);
+>>>>>>> 0e91d2a... Nougat
 	spin_unlock(&inode->i_lock);
-out_nolock:
-	if (actual == dentry) {
-		security_d_instantiate(dentry, inode);
-		return NULL;
-	}
-
-	iput(inode);
-	return actual;
+out:
+	security_d_instantiate(dentry, inode);
+	d_rehash(dentry);
+	return NULL;
 }
-EXPORT_SYMBOL_GPL(d_materialise_unique);
+EXPORT_SYMBOL(d_splice_alias);
 
 static int prepend(char **buffer, int *buflen, const char *str, int namelen)
 {

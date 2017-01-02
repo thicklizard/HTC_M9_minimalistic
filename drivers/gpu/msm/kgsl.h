@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2008-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2008-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -37,7 +41,25 @@
 #define KGSL_MEMSTORE_MAX	(KGSL_MEMSTORE_SIZE / \
 	sizeof(struct kgsl_devmemstore) - 1 - KGSL_PRIORITY_MAX_RB_LEVELS)
 
+<<<<<<< HEAD
 /* Timestamp window used to detect rollovers (half of integer range) */
+=======
+#define MEMSTORE_RB_OFFSET(rb, field)	\
+	KGSL_MEMSTORE_OFFSET(((rb)->id + KGSL_MEMSTORE_MAX), field)
+
+#define MEMSTORE_ID_GPU_ADDR(dev, iter, field) \
+	((dev)->memstore.gpuaddr + KGSL_MEMSTORE_OFFSET(iter, field))
+
+#define MEMSTORE_RB_GPU_ADDR(dev, rb, field)	\
+	((dev)->memstore.gpuaddr + \
+	 KGSL_MEMSTORE_OFFSET(((rb)->id + KGSL_MEMSTORE_MAX), field))
+
+
+#define SCRATCH_RPTR_OFFSET(id) ((id) * sizeof(unsigned int))
+#define SCRATCH_RPTR_GPU_ADDR(dev, id) \
+	((dev)->scratch.gpuaddr + SCRATCH_RPTR_OFFSET(id))
+
+>>>>>>> 0e91d2a... Nougat
 #define KGSL_TIMESTAMP_WINDOW 0x80000000
 
 /*cache coherency ops */
@@ -123,6 +145,7 @@ struct kgsl_memdesc_ops {
 #define KGSL_MEMDESC_FROZEN BIT(2)
 /* The memdesc is mapped into a pagetable */
 #define KGSL_MEMDESC_MAPPED BIT(3)
+<<<<<<< HEAD
 /* Indicates gpuaddr is assigned via gen pool */
 #define KGSL_MEMDESC_GENPOOL_ALLOC BIT(4)
 /* The memdesc is secured for content protection */
@@ -137,6 +160,13 @@ struct kgsl_memdesc_ops {
 #define KGSL_MEMDESC_TZ_LOCKED BIT(9)
 
 /* shared memory allocation */
+=======
+#define KGSL_MEMDESC_SECURE BIT(4)
+#define KGSL_MEMDESC_PRIVILEGED BIT(6)
+#define KGSL_MEMDESC_TZ_LOCKED BIT(7)
+#define KGSL_MEMDESC_CONTIG BIT(8)
+
+>>>>>>> 0e91d2a... Nougat
 struct kgsl_memdesc {
 	struct kgsl_pagetable *pagetable;
 	void *hostptr; /* kernel virtual address */
@@ -144,14 +174,24 @@ struct kgsl_memdesc {
 	unsigned long useraddr; /* userspace address */
 	unsigned int gpuaddr;
 	phys_addr_t physaddr;
+<<<<<<< HEAD
 	size_t size;
 	unsigned int priv; /* Internal flags and settings */
 	struct scatterlist *sg;
 	unsigned int sglen; /* Active entries in the sglist */
+=======
+	uint64_t size;
+	uint64_t mapsize;
+	unsigned int priv;
+	struct sg_table *sgt;
+>>>>>>> 0e91d2a... Nougat
 	struct kgsl_memdesc_ops *ops;
 	unsigned int flags; /* Flags set from userspace */
 	struct device *dev;
 	struct dma_attrs attrs;
+	struct page **pages;
+	unsigned int page_count;
+
 	struct kgsl_process_private *private;
 };
 
@@ -421,6 +461,7 @@ kgsl_mem_entry_get(struct kgsl_mem_entry *entry)
 static inline void
 kgsl_mem_entry_put(struct kgsl_mem_entry *entry)
 {
+<<<<<<< HEAD
 	kref_put(&entry->refcount, kgsl_mem_entry_destroy);
 }
 
@@ -437,6 +478,14 @@ kgsl_mem_entry_put(struct kgsl_mem_entry *entry)
 static inline bool kgsl_addr_range_overlap(unsigned int gpuaddr1,
 		unsigned int size1,
 		unsigned int gpuaddr2, unsigned int size2)
+=======
+	if (entry)
+		kref_put(&entry->refcount, kgsl_mem_entry_destroy);
+}
+
+static inline bool kgsl_addr_range_overlap(uint64_t gpuaddr1,
+		uint64_t size1, uint64_t gpuaddr2, uint64_t size2)
+>>>>>>> 0e91d2a... Nougat
 {
 	if ((size1 > (UINT_MAX - gpuaddr1)) || (size2 > (UINT_MAX - gpuaddr2)))
 		return false;

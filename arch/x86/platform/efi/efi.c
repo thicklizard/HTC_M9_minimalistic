@@ -792,8 +792,157 @@ void __init efi_enter_virtual_mode(void)
 		}
 		prev_md = md;
 	}
+<<<<<<< HEAD
+=======
+}
+
+static void __init get_systab_virt_addr(efi_memory_desc_t *md)
+{
+	unsigned long size;
+	u64 end, systab;
+
+	size = md->num_pages << EFI_PAGE_SHIFT;
+	end = md->phys_addr + size;
+	systab = (u64)(unsigned long)efi_phys.systab;
+	if (md->phys_addr <= systab && systab < end) {
+		systab += md->virt_addr - md->phys_addr;
+		efi.systab = (efi_system_table_t *)(unsigned long)systab;
+	}
+}
+
+static void __init save_runtime_map(void)
+{
+#ifdef CONFIG_KEXEC
+	efi_memory_desc_t *md;
+	void *tmp, *p, *q = NULL;
+	int count = 0;
+
+	if (efi_enabled(EFI_OLD_MEMMAP))
+		return;
 
 	for (p = memmap.map; p < memmap.map_end; p += memmap.desc_size) {
+		md = p;
+
+		if (!(md->attribute & EFI_MEMORY_RUNTIME) ||
+		    (md->type == EFI_BOOT_SERVICES_CODE) ||
+		    (md->type == EFI_BOOT_SERVICES_DATA))
+			continue;
+		tmp = krealloc(q, (count + 1) * memmap.desc_size, GFP_KERNEL);
+		if (!tmp)
+			goto out;
+		q = tmp;
+
+		memcpy(q + count * memmap.desc_size, md, memmap.desc_size);
+		count++;
+	}
+
+	efi_runtime_map_setup(q, count, memmap.desc_size);
+	return;
+
+out:
+	kfree(q);
+	pr_err("Error saving runtime map, efi runtime on kexec non-functional!!\n");
+#endif
+}
+
+static void *realloc_pages(void *old_memmap, int old_shift)
+{
+	void *ret;
+
+	ret = (void *)__get_free_pages(GFP_KERNEL, old_shift + 1);
+	if (!ret)
+		goto out;
+
+	/*
+	 * A first-time allocation doesn't have anything to copy.
+	 */
+	if (!old_memmap)
+		return ret;
+
+	memcpy(ret, old_memmap, PAGE_SIZE << old_shift);
+
+out:
+	free_pages((unsigned long)old_memmap, old_shift);
+	return ret;
+}
+
+/*
+ * Iterate the EFI memory map in reverse order because the regions
+ * will be mapped top-down. The end result is the same as if we had
+ * mapped things forward, but doesn't require us to change the
+ * existing implementation of efi_map_region().
+ */
+static inline void *efi_map_next_entry_reverse(void *entry)
+{
+	/* Initial call */
+	if (!entry)
+		return memmap.map_end - memmap.desc_size;
+
+	entry -= memmap.desc_size;
+	if (entry < memmap.map)
+		return NULL;
+
+	return entry;
+}
+
+/*
+ * efi_map_next_entry - Return the next EFI memory map descriptor
+ * @entry: Previous EFI memory map descriptor
+ *
+ * This is a helper function to iterate over the EFI memory map, which
+ * we do in different orders depending on the current configuration.
+ *
+ * To begin traversing the memory map @entry must be %NULL.
+ *
+ * Returns %NULL when we reach the end of the memory map.
+ */
+static void *efi_map_next_entry(void *entry)
+{
+	if (!efi_enabled(EFI_OLD_MEMMAP) && efi_enabled(EFI_64BIT)) {
+		/*
+		 * Starting in UEFI v2.5 the EFI_PROPERTIES_TABLE
+		 * config table feature requires us to map all entries
+		 * in the same order as they appear in the EFI memory
+		 * map. That is to say, entry N must have a lower
+		 * virtual address than entry N+1. This is because the
+		 * firmware toolchain leaves relative references in
+		 * the code/data sections, which are split and become
+		 * separate EFI memory regions. Mapping things
+		 * out-of-order leads to the firmware accessing
+		 * unmapped addresses.
+		 *
+		 * Since we need to map things this way whether or not
+		 * the kernel actually makes use of
+		 * EFI_PROPERTIES_TABLE, let's just switch to this
+		 * scheme by default for 64-bit.
+		 */
+		return efi_map_next_entry_reverse(entry);
+	}
+
+	/* Initial call */
+	if (!entry)
+		return memmap.map;
+
+	entry += memmap.desc_size;
+	if (entry >= memmap.map_end)
+		return NULL;
+
+	return entry;
+}
+
+/*
+ * Map the efi memory ranges of the runtime services and update new_mmap with
+ * virtual addresses.
+ */
+static void * __init efi_map_regions(int *count, int *pg_shift)
+{
+	void *p, *new_memmap = NULL;
+	unsigned long left = 0;
+	efi_memory_desc_t *md;
+>>>>>>> 0e91d2a... Nougat
+
+	p = NULL;
+	while ((p = efi_map_next_entry(p))) {
 		md = p;
 		if (!(md->attribute & EFI_MEMORY_RUNTIME)) {
 #ifdef CONFIG_X86_64

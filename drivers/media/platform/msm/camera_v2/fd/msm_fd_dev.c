@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -209,10 +213,15 @@ static int msm_fd_stop_streaming(struct vb2_queue *q)
 {
 	struct fd_ctx *ctx = vb2_get_drv_priv(q);
 
+	mutex_lock(&ctx->fd_device->recovery_lock);
 	msm_fd_hw_remove_buffers_from_queue(ctx->fd_device, q);
 	msm_fd_hw_put(ctx->fd_device);
+<<<<<<< HEAD
 
 	return 0;
+=======
+	mutex_unlock(&ctx->fd_device->recovery_lock);
+>>>>>>> 0e91d2a... Nougat
 }
 
 static struct vb2_ops msm_fd_vb2_q_ops = {
@@ -259,6 +268,76 @@ static struct vb2_mem_ops msm_fd_vb2_mem_ops = {
 	.put_userptr = msm_fd_put_userptr,
 };
 
+<<<<<<< HEAD
+=======
+/*
+ * msm_fd_vbif_error_handler - FD VBIF Error handler
+ * @handle: FD Device handle
+ * @error: CPP-VBIF Error code
+ */
+static int msm_fd_vbif_error_handler(void *handle, uint32_t error)
+{
+	struct fd_ctx *ctx;
+	struct msm_fd_device *fd;
+	struct msm_fd_buffer *active_buf;
+	int ret;
+
+	if (NULL == handle) {
+		dev_err(fd->dev, "FD Ctx is null, Cannot recover\n");
+		return 0;
+	}
+	ctx = (struct fd_ctx *)handle;
+	fd = (struct msm_fd_device *)ctx->fd_device;
+
+	if (error == CPP_VBIF_ERROR_HANG) {
+		mutex_lock(&fd->recovery_lock);
+		dev_err(fd->dev, "Handling FD VBIF Hang\n");
+		if (fd->state != MSM_FD_DEVICE_RUNNING) {
+			dev_err(fd->dev, "FD is not FD_DEVICE_RUNNING, %d\n",
+				fd->state);
+			mutex_unlock(&fd->recovery_lock);
+			return 0;
+		}
+		fd->recovery_mode = 1;
+
+		/* Halt and reset */
+		msm_fd_hw_put(fd);
+		msm_fd_hw_get(fd, ctx->settings.speed);
+
+		/* Get active buffer */
+		active_buf = msm_fd_hw_get_active_buffer(fd);
+
+		if (active_buf == NULL) {
+			dev_dbg(fd->dev, "no active buffer, return\n");
+			fd->recovery_mode = 0;
+			mutex_unlock(&fd->recovery_lock);
+			return 0;
+		}
+
+		dev_dbg(fd->dev, "Active Buffer present.. Start re-schedule\n");
+
+		/* Queue the buffer again */
+		msm_fd_hw_add_buffer(fd, active_buf);
+
+		/* Schedule and restart */
+		ret = msm_fd_hw_schedule_next_buffer(fd);
+		if (ret) {
+			dev_err(fd->dev, "Cannot reschedule buffer, recovery failed\n");
+			fd->recovery_mode = 0;
+			mutex_unlock(&fd->recovery_lock);
+			return ret;
+		}
+		dev_dbg(fd->dev, "Restarted FD after VBIF HAng\n");
+		mutex_unlock(&fd->recovery_lock);
+	}
+	return 0;
+}
+
+/*
+ * msm_fd_open - Fd device open method.
+ * @file: Pointer to file struct.
+ */
+>>>>>>> 0e91d2a... Nougat
 static int msm_fd_open(struct file *file)
 {
 	struct msm_fd_device *device = video_drvdata(file);
@@ -318,8 +397,24 @@ static int msm_fd_open(struct file *file)
 		goto error_stats_vmalloc;
 	}
 
+<<<<<<< HEAD
+=======
+	ret = cam_config_ahb_clk(NULL, 0, CAM_AHB_CLIENT_FD,
+			CAM_AHB_SVS_VOTE);
+	if (ret < 0) {
+		pr_err("%s: failed to vote for AHB\n", __func__);
+		goto error_ahb_config;
+	}
+
+	/* Register with CPP VBIF error handler */
+	msm_cpp_vbif_register_error_handler((void *)ctx,
+		VBIF_CLIENT_FD, msm_fd_vbif_error_handler);
+
+>>>>>>> 0e91d2a... Nougat
 	return 0;
 
+error_ahb_config:
+	vfree(ctx->stats);
 error_stats_vmalloc:
 	ion_client_destroy(ctx->mem_pool.client);
 error_ion_client_create:
@@ -335,6 +430,10 @@ static int msm_fd_release(struct file *file)
 {
 	struct fd_ctx *ctx = msm_fd_ctx_from_fh(file->private_data);
 
+	/* Un-register with CPP VBIF error handler */
+	msm_cpp_vbif_register_error_handler((void *)ctx,
+		VBIF_CLIENT_FD, NULL);
+
 	vb2_queue_release(&ctx->vb2_q);
 
 	vfree(ctx->stats);
@@ -349,6 +448,13 @@ static int msm_fd_release(struct file *file)
 
 	kfree(ctx);
 
+<<<<<<< HEAD
+=======
+	if (cam_config_ahb_clk(NULL, 0, CAM_AHB_CLIENT_FD,
+		CAM_AHB_SUSPEND_VOTE) < 0)
+		pr_err("%s: failed to remove vote for AHB\n", __func__);
+
+>>>>>>> 0e91d2a... Nougat
 	return 0;
 }
 
@@ -376,7 +482,11 @@ static long msm_fd_private_ioctl(struct file *file, void *fh,
 	struct fd_ctx *ctx = msm_fd_ctx_from_fh(fh);
 	struct msm_fd_stats *stats;
 	int stats_idx;
+<<<<<<< HEAD
 	int ret = -EFAULT;
+=======
+	int ret = 0;
+>>>>>>> 0e91d2a... Nougat
 	int i;
 
 	switch (cmd) {
@@ -952,7 +1062,17 @@ static void msm_fd_wq_handler(struct work_struct *work)
 	
 	atomic_set(&stats->frame_id, ctx->sequence);
 
+<<<<<<< HEAD
 	
+=======
+	/* If Recovery mode is on, we got IRQ after recovery, reset it */
+	if (fd->recovery_mode) {
+		fd->recovery_mode = 0;
+		dev_dbg(fd->dev, "Got IRQ after Recovery\n");
+	}
+
+	/* We have the data from fd hw, we can start next processing */
+>>>>>>> 0e91d2a... Nougat
 	msm_fd_hw_schedule_next_buffer(fd);
 
 	
@@ -996,6 +1116,13 @@ static int fd_probe(struct platform_device *pdev)
 
 	mutex_init(&fd->lock);
 	spin_lock_init(&fd->slock);
+<<<<<<< HEAD
+=======
+	mutex_init(&fd->recovery_lock);
+	init_completion(&fd->hw_halt_completion);
+	INIT_LIST_HEAD(&fd->buf_queue);
+	fd->pdev = pdev;
+>>>>>>> 0e91d2a... Nougat
 	fd->dev = &pdev->dev;
 
 	
@@ -1006,6 +1133,7 @@ static int fd_probe(struct platform_device *pdev)
 		goto error_mem_resources;
 	}
 
+<<<<<<< HEAD
 	fd->vdd = regulator_get(&pdev->dev, "vdd");
 	if (IS_ERR(fd->vdd)) {
 		dev_err(&pdev->dev, "Fail to get vdd regulator\n");
@@ -1014,12 +1142,26 @@ static int fd_probe(struct platform_device *pdev)
 	}
 
 	ret = msm_fd_hw_get_clocks(fd);
+=======
+	ret = msm_camera_get_regulator_info(pdev, &fd->vdd_info,
+		&fd->num_reg);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Fail to get regulators\n");
+		goto error_get_regulator;
+	}
+	ret = msm_camera_get_clk_info_and_rates(pdev, &fd->clk_info,
+		&fd->clk, &fd->clk_rates, &fd->clk_rates_num, &fd->clk_num);
+>>>>>>> 0e91d2a... Nougat
 	if (ret < 0) {
 		dev_err(&pdev->dev, "Fail to get clocks\n");
 		goto error_get_clocks;
 	}
 
+<<<<<<< HEAD
 	ret = msm_fd_hw_get_iommu(fd);
+=======
+	ret = msm_camera_register_bus_client(pdev, CAM_BUS_CLIENT_FD);
+>>>>>>> 0e91d2a... Nougat
 	if (ret < 0) {
 		dev_err(&pdev->dev, "Fail to get iommu\n");
 		goto error_iommu_get;
@@ -1081,6 +1223,7 @@ static int fd_probe(struct platform_device *pdev)
 error_video_register:
 	v4l2_device_unregister(&fd->v4l2_dev);
 error_v4l2_register:
+<<<<<<< HEAD
 	destroy_workqueue(fd->work_queue);
 error_alloc_workqueue:
 	devm_free_irq(&pdev->dev, fd->irq_num, fd);
@@ -1090,6 +1233,16 @@ error_iommu_get:
 	msm_fd_hw_put_clocks(fd);
 error_get_clocks:
 	regulator_put(fd->vdd);
+=======
+	msm_fd_hw_release_irq(fd);
+error_hw_get_request_irq:
+	msm_camera_unregister_bus_client(CAM_BUS_CLIENT_FD);
+error_get_bus:
+	msm_camera_put_clk_info_and_rates(pdev, &fd->clk_info,
+		&fd->clk, &fd->clk_rates, fd->clk_rates_num, fd->clk_num);
+error_get_clocks:
+	msm_camera_put_regulators(pdev, &fd->vdd_info, fd->num_reg);
+>>>>>>> 0e91d2a... Nougat
 error_get_regulator:
 	msm_fd_hw_release_mem_resources(fd);
 error_mem_resources:
@@ -1109,10 +1262,18 @@ static int fd_device_remove(struct platform_device *pdev)
 	video_unregister_device(&fd->video);
 	destroy_workqueue(fd->work_queue);
 	v4l2_device_unregister(&fd->v4l2_dev);
+<<<<<<< HEAD
 	devm_free_irq(&pdev->dev, fd->irq_num, fd);
 	msm_fd_hw_put_iommu(fd);
 	msm_fd_hw_put_clocks(fd);
 	regulator_put(fd->vdd);
+=======
+	msm_fd_hw_release_irq(fd);
+	msm_camera_unregister_bus_client(CAM_BUS_CLIENT_FD);
+	msm_camera_put_clk_info_and_rates(pdev, &fd->clk_info,
+		&fd->clk, &fd->clk_rates, fd->clk_rates_num, fd->clk_num);
+	msm_camera_put_regulators(pdev, &fd->vdd_info, fd->num_reg);
+>>>>>>> 0e91d2a... Nougat
 	msm_fd_hw_release_mem_resources(fd);
 	kfree(fd);
 

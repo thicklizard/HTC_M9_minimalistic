@@ -213,7 +213,7 @@ static int cmd_status(struct sock *sk, u16 index, u16 cmd, u8 status)
 	struct mgmt_ev_cmd_status *ev;
 	int err;
 
-	BT_DBG("sock %p, index %u, cmd %u, status %u", sk, index, cmd, status);
+	BT_DBG("sock %pK, index %u, cmd %u, status %u", sk, index, cmd, status);
 
 	skb = alloc_skb(sizeof(*hdr) + sizeof(*ev), GFP_KERNEL);
 	if (!skb)
@@ -244,7 +244,7 @@ static int cmd_complete(struct sock *sk, u16 index, u16 cmd, u8 status,
 	struct mgmt_ev_cmd_complete *ev;
 	int err;
 
-	BT_DBG("sock %p", sk);
+	BT_DBG("sock %pK", sk);
 
 	skb = alloc_skb(sizeof(*hdr) + sizeof(*ev) + rp_len, GFP_KERNEL);
 	if (!skb)
@@ -275,7 +275,7 @@ static int read_version(struct sock *sk, struct hci_dev *hdev, void *data,
 {
 	struct mgmt_rp_read_version rp;
 
-	BT_DBG("sock %p", sk);
+	BT_DBG("sock %pK", sk);
 
 	rp.version = MGMT_VERSION;
 	rp.revision = __constant_cpu_to_le16(MGMT_REVISION);
@@ -294,7 +294,7 @@ static int read_commands(struct sock *sk, struct hci_dev *hdev, void *data,
 	size_t rp_size;
 	int i, err;
 
-	BT_DBG("sock %p", sk);
+	BT_DBG("sock %pK", sk);
 
 	rp_size = sizeof(*rp) + ((num_commands + num_events) * sizeof(u16));
 
@@ -327,7 +327,7 @@ static int read_index_list(struct sock *sk, struct hci_dev *hdev, void *data,
 	u16 count;
 	int err;
 
-	BT_DBG("sock %p", sk);
+	BT_DBG("sock %pK", sk);
 
 	read_lock(&hci_dev_list_lock);
 
@@ -336,7 +336,54 @@ static int read_index_list(struct sock *sk, struct hci_dev *hdev, void *data,
 		if (!mgmt_valid_hdev(d))
 			continue;
 
+<<<<<<< HEAD
 		count++;
+=======
+		/* Devices marked as raw-only are neither configured
+		 * nor unconfigured controllers.
+		 */
+		if (test_bit(HCI_QUIRK_RAW_DEVICE, &d->quirks))
+			continue;
+
+		if (d->dev_type == HCI_BREDR &&
+		    !test_bit(HCI_UNCONFIGURED, &d->dev_flags)) {
+			rp->index[count++] = cpu_to_le16(d->id);
+			BT_DBG("Added hci%u", d->id);
+		}
+	}
+
+	rp->num_controllers = cpu_to_le16(count);
+	rp_len = sizeof(*rp) + (2 * count);
+
+	read_unlock(&hci_dev_list_lock);
+
+	err = cmd_complete(sk, MGMT_INDEX_NONE, MGMT_OP_READ_INDEX_LIST, 0, rp,
+			   rp_len);
+
+	kfree(rp);
+
+	return err;
+}
+
+static int read_unconf_index_list(struct sock *sk, struct hci_dev *hdev,
+				  void *data, u16 data_len)
+{
+	struct mgmt_rp_read_unconf_index_list *rp;
+	struct hci_dev *d;
+	size_t rp_len;
+	u16 count;
+	int err;
+
+	BT_DBG("sock %pK", sk);
+
+	read_lock(&hci_dev_list_lock);
+
+	count = 0;
+	list_for_each_entry(d, &hci_dev_list, list) {
+		if (d->dev_type == HCI_BREDR &&
+		    test_bit(HCI_UNCONFIGURED, &d->dev_flags))
+			count++;
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	rp_len = sizeof(*rp) + (2 * count);
@@ -371,6 +418,81 @@ static int read_index_list(struct sock *sk, struct hci_dev *hdev, void *data,
 	return err;
 }
 
+<<<<<<< HEAD
+=======
+static bool is_configured(struct hci_dev *hdev)
+{
+	if (test_bit(HCI_QUIRK_EXTERNAL_CONFIG, &hdev->quirks) &&
+	    !test_bit(HCI_EXT_CONFIGURED, &hdev->dev_flags))
+		return false;
+
+	if (test_bit(HCI_QUIRK_INVALID_BDADDR, &hdev->quirks) &&
+	    !bacmp(&hdev->public_addr, BDADDR_ANY))
+		return false;
+
+	return true;
+}
+
+static __le32 get_missing_options(struct hci_dev *hdev)
+{
+	u32 options = 0;
+
+	if (test_bit(HCI_QUIRK_EXTERNAL_CONFIG, &hdev->quirks) &&
+	    !test_bit(HCI_EXT_CONFIGURED, &hdev->dev_flags))
+		options |= MGMT_OPTION_EXTERNAL_CONFIG;
+
+	if (test_bit(HCI_QUIRK_INVALID_BDADDR, &hdev->quirks) &&
+	    !bacmp(&hdev->public_addr, BDADDR_ANY))
+		options |= MGMT_OPTION_PUBLIC_ADDRESS;
+
+	return cpu_to_le32(options);
+}
+
+static int new_options(struct hci_dev *hdev, struct sock *skip)
+{
+	__le32 options = get_missing_options(hdev);
+
+	return mgmt_event(MGMT_EV_NEW_CONFIG_OPTIONS, hdev, &options,
+			  sizeof(options), skip);
+}
+
+static int send_options_rsp(struct sock *sk, u16 opcode, struct hci_dev *hdev)
+{
+	__le32 options = get_missing_options(hdev);
+
+	return cmd_complete(sk, hdev->id, opcode, 0, &options,
+			    sizeof(options));
+}
+
+static int read_config_info(struct sock *sk, struct hci_dev *hdev,
+			    void *data, u16 data_len)
+{
+	struct mgmt_rp_read_config_info rp;
+	u32 options = 0;
+
+	BT_DBG("sock %pK %s", sk, hdev->name);
+
+	hci_dev_lock(hdev);
+
+	memset(&rp, 0, sizeof(rp));
+	rp.manufacturer = cpu_to_le16(hdev->manufacturer);
+
+	if (test_bit(HCI_QUIRK_EXTERNAL_CONFIG, &hdev->quirks))
+		options |= MGMT_OPTION_EXTERNAL_CONFIG;
+
+	if (hdev->set_bdaddr)
+		options |= MGMT_OPTION_PUBLIC_ADDRESS;
+
+	rp.supported_options = cpu_to_le32(options);
+	rp.missing_options = get_missing_options(hdev);
+
+	hci_dev_unlock(hdev);
+
+	return cmd_complete(sk, hdev->id, MGMT_OP_READ_CONFIG_INFO, 0, &rp,
+			    sizeof(rp));
+}
+
+>>>>>>> 0e91d2a... Nougat
 static u32 get_supported_settings(struct hci_dev *hdev)
 {
 	u32 settings = 0;
@@ -698,7 +820,7 @@ static int read_controller_info(struct sock *sk, struct hci_dev *hdev,
 {
 	struct mgmt_rp_read_info rp;
 
-	BT_DBG("sock %p %s", sk, hdev->name);
+	BT_DBG("sock %pK %s", sk, hdev->name);
 
 	hci_dev_lock(hdev);
 

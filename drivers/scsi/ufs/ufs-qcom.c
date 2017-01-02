@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2016, Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -626,7 +626,7 @@ out:
 }
 
 static
-int ufs_qcom_crytpo_engine_cfg(struct ufs_hba *hba, unsigned int task_tag)
+int ufs_qcom_crytpo_engine_cfg_start(struct ufs_hba *hba, unsigned int task_tag)
 {
 	struct ufs_qcom_host *host = hba->priv;
 	struct ufshcd_lrb *lrbp = &hba->lrb[task_tag];
@@ -636,7 +636,22 @@ int ufs_qcom_crytpo_engine_cfg(struct ufs_hba *hba, unsigned int task_tag)
 	    !lrbp->cmd || lrbp->command_type != UTP_CMD_TYPE_SCSI)
 		goto out;
 
-	err = ufs_qcom_ice_cfg(host, lrbp->cmd);
+	err = ufs_qcom_ice_cfg_start(host, lrbp->cmd);
+out:
+	return err;
+}
+
+static
+int ufs_qcom_crytpo_engine_cfg_end(struct ufs_hba *hba,
+		struct ufshcd_lrb *lrbp, struct request *req)
+{
+	struct ufs_qcom_host *host = ufshcd_get_variant(hba);
+	int err = 0;
+
+	if (!host->ice.pdev || lrbp->command_type != UTP_CMD_TYPE_SCSI)
+		goto out;
+
+	err = ufs_qcom_ice_cfg_end(host, req);
 out:
 	return err;
 }
@@ -895,6 +910,35 @@ static int ufs_qcom_pwr_change_notify(struct ufs_hba *hba,
 		ufs_qcom_cap.desired_working_mode =
 					UFS_QCOM_LIMIT_DESIRED_MODE;
 
+<<<<<<< HEAD
+=======
+		if (host->hw_ver.major == 0x1) {
+			/*
+			 * HS-G3 operations may not reliably work on legacy QCOM
+			 * UFS host controller hardware even though capability
+			 * exchange during link startup phase may end up
+			 * negotiating maximum supported gear as G3.
+			 * Hence downgrade the maximum supported gear to HS-G2.
+			 */
+			if (ufs_qcom_cap.hs_tx_gear > UFS_HS_G2)
+				ufs_qcom_cap.hs_tx_gear = UFS_HS_G2;
+			if (ufs_qcom_cap.hs_rx_gear > UFS_HS_G2)
+				ufs_qcom_cap.hs_rx_gear = UFS_HS_G2;
+		}
+
+		/*
+		 * Platforms using QRBTCv2 phy must limit link to PWM Gear-1
+		 * and SLOW mode to successfully bring up the link.
+		 */
+		if (!strcmp(ufs_qcom_phy_name(phy), "ufs_phy_qrbtc_v2")) {
+			ufs_qcom_cap.tx_lanes = 1;
+			ufs_qcom_cap.rx_lanes = 1;
+			ufs_qcom_cap.pwm_rx_gear = UFS_PWM_G1;
+			ufs_qcom_cap.pwm_tx_gear = UFS_PWM_G1;
+			ufs_qcom_cap.desired_working_mode = SLOW;
+		}
+
+>>>>>>> 0e91d2a... Nougat
 		ret = ufs_qcom_get_pwr_dev_param(&ufs_qcom_cap,
 						 dev_max_params,
 						 dev_req_params);
@@ -1025,6 +1069,7 @@ static void ufs_qcom_get_speed_mode(struct ufs_pa_layer_attr *p, char *result)
 	int lanes = max_t(u32, p->lane_rx, p->lane_tx);
 	int pwr;
 
+<<<<<<< HEAD
 	/* default to PWM Gear 1, Lane 1 if power mode is not initialized */
 	if (!gear)
 		gear = 1;
@@ -1044,6 +1089,20 @@ static void ufs_qcom_get_speed_mode(struct ufs_pa_layer_attr *p, char *result)
 		pwr = SLOW_MODE;
 		snprintf(result, BUS_VECTOR_NAME_LEN, "%s_G%d_L%d",
 			 "PWM", gear, lanes);
+=======
+	if (!host->disable_lpm) {
+		hba->caps |= UFSHCD_CAP_CLK_GATING;
+		hba->caps |= UFSHCD_CAP_HIBERN8_WITH_CLK_GATING;
+		hba->caps |= UFSHCD_CAP_CLK_SCALING;
+	}
+	hba->caps |= UFSHCD_CAP_AUTO_BKOPS_SUSPEND;
+
+	if (host->hw_ver.major >= 0x2) {
+		if (!host->disable_lpm)
+			hba->caps |= UFSHCD_CAP_POWER_COLLAPSE_DURING_HIBERN8;
+		host->caps = UFS_QCOM_CAP_QUNIPRO |
+			     UFS_QCOM_CAP_RETAIN_SEC_CFG_AFTER_PWR_COLLAPSE;
+>>>>>>> 0e91d2a... Nougat
 	}
 }
 
@@ -1180,6 +1239,18 @@ static int get_android_boot_dev(char *str)
 }
 __setup("androidboot.bootdevice=", get_android_boot_dev);
 
+/*
+ * ufs_qcom_parse_lpm - read from DTS whether LPM modes should be disabled.
+ */
+static void ufs_qcom_parse_lpm(struct ufs_qcom_host *host)
+{
+	struct device_node *node = host->hba->dev->of_node;
+
+	host->disable_lpm = of_property_read_bool(node, "qcom,disable-lpm");
+	if (host->disable_lpm)
+		pr_info("%s: will disable all LPM modes\n", __func__);
+}
+
 /**
  * ufs_qcom_init - bind phy with controller
  * @hba: host controller instance
@@ -1259,8 +1330,15 @@ static int ufs_qcom_init(struct ufs_hba *hba)
 	if (err)
 		goto out_disable_phy;
 
+<<<<<<< HEAD
 	ufs_qcom_get_controller_revision(hba, &host->hw_ver.major,
 		&host->hw_ver.minor, &host->hw_ver.step);
+=======
+	ufs_qcom_parse_lpm(host);
+	if (host->disable_lpm)
+		pm_runtime_forbid(host->hba->dev);
+	ufs_qcom_set_caps(hba);
+>>>>>>> 0e91d2a... Nougat
 	ufs_qcom_advertise_quirks(hba);
 
 	hba->caps |= UFSHCD_CAP_CLK_GATING | UFSHCD_CAP_CLK_SCALING;
@@ -1429,7 +1507,8 @@ void ufs_qcom_print_hw_debug_reg_all(struct ufs_hba *hba, void *priv,
 	print_fn(hba, UFS_UFS_DBG_RD_PRDT_RAM, 64,
 			"UFS_UFS_DBG_RD_PRDT_RAM ", priv);
 
-	ufshcd_writel(hba, (reg & ~UFS_BIT(17)), REG_UFS_CFG1);
+	/* clear bit 17 - UTP_DBG_RAMS_EN */
+	ufshcd_rmwl(hba, UFS_BIT(17), 0, REG_UFS_CFG1);
 
 	print_fn(hba, UFS_DBG_RD_REG_UAWM, 4,
 			"UFS_DBG_RD_REG_UAWM ", priv);
@@ -1616,4 +1695,70 @@ const struct ufs_hba_variant_ops ufs_hba_qcom_vops = {
 	.add_debugfs		= ufs_qcom_dbg_add_debugfs,
 #endif
 };
+<<<<<<< HEAD
 EXPORT_SYMBOL(ufs_hba_qcom_vops);
+=======
+
+static struct ufs_hba_crypto_variant_ops ufs_hba_crypto_variant_ops = {
+	.crypto_req_setup	= ufs_qcom_crypto_req_setup,
+	.crypto_engine_cfg_start	= ufs_qcom_crytpo_engine_cfg_start,
+	.crypto_engine_cfg_end	= ufs_qcom_crytpo_engine_cfg_end,
+	.crypto_engine_reset	  = ufs_qcom_crytpo_engine_reset,
+	.crypto_engine_get_status = ufs_qcom_crypto_engine_get_status,
+};
+
+static struct ufs_hba_pm_qos_variant_ops ufs_hba_pm_qos_variant_ops = {
+	.req_start	= ufs_qcom_pm_qos_req_start,
+	.req_end	= ufs_qcom_pm_qos_req_end,
+};
+
+static struct ufs_hba_variant ufs_hba_qcom_variant = {
+	.name		= "qcom",
+	.vops		= &ufs_hba_qcom_vops,
+	.crypto_vops	= &ufs_hba_crypto_variant_ops,
+	.pm_qos_vops	= &ufs_hba_pm_qos_variant_ops,
+};
+
+/**
+ * ufs_qcom_probe - probe routine of the driver
+ * @pdev: pointer to platform device handle
+ *
+ * Always returns 0
+ */
+static int ufs_qcom_probe(struct platform_device *pdev)
+{
+	ufs_hba_qcom_variant.dev = &pdev->dev;
+	dev_set_drvdata(&pdev->dev, (void *)&ufs_hba_qcom_variant);
+	return 0;
+}
+
+/**
+ * ufs_qcom_remove - set driver_data of the device to NULL
+ * @pdev: pointer to platform device handle
+ *
+ * Always returns 0
+ */
+static int ufs_qcom_remove(struct platform_device *pdev)
+{
+	dev_set_drvdata(&pdev->dev, NULL);
+	return 0;
+}
+
+static const struct of_device_id ufs_qcom_of_match[] = {
+	{ .compatible = "qcom,ufs_variant"},
+	{},
+};
+
+static struct platform_driver ufs_qcom_pltform = {
+	.probe	= ufs_qcom_probe,
+	.remove	= ufs_qcom_remove,
+	.driver	= {
+		.name	= "ufs_qcom",
+		.owner	= THIS_MODULE,
+		.of_match_table = of_match_ptr(ufs_qcom_of_match),
+	},
+};
+module_platform_driver(ufs_qcom_pltform);
+
+MODULE_LICENSE("GPL v2");
+>>>>>>> 0e91d2a... Nougat

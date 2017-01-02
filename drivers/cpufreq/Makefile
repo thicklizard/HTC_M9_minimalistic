@@ -1,5 +1,9 @@
 # CPUfreq core
 obj-$(CONFIG_CPU_FREQ)			+= cpufreq.o freq_table.o
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0e91d2a... Nougat
 # CPUfreq stats
 obj-$(CONFIG_CPU_FREQ_STAT)             += cpufreq_stats.o
 

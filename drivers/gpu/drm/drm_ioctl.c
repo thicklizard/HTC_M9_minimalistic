@@ -38,6 +38,12 @@
 
 #include <linux/pci.h>
 #include <linux/export.h>
+<<<<<<< HEAD
+=======
+
+static int drm_version(struct drm_device *dev, void *data,
+		       struct drm_file *file_priv);
+>>>>>>> 0e91d2a... Nougat
 
 /**
  * Get the bus id.
@@ -181,7 +187,12 @@ int drm_getmap(struct drm_device *dev, void *data,
 	map->type = r_list->map->type;
 	map->flags = r_list->map->flags;
 	map->handle = (void *)(unsigned long) r_list->user_token;
+<<<<<<< HEAD
 	map->mtrr = r_list->map->mtrr;
+=======
+	map->mtrr = arch_phys_wc_index(r_list->map->mtrr);
+
+>>>>>>> 0e91d2a... Nougat
 	mutex_unlock(&dev->struct_mutex);
 
 	return 0;

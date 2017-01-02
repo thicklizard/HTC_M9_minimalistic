@@ -1121,7 +1121,41 @@ void page_add_file_rmap(struct page *page)
 		__inc_zone_page_state(page, NR_FILE_MAPPED);
 		mem_cgroup_inc_page_stat(page, MEMCG_NR_FILE_MAPPED);
 	}
+<<<<<<< HEAD
 	mem_cgroup_end_update_page_stat(page, &locked, &flags);
+=======
+	mem_cgroup_end_page_stat(memcg, &locked, &flags);
+}
+
+static void page_remove_file_rmap(struct page *page)
+{
+	struct mem_cgroup *memcg;
+	unsigned long flags;
+	bool locked;
+
+	memcg = mem_cgroup_begin_page_stat(page, &locked, &flags);
+
+	/* page still mapped by someone else? */
+	if (!atomic_add_negative(-1, &page->_mapcount))
+		goto out;
+
+	/* Hugepages are not counted in NR_FILE_MAPPED for now. */
+	if (unlikely(PageHuge(page)))
+		goto out;
+
+	/*
+	 * We use the irq-unsafe __{inc|mod}_zone_page_stat because
+	 * these counters are not modified in interrupt context, and
+	 * pte lock(a spinlock) is held, which implies preemption disabled.
+	 */
+	__dec_zone_page_state(page, NR_FILE_MAPPED);
+	mem_cgroup_dec_page_stat(memcg, MEM_CGROUP_STAT_FILE_MAPPED);
+
+	if (unlikely(PageMlocked(page)))
+		clear_page_mlock(page);
+out:
+	mem_cgroup_end_page_stat(memcg, &locked, &flags);
+>>>>>>> 0e91d2a... Nougat
 }
 
 /**

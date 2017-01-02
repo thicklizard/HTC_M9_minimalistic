@@ -26,6 +26,7 @@ struct msm_hdmi_mhl_ops {
 int msm_hdmi_register_mhl(struct platform_device *pdev,
 			  struct msm_hdmi_mhl_ops *ops, void *data);
 
+<<<<<<< HEAD
 #ifdef CONFIG_HTC_MHL_DETECTION_8620
 /***********************************
  Direction: sii8620 drvier -> hdmi driver
@@ -34,6 +35,17 @@ struct t_mhl_disconnect_notifier{
         struct list_head mhl_notifier_link;
         const char *name;
         void (*func)(void);
+=======
+enum ds_event_type {
+	AUDIO_STATE,
+};
+
+struct msm_hdmi_sp_ops {
+	int (*set_sp_max_pclk)(struct platform_device *pdev, u32 max_val);
+	int (*set_upstream_hpd)(struct platform_device *pdev, uint8_t on);
+	int (*set_upstream_hdcp)(struct platform_device *pdev, uint8_t on);
+	int (*event_control)(int event, int val);
+>>>>>>> 0e91d2a... Nougat
 };
 int mhl_disconnect_register_notifier(struct t_mhl_disconnect_notifier *);
 static LIST_HEAD(g_lh_mhl_disconnect_notifier_list);

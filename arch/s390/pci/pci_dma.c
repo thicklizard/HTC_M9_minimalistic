@@ -289,7 +289,11 @@ static dma_addr_t s390_dma_map_pages(struct device *dev, struct page *page,
 		flags |= ZPCI_TABLE_PROTECTED;
 
 	if (!dma_update_trans(zdev, pa, dma_addr, size, flags)) {
+<<<<<<< HEAD
 		atomic64_add(nr_pages, (atomic64_t *) &zdev->fmb->mapped_pages);
+=======
+		atomic64_add(nr_pages, &zdev->mapped_pages);
+>>>>>>> 0e91d2a... Nougat
 		return dma_addr + (offset & ~PAGE_MASK);
 	}
 
@@ -314,7 +318,11 @@ static void s390_dma_unmap_pages(struct device *dev, dma_addr_t dma_addr,
 			     ZPCI_TABLE_PROTECTED | ZPCI_PTE_INVALID))
 		dev_err(dev, "Failed to unmap addr: %Lx\n", dma_addr);
 
+<<<<<<< HEAD
 	atomic64_add(npages, (atomic64_t *) &zdev->fmb->unmapped_pages);
+=======
+	atomic64_add(npages, &zdev->unmapped_pages);
+>>>>>>> 0e91d2a... Nougat
 	iommu_page_index = (dma_addr - zdev->start_dma) >> PAGE_SHIFT;
 	dma_free_iommu(zdev, iommu_page_index, npages);
 }
@@ -344,6 +352,10 @@ static void *s390_dma_alloc(struct device *dev, size_t size,
 		return NULL;
 	}
 
+<<<<<<< HEAD
+=======
+	atomic64_add(size / PAGE_SIZE, &zdev->allocated_pages);
+>>>>>>> 0e91d2a... Nougat
 	if (dma_handle)
 		*dma_handle = map;
 	return (void *) pa;
@@ -353,8 +365,16 @@ static void s390_dma_free(struct device *dev, size_t size,
 			  void *pa, dma_addr_t dma_handle,
 			  struct dma_attrs *attrs)
 {
+<<<<<<< HEAD
 	s390_dma_unmap_pages(dev, dma_handle, PAGE_ALIGN(size),
 			     DMA_BIDIRECTIONAL, NULL);
+=======
+	struct zpci_dev *zdev = get_zdev(to_pci_dev(dev));
+
+	size = PAGE_ALIGN(size);
+	atomic64_sub(size / PAGE_SIZE, &zdev->allocated_pages);
+	s390_dma_unmap_pages(dev, dma_handle, size, DMA_BIDIRECTIONAL, NULL);
+>>>>>>> 0e91d2a... Nougat
 	free_pages((unsigned long) pa, get_order(size));
 }
 

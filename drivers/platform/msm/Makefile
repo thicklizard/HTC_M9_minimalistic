@@ -19,6 +19,7 @@ obj-$(CONFIG_QPNP_VIBRATOR) += qpnp-vibrator.o
 obj-$(CONFIG_QPNP_CLKDIV) += qpnp-clkdiv.o
 obj-$(CONFIG_QPNP_COINCELL) += qpnp-coincell.o
 obj-$(CONFIG_MSM_AVTIMER) += avtimer.o
+<<<<<<< HEAD
 obj-$(CONFIG_SSM) += ssm.o
 obj-$(CONFIG_QPNP_REVID) += qpnp-revid.o
 obj-$(CONFIG_QPNP_USB_DETECT) += qpnp-usbdetect.o
@@ -31,3 +32,8 @@ obj-$(CONFIG_QPNP_HAPTIC) += qpnp-haptic.o
 obj-$(CONFIG_QMP_CORE) += qmp_core/
 obj-$(CONFIG_QPNP_PMIC_DOG) += qpnp-pmic-dog.o
 obj-$(CONFIG_SEEMP_CORE) += seemp_core/
+=======
+obj-$(CONFIG_MSM_11AD) += msm_11ad/
+obj-$(CONFIG_MSM_MHI_DEV) += mhi_dev/
+obj-$(CONFIG_SSM) += ssm.o
+>>>>>>> 0e91d2a... Nougat

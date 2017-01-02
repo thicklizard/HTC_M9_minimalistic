@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -60,6 +60,26 @@ struct hdmi_edid_sink_data {
 	u32 preferred_video_format;
 };
 
+<<<<<<< HEAD
+=======
+struct hdmi_edid_sink_caps {
+	u32 max_pclk_in_hz;
+	bool scdc_present;
+	bool scramble_support; 
+	bool read_req_support;
+	bool osd_disparity;
+	bool dual_view_support;
+	bool ind_view_support;
+};
+
+struct hdmi_edid_override_data {
+	int scramble;
+	int sink_mode;
+	int format;
+	int vic;
+};
+
+>>>>>>> 0e91d2a... Nougat
 struct hdmi_edid_ctrl {
 	u8 pt_scan_info;
 	u8 it_scan_info;
@@ -75,10 +95,22 @@ struct hdmi_edid_ctrl {
 	int adb_size;
 	u8 spkr_alloc_data_block[MAX_SPKR_ALLOC_DATA_BLOCK_SIZE];
 	int sadb_size;
+<<<<<<< HEAD
 	u8 edid_buf[MAX_EDID_BLOCK_SIZE];
 
 	struct hdmi_edid_sink_data sink_data;
 	struct hdmi_edid_init_data init_data;
+=======
+	u8 edid_buf[MAX_EDID_SIZE];
+	char vendor_id[EDID_VENDOR_ID_SIZE];
+	bool keep_resv_timings;
+	bool edid_override;
+
+	struct hdmi_edid_sink_data sink_data;
+	struct hdmi_edid_init_data init_data;
+	struct hdmi_edid_sink_caps sink_caps;
+	struct hdmi_edid_override_data override_data;
+>>>>>>> 0e91d2a... Nougat
 };
 
 static ssize_t hdmi_edid_sysfs_rda_audio_data_block(struct device *dev,
@@ -162,23 +194,77 @@ static ssize_t hdmi_edid_sysfs_rda_spkr_alloc_data_block(struct device *dev,
 static DEVICE_ATTR(spkr_alloc_data_block, S_IRUGO,
 	hdmi_edid_sysfs_rda_spkr_alloc_data_block, NULL);
 
+<<<<<<< HEAD
+=======
+static ssize_t hdmi_edid_sysfs_wta_modes(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	ssize_t ret = strnlen(buf, PAGE_SIZE);
+	struct hdmi_edid_ctrl *edid_ctrl = hdmi_edid_get_ctrl(dev);
+
+	if (!edid_ctrl) {
+		DEV_ERR("%s: invalid ctrl\n", __func__);
+		ret = -EINVAL;
+		goto error;
+	}
+
+	if (sscanf(buf, "%d %d %d %d",
+		&edid_ctrl->override_data.scramble,
+		&edid_ctrl->override_data.sink_mode,
+		&edid_ctrl->override_data.format,
+		&edid_ctrl->override_data.vic) != 4) {
+		DEV_ERR("could not read input\n");
+		ret = -EINVAL;
+		goto bail;
+	}
+
+	edid_ctrl->edid_override = true;
+	return ret;
+bail:
+	DEV_DBG("%s: reset edid override\n", __func__);
+	edid_ctrl->edid_override = false;
+error:
+	return ret;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static ssize_t hdmi_edid_sysfs_rda_modes(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
 	ssize_t ret = 0;
 	int i;
+<<<<<<< HEAD
 	struct hdmi_edid_ctrl *edid_ctrl =
 		hdmi_get_featuredata_from_sysfs_dev(dev, HDMI_TX_FEAT_EDID);
+=======
+	struct hdmi_edid_ctrl *edid_ctrl = hdmi_edid_get_ctrl(dev);
+	u32 num_of_elements = 0;
+	struct disp_mode_info *video_mode;
+>>>>>>> 0e91d2a... Nougat
 
 	if (!edid_ctrl) {
 		DEV_ERR("%s: invalid input\n", __func__);
 		return -EINVAL;
 	}
 
+	num_of_elements = edid_ctrl->sink_data.num_of_elements;
+	video_mode = edid_ctrl->sink_data.disp_mode_list;
+
+	if (edid_ctrl->edid_override && (edid_ctrl->override_data.vic > 0)) {
+		num_of_elements = 1;
+		edid_ctrl->sink_data.disp_mode_list[0].video_format =
+			edid_ctrl->override_data.vic;
+	}
+
 	buf[0] = 0;
+<<<<<<< HEAD
 	if (edid_ctrl->sink_data.num_of_elements) {
 		u32 *video_mode = edid_ctrl->sink_data.disp_mode_list;
 		for (i = 0; i < edid_ctrl->sink_data.num_of_elements; ++i) {
+=======
+	if (num_of_elements) {
+		for (i = 0; i < num_of_elements; i++) {
+>>>>>>> 0e91d2a... Nougat
 			if (ret > 0)
 				ret += scnprintf(buf + ret, PAGE_SIZE - ret,
 					",%d", *video_mode++);
@@ -197,6 +283,65 @@ static ssize_t hdmi_edid_sysfs_rda_modes(struct device *dev,
 	return ret;
 } 
 static DEVICE_ATTR(edid_modes, S_IRUGO, hdmi_edid_sysfs_rda_modes, NULL);
+
+static ssize_t hdmi_edid_sysfs_rda_res_info_data(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	ssize_t ret;
+	u32 i, no_of_elem, offset = 0;
+	struct msm_hdmi_mode_timing_info info = {0};
+	struct hdmi_edid_ctrl *edid_ctrl = hdmi_edid_get_ctrl(dev);
+	struct disp_mode_info *minfo = NULL;
+
+	if (!edid_ctrl) {
+		DEV_ERR("%s: invalid input\n", __func__);
+		return -EINVAL;
+	}
+
+	no_of_elem = edid_ctrl->sink_data.num_of_elements;
+	minfo = edid_ctrl->sink_data.disp_mode_list;
+
+	if (edid_ctrl->edid_override && (edid_ctrl->override_data.vic > 0)) {
+		no_of_elem = 1;
+		minfo[0].video_format = edid_ctrl->override_data.vic;
+	}
+
+	for (i = 0; i < no_of_elem; i++) {
+		ret = hdmi_get_supported_mode(&info,
+			edid_ctrl->init_data.ds_data,
+			minfo->video_format);
+
+		if (edid_ctrl->edid_override &&
+			(edid_ctrl->override_data.format > 0))
+			info.pixel_formats = edid_ctrl->override_data.format;
+		else
+			info.pixel_formats =
+			    (minfo->rgb_support ?
+				MSM_HDMI_RGB_888_24BPP_FORMAT : 0) |
+			    (minfo->y420_support ?
+				MSM_HDMI_YUV_420_12BPP_FORMAT : 0);
+
+		minfo++;
+		if (ret || !info.supported)
+			continue;
+
+		offset += scnprintf(buf + offset, PAGE_SIZE - offset,
+			"%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+			info.video_format, info.active_h,
+			info.front_porch_h, info.pulse_width_h,
+			info.back_porch_h, info.active_low_h,
+			info.active_v, info.front_porch_v,
+			info.pulse_width_v, info.back_porch_v,
+			info.active_low_v, info.pixel_freq,
+			info.refresh_rate, info.interlaced,
+			info.supported, info.ar,
+			info.pixel_formats);
+	}
+
+	return offset;
+}
+static DEVICE_ATTR(res_info_data, S_IRUGO, hdmi_edid_sysfs_rda_res_info_data,
+	NULL);
 
 static ssize_t hdmi_edid_sysfs_wta_res_info(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
@@ -257,11 +402,30 @@ static ssize_t hdmi_edid_sysfs_rda_res_info(struct device *dev,
 		}
 	}
 
+	if (edid_ctrl->edid_override && (edid_ctrl->override_data.vic > 0)) {
+		no_of_elem = 1;
+		minfo[0].video_format = edid_ctrl->override_data.vic;
+	}
+
 	for (; i < no_of_elem && size_to_write < PAGE_SIZE; i++) {
 		ret = hdmi_get_supported_mode(&info,
 			edid_ctrl->init_data.ds_data,
 			*video_mode++);
 
+<<<<<<< HEAD
+=======
+		if (edid_ctrl->edid_override &&
+			(edid_ctrl->override_data.format > 0))
+			info.pixel_formats = edid_ctrl->override_data.format;
+		else
+			info.pixel_formats =
+			    (minfo->rgb_support ?
+				 MSM_HDMI_RGB_888_24BPP_FORMAT : 0) |
+			    (minfo->y420_support ?
+				MSM_HDMI_YUV_420_12BPP_FORMAT : 0);
+
+		minfo++;
+>>>>>>> 0e91d2a... Nougat
 		if (ret || !info.supported)
 			continue;
 
@@ -449,6 +613,11 @@ static struct attribute *hdmi_edid_fs_attrs[] = {
 	&dev_attr_edid_audio_latency.attr,
 	&dev_attr_edid_video_latency.attr,
 	&dev_attr_res_info.attr,
+<<<<<<< HEAD
+=======
+	&dev_attr_res_info_data.attr,
+	&dev_attr_add_res.attr,
+>>>>>>> 0e91d2a... Nougat
 	NULL,
 };
 
@@ -1571,10 +1740,19 @@ int hdmi_edid_read(void *input, u8 write_burst_vic)
 
 	if (!edid_ctrl) {
 		DEV_ERR("%s: invalid input\n", __func__);
+<<<<<<< HEAD
 		return -EINVAL;
 	}
 
 	edid_ctrl->page_id = MSM_HDMI_INIT_RES_PAGE;
+=======
+		status = -EINVAL;
+		goto err_invalid_data;
+	}
+
+	
+	hdmi_edid_reset_parser(edid_ctrl);
+>>>>>>> 0e91d2a... Nougat
 
 	edid_buf = edid_ctrl->edid_buf;
 
@@ -1737,13 +1915,20 @@ end:
 u32 hdmi_edid_get_sink_mode(void *input)
 {
 	struct hdmi_edid_ctrl *edid_ctrl = (struct hdmi_edid_ctrl *)input;
+	bool sink_mode;
 
 	if (!edid_ctrl) {
 		DEV_ERR("%s: invalid input\n", __func__);
 		return 0;
 	}
 
-	return edid_ctrl->sink_mode;
+	if (edid_ctrl->edid_override &&
+		(edid_ctrl->override_data.sink_mode != -1))
+		sink_mode = edid_ctrl->override_data.sink_mode;
+	else
+		sink_mode = edid_ctrl->sink_mode;
+
+	return sink_mode;
 } 
 
 bool hdmi_edid_is_s3d_mode_supported(void *input, u32 video_mode, u32 s3d_mode)
@@ -1772,6 +1957,59 @@ bool hdmi_edid_is_s3d_mode_supported(void *input, u32 video_mode, u32 s3d_mode)
 	return ret;
 }
 
+<<<<<<< HEAD
+=======
+bool hdmi_edid_get_scdc_support(void *input)
+{
+	struct hdmi_edid_ctrl *edid_ctrl = input;
+	bool scdc_present;
+
+	if (!edid_ctrl) {
+		DEV_ERR("%s: invalid input\n", __func__);
+		return false;
+	}
+
+	if (edid_ctrl->edid_override &&
+		(edid_ctrl->override_data.scramble != -1))
+		scdc_present = edid_ctrl->override_data.scramble;
+	else
+		scdc_present = edid_ctrl->sink_caps.scdc_present;
+
+	return scdc_present;
+}
+
+bool hdmi_edid_sink_scramble_override(void *input)
+{
+	struct hdmi_edid_ctrl *edid_ctrl = (struct hdmi_edid_ctrl *)input;
+
+	if (edid_ctrl->edid_override &&
+		(edid_ctrl->override_data.scramble != -1))
+		return true;
+
+	return false;
+
+}
+
+bool hdmi_edid_get_sink_scrambler_support(void *input)
+{
+	struct hdmi_edid_ctrl *edid_ctrl = (struct hdmi_edid_ctrl *)input;
+	bool scramble_support;
+
+	if (!edid_ctrl) {
+		DEV_ERR("%s: invalid input\n", __func__);
+		return 0;
+	}
+
+	if (edid_ctrl->edid_override &&
+		(edid_ctrl->override_data.scramble != -1))
+		scramble_support = edid_ctrl->override_data.scramble;
+	else
+		scramble_support = edid_ctrl->sink_caps.scramble_support;
+
+	return scramble_support;
+}
+
+>>>>>>> 0e91d2a... Nougat
 int hdmi_edid_get_audio_blk(void *input, struct msm_hdmi_audio_edid_blk *blk)
 {
 	struct hdmi_edid_ctrl *edid_ctrl = (struct hdmi_edid_ctrl *)input;

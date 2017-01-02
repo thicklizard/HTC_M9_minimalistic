@@ -18,12 +18,16 @@
 #include "common.h"
 #include "mx31.h"
 
+<<<<<<< HEAD
 static void __init imx31_dt_init(void)
 {
 	of_platform_populate(NULL, of_default_bus_match_table, NULL, NULL);
 }
 
 static const char *imx31_dt_board_compat[] __initdata = {
+=======
+static const char * const imx31_dt_board_compat[] __initconst = {
+>>>>>>> 0e91d2a... Nougat
 	"fsl,imx31",
 	NULL
 };
@@ -39,7 +43,5 @@ DT_MACHINE_START(IMX31_DT, "Freescale i.MX31 (Device Tree Support)")
 	.init_irq	= mx31_init_irq,
 	.handle_irq	= imx31_handle_irq,
 	.init_time	= imx31_dt_timer_init,
-	.init_machine	= imx31_dt_init,
 	.dt_compat	= imx31_dt_board_compat,
-	.restart	= mxc_restart,
 MACHINE_END

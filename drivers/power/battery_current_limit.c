@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -248,6 +248,7 @@ static void __ref bcl_handle_hotplug(struct work_struct *work)
 static int __ref bcl_cpu_ctrl_callback(struct notifier_block *nfb,
 	unsigned long action, void *hcpu)
 {
+<<<<<<< HEAD
 	uint32_t cpu = (uintptr_t)hcpu;
 
 	if (action == CPU_UP_PREPARE || action == CPU_UP_PREPARE_FROZEN) {
@@ -260,6 +261,21 @@ static int __ref bcl_cpu_ctrl_callback(struct notifier_block *nfb,
 		} else {
 			pr_debug("voting for CPU%d to be online\n", cpu);
 		}
+=======
+	int cpu, ret = 0;
+	union device_request cpufreq_req;
+
+	trace_bcl_sw_mitigation_event("Start Frequency Mitigate");
+	cpufreq_req.freq.max_freq = UINT_MAX;
+	cpufreq_req.freq.min_freq = CPUFREQ_MIN_NO_MITIGATION;
+
+	if (bcl_vph_state == BCL_LOW_THRESHOLD
+		|| bcl_ibat_state == BCL_HIGH_THRESHOLD
+		|| bcl_soc_state == BCL_LOW_THRESHOLD) {
+		cpufreq_req.freq.max_freq = (gbcl->bcl_monitor_type
+			== BCL_IBAT_MONITOR_TYPE) ? gbcl->btm_freq_max
+			: gbcl->bcl_p_freq_max;
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	return NOTIFY_OK;

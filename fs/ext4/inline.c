@@ -43,11 +43,6 @@ static int get_max_inline_xattr_value_size(struct inode *inode,
 			EXT4_I(inode)->i_extra_isize -
 			sizeof(struct ext4_xattr_ibody_header);
 
-	/*
-	 * We need to subtract another sizeof(__u32) since an in-inode xattr
-	 * needs an empty 4 bytes to indicate the gap between the xattr entry
-	 * and the name/value pair.
-	 */
 	if (!ext4_test_inode_state(inode, EXT4_STATE_XATTR))
 		return EXT4_XATTR_SIZE(min_offs -
 			EXT4_XATTR_LEN(strlen(EXT4_XATTR_SYSTEM_DATA)) -
@@ -57,7 +52,7 @@ static int get_max_inline_xattr_value_size(struct inode *inode,
 	header = IHDR(inode, raw_inode);
 	entry = IFIRST(header);
 
-	/* Compute min_offs. */
+	
 	for (; !IS_LAST_ENTRY(entry); entry = EXT4_XATTR_NEXT(entry)) {
 		if (!entry->e_value_block && entry->e_value_size) {
 			size_t offs = le16_to_cpu(entry->e_value_offs);
@@ -87,11 +82,6 @@ out:
 	return free;
 }
 
-/*
- * Get the maximum size we now can store in an inode.
- * If we can't find the space for a xattr entry, don't use the space
- * of the extents since we have no space to indicate the inline data.
- */
 int ext4_get_max_inline_size(struct inode *inode)
 {
 	int error, max_inline_size;
@@ -120,6 +110,7 @@ int ext4_get_max_inline_size(struct inode *inode)
 	return max_inline_size + EXT4_MIN_INLINE_DATA_SIZE;
 }
 
+<<<<<<< HEAD
 int ext4_has_inline_data(struct inode *inode)
 {
 	return ext4_test_inode_flag(inode, EXT4_INODE_INLINE_DATA) &&
@@ -131,6 +122,8 @@ int ext4_has_inline_data(struct inode *inode)
  * currently only used in a code path coming form ext4_iget, before
  * the new inode has been unlocked
  */
+=======
+>>>>>>> 0e91d2a... Nougat
 int ext4_find_inline_data_nolock(struct inode *inode)
 {
 	struct ext4_xattr_ibody_find is = {
@@ -205,6 +198,7 @@ out:
 	return cp_len;
 }
 
+<<<<<<< HEAD
 /*
  * write the buffer to the inline inode.
  * If 'create' is set, we don't need to do the extra copy in the xattr
@@ -213,6 +207,10 @@ out:
  */
 void ext4_write_inline_data(struct inode *inode, struct ext4_iloc *iloc,
 			    void *buffer, loff_t pos, unsigned int len)
+=======
+static void ext4_write_inline_data(struct inode *inode, struct ext4_iloc *iloc,
+				   void *buffer, loff_t pos, unsigned int len)
+>>>>>>> 0e91d2a... Nougat
 {
 	struct ext4_xattr_entry *entry;
 	struct ext4_xattr_ibody_header *header;
@@ -276,7 +274,7 @@ static int ext4_create_inline_data(handle_t *handle,
 		len = 0;
 	}
 
-	/* Insert the the xttr entry. */
+	
 	i.value = value;
 	i.value_len = len;
 
@@ -323,7 +321,7 @@ static int ext4_update_inline_data(handle_t *handle, struct inode *inode,
 		.name = EXT4_XATTR_SYSTEM_DATA,
 	};
 
-	/* If the old space is ok, write the data directly. */
+	
 	if (len <= EXT4_I(inode)->i_inline_size)
 		return 0;
 
@@ -351,7 +349,7 @@ static int ext4_update_inline_data(handle_t *handle, struct inode *inode,
 	if (error)
 		goto out;
 
-	/* Update the xttr entry. */
+	
 	i.value = value;
 	i.value_len = len;
 
@@ -502,10 +500,6 @@ int ext4_readpage_inline(struct inode *inode, struct page *page)
 		return -EAGAIN;
 	}
 
-	/*
-	 * Current inline data can only exist in the 1st page,
-	 * So for all the other pages, just set them uptodate.
-	 */
 	if (!page->index)
 		ret = ext4_read_inline_page(inode, page);
 	else if (!PageUptodate(page)) {
@@ -531,10 +525,6 @@ static int ext4_convert_inline_data_to_extent(struct address_space *mapping,
 	struct ext4_iloc iloc;
 
 	if (!ext4_has_inline_data(inode)) {
-		/*
-		 * clear the flag so that no new write
-		 * will trap here again.
-		 */
 		ext4_clear_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA);
 		return 0;
 	}
@@ -553,8 +543,6 @@ retry:
 		goto out;
 	}
 
-	/* We cannot recurse into the filesystem as the transaction is already
-	 * started */
 	flags |= AOP_FLAG_NOFS;
 
 	page = grab_cache_page_write_begin(mapping, 0, flags);
@@ -565,7 +553,7 @@ retry:
 
 	down_write(&EXT4_I(inode)->xattr_sem);
 	sem_held = 1;
-	/* If some one has already done this for us, just exit. */
+	
 	if (!ext4_has_inline_data(inode)) {
 		ret = 0;
 		goto out;
@@ -603,12 +591,6 @@ retry:
 		ext4_journal_stop(handle);
 		handle = NULL;
 		ext4_truncate_failed_write(inode);
-		/*
-		 * If truncate failed early the inode might
-		 * still be on the orphan list; we need to
-		 * make sure the inode is removed from the
-		 * orphan list in that case.
-		 */
 		if (inode->i_nlink)
 			ext4_orphan_del(NULL, inode);
 	}
@@ -630,12 +612,6 @@ out:
 	return ret;
 }
 
-/*
- * Try to write data in the inode.
- * If the inode has inline data, check whether the new write can be
- * in the inode also. If not, create the page the handle, move the data
- * to the page make it update and let the later codes create extent for it.
- */
 int ext4_try_to_write_inline_data(struct address_space *mapping,
 				  struct inode *inode,
 				  loff_t pos, unsigned len,
@@ -654,10 +630,6 @@ int ext4_try_to_write_inline_data(struct address_space *mapping,
 	if (ret)
 		return ret;
 
-	/*
-	 * The possible write could happen in the inode,
-	 * so try to reserve the space in inode first.
-	 */
 	handle = ext4_journal_start(inode, EXT4_HT_INODE, 1);
 	if (IS_ERR(handle)) {
 		ret = PTR_ERR(handle);
@@ -669,7 +641,7 @@ int ext4_try_to_write_inline_data(struct address_space *mapping,
 	if (ret && ret != -ENOSPC)
 		goto out;
 
-	/* We don't have space in inline inode, so convert it to extent. */
+	
 	if (ret == -ENOSPC) {
 		ext4_journal_stop(handle);
 		brelse(iloc.bh);
@@ -741,7 +713,7 @@ int ext4_write_inline_data_end(struct inode *inode, loff_t pos, unsigned len,
 	ext4_write_inline_data(inode, &iloc, kaddr, pos, len);
 	kunmap_atomic(kaddr);
 	SetPageUptodate(page);
-	/* clear page dirty so that writepages wouldn't work for us. */
+	
 	ClearPageDirty(page);
 
 	up_write(&EXT4_I(inode)->xattr_sem);
@@ -774,15 +746,6 @@ ext4_journalled_write_inline_data(struct inode *inode,
 	return iloc.bh;
 }
 
-/*
- * Try to make the page cache and handle ready for the inline data case.
- * We can call this function in 2 cases:
- * 1. The inode is created and the first write exceeds inline size. We can
- *    clear the inode state safely.
- * 2. The inode has inline data, then we need to read the data, make it
- *    update and dirty so that ext4_da_writepages can handle it. We don't
- *    need to start the journal since the file's metatdata isn't changed now.
- */
 static int ext4_da_convert_inline_data_to_extent(struct address_space *mapping,
 						 struct inode *inode,
 						 unsigned flags,
@@ -878,10 +841,6 @@ int ext4_da_write_inline_data_begin(struct address_space *mapping,
 		goto out;
 	}
 
-	/*
-	 * We cannot recurse into the filesystem as the transaction
-	 * is already started.
-	 */
 	flags |= AOP_FLAG_NOFS;
 
 	page = grab_cache_page_write_begin(mapping, 0, flags);
@@ -926,13 +885,6 @@ int ext4_da_write_inline_data_end(struct inode *inode, loff_t pos,
 
 	copied = ext4_write_inline_data_end(inode, pos, len, copied, page);
 
-	/*
-	 * No need to use i_size_read() here, the i_size
-	 * cannot change under us because we hold i_mutex.
-	 *
-	 * But it's important to update i_size while still holding page lock:
-	 * page writeout could otherwise come in and zero beyond i_size.
-	 */
 	if (pos+copied > inode->i_size) {
 		i_size_write(inode, pos+copied);
 		i_size_changed = 1;
@@ -940,12 +892,6 @@ int ext4_da_write_inline_data_end(struct inode *inode, loff_t pos,
 	unlock_page(page);
 	page_cache_release(page);
 
-	/*
-	 * Don't mark the inode dirty under page lock. First, it unnecessarily
-	 * makes the holding time of page lock longer. Second, it forces lock
-	 * ordering of page lock and transaction start for journaling
-	 * filesystems.
-	 */
 	if (i_size_changed)
 		mark_inode_dirty(inode);
 
@@ -980,11 +926,6 @@ void ext4_show_inline_dir(struct inode *dir, struct buffer_head *bh,
 #define ext4_show_inline_dir(dir, bh, inline_start, inline_size)
 #endif
 
-/*
- * Add a new entry into a inline dir.
- * It will return -ENOSPC if no space is available, and -EIO
- * and -EEXIST if directory entry already exists.
- */
 static int ext4_add_dirent_to_inline(handle_t *handle,
 				     struct dentry *dentry,
 				     struct inode *inode,
@@ -1012,17 +953,6 @@ static int ext4_add_dirent_to_inline(handle_t *handle,
 
 	ext4_show_inline_dir(dir, iloc->bh, inline_start, inline_size);
 
-	/*
-	 * XXX shouldn't update any times until successful
-	 * completion of syscall, but too many callers depend
-	 * on this.
-	 *
-	 * XXX similarly, too many callers depend on
-	 * ext4_new_inode() setting the times, but error
-	 * recovery deletes the inode, so the worst that can
-	 * happen is that the times are slightly out of date
-	 * and/or different from the directory change time.
-	 */
 	dir->i_mtime = dir->i_ctime = ext4_current_time(dir);
 	ext4_update_dx_flag(dir);
 	dir->i_version++;
@@ -1045,7 +975,6 @@ static void *ext4_get_inline_xattr_pos(struct inode *inode,
 	return (void *)IFIRST(header) + le16_to_cpu(entry->e_value_offs);
 }
 
-/* Set the final de to cover the whole block. */
 static void ext4_update_final_de(void *de_buf, int old_size, int new_size)
 {
 	struct ext4_dir_entry_2 *de, *prev_de;
@@ -1065,7 +994,7 @@ static void ext4_update_final_de(void *de_buf, int old_size, int new_size)
 		prev_de->rec_len = ext4_rec_len_to_disk(de_len + new_size -
 							old_size, new_size);
 	} else {
-		/* this is just created, so create an empty entry. */
+		
 		de->inode = 0;
 		de->rec_len = ext4_rec_len_to_disk(new_size, new_size);
 	}
@@ -1113,10 +1042,6 @@ static int ext4_finish_convert_inline_dir(handle_t *handle,
 	struct ext4_dir_entry_tail *t;
 	void *target = dir_block->b_data;
 
-	/*
-	 * First create "." and ".." and then copy the dir information
-	 * back to the block.
-	 */
 	de = (struct ext4_dir_entry_2 *)target;
 	de = ext4_init_dot_dotdot(inode, de,
 		inode->i_sb->s_blocksize, csum_size,
@@ -1172,6 +1097,17 @@ static int ext4_convert_inline_data_nolock(handle_t *handle,
 	if (error < 0)
 		goto out;
 
+<<<<<<< HEAD
+=======
+	if (S_ISDIR(inode->i_mode)) {
+		error = ext4_check_all_de(inode, iloc->bh,
+					buf + EXT4_INLINE_DOTDOT_SIZE,
+					inline_size - EXT4_INLINE_DOTDOT_SIZE);
+		if (error)
+			goto out;
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	error = ext4_destroy_inline_data_nolock(handle, inode);
 	if (error)
 		goto out;
@@ -1223,11 +1159,6 @@ out:
 	return error;
 }
 
-/*
- * Try to add the new entry to the inline data.
- * If succeeds, return 0. If not, extended the inline dir and copied data to
- * the new created block.
- */
 int ext4_try_add_inline_entry(handle_t *handle, struct dentry *dentry,
 			      struct inode *inode)
 {
@@ -1253,11 +1184,11 @@ int ext4_try_add_inline_entry(handle_t *handle, struct dentry *dentry,
 	if (ret != -ENOSPC)
 		goto out;
 
-	/* check whether it can be inserted to inline xattr space. */
+	
 	inline_size = EXT4_I(dir)->i_inline_size -
 			EXT4_MIN_INLINE_DATA_SIZE;
 	if (!inline_size) {
-		/* Try to use the xattr space.*/
+		
 		ret = ext4_update_inline_dir(handle, dir, &iloc);
 		if (ret && ret != -ENOSPC)
 			goto out;
@@ -1276,11 +1207,6 @@ int ext4_try_add_inline_entry(handle_t *handle, struct dentry *dentry,
 			goto out;
 	}
 
-	/*
-	 * The inline space is filled up, so create a new block for it.
-	 * As the extent tree will be created, we have to save the inline
-	 * dir first.
-	 */
 	ret = ext4_convert_inline_data_nolock(handle, dir, &iloc);
 
 out:
@@ -1290,11 +1216,6 @@ out:
 	return ret;
 }
 
-/*
- * This function fills a red-black tree with information from an
- * inlined dir.  It returns the number directory entries loaded
- * into the tree.  If there is an error it is returned in err.
- */
 int htree_inlinedir_to_tree(struct file *dir_file,
 			    struct inode *dir, ext4_lblk_t block,
 			    struct dx_hash_info *hinfo,
@@ -1338,11 +1259,6 @@ int htree_inlinedir_to_tree(struct file *dir_file,
 	pos = 0;
 	parent_ino = le32_to_cpu(((struct ext4_dir_entry_2 *)dir_buf)->inode);
 	while (pos < inline_size) {
-		/*
-		 * As inlined dir doesn't store any information about '.' and
-		 * only the inode number of '..' is stored, we have to handle
-		 * them differently.
-		 */
 		if (pos == 0) {
 			fake.inode = cpu_to_le32(inode->i_ino);
 			fake.name_len = 1;
@@ -1396,6 +1312,7 @@ out:
 	return ret;
 }
 
+<<<<<<< HEAD
 /*
  * So this function is called when the volume is mkfsed with
  * dir_index disabled. In order to keep f_pos persistent
@@ -1406,6 +1323,10 @@ out:
  */
 int ext4_read_inline_dir(struct file *filp,
 			 void *dirent, filldir_t filldir,
+=======
+int ext4_read_inline_dir(struct file *file,
+			 struct dir_context *ctx,
+>>>>>>> 0e91d2a... Nougat
 			 int *has_inline_data)
 {
 	int error = 0;
@@ -1448,18 +1369,12 @@ int ext4_read_inline_dir(struct file *filp,
 	parent_ino = le32_to_cpu(((struct ext4_dir_entry_2 *)dir_buf)->inode);
 	offset = filp->f_pos;
 
-	/*
-	 * dotdot_offset and dotdot_size is the real offset and
-	 * size for ".." and "." if the dir is block based while
-	 * the real size for them are only EXT4_INLINE_DOTDOT_SIZE.
-	 * So we will use extra_offset and extra_size to indicate them
-	 * during the inline dir iteration.
-	 */
 	dotdot_offset = EXT4_DIR_REC_LEN(1);
 	dotdot_size = dotdot_offset + EXT4_DIR_REC_LEN(2);
 	extra_offset = dotdot_size - EXT4_INLINE_DOTDOT_SIZE;
 	extra_size = extra_offset + inline_size;
 
+<<<<<<< HEAD
 	while (!error && !stored && filp->f_pos < extra_size) {
 revalidate:
 		/*
@@ -1501,6 +1416,24 @@ revalidate:
 			offset = i;
 			filp->f_pos = offset;
 			filp->f_version = inode->i_version;
+=======
+	if (file->f_version != inode->i_version) {
+		for (i = 0; i < extra_size && i < offset;) {
+			if (!i) {
+				i = dotdot_offset;
+				continue;
+			} else if (i == dotdot_offset) {
+				i = dotdot_size;
+				continue;
+			}
+			de = (struct ext4_dir_entry_2 *)
+				(dir_buf + i - extra_offset);
+			if (ext4_rec_len_from_disk(de->rec_len, extra_size)
+				< EXT4_DIR_REC_LEN(1))
+				break;
+			i += ext4_rec_len_from_disk(de->rec_len,
+						    extra_size);
+>>>>>>> 0e91d2a... Nougat
 		}
 
 		while (!error && filp->f_pos < extra_size) {
@@ -1580,11 +1513,6 @@ struct buffer_head *ext4_get_first_inline_block(struct inode *inode,
 	return iloc.bh;
 }
 
-/*
- * Try to create the inline data for the new dir.
- * If it succeeds, return 0, otherwise return the error.
- * In case of ENOSPC, the caller should create the normal disk layout dir.
- */
 int ext4_try_create_inline_dir(handle_t *handle, struct inode *parent,
 			       struct inode *inode)
 {
@@ -1600,10 +1528,6 @@ int ext4_try_create_inline_dir(handle_t *handle, struct inode *parent,
 	if (ret)
 		goto out;
 
-	/*
-	 * For inline dir, we only save the inode information for the ".."
-	 * and create a fake dentry to cover the left space.
-	 */
 	de = (struct ext4_dir_entry_2 *)ext4_raw_inode(&iloc)->i_block;
 	de->inode = cpu_to_le32(parent->i_ino);
 	de = (struct ext4_dir_entry_2 *)((void *)de + EXT4_INLINE_DOTDOT_SIZE);
@@ -1640,8 +1564,13 @@ struct buffer_head *ext4_find_inline_entry(struct inode *dir,
 	inline_start = (void *)ext4_raw_inode(&iloc)->i_block +
 						EXT4_INLINE_DOTDOT_SIZE;
 	inline_size = EXT4_MIN_INLINE_DATA_SIZE - EXT4_INLINE_DOTDOT_SIZE;
+#ifdef CONFIG_SDCARD_FS_CI_SEARCH
+	ret = search_dir(iloc.bh, inline_start, inline_size,
+			 dir, d_name, 0, res_dir, NULL);
+#else
 	ret = search_dir(iloc.bh, inline_start, inline_size,
 			 dir, d_name, 0, res_dir);
+#endif
 	if (ret == 1)
 		goto out_find;
 	if (ret < 0)
@@ -1653,8 +1582,13 @@ struct buffer_head *ext4_find_inline_entry(struct inode *dir,
 	inline_start = ext4_get_inline_xattr_pos(dir, &iloc);
 	inline_size = ext4_get_inline_size(dir) - EXT4_MIN_INLINE_DATA_SIZE;
 
+#ifdef CONFIG_SDCARD_FS_CI_SEARCH
+	ret = search_dir(iloc.bh, inline_start, inline_size,
+			 dir, d_name, 0, res_dir, NULL);
+#else
 	ret = search_dir(iloc.bh, inline_start, inline_size,
 			 dir, d_name, 0, res_dir);
+#endif
 	if (ret == 1)
 		goto out_find;
 
@@ -1721,9 +1655,6 @@ out:
 	return err;
 }
 
-/*
- * Get the inline dentry at offset.
- */
 static inline struct ext4_dir_entry_2 *
 ext4_get_inline_entry(struct inode *inode,
 		      struct ext4_iloc *iloc,
@@ -1856,14 +1787,6 @@ out:
 	return (error < 0 ? error : 0);
 }
 
-/*
- * Called during xattr set, and if we can sparse space 'needed',
- * just create the extent tree evict the data to the outer block.
- *
- * We use jbd2 instead of page cache to move data to the 1st block
- * so that the whole transaction can be committed as a whole and
- * the data isn't lost because of the delayed page cache write.
- */
 int ext4_try_to_evict_inline_data(handle_t *handle,
 				  struct inode *inode,
 				  int needed)
@@ -1933,7 +1856,7 @@ void ext4_inline_data_truncate(struct inode *inode, int *has_inline)
 	EXT4_I(inode)->i_disksize = i_size;
 
 	if (i_size < inline_size) {
-		/* Clear the content in the xattr space. */
+		
 		if (inline_size > EXT4_MIN_INLINE_DATA_SIZE) {
 			if (ext4_xattr_ibody_find(inode, &i, &is))
 				goto out_error;
@@ -1956,7 +1879,7 @@ void ext4_inline_data_truncate(struct inode *inode, int *has_inline)
 				goto out_error;
 		}
 
-		/* Clear the content within i_blocks. */
+		
 		if (i_size < EXT4_MIN_INLINE_DATA_SIZE) {
 			void *p = (void *) ext4_raw_inode(&is.iloc)->i_block;
 			memset(p + i_size, 0,

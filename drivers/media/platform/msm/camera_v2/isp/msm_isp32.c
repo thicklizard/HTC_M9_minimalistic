@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1499,6 +1503,12 @@ struct msm_vfe_hardware_info vfe32_hw_info = {
 			.get_error_mask = msm_vfe32_get_error_mask,
 			.process_error_status = msm_vfe32_process_error_status,
 			.get_overflow_mask = msm_vfe32_get_overflow_mask,
+<<<<<<< HEAD
+=======
+			.is_module_cfg_lock_needed =
+				msm_vfe32_is_module_cfg_lock_needed,
+			.ahb_clk_cfg = NULL,
+>>>>>>> 0e91d2a... Nougat
 		},
 		.stats_ops = {
 			.get_stats_idx = msm_vfe32_get_stats_idx,
@@ -1516,6 +1526,7 @@ struct msm_vfe_hardware_info vfe32_hw_info = {
 			.get_wm_mask = msm_vfe32_stats_get_wm_mask,
 			.get_frame_id = msm_vfe32_stats_get_frame_id,
 			.get_pingpong_status = msm_vfe32_get_pingpong_status,
+			.enable_stats_wm = NULL,
 		},
 	},
 	.dmi_reg_offset = 0x5A0,

@@ -463,6 +463,33 @@ static int dapm_connect_mux(struct snd_soc_dapm_context *dapm,
 	return -ENODEV;
 }
 
+<<<<<<< HEAD
+=======
+/* set up initial codec paths */
+static void dapm_set_mixer_path_status(struct snd_soc_dapm_widget *w,
+	struct snd_soc_dapm_path *p, int i)
+{
+	struct soc_mixer_control *mc = (struct soc_mixer_control *)
+		w->kcontrol_news[i].private_value;
+	unsigned int reg = mc->reg;
+	unsigned int shift = mc->shift;
+	unsigned int max = mc->max;
+	unsigned int mask = (1 << fls(max)) - 1;
+	unsigned int invert = mc->invert;
+	unsigned int val = 0;
+
+	if (reg != SND_SOC_NOPM) {
+		soc_dapm_read(w->dapm, reg, &val);
+		val = (val >> shift) & mask;
+		if (invert)
+			val = max - val;
+		p->connect = !!val;
+	} else {
+		p->connect = 0;
+	}
+}
+
+>>>>>>> 0e91d2a... Nougat
 /* connect mixer widget to its interconnecting audio paths */
 static int dapm_connect_mixer(struct snd_soc_dapm_context *dapm,
 	struct snd_soc_dapm_widget *src, struct snd_soc_dapm_widget *dest,
@@ -1777,6 +1804,7 @@ static ssize_t dapm_widget_power_read_file(struct file *file,
 					   size_t count, loff_t *ppos)
 {
 	struct snd_soc_dapm_widget *w = file->private_data;
+	struct snd_soc_card *card = w->dapm->card;
 	char *buf;
 	int in, out;
 	ssize_t ret;
@@ -1785,6 +1813,8 @@ static ssize_t dapm_widget_power_read_file(struct file *file,
 	buf = kmalloc(PAGE_SIZE, GFP_KERNEL);
 	if (!buf)
 		return -ENOMEM;
+
+	mutex_lock(&card->dapm_mutex);
 
 	in = is_connected_input_ep(w, NULL);
 	dapm_clear_walk_input(w->dapm, &w->sources);
@@ -1827,6 +1857,8 @@ static ssize_t dapm_widget_power_read_file(struct file *file,
 					p->name ? p->name : "static",
 					p->sink->name);
 	}
+
+	mutex_unlock(&card->dapm_mutex);
 
 	ret = simple_read_from_buffer(user_buf, count, ppos, buf, ret);
 
@@ -2094,6 +2126,28 @@ static ssize_t dapm_widget_show(struct device *dev,
 	return count;
 }
 
+<<<<<<< HEAD
+=======
+/* show dapm widget status in sys fs */
+static ssize_t dapm_widget_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct snd_soc_pcm_runtime *rtd = dev_get_drvdata(dev);
+	int i, count = 0;
+
+	mutex_lock(&rtd->card->dapm_mutex);
+
+	for (i = 0; i < rtd->num_codecs; i++) {
+		struct snd_soc_codec *codec = rtd->codec_dais[i]->codec;
+		count += dapm_widget_show_codec(codec, buf + count);
+	}
+
+	mutex_unlock(&rtd->card->dapm_mutex);
+
+	return count;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static DEVICE_ATTR(dapm_widget, 0444, dapm_widget_show, NULL);
 
 int snd_soc_dapm_sys_add(struct device *dev)

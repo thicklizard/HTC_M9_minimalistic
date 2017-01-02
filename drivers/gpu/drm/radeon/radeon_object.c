@@ -33,6 +33,7 @@
 #include <linux/slab.h>
 #include <drm/drmP.h>
 #include <drm/radeon_drm.h>
+#include <drm/drm_cache.h>
 #include "radeon.h"
 #include "radeon_trace.h"
 
@@ -146,6 +147,43 @@ int radeon_bo_create(struct radeon_device *rdev,
 	bo->surface_reg = -1;
 	INIT_LIST_HEAD(&bo->list);
 	INIT_LIST_HEAD(&bo->va);
+<<<<<<< HEAD
+=======
+	bo->initial_domain = domain & (RADEON_GEM_DOMAIN_VRAM |
+	                               RADEON_GEM_DOMAIN_GTT |
+	                               RADEON_GEM_DOMAIN_CPU);
+
+	bo->flags = flags;
+	/* PCI GART is always snooped */
+	if (!(rdev->flags & RADEON_IS_PCIE))
+		bo->flags &= ~(RADEON_GEM_GTT_WC | RADEON_GEM_GTT_UC);
+
+#ifdef CONFIG_X86_32
+	/* XXX: Write-combined CPU mappings of GTT seem broken on 32-bit
+	 * See https://bugs.freedesktop.org/show_bug.cgi?id=84627
+	 */
+	bo->flags &= ~(RADEON_GEM_GTT_WC | RADEON_GEM_GTT_UC);
+#elif defined(CONFIG_X86) && !defined(CONFIG_X86_PAT)
+	/* Don't try to enable write-combining when it can't work, or things
+	 * may be slow
+	 * See https://bugs.freedesktop.org/show_bug.cgi?id=88758
+	 */
+
+#warning Please enable CONFIG_MTRR and CONFIG_X86_PAT for better performance \
+	 thanks to write-combining
+
+	DRM_INFO_ONCE("Please enable CONFIG_MTRR and CONFIG_X86_PAT for "
+		      "better performance thanks to write-combining\n");
+	bo->flags &= ~(RADEON_GEM_GTT_WC | RADEON_GEM_GTT_UC);
+#else
+	/* For architectures that don't support WC memory,
+	 * mask out the WC flag from the BO
+	 */
+	if (!drm_arch_can_wc_memory())
+		bo->flags &= ~RADEON_GEM_GTT_WC;
+#endif
+
+>>>>>>> 0e91d2a... Nougat
 	radeon_ttm_placement_from_domain(bo, domain);
 	/* Kernel allocation are uninterruptible */
 	down_read(&rdev->pm.mclk_lock);
@@ -626,6 +664,7 @@ int radeon_bo_wait(struct radeon_bo *bo, u32 *mem_type, bool no_wait)
 	return r;
 }
 
+<<<<<<< HEAD
 
 /**
  * radeon_bo_reserve - reserve bo
@@ -647,4 +686,23 @@ int radeon_bo_reserve(struct radeon_bo *bo, bool no_intr)
 		return r;
 	}
 	return 0;
+=======
+/**
+ * radeon_bo_fence - add fence to buffer object
+ *
+ * @bo: buffer object in question
+ * @fence: fence to add
+ * @shared: true if fence should be added shared
+ *
+ */
+void radeon_bo_fence(struct radeon_bo *bo, struct radeon_fence *fence,
+                     bool shared)
+{
+	struct reservation_object *resv = bo->tbo.resv;
+
+	if (shared)
+		reservation_object_add_shared_fence(resv, &fence->base);
+	else
+		reservation_object_add_excl_fence(resv, &fence->base);
+>>>>>>> 0e91d2a... Nougat
 }

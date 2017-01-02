@@ -96,6 +96,7 @@ static void inet6_sk_rx_dst_set(struct sock *sk, const struct sk_buff *skb)
 	struct dst_entry *dst = skb_dst(skb);
 	const struct rt6_info *rt = (const struct rt6_info *)dst;
 
+<<<<<<< HEAD
 	dst_hold(dst);
 	sk->sk_rx_dst = dst;
 	inet_sk(sk)->rx_dst_ifindex = skb->skb_iif;
@@ -113,6 +114,15 @@ static void tcp_v6_hash(struct sock *sk)
 		local_bh_disable();
 		__inet6_hash(sk, NULL);
 		local_bh_enable();
+=======
+	if (dst && dst_hold_safe(dst)) {
+		const struct rt6_info *rt = (const struct rt6_info *)dst;
+
+		sk->sk_rx_dst = dst;
+		inet_sk(sk)->rx_dst_ifindex = skb->skb_iif;
+		if (rt->rt6i_node)
+			inet6_sk(sk)->rx_dst_cookie = rt->rt6i_node->fn_sernum;
+>>>>>>> 0e91d2a... Nougat
 	}
 }
 
@@ -1090,6 +1100,7 @@ static struct sock * tcp_v6_syn_recv_sock(struct sock *sk, struct sk_buff *skb,
 	struct inet6_request_sock *treq;
 	struct ipv6_pinfo *newnp, *np = inet6_sk(sk);
 	struct tcp6_sock *newtcp6sk;
+	struct ipv6_txoptions *opt;
 	struct inet_sock *newinet;
 	struct tcp_sock *newtp;
 	struct sock *newsk;
@@ -1953,6 +1964,7 @@ struct proto tcpv6_prot = {
 	.proto_cgroup		= tcp_proto_cgroup,
 #endif
 	.clear_sk		= tcp_v6_clear_sk,
+	.diag_destroy		= tcp_abort,
 };
 
 static const struct inet6_protocol tcpv6_protocol = {

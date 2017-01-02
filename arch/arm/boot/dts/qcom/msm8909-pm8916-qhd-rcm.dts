@@ -16,7 +16,10 @@
 #include "msm8909-cdp.dtsi"
 #include "msm8909-pm8916-cdp.dtsi"
 #include "msm8909-gpu-qhd.dtsi"
+<<<<<<< HEAD
 #include "msm8909-memory.dtsi"
+=======
+>>>>>>> 0e91d2a... Nougat
 
 / {
 	model = "Qualcomm Technologies, Inc. MSM8909-PM8916 512MB QHD RCM";

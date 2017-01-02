@@ -157,15 +157,42 @@ int ecryptfs_get_lower_file(struct dentry *dentry, struct inode *inode)
 
 void ecryptfs_put_lower_file(struct inode *inode)
 {
+	int ret = 0;
 	struct ecryptfs_inode_info *inode_info;
+	bool clear_cache_needed = false;
 
 	inode_info = ecryptfs_inode_to_private(inode);
 	if (atomic_dec_and_mutex_lock(&inode_info->lower_file_count,
 				      &inode_info->lower_file_mutex)) {
+
+		if (get_events() && get_events()->is_hw_crypt_cb &&
+				get_events()->is_hw_crypt_cb())
+			clear_cache_needed = true;
+
+		if (clear_cache_needed) {
+			ret = vfs_fsync(inode_info->lower_file, false);
+
+			if (ret)
+				pr_err("failed to sync file ret = %d.\n", ret);
+		}
+
 		filemap_write_and_wait(inode->i_mapping);
 		fput(inode_info->lower_file);
 		inode_info->lower_file = NULL;
 		mutex_unlock(&inode_info->lower_file_mutex);
+<<<<<<< HEAD
+=======
+
+		if (clear_cache_needed) {
+			truncate_inode_pages_fill_zero(inode->i_mapping, 0);
+			truncate_inode_pages_fill_zero(
+				ecryptfs_inode_to_lower(inode)->i_mapping, 0);
+		}
+
+		if (get_events() && get_events()->release_cb)
+			get_events()->release_cb(
+			ecryptfs_inode_to_lower(inode));
+>>>>>>> 0e91d2a... Nougat
 	}
 }
 
@@ -416,6 +443,10 @@ static int ecryptfs_parse_options(struct ecryptfs_sb_info *sbi, char *options,
 	    && !fn_cipher_name_set)
 		strcpy(mount_crypt_stat->global_default_fn_cipher_name,
 		       mount_crypt_stat->global_default_cipher_name);
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0e91d2a... Nougat
 	if (!cipher_key_bytes_set)
 		mount_crypt_stat->global_default_cipher_key_size = 0;
 	if ((mount_crypt_stat->flags & ECRYPTFS_GLOBAL_ENCRYPT_FILENAMES)
@@ -558,6 +589,14 @@ static struct dentry *ecryptfs_mount(struct file_system_type *fs_type, int flags
 
 	ecryptfs_set_superblock_lower(s, path.dentry->d_sb);
 
+<<<<<<< HEAD
+=======
+
+	if (get_events() && get_events()->is_hw_crypt_cb &&
+			get_events()->is_hw_crypt_cb())
+		drop_pagecache_sb(ecryptfs_superblock_to_lower(s), 0);
+
+>>>>>>> 0e91d2a... Nougat
 	/**
 	 * Set the POSIX ACL flag based on whether they're enabled in the lower
 	 * mount.

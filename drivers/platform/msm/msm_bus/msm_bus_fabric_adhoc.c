@@ -666,6 +666,11 @@ exit_disable_qos_clk:
 static int msm_bus_qos_enable_clk(struct msm_bus_node_device_type *node)
 {
 	struct msm_bus_node_device_type *bus_node = NULL;
+<<<<<<< HEAD
+=======
+	int i;
+	int ret = 0;
+>>>>>>> 0e91d2a... Nougat
 	long rounded_rate;
 	int ret = 0;
 	int bus_qos_enabled = 0;

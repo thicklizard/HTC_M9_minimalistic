@@ -102,4 +102,52 @@ struct ecryptfs_auth_tok {
 	} token;
 } __attribute__ ((packed));
 
+<<<<<<< HEAD
+=======
+#define ECRYPTFS_INVALID_EVENTS_HANDLE -1
+
+/**
+ * ecryptfs_events struct represents a partial interface
+ * towards ecryptfs module. If registered to ecryptfs events,
+ * one can receive push notifications.
+ * A first callback received from ecryptfs will probably be
+ * about file opening (open_cb),
+ * in which ecryptfs passes its ecryptfs_data for future usage.
+ * This data represents a file and must be passed in every query functions
+ * such as ecryptfs_get_key_size(), ecryptfs_get_cipher() etc.
+ */
+struct ecryptfs_events {
+	bool (*is_cipher_supported_cb)(const void *ecrytpfs_data);
+	void (*open_cb)(struct inode *inode, void *ecrytpfs_data);
+	void (*release_cb)(struct inode *inode);
+	int (*encrypt_cb)(struct page *in_page, struct page *out_page,
+		struct inode *inode, unsigned long extent_offset);
+	int (*decrypt_cb)(struct page *in_page, struct page *out_page,
+		struct inode *inode, unsigned long extent_offset);
+	bool (*is_hw_crypt_cb)(void);
+	size_t (*get_salt_key_size_cb)(const void *ecrytpfs_data);
+};
+
+
+int ecryptfs_register_to_events(const struct ecryptfs_events *ops);
+
+int ecryptfs_unregister_from_events(int user_handle);
+
+const unsigned char *ecryptfs_get_key(const void *ecrytpfs_data);
+
+size_t ecryptfs_get_key_size(const void *ecrytpfs_data);
+
+const unsigned char *ecryptfs_get_salt(const void *ecrytpfs_data);
+
+size_t ecryptfs_get_salt_size(const void *ecrytpfs_data);
+
+bool ecryptfs_cipher_match(const void *ecrytpfs_data,
+		const unsigned char *cipher, size_t cipher_size);
+
+bool ecryptfs_is_page_in_metadata(const void *ecrytpfs_data, pgoff_t offset);
+
+bool ecryptfs_is_data_equal(const void *ecrytpfs_data1,
+		const void *ecrytpfs_data2);
+
+>>>>>>> 0e91d2a... Nougat
 #endif /* _LINUX_ECRYPTFS_H */

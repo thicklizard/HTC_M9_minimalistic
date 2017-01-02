@@ -55,6 +55,11 @@ obj-$(CONFIG_TOUCHSCREEN_S3C2410)	+= s3c2410_ts.o
 obj-$(CONFIG_TOUCHSCREEN_ST1232)	+= st1232.o
 obj-$(CONFIG_TOUCHSCREEN_STMPE)		+= stmpe-ts.o
 obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_v21) += synaptics_dsx/
+<<<<<<< HEAD
+=======
+obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_HTC) += synaptics_dsx_htc/
+obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_v26) += synaptics_dsx_2.6/
+>>>>>>> 0e91d2a... Nougat
 obj-$(CONFIG_TOUCHSCREEN_TI_AM335X_TSC)	+= ti_am335x_tsc.o
 obj-$(CONFIG_TOUCHSCREEN_TNETV107X)	+= tnetv107x-ts.o
 obj-$(CONFIG_TOUCHSCREEN_TOUCHIT213)	+= touchit213.o

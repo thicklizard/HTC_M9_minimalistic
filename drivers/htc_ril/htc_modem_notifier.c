@@ -69,8 +69,14 @@ static int notify_modem_app_reboot_call(struct notifier_block *this,
 		case SYS_RESTART:
 #ifdef CONFIG_GSM
 		case SYS_POWER_OFF:
+<<<<<<< HEAD
 #endif		
 			if(_cmd && !strncmp(_cmd, "oem-", 4)) {
+=======
+			//We only pass reason "oem-9x" to modem after modem power up
+			if(modem_is_load && _cmd && (strlen(_cmd)==6) && !strncmp(_cmd, "oem-9", 5) ) {
+				pr_info("[modem_notifier]%s: send reboot reason to modem.\n", __func__);
+>>>>>>> 0e91d2a... Nougat
 				oem_code = simple_strtoul(_cmd + 4, 0, 16) & 0xff;
 				set_oem_reboot_reason(oem_code);
 			}
@@ -89,11 +95,35 @@ static int modem_notifier_cb(struct notifier_block *this,
 				unsigned long code, void *data)
 {
 	switch(code) {
+<<<<<<< HEAD
 		case SUBSYS_AFTER_POWERUP:
 			modem_is_load = 1;
 			break;
 		default:
 			break;
+=======
+            case SUBSYS_BEFORE_POWERUP:
+                htc_smp2p_notify_modem_app_reboot( false );
+                break;
+	    case SUBSYS_AFTER_POWERUP:
+		modem_is_load = 1;
+		break;
+            case SUBSYS_AFTER_SHUTDOWN:
+                modem_is_load = 0;
+                break;
+	    case SUBSYS_SOC_RESET:  //for offline ramdump
+                pr_info("[modem_notifier]%s: notify modem to do cache flush [Before]\n", __func__);
+                if ( !htc_check_modem_crash_status() && modem_is_load ) {
+	          pr_info("[modem_notifier]%s: notify modem to do cache flush [Start]\n", __func__);
+	          set_oem_reboot_reason(0x98);
+                  htc_smp2p_notify_modem_app_reboot( true );
+                  msleep( 200 );
+	          pr_info("[modem_notifier]%s: notify modem to do cache flush [End]\n", __func__);
+                }
+		break;
+	    default:
+		break;
+>>>>>>> 0e91d2a... Nougat
 	}
 	return NOTIFY_DONE;
 }

@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -32,6 +32,14 @@
 #define DMA_TX_TIMEOUT 200
 #define DMA_TPG_FIFO_LEN 64
 
+<<<<<<< HEAD
+=======
+#define FIFO_STATUS	0x0C
+#define LANE_STATUS	0xA8
+
+#define MDSS_DSI_INT_CTRL	0x0110
+
+>>>>>>> 0e91d2a... Nougat
 struct mdss_dsi_ctrl_pdata *ctrl_list[DSI_CTRL_MAX];
 
 struct mdss_hw mdss_dsi0_hw = {
@@ -95,7 +103,7 @@ void mdss_dsi_ctrl_init(struct device *ctrl_dev,
 	if (ctrl->mdss_util->register_irq(ctrl->dsi_hw))
 		pr_err("%s: mdss_register_irq failed.\n", __func__);
 
-	pr_debug("%s: ndx=%d base=%p\n", __func__, ctrl->ndx, ctrl->ctrl_base);
+	pr_debug("%s: ndx=%d base=%pK\n", __func__, ctrl->ndx, ctrl->ctrl_base);
 
 	init_completion(&ctrl->dma_comp);
 	init_completion(&ctrl->mdp_comp);
@@ -121,7 +129,7 @@ void mdss_dsi_ctrl_init(struct device *ctrl_dev,
 	}
 }
 
-static void mdss_dsi_set_reg(struct mdss_dsi_ctrl_pdata *ctrl, int off,
+void mdss_dsi_set_reg(struct mdss_dsi_ctrl_pdata *ctrl, int off,
 						u32 mask, u32 val)
 {
 	u32 data;
@@ -250,6 +258,7 @@ void mdss_dsi_cmd_test_pattern(struct mdss_dsi_ctrl_pdata *ctrl)
 	MIPI_OUTP((ctrl->ctrl_base) + 0x015c, 0x0);
 }
 
+<<<<<<< HEAD
 void mdss_dsi_get_hw_revision(struct mdss_dsi_ctrl_pdata *ctrl)
 {
 	if (ctrl->hw_rev)
@@ -261,6 +270,32 @@ void mdss_dsi_get_hw_revision(struct mdss_dsi_ctrl_pdata *ctrl)
 
 	pr_debug("%s: ndx=%d hw_rev=%x\n", __func__,
 				ctrl->ndx, ctrl->hw_rev);
+=======
+void mdss_dsi_read_hw_revision(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	if (ctrl->shared_data->hw_rev)
+		return;
+
+	
+	ctrl->shared_data->hw_rev = MIPI_INP(ctrl->ctrl_base);
+}
+
+void mdss_dsi_read_phy_revision(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	u32 reg_val;
+
+	if (ctrl->shared_data->phy_rev > DSI_PHY_REV_UNKNOWN)
+		return;
+
+	reg_val = MIPI_INP(ctrl->phy_io.base);
+
+	if (reg_val == DSI_PHY_REV_20)
+		ctrl->shared_data->phy_rev = DSI_PHY_REV_20;
+	else if (reg_val == DSI_PHY_REV_10)
+		ctrl->shared_data->phy_rev = DSI_PHY_REV_10;
+	else
+		ctrl->shared_data->phy_rev = DSI_PHY_REV_UNKNOWN;
+>>>>>>> 0e91d2a... Nougat
 }
 
 void mdss_dsi_host_init(struct mdss_panel_data *pdata)
@@ -396,6 +431,9 @@ void mdss_dsi_host_init(struct mdss_panel_data *pdata)
 
 	
 	mdss_dsi_lp_cd_rx(ctrl_pdata);
+
+	
+	MIPI_OUTP((ctrl_pdata->ctrl_base) + 0x50, 0x30);
 
 	wmb();
 }
@@ -695,7 +733,8 @@ static void mdss_dsi_ctl_phy_reset(struct mdss_dsi_ctrl_pdata *ctrl, u32 event)
 		if (i == loop) {
 			MDSS_XLOG(ctrl0->ndx, ln0, 0x1f1f);
 			MDSS_XLOG(ctrl1->ndx, ln1, 0x1f1f);
-			pr_err("Clock lane still in stop state");
+			pr_err("%s: Clock lane still in stop state\n",
+					__func__);
 			MDSS_XLOG_TOUT_HANDLER("mdp", "dsi0_ctrl", "dsi0_phy",
 				"dsi1_ctrl", "dsi1_phy", "panic");
 		}
@@ -754,7 +793,8 @@ static void mdss_dsi_ctl_phy_reset(struct mdss_dsi_ctrl_pdata *ctrl, u32 event)
 		}
 		if (i == loop) {
 			MDSS_XLOG(ctrl->ndx, ln0, 0x1f1f);
-			pr_err("Clock lane still in stop state");
+			pr_err("%s: Clock lane still in stop state\n",
+					__func__);
 			MDSS_XLOG_TOUT_HANDLER("mdp", "dsi0_ctrl", "dsi0_phy",
 				"dsi1_ctrl", "dsi1_phy", "panic");
 		}
@@ -927,22 +967,39 @@ void mdss_dsi_cmd_bta_sw_trigger(struct mdss_panel_data *pdata)
 
 static int mdss_dsi_read_status(struct mdss_dsi_ctrl_pdata *ctrl)
 {
+	int i, rc, *lenp;
+	int start = 0;
 	struct dcs_cmd_req cmdreq;
 
-	memset(&cmdreq, 0, sizeof(cmdreq));
-	cmdreq.cmds = ctrl->status_cmds.cmds;
-	cmdreq.cmds_cnt = ctrl->status_cmds.cmd_cnt;
-	cmdreq.flags = CMD_REQ_COMMIT | CMD_CLK_CTRL | CMD_REQ_RX;
-	cmdreq.rlen = ctrl->status_cmds_rlen;
-	cmdreq.cb = NULL;
-	cmdreq.rbuf = ctrl->status_buf.data;
+	rc = 1;
+	lenp = ctrl->status_valid_params ?: ctrl->status_cmds_rlen;
 
-	if (ctrl->status_cmds.link_state == DSI_LP_MODE)
-		cmdreq.flags  |= CMD_REQ_LP_MODE;
-	else if (ctrl->status_cmds.link_state == DSI_HS_MODE)
-		cmdreq.flags |= CMD_REQ_HS_MODE;
+	for (i = 0; i < ctrl->status_cmds.cmd_cnt; ++i) {
+		memset(&cmdreq, 0, sizeof(cmdreq));
+		cmdreq.cmds = ctrl->status_cmds.cmds + i;
+		cmdreq.cmds_cnt = 1;
+		cmdreq.flags = CMD_REQ_COMMIT | CMD_CLK_CTRL | CMD_REQ_RX;
+		cmdreq.rlen = ctrl->status_cmds_rlen[i];
+		cmdreq.cb = NULL;
+		cmdreq.rbuf = ctrl->status_buf.data;
 
-	return mdss_dsi_cmdlist_put(ctrl, &cmdreq);
+		if (ctrl->status_cmds.link_state == DSI_LP_MODE)
+			cmdreq.flags  |= CMD_REQ_LP_MODE;
+		else if (ctrl->status_cmds.link_state == DSI_HS_MODE)
+			cmdreq.flags |= CMD_REQ_HS_MODE;
+
+		rc = mdss_dsi_cmdlist_put(ctrl, &cmdreq);
+		if (rc <= 0) {
+			pr_err("%s: get status: fail\n", __func__);
+			return rc;
+		}
+
+		memcpy(ctrl->return_buf + start,
+			ctrl->status_buf.data, lenp[i]);
+		start += lenp[i];
+	}
+
+	return rc;
 }
 
 
@@ -973,6 +1030,68 @@ int mdss_dsi_reg_status_check(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 	return ret;
 }
 
+<<<<<<< HEAD
+=======
+void mdss_dsi_dsc_config(struct mdss_dsi_ctrl_pdata *ctrl, struct dsc_desc *dsc)
+{
+	u32 data, offset;
+
+	if (dsc->pkt_per_line <= 0) {
+		pr_err("%s: Error: pkt_per_line cannot be negative or 0\n",
+			__func__);
+		return;
+	}
+
+	if (ctrl->panel_mode == DSI_VIDEO_MODE) {
+		MIPI_OUTP((ctrl->ctrl_base) +
+			MDSS_DSI_VIDEO_COMPRESSION_MODE_CTRL2, 0);
+		data = dsc->bytes_per_pkt << 16;
+		data |= (0x0b << 8);	
+		offset = MDSS_DSI_VIDEO_COMPRESSION_MODE_CTRL;
+	} else {
+		
+		MIPI_OUTP((ctrl->ctrl_base) +
+			MDSS_DSI_COMMAND_COMPRESSION_MODE_CTRL3, 0);
+
+		MIPI_OUTP((ctrl->ctrl_base) +
+			MDSS_DSI_COMMAND_COMPRESSION_MODE_CTRL2,
+						dsc->bytes_in_slice);
+
+		data = DTYPE_DCS_LWRITE << 8;
+		offset = MDSS_DSI_COMMAND_COMPRESSION_MODE_CTRL;
+	}
+
+	if (dsc->pkt_per_line == 4)
+		data |= (dsc->pkt_per_line - 2) << 6;
+	else
+		data |= (dsc->pkt_per_line - 1) << 6;
+	data |= dsc->eol_byte_num << 4;
+	data |= 1;	
+	MIPI_OUTP((ctrl->ctrl_base) + offset, data);
+}
+
+void mdss_dsi_set_burst_mode(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	u32 data;
+
+	if (ctrl->shared_data->hw_rev < MDSS_DSI_HW_REV_103)
+		return;
+
+	data = MIPI_INP(ctrl->ctrl_base + 0x1b8);
+
+	if (ctrl->idle_enabled)
+		data &= ~BIT(16); 
+	else
+		data |= BIT(16); 
+
+	ctrl->burst_mode_enabled = !ctrl->idle_enabled;
+
+	MIPI_OUTP((ctrl->ctrl_base + 0x1b8), data);
+	pr_debug("%s: burst=%d\n", __func__, ctrl->burst_mode_enabled);
+
+}
+
+>>>>>>> 0e91d2a... Nougat
 static void mdss_dsi_mode_setup(struct mdss_panel_data *pdata)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
@@ -1059,6 +1178,20 @@ static void mdss_dsi_mode_setup(struct mdss_panel_data *pdata)
 		}
 
 		
+<<<<<<< HEAD
+=======
+		if ((ctrl_pdata->shared_data->hw_rev >= MDSS_DSI_HW_REV_104)
+			&& ctrl_pdata->null_insert_enabled) {
+			data = (mipi->vc << 1); 
+			data |= 0 << 16; 
+			data |= 0x1; 
+			MIPI_OUTP((ctrl_pdata->ctrl_base) + 0x2b4, data);
+		}
+
+		mdss_dsi_set_burst_mode(ctrl_pdata);
+
+		
+>>>>>>> 0e91d2a... Nougat
 		MIPI_OUTP((ctrl_pdata->ctrl_base) + 0x60, stream_ctrl);
 		MIPI_OUTP((ctrl_pdata->ctrl_base) + 0x58, stream_ctrl);
 
@@ -1165,9 +1298,13 @@ static int mdss_dsi_cmd_dma_tpg_tx(struct mdss_dsi_ctrl_pdata *ctrl,
 		return -EINVAL;
 	}
 
+<<<<<<< HEAD
 	mdss_dsi_get_hw_revision(ctrl);
 
 	if (ctrl->hw_rev < MDSS_DSI_HW_REV_103) {
+=======
+	if (ctrl->shared_data->hw_rev < MDSS_DSI_HW_REV_103) {
+>>>>>>> 0e91d2a... Nougat
 		pr_err("CMD DMA TPG not supported for this DSI version\n");
 		return -EINVAL;
 	}
@@ -1786,6 +1923,10 @@ int mdss_dsi_en_wait4dynamic_done(struct mdss_dsi_ctrl_pdata *ctrl)
 	unsigned long flag;
 	u32 data;
 	int rc = 0;
+<<<<<<< HEAD
+=======
+	struct mdss_dsi_ctrl_pdata *sctrl_pdata = NULL;
+>>>>>>> 0e91d2a... Nougat
 
 	
 	data = MIPI_INP((ctrl->ctrl_base) + 0x0110);
@@ -1798,12 +1939,38 @@ int mdss_dsi_en_wait4dynamic_done(struct mdss_dsi_ctrl_pdata *ctrl)
 	mdss_dsi_enable_irq(ctrl, DSI_DYNAMIC_TERM);
 	spin_unlock_irqrestore(&ctrl->mdp_lock, flag);
 	MIPI_OUTP((ctrl->ctrl_base) + DSI_DYNAMIC_REFRESH_CTRL,
+<<<<<<< HEAD
 			(BIT(8) | BIT(0)));
+=======
+		(BIT(13) | BIT(8) | BIT(0)));
 
-	if (!wait_for_completion_timeout(&ctrl->dynamic_comp,
-			msecs_to_jiffies(VSYNC_PERIOD * 4))) {
-		pr_err("Dynamic interrupt timedout\n");
-		rc = -EINVAL;
+	if (mdss_dsi_is_ctrl_clk_master(ctrl))
+		sctrl_pdata = mdss_dsi_get_ctrl_clk_slave();
+
+	if (sctrl_pdata)
+		MIPI_OUTP((sctrl_pdata->ctrl_base) + DSI_DYNAMIC_REFRESH_CTRL,
+				(BIT(13) | BIT(8) | BIT(0)));
+>>>>>>> 0e91d2a... Nougat
+
+	rc = wait_for_completion_timeout(&ctrl->dynamic_comp,
+			msecs_to_jiffies(VSYNC_PERIOD * 4));
+	if (rc == 0) {
+		u32 reg_val, status;
+
+		reg_val = MIPI_INP(ctrl->ctrl_base + MDSS_DSI_INT_CTRL);
+		status = reg_val & DSI_INTR_DYNAMIC_REFRESH_DONE;
+		if (status) {
+			reg_val &= DSI_INTR_MASK_ALL;
+			
+			reg_val |= DSI_INTR_DYNAMIC_REFRESH_DONE;
+			MIPI_OUTP(ctrl->ctrl_base + MDSS_DSI_INT_CTRL, reg_val);
+			mdss_dsi_disable_irq(ctrl, DSI_DYNAMIC_TERM);
+			pr_warn_ratelimited("%s: dfps done but irq not triggered\n",
+				__func__);
+		} else {
+			pr_err("Dynamic interrupt timedout\n");
+			rc = -ETIMEDOUT;
+		}
 	}
 
 	data = MIPI_INP((ctrl->ctrl_base) + 0x0110);
@@ -1986,6 +2153,44 @@ int mdss_dsi_cmdlist_rx(struct mdss_dsi_ctrl_pdata *ctrl,
 	return len;
 }
 
+static inline bool mdss_dsi_delay_cmd(struct mdss_dsi_ctrl_pdata *ctrl,
+	bool from_mdp)
+{
+	unsigned long flags;
+	bool mdp_busy = false;
+	bool need_wait = false;
+
+	if (!ctrl->mdp_callback)
+		goto exit;
+
+	
+	if (!mdss_dsi_is_hw_config_split(ctrl->shared_data) ||
+	    !(ctrl->panel_mode == DSI_CMD_MODE) ||
+	    !ctrl->burst_mode_enabled)
+		goto exit;
+
+	
+	if (from_mdp || !(ctrl->ctrl_state & CTRL_STATE_PANEL_INIT))
+		goto exit;
+
+	
+	if (mdss_dsi_sync_wait_enable(ctrl) &&
+	   !mdss_dsi_sync_wait_trigger(ctrl))
+		goto exit;
+
+	spin_lock_irqsave(&ctrl->mdp_lock, flags);
+	if (ctrl->mdp_busy == true)
+		mdp_busy = true;
+	spin_unlock_irqrestore(&ctrl->mdp_lock, flags);
+
+	if (mdp_busy && !(MIPI_INP(ctrl->ctrl_base + 0x008) & BIT(2)))
+		need_wait = true;
+
+exit:
+	MDSS_XLOG(need_wait, from_mdp, mdp_busy);
+	return need_wait;
+}
+
 int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 {
 	struct dcs_cmd_req *req;
@@ -1996,9 +2201,6 @@ int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 	int rc = 0;
 	bool hs_req = false;
 
-	if (mdss_get_sd_client_cnt())
-		return -EPERM;
-
 	if (from_mdp) {	
 		mutex_lock(&ctrl->cmd_mutex);
 		pinfo = &ctrl->panel_data.panel_info;
@@ -2006,7 +2208,15 @@ int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 			roi = &pinfo->roi;
 	}
 
+<<<<<<< HEAD
 	req = mdss_dsi_cmdlist_get(ctrl);
+=======
+	req = mdss_dsi_cmdlist_get(ctrl, from_mdp);
+	if (req && from_mdp && ctrl->burst_mode_enabled) {
+		mutex_lock(&ctrl->cmd_mutex);
+		cmd_mutex_acquired = true;
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	MDSS_XLOG(ctrl->ndx, from_mdp, ctrl->mdp_busy, current->pid,
 							XLOG_FUNC_ENTRY);
@@ -2014,10 +2224,25 @@ int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 	if (req && (req->flags & CMD_REQ_HS_MODE))
 		hs_req = true;
 
+<<<<<<< HEAD
 	
 	mdss_dsi_cmd_mdp_busy(ctrl);
+=======
+	if ((!ctrl->burst_mode_enabled) || from_mdp) {
+		
+		mdss_dsi_cmd_mdp_busy(ctrl);
+	}
+>>>>>>> 0e91d2a... Nougat
 
-	mdss_dsi_get_hw_revision(ctrl);
+	if (mdss_get_sd_client_cnt() && req) {
+		if (ctrl->shared_data->hw_rev >= MDSS_DSI_HW_REV_103) {
+			req->flags |= CMD_REQ_DMA_TPG;
+		} else {
+			if (cmd_mutex_acquired)
+				mutex_unlock(&ctrl->cmd_mutex);
+			return -EPERM;
+		}
+	}
 
 	
 	if (req && (ctrl->hw_rev < MDSS_DSI_HW_REV_103))
@@ -2066,6 +2291,12 @@ int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 
 	mdss_dsi_clk_ctrl(ctrl, DSI_ALL_CLKS, 1);
 
+	mutex_lock(&ctrl->mutex);
+	if (mdss_dsi_delay_cmd(ctrl, from_mdp))
+		ctrl->mdp_callback->fxn(ctrl->mdp_callback->data,
+			MDP_INTF_CALLBACK_DSI_WAIT);
+	mutex_unlock(&ctrl->mutex);
+
 	if (req->flags & CMD_REQ_HS_MODE)
 		mdss_dsi_set_tx_power_mode(0, &ctrl->panel_data);
 
@@ -2081,6 +2312,7 @@ int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 		if (use_iommu)
 			ctrl->mdss_util->iommu_ctrl(0);
 
+<<<<<<< HEAD
 		if (ctrl->mdss_util->bus_scale_set_quota)
 			ctrl->mdss_util->bus_scale_set_quota(MDSS_DSI_RT, 0, 0);
 		if (ctrl->mdss_util->bus_bandwidth_ctrl)
@@ -2088,6 +2320,13 @@ int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 	}
 
 	mdss_dsi_clk_ctrl(ctrl, DSI_ALL_CLKS, 0);
+=======
+		(void)mdss_dsi_bus_bandwidth_vote(ctrl->shared_data, false);
+	}
+
+	mdss_dsi_clk_ctrl(ctrl, ctrl->dsi_clk_handle, MDSS_DSI_ALL_CLKS,
+			MDSS_DSI_CLK_OFF);
+>>>>>>> 0e91d2a... Nougat
 need_lock:
 
 	MDSS_XLOG(ctrl->ndx, from_mdp, ctrl->mdp_busy, current->pid,
@@ -2107,6 +2346,36 @@ need_lock:
 	return ret;
 }
 
+<<<<<<< HEAD
+=======
+static void __dsi_fifo_error_handler(struct mdss_dsi_ctrl_pdata *ctrl,
+	bool recovery_needed)
+{
+	struct mdss_dsi_ctrl_pdata *sctrl;
+	bool use_pp_split = false;
+
+	use_pp_split = ctrl->panel_data.panel_info.use_pingpong_split;
+
+	mdss_dsi_clk_ctrl(ctrl, ctrl->dsi_clk_handle, MDSS_DSI_ALL_CLKS,
+		  MDSS_DSI_CLK_ON);
+	mdss_dsi_sw_reset(ctrl, true);
+	if (recovery_needed)
+		ctrl->recovery->fxn(ctrl->recovery->data,
+			MDP_INTF_DSI_CMD_FIFO_UNDERFLOW);
+	mdss_dsi_clk_ctrl(ctrl, ctrl->dsi_clk_handle, MDSS_DSI_ALL_CLKS,
+		  MDSS_DSI_CLK_OFF);
+
+	sctrl = mdss_dsi_get_other_ctrl(ctrl);
+	if (sctrl && use_pp_split) {
+		mdss_dsi_clk_ctrl(sctrl, sctrl->dsi_clk_handle,
+			MDSS_DSI_ALL_CLKS, MDSS_DSI_CLK_ON);
+		mdss_dsi_sw_reset(sctrl, true);
+		mdss_dsi_clk_ctrl(sctrl, sctrl->dsi_clk_handle,
+			MDSS_DSI_ALL_CLKS, MDSS_DSI_CLK_OFF);
+	}
+}
+
+>>>>>>> 0e91d2a... Nougat
 static void dsi_send_events(struct mdss_dsi_ctrl_pdata *ctrl,
 					u32 events, u32 arg)
 {
@@ -2312,9 +2581,13 @@ void mdss_dsi_fifo_status(struct mdss_dsi_ctrl_pdata *ctrl)
 	if (status & 0xcccc4489) {
 		MIPI_OUTP(base + 0x000c, status);
 
+<<<<<<< HEAD
 		if (!ctrl->dfps_status)
 			pr_err("%s: ctrl ndx=%d status=%x\n", __func__,
 					ctrl->ndx, status);
+=======
+		pr_err("%s: status=%x\n", __func__, status);
+>>>>>>> 0e91d2a... Nougat
 
 		if (status & 0x44440000) {
 			dsi_send_events(ctrl, DSI_EV_DLNx_FIFO_OVERFLOW, 0);
@@ -2356,9 +2629,42 @@ void mdss_dsi_clk_status(struct mdss_dsi_ctrl_pdata *ctrl)
 
 	if (status & 0x10000) { 
 		MIPI_OUTP(base + 0x0120, status);
+		
+		if (MIPI_INP(base + 0x10c) & BIT(28))
+			return false;
+
 		dsi_send_events(ctrl, DSI_EV_PLL_UNLOCKED, 0);
 		pr_err("%s: status=%x\n", __func__, status);
 	}
+<<<<<<< HEAD
+=======
+
+	return ret;
+}
+
+static void __dsi_error_counter(struct dsi_err_container *err_container)
+{
+	s64 prev_time, curr_time;
+	int prev_index;
+
+	err_container->err_cnt++;
+
+	err_container->index = (err_container->index + 1) %
+		err_container->max_err_index;
+	curr_time = ktime_to_ms(ktime_get());
+	err_container->err_time[err_container->index] = curr_time;
+
+	prev_index = (err_container->index + 1) % err_container->max_err_index;
+	prev_time = err_container->err_time[prev_index];
+
+	if (prev_time &&
+		((curr_time - prev_time) < err_container->err_time_delta)) {
+		pr_err("%s: panic in WQ as dsi error intrs within:%dms\n",
+				__func__, err_container->err_time_delta);
+		MDSS_XLOG_TOUT_HANDLER_WQ("mdp", "dsi0_ctrl", "dsi0_phy",
+			"dsi1_ctrl", "dsi1_phy", "panic");
+	}
+>>>>>>> 0e91d2a... Nougat
 }
 
 void mdss_dsi_error(struct mdss_dsi_ctrl_pdata *ctrl)
@@ -2369,12 +2675,21 @@ void mdss_dsi_error(struct mdss_dsi_ctrl_pdata *ctrl)
 	mdss_dsi_err_intr_ctrl(ctrl, DSI_INTR_ERROR_MASK, 0);
 
 	
+<<<<<<< HEAD
 	mdss_dsi_clk_status(ctrl);	
 	mdss_dsi_fifo_status(ctrl);	
 	mdss_dsi_ack_err_status(ctrl);	
 	mdss_dsi_timeout_status(ctrl);	
 	mdss_dsi_status(ctrl);		
 	mdss_dsi_dln0_phy_err(ctrl, true);	
+=======
+	err_handled |= mdss_dsi_clk_status(ctrl);	
+	err_handled |= mdss_dsi_fifo_status(ctrl);	
+	err_handled |= mdss_dsi_ack_err_status(ctrl);	
+	err_handled |= mdss_dsi_timeout_status(ctrl);	
+	err_handled |= mdss_dsi_status(ctrl);		
+	err_handled |= mdss_dsi_dln0_phy_err(ctrl, true);
+>>>>>>> 0e91d2a... Nougat
 
 	
 	intr = MIPI_INP(ctrl->ctrl_base + 0x0110);
@@ -2399,10 +2714,26 @@ irqreturn_t mdss_dsi_isr(int irq, void *ptr)
 
 	isr = MIPI_INP(ctrl->ctrl_base + 0x0110);
 	MIPI_OUTP(ctrl->ctrl_base + 0x0110, (isr & ~DSI_INTR_ERROR));
+<<<<<<< HEAD
+=======
+	isr2 = MIPI_INP(ctrl->ctrl_base + 0x0110);
+	if (isr2 & mask2) {
+		pr_warn("%s: unclear intr ctrl, ndx=%d, isr=%x, isr2=%x, irq=%x\n",
+			__func__, ctrl->ndx, isr, isr2, irq);
+		mdelay(3);
+		MIPI_OUTP(ctrl->ctrl_base + 0x0110, (isr2 & ~DSI_INTR_ERROR));
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	pr_debug("%s: ndx=%d isr=%x\n", __func__, ctrl->ndx, isr);
 
+	if (isr & DSI_INTR_ERROR) {
+		MDSS_XLOG(ctrl->ndx, ctrl->mdp_busy, isr, 0x97);
+		mdss_dsi_error(ctrl);
+	}
+
 	if (isr & DSI_INTR_BTA_DONE) {
+		MDSS_XLOG(ctrl->ndx, ctrl->mdp_busy, isr, 0x96);
 		spin_lock(&ctrl->mdp_lock);
 		mdss_dsi_disable_irq_nosync(ctrl, DSI_BTA_TERM);
 		complete(&ctrl->bta_comp);
@@ -2416,11 +2747,14 @@ irqreturn_t mdss_dsi_isr(int irq, void *ptr)
 		spin_unlock(&ctrl->mdp_lock);
 	}
 
+<<<<<<< HEAD
 	if (isr & DSI_INTR_ERROR) {
 		MDSS_XLOG(ctrl->ndx, ctrl->mdp_busy, isr, 0x97);
 		mdss_dsi_error(ctrl);
 	}
 
+=======
+>>>>>>> 0e91d2a... Nougat
 	if (isr & DSI_INTR_VIDEO_DONE) {
 		spin_lock(&ctrl->mdp_lock);
 		mdss_dsi_disable_irq_nosync(ctrl, DSI_VIDEO_TERM);

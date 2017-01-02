@@ -99,9 +99,9 @@ DeleteMidQEntry(struct mid_q_entry *midEntry)
 	   something is wrong, unless it is quite a slow link or server */
 	if ((now - midEntry->when_alloc) > HZ) {
 		if ((cifsFYI & CIFS_TIMER) && (midEntry->command != command)) {
-			printk(KERN_DEBUG " CIFS slow rsp: cmd %d mid %llu",
+			pr_debug(" CIFS slow rsp: cmd %d mid %llu",
 			       midEntry->command, midEntry->mid);
-			printk(" A: 0x%lx S: 0x%lx R: 0x%lx\n",
+			pr_info(" A: 0x%lx S: 0x%lx R: 0x%lx\n",
 			       now - midEntry->when_alloc,
 			       now - midEntry->when_sent,
 			       now - midEntry->when_received);
@@ -523,16 +523,23 @@ cifs_call_async(struct TCP_Server_Info *server, struct smb_rqst *rqst,
 	cifs_in_send_dec(server);
 	cifs_save_when_sent(mid);
 
-	if (rc < 0)
+	if (rc < 0) {
 		server->sequence_number -= 2;
+		cifs_delete_mid(mid);
+	}
+
 	mutex_unlock(&server->srv_mutex);
 
 	if (rc == 0)
 		return 0;
 
+<<<<<<< HEAD
 	cifs_delete_mid(mid);
 	add_credits(server, 1, optype);
 	wake_up(&server->request_q);
+=======
+	add_credits_and_wake_if(server, credits, optype);
+>>>>>>> 0e91d2a... Nougat
 	return rc;
 }
 

@@ -360,10 +360,13 @@ struct hc_driver {
 	int	(*disable_usb3_lpm_timeout)(struct usb_hcd *,
 			struct usb_device *, enum usb3_link_state state);
 	int	(*find_raw_port_number)(struct usb_hcd *, int);
+<<<<<<< HEAD
 	/* if hcd needs to finish ep cleanup asap after HC halt failiure */
 	void (*halt_failed_cleanup)(struct usb_hcd *);
 
 	/* to log submission/completion events*/
+=======
+>>>>>>> 0e91d2a... Nougat
 	void	(*log_urb)(struct urb *urb, char *event, unsigned extra);
 	void	(*dump_regs)(struct usb_hcd *);
 	void	(*set_autosuspend_delay)(struct usb_device *);

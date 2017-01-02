@@ -42,6 +42,7 @@ obj-$(CONFIG_ARCH_MSM8610) += clock-8610.o
 obj-$(CONFIG_ARCH_MSM8610) += clock-dsi-8610.o
 obj-$(CONFIG_ARCH_MDM9630) += clock-9630.o
 obj-$(CONFIG_ARCH_MDM9640) += board-9640.o
+<<<<<<< HEAD
 obj-$(CONFIG_ARCH_MDMFERRUM) += board-8909.o
 obj-$(CONFIG_ARCH_MSMVPIPA) += board-vpipa.o
 obj-$(CONFIG_MSM_PM) += ext-buck-control.o
@@ -72,3 +73,18 @@ obj-$(CONFIG_MSM_SMCMOD) += smcmod.o
 obj-$(CONFIG_ARCH_MSM8974) += msm_mpmctr.o
 
 obj-$(CONFIG_PERFMAP) += perfmap.o
+=======
+obj-$(CONFIG_ARCH_MDM9607) += board-9607.o
+obj-$(CONFIG_ARCH_MDMCALIFORNIUM) += board-californium.o
+obj-$(CONFIG_ARCH_MSM8916) += board-8952.o
+obj-$(CONFIG_ARCH_MSM8917) += board-8917.o
+obj-$(CONFIG_ARCH_MSM8920) += board-8920.o
+obj-$(CONFIG_ARCH_MSM8937) += board-8937.o
+obj-$(CONFIG_ARCH_MSM8940) += board-8940.o
+obj-$(CONFIG_ARCH_MSM8953) += board-8953.o
+obj-$(CONFIG_ARCH_MSM8909) += board-8909.o
+
+#SMP
+obj-$(CONFIG_SMP) += headsmp.o platsmp.o
+obj-$(CONFIG_HOTPLUG_CPU) += hotplug.o
+>>>>>>> 0e91d2a... Nougat

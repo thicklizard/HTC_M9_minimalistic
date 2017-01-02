@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 /* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+=======
+/*
+ * Copyright (c) 2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -11,6 +16,7 @@
  */
 
 #include <linux/kernel.h>
+<<<<<<< HEAD
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_platform.h>
@@ -86,4 +92,27 @@ DT_MACHINE_START(MSM8909_DT,
 	.dt_compat = msm8909_dt_match,
 	.reserve = msm8909_dt_reserve,
 	.smp = &msm8916_smp_ops,
+=======
+#include <asm/mach/map.h>
+#include <asm/mach/arch.h>
+#include "board-dt.h"
+#include "platsmp.h"
+
+static const char *msm8909_dt_match[] __initconst = {
+	"qcom,msm8909",
+	"qcom,apq8009",
+	NULL
+};
+
+static void __init msm8909_init(void)
+{
+	board_dt_populate(NULL);
+}
+
+DT_MACHINE_START(MSM8909_DT,
+	"Qualcomm Technologies, Inc. MSM 8909 (Flattened Device Tree)")
+	.init_machine	= msm8909_init,
+	.dt_compat	= msm8909_dt_match,
+	.smp	= &msm8909_smp_ops,
+>>>>>>> 0e91d2a... Nougat
 MACHINE_END

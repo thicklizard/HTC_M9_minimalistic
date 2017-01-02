@@ -60,6 +60,8 @@
 
 #ifndef __ASSEMBLY__
 
+#include <linux/irqdomain.h>
+
 struct device_node;
 
 extern struct irq_chip gic_arch_extn;
@@ -80,6 +82,15 @@ static inline void gic_init(unsigned int nr, int start,
 	gic_init_bases(nr, start, dist, cpu, 0, NULL);
 }
 
+<<<<<<< HEAD
+=======
+int gicv2m_of_init(struct device_node *node, struct irq_domain *parent);
+
+void gic_send_sgi(unsigned int cpu_id, unsigned int irq);
+int gic_get_cpu_id(unsigned int cpu);
+void gic_migrate_target(unsigned int new_cpu_id);
+unsigned long gic_get_sgir_physaddr(void);
+>>>>>>> 0e91d2a... Nougat
 void gic_show_pending_irq(void);
 #endif /* __ASSEMBLY */
 #endif

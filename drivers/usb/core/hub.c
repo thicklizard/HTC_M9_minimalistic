@@ -4247,8 +4247,14 @@ hub_port_init (struct usb_hub *hub, struct usb_device *udev, int port1,
 	 * value.
 	 */
 	for (i = 0; i < GET_DESCRIPTOR_TRIES; (++i, msleep(100))) {
+<<<<<<< HEAD
 		if (USE_NEW_SCHEME(retry_counter) &&
 			!(hcd->driver->flags & HCD_USB3) &&
+=======
+		bool did_new_scheme = false;
+
+		if (use_new_scheme(udev, retry_counter) &&
+>>>>>>> 0e91d2a... Nougat
 			!((hcd->driver->flags & HCD_RT_OLD_ENUM) &&
 				!hdev->parent)) {
 			struct usb_device_descriptor *buf;

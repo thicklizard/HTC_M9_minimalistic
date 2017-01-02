@@ -42,9 +42,24 @@ static inline int32_t mul_fp(int32_t x, int32_t y)
 	return ((int64_t)x * (int64_t)y) >> FRAC_BITS;
 }
 
-static inline int32_t div_fp(int32_t x, int32_t y)
+static inline int32_t div_fp(s64 x, s64 y)
 {
+<<<<<<< HEAD
 	return div_s64((int64_t)x << FRAC_BITS, (int64_t)y);
+=======
+	return div64_s64((int64_t)x << FRAC_BITS, y);
+}
+
+static inline int ceiling_fp(int32_t x)
+{
+	int mask, ret;
+
+	ret = fp_toint(x);
+	mask = (1 << FRAC_BITS) - 1;
+	if (x & mask)
+		ret += 1;
+	return ret;
+>>>>>>> 0e91d2a... Nougat
 }
 
 struct sample {
@@ -471,12 +486,33 @@ static inline void intel_pstate_set_sample_time(struct cpudata *cpu)
 
 static inline int32_t intel_pstate_get_scaled_busy(struct cpudata *cpu)
 {
+<<<<<<< HEAD
 	int32_t core_busy, max_pstate, current_pstate;
+=======
+	int32_t core_busy, max_pstate, current_pstate, sample_ratio;
+	s64 duration_us;
+	u32 sample_time;
+>>>>>>> 0e91d2a... Nougat
 
 	core_busy = cpu->samples[cpu->sample_ptr].core_pct_busy;
 	max_pstate = int_tofp(cpu->pstate.max_pstate);
 	current_pstate = int_tofp(cpu->pstate.current_pstate);
+<<<<<<< HEAD
 	return mul_fp(core_busy, div_fp(max_pstate, current_pstate));
+=======
+	core_busy = mul_fp(core_busy, div_fp(max_pstate, current_pstate));
+
+	sample_time = pid_params.sample_rate_ms  * USEC_PER_MSEC;
+	duration_us = ktime_us_delta(cpu->sample.time,
+				     cpu->last_sample_time);
+	if (duration_us > sample_time * 3) {
+		sample_ratio = div_fp(int_tofp(sample_time),
+				      int_tofp(duration_us));
+		core_busy = mul_fp(core_busy, sample_ratio);
+	}
+
+	return core_busy;
+>>>>>>> 0e91d2a... Nougat
 }
 
 static inline void intel_pstate_adjust_busy_pstate(struct cpudata *cpu)

@@ -73,9 +73,19 @@ obj-$(CONFIG_SND_SOC_APQ8084) += snd-soc-apq8084.o
 snd-soc-cpe-objs := msm-cpe-lsm.o
 obj-$(CONFIG_SND_SOC_CPE) += snd-soc-cpe.o
 
+<<<<<<< HEAD
 #for mdm9630 sound card driver
 snd-soc-mdm9630-objs := mdm9630.o
 obj-$(CONFIG_SND_SOC_MDM9630) += snd-soc-mdm9630.o
+=======
+# for MSM 8994 sound card driver
+snd-soc-msm8994-objs := msm8994.o
+obj-$(CONFIG_SND_SOC_MSM8994) += snd-soc-msm8994.o
+
+# for MSM8996 sound card driver
+snd-soc-msm8996-objs := msm8996.o apq8096-auto.o apq8096-i2c.o
+obj-$(CONFIG_SND_SOC_MSM8996) += snd-soc-msm8996.o
+>>>>>>> 0e91d2a... Nougat
 
 # for MSM 8x16 sound card driver
 snd-soc-msm8x16-objs := msm8x16.o msm8939-slimbus.o
@@ -90,6 +100,17 @@ snd-soc-msm8994-objs := msm8994.o
 obj-$(CONFIG_SND_SOC_MSM8994) += snd-soc-msm8994.o
 obj-$(CONFIG_SND_SOC_MSM8994) += htc_acoustic_alsa.o
 
+<<<<<<< HEAD
+=======
+# for MDM 9607 sound card driver
+snd-soc-mdm9607-objs := mdm9607.o
+obj-$(CONFIG_SND_SOC_MDM9607) += snd-soc-mdm9607.o
+
+# for MSM 8909 sound card driver
+snd-soc-msm8909-objs := msm8952.o msm-audio-pinctrl.o
+obj-$(CONFIG_SND_SOC_MSM8909) += snd-soc-msm8909.o
+
+>>>>>>> 0e91d2a... Nougat
 # for MDM9640 sound card driver
 snd-soc-mdm9640-objs := mdm9640.o
 obj-$(CONFIG_SND_SOC_MDM9640) += snd-soc-mdm9640.o

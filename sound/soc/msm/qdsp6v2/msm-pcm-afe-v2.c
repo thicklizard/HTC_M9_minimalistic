@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License version 2 and
@@ -238,6 +238,12 @@ static void pcm_afe_process_tx_pkt(uint32_t opcode,
 		}
 		break;
 	}
+	case RESET_EVENTS:
+		prtd->pcm_irq_pos += snd_pcm_lib_period_bytes
+						(prtd->substream);
+		prtd->reset_event = true;
+		snd_pcm_period_elapsed(prtd->substream);
+		break;
 	default:
 		break;
 	}
@@ -315,6 +321,16 @@ static void pcm_afe_process_rx_pkt(uint32_t opcode,
 		}
 		break;
 	}
+	case RESET_EVENTS:
+		prtd->pcm_irq_pos += snd_pcm_lib_period_bytes
+							(prtd->substream);
+		prtd->reset_event = true;
+		if (!prtd->mmap_flag) {
+			atomic_set(&prtd->rec_bytes_avail, 1);
+			wake_up(&prtd->read_wait);
+		}
+		snd_pcm_period_elapsed(prtd->substream);
+		break;
 	default:
 		break;
 	}
@@ -387,7 +403,7 @@ static int msm_afe_open(struct snd_pcm_substream *substream)
 		pr_err("Failed to allocate memory for msm_audio\n");
 		return -ENOMEM;
 	} else
-		pr_debug("prtd %p\n", prtd);
+		pr_debug("prtd %pK\n", prtd);
 
 	mutex_init(&prtd->lock);
 	spin_lock_init(&prtd->dsp_lock);
@@ -440,9 +456,150 @@ static int msm_afe_open(struct snd_pcm_substream *substream)
 		}
 	}
 
+	prtd->reset_event = false;
 	return 0;
 }
 
+<<<<<<< HEAD
+=======
+static int msm_afe_playback_copy(struct snd_pcm_substream *substream,
+				int channel, snd_pcm_uframes_t hwoff,
+				void __user *buf, snd_pcm_uframes_t frames)
+{
+	int ret = 0;
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	struct pcm_afe_info *prtd = runtime->private_data;
+	char *hwbuf = runtime->dma_area + frames_to_bytes(runtime, hwoff);
+	u32 mem_map_handle = 0;
+
+	pr_debug("%s : appl_ptr 0x%lx hw_ptr 0x%lx dest_to_copy 0x%pK\n",
+		__func__,
+		runtime->control->appl_ptr, runtime->status->hw_ptr, hwbuf);
+
+	if (copy_from_user(hwbuf, buf, frames_to_bytes(runtime, frames))) {
+		pr_err("%s :Failed to copy audio from user buffer\n",
+			__func__);
+
+		ret = -EFAULT;
+		goto fail;
+	}
+
+	if (!prtd->mmap_flag) {
+		mem_map_handle = afe_req_mmap_handle(prtd->audio_client);
+		if (!mem_map_handle) {
+			pr_err("%s: mem_map_handle is NULL\n", __func__);
+			ret = -EFAULT;
+			goto fail;
+		}
+
+		pr_debug("%s : prtd-> dma_addr 0x%lx dsp_cnt %d\n", __func__,
+			prtd->dma_addr, prtd->dsp_cnt);
+
+		if (prtd->dsp_cnt == runtime->periods)
+			prtd->dsp_cnt = 0;
+
+		ret = afe_rt_proxy_port_write(
+				(prtd->dma_addr + (prtd->dsp_cnt *
+				snd_pcm_lib_period_bytes(prtd->substream))),
+				mem_map_handle,
+				snd_pcm_lib_period_bytes(prtd->substream));
+
+		if (ret) {
+			pr_err("%s: AFE proxy port write failed %d\n",
+				__func__, ret);
+			goto fail;
+		}
+		prtd->dsp_cnt++;
+	}
+fail:
+	return ret;
+}
+
+static int msm_afe_capture_copy(struct snd_pcm_substream *substream,
+				int channel, snd_pcm_uframes_t hwoff,
+				void __user *buf, snd_pcm_uframes_t frames)
+{
+	int ret = 0;
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	struct pcm_afe_info *prtd = runtime->private_data;
+	char *hwbuf = runtime->dma_area + frames_to_bytes(runtime, hwoff);
+	u32 mem_map_handle = 0;
+
+	if (!prtd->mmap_flag) {
+		mem_map_handle = afe_req_mmap_handle(prtd->audio_client);
+
+		if (!mem_map_handle) {
+			pr_err("%s: mem_map_handle is NULL\n", __func__);
+			ret = -EFAULT;
+			goto fail;
+		}
+
+		if (prtd->dsp_cnt == runtime->periods)
+			prtd->dsp_cnt = 0;
+
+		ret = afe_rt_proxy_port_read((prtd->dma_addr +
+				(prtd->dsp_cnt *
+				snd_pcm_lib_period_bytes(prtd->substream))),
+				mem_map_handle,
+				snd_pcm_lib_period_bytes(prtd->substream));
+
+		if (ret) {
+			pr_err("%s: AFE proxy port read failed %d\n",
+				__func__, ret);
+			goto fail;
+		}
+
+		prtd->dsp_cnt++;
+		ret = wait_event_timeout(prtd->read_wait,
+				atomic_read(&prtd->rec_bytes_avail), 5 * HZ);
+		if (ret < 0) {
+			pr_err("%s: wait_event_timeout failed\n", __func__);
+
+			ret = -ETIMEDOUT;
+			goto fail;
+		}
+		atomic_set(&prtd->rec_bytes_avail, 0);
+	}
+	pr_debug("%s:appl_ptr 0x%lx hw_ptr 0x%lx src_to_copy 0x%pK\n",
+			__func__, runtime->control->appl_ptr,
+			runtime->status->hw_ptr, hwbuf);
+
+	if (copy_to_user(buf, hwbuf, frames_to_bytes(runtime, frames))) {
+		pr_err("%s: copy to user failed\n", __func__);
+
+		goto fail;
+		ret = -EFAULT;
+	}
+
+fail:
+	return ret;
+}
+
+static int msm_afe_copy(struct snd_pcm_substream *substream, int channel,
+			snd_pcm_uframes_t hwoff, void __user *buf,
+			snd_pcm_uframes_t frames)
+{
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	struct pcm_afe_info *prtd = runtime->private_data;
+
+	int ret = 0;
+
+	if (prtd->reset_event) {
+		pr_debug("%s: reset events received from ADSP, return error\n",
+			__func__);
+		return -ENETRESET;
+	}
+
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		ret = msm_afe_playback_copy(substream, channel, hwoff,
+					buf, frames);
+	else if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
+		ret = msm_afe_capture_copy(substream, channel, hwoff,
+					buf, frames);
+	return ret;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static int msm_afe_close(struct snd_pcm_substream *substream)
 {
 	int rc = 0;
@@ -606,7 +763,7 @@ static int msm_afe_hw_params(struct snd_pcm_substream *substream,
 		return -ENOMEM;
 	}
 
-	pr_debug("%s:buf = %p\n", __func__, buf);
+	pr_debug("%s:buf = %pK\n", __func__, buf);
 	dma_buf->dev.type = SNDRV_DMA_TYPE_DEV;
 	dma_buf->dev.dev = substream->pcm->card->dev;
 	dma_buf->private_data = NULL;
@@ -643,6 +800,12 @@ static snd_pcm_uframes_t msm_afe_pointer(struct snd_pcm_substream *substream)
 
 	if (prtd->pcm_irq_pos >= snd_pcm_lib_buffer_bytes(substream))
 		prtd->pcm_irq_pos = 0;
+
+	if (prtd->reset_event) {
+		pr_debug("%s: reset events received from ADSP, return XRUN\n",
+			__func__);
+		return SNDRV_PCM_POS_XRUN;
+	}
 
 	pr_debug("pcm_irq_pos = %d\n", prtd->pcm_irq_pos);
 	return bytes_to_frames(runtime, (prtd->pcm_irq_pos));

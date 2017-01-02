@@ -65,6 +65,7 @@ obj-$(CONFIG_QSEECOM) += compat_qseecom.o
 endif
 obj-$(CONFIG_QFP_FUSE) += qfp_fuse.o
 obj-$(CONFIG_TI_DRV2667) += ti_drv2667.o
+<<<<<<< HEAD
 obj-$(CONFIG_QPNP_MISC) += qpnp-misc.o
 obj-$(CONFIG_CABLE_DETECT_8XXX) += cable_detect_8xxx.o
 obj-$(CONFIG_QCOM_LIQUID_DOCK)	+= qcom_liquid_dock.o
@@ -72,3 +73,13 @@ obj-$(CONFIG_FPR_SYN)	+= fpr_Synaptics/
 obj-$(CONFIG_FPR_CT)	+= fpr_CrucialTec/
 obj-y				+= qcom/
 obj-y				+= headset/
+=======
+#HTC_AUD_START
+#obj-y				+= headset/
+obj-$(CONFIG_RT_REGMAP) += rt-regmap.o
+#HTC_AUD_END
+obj-$(CONFIG_USB_EXT_TYPE_C_PERICOM)	+= type-c-pericom.o
+obj-$(CONFIG_USB_EXT_TYPE_C_TI)		+= type-c-ti.o
+obj-$(CONFIG_HTC_FLASHLIGHT) += htc_flashlight.o
+obj-$(CONFIG_QPNP_MISC) 	+= qpnp-misc.o
+>>>>>>> 0e91d2a... Nougat

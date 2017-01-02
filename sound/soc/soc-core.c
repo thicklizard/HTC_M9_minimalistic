@@ -764,6 +764,84 @@ EXPORT_SYMBOL_GPL(snd_soc_resume);
 static const struct snd_soc_dai_ops null_dai_ops = {
 };
 
+<<<<<<< HEAD
+=======
+/**
+ * soc_find_component: find a component from component_list in ASoC core
+ *
+ * @of_node: of_node of the component to query.
+ * @name: name of the component to query.
+ *
+ * function to find out if a component is already registered with ASoC core.
+ *
+ * Returns component handle for success, else NULL error.
+ */
+struct snd_soc_component *soc_find_component(
+	const struct device_node *of_node, const char *name)
+{
+	struct snd_soc_component *component;
+	bool found = false;
+
+	if (!of_node && !name) {
+		pr_err("%s: Either of_node or name must be valid\n",
+			__func__);
+		return NULL;
+	}
+
+	mutex_lock(&client_mutex);
+	list_for_each_entry(component, &component_list, list) {
+		if (of_node) {
+			if (component->dev->of_node == of_node) {
+				found = true;
+				goto exit;
+			}
+		} else if (strcmp(component->name, name) == 0) {
+			found = true;
+			goto exit;
+		}
+	}
+
+exit:
+	mutex_unlock(&client_mutex);
+	if (found)
+		return component;
+	else
+		return NULL;
+}
+EXPORT_SYMBOL(soc_find_component);
+
+static struct snd_soc_dai *snd_soc_find_dai(
+	const struct snd_soc_dai_link_component *dlc)
+{
+	struct snd_soc_component *component;
+	struct snd_soc_dai *dai;
+	bool found = false;
+
+	mutex_lock(&client_mutex);
+	/* Find CPU DAI from registered DAIs*/
+	list_for_each_entry(component, &component_list, list) {
+		if (dlc->of_node && component->dev->of_node != dlc->of_node)
+			continue;
+		if (dlc->name && strcmp(component->name, dlc->name))
+			continue;
+		list_for_each_entry(dai, &component->dai_list, list) {
+			if (dlc->dai_name && strcmp(dai->name, dlc->dai_name))
+				continue;
+
+			found = true;
+			goto exit;
+		}
+	}
+
+exit:
+	mutex_unlock(&client_mutex);
+	if (found)
+		return dai;
+	else
+		return NULL;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static int soc_bind_dai_link(struct snd_soc_card *card, int num)
 {
 	struct snd_soc_dai_link *dai_link = &card->dai_link[num];
@@ -2451,7 +2529,17 @@ int snd_soc_get_volsw_sx(struct snd_kcontrol *kcontrol,
 	unsigned int rshift = mc->rshift;
 	int max = mc->max;
 	int min = mc->min;
+<<<<<<< HEAD
 	int mask = (1 << (fls(min + max) - 1)) - 1;
+=======
+	unsigned int mask = (unsigned int)(1 << (fls(min + max) - 1)) - 1;
+	unsigned int val;
+	int ret;
+
+	ret = snd_soc_component_read(component, reg, &val);
+	if (ret < 0)
+		return ret;
+>>>>>>> 0e91d2a... Nougat
 
 	ucontrol->value.integer.value[0] =
 	    ((snd_soc_read(codec, reg) >> shift) - min) & mask;

@@ -1,4 +1,4 @@
-/* Copyright (c) 2002,2007-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2002,2007-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -28,12 +28,15 @@
 
 #include <linux/sync.h>
 
+<<<<<<< HEAD
 #define KGSL_TIMEOUT_NONE           0
 #define KGSL_TIMEOUT_DEFAULT        0xFFFFFFFF
 #define KGSL_TIMEOUT_PART           50 
 
 #define FIRST_TIMEOUT (HZ / 2)
 
+=======
+>>>>>>> 0e91d2a... Nougat
 #define KGSL_IOCTL_FUNC(_cmd, _func) \
 	[_IOC_NR((_cmd))] = \
 		{ .cmd = (_cmd), .func = (_func) }
@@ -47,10 +50,6 @@
 #define KGSL_STATE_SUSPEND	0x00000010
 #define KGSL_STATE_AWARE	0x00000020
 #define KGSL_STATE_SLUMBER	0x00000080
-
-#define KGSL_GRAPHICS_MEMORY_LOW_WATERMARK  0x1000000
-
-#define KGSL_IS_PAGE_ALIGNED(addr) (!((addr) & (~PAGE_MASK)))
 
 enum kgsl_event_results {
 	KGSL_EVENT_RETIRED = 1,
@@ -253,6 +252,7 @@ struct kgsl_device {
 	
 	unsigned int shader_mem_len;
 	struct kgsl_memdesc memstore;
+	struct kgsl_memdesc scratch;
 	const char *iomemname;
 	const char *shadermemname;
 
@@ -287,6 +287,7 @@ struct kgsl_device {
 	struct kgsl_snapshot *snapshot;
 
 	u32 snapshot_faultcount;	
+	bool force_panic;		
 	struct kobject snapshot_kobj;
 
 	struct kobject ppd_kobj;
@@ -298,13 +299,15 @@ struct kgsl_device {
 	int mem_log;
 	int pwr_log;
 	struct kgsl_pwrscale pwrscale;
-	struct work_struct event_work;
 
 	int reset_counter; 
 	int cff_dump_enable;
 	struct workqueue_struct *events_wq;
 
 	struct device *busmondev; 
+
+	
+	int active_context_count;
 
 	
 	int gpu_fault_no_panic;
@@ -316,8 +319,6 @@ struct kgsl_device {
 	.cmdbatch_gate = COMPLETION_INITIALIZER((_dev).cmdbatch_gate),\
 	.idle_check_ws = __WORK_INITIALIZER((_dev).idle_check_ws,\
 			kgsl_idle_check),\
-	.event_work  = __WORK_INITIALIZER((_dev).event_work,\
-			kgsl_process_events),\
 	.context_idr = IDR_INIT((_dev).context_idr),\
 	.wait_queue = __WAIT_QUEUE_HEAD_INITIALIZER((_dev).wait_queue),\
 	.active_cnt_wq = __WAIT_QUEUE_HEAD_INITIALIZER((_dev).active_cnt_wq),\
@@ -346,10 +347,8 @@ struct kgsl_context {
 	unsigned long priv;
 	struct kgsl_device *device;
 	unsigned int reset_status;
-	bool wait_on_invalid_ts;
 	struct sync_timeline *timeline;
 	struct kgsl_event_group events;
-	unsigned int pagefault_ts;
 	unsigned int flags;
 	struct kgsl_pwr_constraint pwr_constraint;
 	unsigned int fault_count;
@@ -387,6 +386,12 @@ struct kgsl_device_private {
 };
 
 struct kgsl_snapshot {
+	uint64_t ib1base;
+	uint64_t ib2base;
+	unsigned int ib1size;
+	unsigned int ib2size;
+	bool ib1dumped;
+	bool ib2dumped;
 	u8 *start;
 	size_t size;
 	u8 *ptr;
@@ -559,7 +564,7 @@ void kgsl_process_event_group(struct kgsl_device *device,
 	struct kgsl_event_group *group);
 void kgsl_flush_event_group(struct kgsl_device *device,
 		struct kgsl_event_group *group);
-void kgsl_process_events(struct work_struct *work);
+void kgsl_process_event_groups(struct kgsl_device *device);
 
 void kgsl_context_destroy(struct kref *kref);
 
@@ -568,8 +573,21 @@ int kgsl_context_init(struct kgsl_device_private *, struct kgsl_context
 
 void kgsl_context_dump(struct kgsl_context *context);
 
+<<<<<<< HEAD
 int kgsl_memfree_find_entry(pid_t pid, unsigned long *gpuaddr,
 	unsigned long *size, unsigned int *flags);
+=======
+int kgsl_memfree_find_entry(pid_t ptname, uint64_t *gpuaddr,
+	uint64_t *size, uint64_t *flags, pid_t *pid);
+
+long kgsl_ioctl(struct file *filep, unsigned int cmd, unsigned long arg);
+
+long kgsl_ioctl_copy_in(unsigned int kernel_cmd, unsigned int user_cmd,
+		unsigned long arg, unsigned char *ptr);
+
+long kgsl_ioctl_copy_out(unsigned int kernel_cmd, unsigned int user_cmd,
+		unsigned long, unsigned char *ptr);
+>>>>>>> 0e91d2a... Nougat
 
 static inline void
 kgsl_context_put(struct kgsl_context *context)

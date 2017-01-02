@@ -306,6 +306,17 @@ int __attribute__((weak)) arch_dup_task_struct(struct task_struct *dst,
 	return 0;
 }
 
+<<<<<<< HEAD
+=======
+void set_task_stack_end_magic(struct task_struct *tsk)
+{
+	unsigned long *stackend;
+
+	stackend = end_of_stack(tsk);
+	*stackend = STACK_END_MAGIC;	/* for overflow detection */
+}
+
+>>>>>>> 0e91d2a... Nougat
 static struct task_struct *dup_task_struct(struct task_struct *orig)
 {
 	struct task_struct *tsk;
@@ -832,7 +843,11 @@ void mm_release(struct task_struct *tsk, struct mm_struct *mm)
  * Allocate a new mm structure and copy contents from the
  * mm structure of the passed in task structure.
  */
+<<<<<<< HEAD
 struct mm_struct *dup_mm(struct task_struct *tsk)
+=======
+static struct mm_struct *dup_mm(struct task_struct *tsk)
+>>>>>>> 0e91d2a... Nougat
 {
 	struct mm_struct *mm, *oldmm = current->mm;
 	int err;
@@ -914,6 +929,12 @@ static int copy_mm(unsigned long clone_flags, struct task_struct *tsk)
 	if (!oldmm)
 		return 0;
 
+<<<<<<< HEAD
+=======
+	/* initialize the new vmacache entries */
+	vmacache_flush(tsk);
+
+>>>>>>> 0e91d2a... Nougat
 	if (clone_flags & CLONE_VM) {
 		atomic_inc(&oldmm->mm_users);
 		mm = oldmm;
@@ -1165,6 +1186,7 @@ static void rt_mutex_init_task(struct task_struct *p)
 #endif
 }
 
+<<<<<<< HEAD
 #ifdef CONFIG_MM_OWNER
 void mm_init_owner(struct mm_struct *mm, struct task_struct *p)
 {
@@ -1172,6 +1194,8 @@ void mm_init_owner(struct mm_struct *mm, struct task_struct *p)
 }
 #endif /* CONFIG_MM_OWNER */
 
+=======
+>>>>>>> 0e91d2a... Nougat
 /*
  * Initialize POSIX timer handling for a single task.
  */
@@ -1185,6 +1209,15 @@ static void posix_cpu_timers_init(struct task_struct *tsk)
 	INIT_LIST_HEAD(&tsk->cpu_timers[2]);
 }
 
+<<<<<<< HEAD
+=======
+static inline void
+init_task_pid(struct task_struct *task, enum pid_type type, struct pid *pid)
+{
+	 task->pids[type].pid = pid;
+}
+
+>>>>>>> 0e91d2a... Nougat
 /*
  * This creates a new process as a copy of the old one,
  * but does not actually start it yet.
@@ -1235,6 +1268,7 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 		return ERR_PTR(-EINVAL);
 
 	/*
+<<<<<<< HEAD
 	 * If the new process will be in a different pid namespace don't
 	 * allow it to share a thread group or signal handlers with the
 	 * forking task.
@@ -1242,6 +1276,18 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 	if ((clone_flags & (CLONE_SIGHAND | CLONE_NEWPID)) &&
 	    (task_active_pid_ns(current) != current->nsproxy->pid_ns))
 		return ERR_PTR(-EINVAL);
+=======
+	 * If the new process will be in a different pid or user namespace
+	 * do not allow it to share a thread group or signal handlers or
+	 * parent with the forking task.
+	 */
+	if (clone_flags & CLONE_SIGHAND) {
+		if ((clone_flags & (CLONE_NEWUSER | CLONE_NEWPID)) ||
+		    (task_active_pid_ns(current) !=
+				current->nsproxy->pid_ns_for_children))
+			return ERR_PTR(-EINVAL);
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	retval = security_task_create(clone_flags);
 	if (retval)
@@ -1285,9 +1331,15 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 	if (!try_module_get(task_thread_info(p)->exec_domain->module))
 		goto bad_fork_cleanup_count;
 
+<<<<<<< HEAD
 	p->did_exec = 0;
 	delayacct_tsk_init(p);	/* Must remain after dup_task_struct() */
 	copy_flags(clone_flags, p);
+=======
+	delayacct_tsk_init(p);	/* Must remain after dup_task_struct() */
+	p->flags &= ~(PF_SUPERPRIV | PF_WQ_WORKER);
+	p->flags |= PF_FORKNOEXEC;
+>>>>>>> 0e91d2a... Nougat
 	INIT_LIST_HEAD(&p->children);
 	INIT_LIST_HEAD(&p->sibling);
 	rcu_copy_process(p);
@@ -1377,7 +1429,13 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 #endif
 
 	/* Perform scheduler related setup. Assign this task to a CPU. */
+<<<<<<< HEAD
 	sched_fork(p);
+=======
+	retval = sched_fork(clone_flags, p);
+	if (retval)
+		goto bad_fork_cleanup_policy;
+>>>>>>> 0e91d2a... Nougat
 
 	retval = perf_event_init_task(p);
 	if (retval)
@@ -1386,6 +1444,10 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 	if (retval)
 		goto bad_fork_cleanup_perf;
 	/* copy all the process information */
+<<<<<<< HEAD
+=======
+	shm_init_task(p);
+>>>>>>> 0e91d2a... Nougat
 	retval = copy_semundo(clone_flags, p);
 	if (retval)
 		goto bad_fork_cleanup_audit;
@@ -1442,7 +1504,10 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 	INIT_LIST_HEAD(&p->pi_state_list);
 	p->pi_state_cache = NULL;
 #endif
+<<<<<<< HEAD
 	uprobe_copy_process(p);
+=======
+>>>>>>> 0e91d2a... Nougat
 	/*
 	 * sigaltstack should be cleared when sharing the same VM
 	 */
@@ -1461,7 +1526,12 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 	clear_all_latency_tracing(p);
 
 	/* ok, now we should be set up.. */
+<<<<<<< HEAD
 	if (clone_flags & CLONE_THREAD)
+=======
+	p->pid = pid_nr(pid);
+	if (clone_flags & CLONE_THREAD) {
+>>>>>>> 0e91d2a... Nougat
 		p->exit_signal = -1;
 	else if (clone_flags & CLONE_PARENT)
 		p->exit_signal = current->group_leader->exit_signal;
@@ -1483,7 +1553,14 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 	INIT_LIST_HEAD(&p->thread_group);
 	p->task_works = NULL;
 
+<<<<<<< HEAD
 	/* Need tasklist lock for parent etc handling! */
+=======
+	/*
+	 * Make it visible to the rest of the system, but dont wake it up yet.
+	 * Need tasklist lock for parent etc handling!
+	 */
+>>>>>>> 0e91d2a... Nougat
 	write_lock_irq(&tasklist_lock);
 
 	/* CLONE_PARENT re-uses the old parent */
@@ -1648,6 +1725,7 @@ long do_fork(unsigned long clone_flags,
 	long nr;
 
 	/*
+<<<<<<< HEAD
 	 * Do some preliminary argument and permissions checking before we
 	 * actually start allocating stuff
 	 */
@@ -1657,6 +1735,8 @@ long do_fork(unsigned long clone_flags,
 	}
 
 	/*
+=======
+>>>>>>> 0e91d2a... Nougat
 	 * Determine whether and which event to report to ptracer.  When
 	 * called from kernel_thread or CLONE_UNTRACED is explicitly
 	 * requested, no event is reported; otherwise, report if the event
@@ -1732,7 +1812,11 @@ SYSCALL_DEFINE0(fork)
 	return do_fork(SIGCHLD, 0, 0, NULL, NULL);
 #else
 	/* can not support in nommu mode */
+<<<<<<< HEAD
 	return(-EINVAL);
+=======
+	return -EINVAL;
+>>>>>>> 0e91d2a... Nougat
 #endif
 }
 #endif
@@ -1826,6 +1910,7 @@ static int check_unshare_flags(unsigned long unshare_flags)
 				CLONE_NEWUSER|CLONE_NEWPID))
 		return -EINVAL;
 	/*
+<<<<<<< HEAD
 	 * Not implemented, but pretend it works if there is nothing to
 	 * unshare. Note that unsharing CLONE_THREAD or CLONE_SIGHAND
 	 * needs to unshare vm.
@@ -1833,6 +1918,23 @@ static int check_unshare_flags(unsigned long unshare_flags)
 	if (unshare_flags & (CLONE_THREAD | CLONE_SIGHAND | CLONE_VM)) {
 		/* FIXME: get_task_mm() increments ->mm_users */
 		if (atomic_read(&current->mm->mm_users) > 1)
+=======
+	 * Not implemented, but pretend it works if there is nothing
+	 * to unshare.  Note that unsharing the address space or the
+	 * signal handlers also need to unshare the signal queues (aka
+	 * CLONE_THREAD).
+	 */
+	if (unshare_flags & (CLONE_THREAD | CLONE_SIGHAND | CLONE_VM)) {
+		if (!thread_group_empty(current))
+			return -EINVAL;
+	}
+	if (unshare_flags & (CLONE_SIGHAND | CLONE_VM)) {
+		if (atomic_read(&current->sighand->count) > 1)
+			return -EINVAL;
+	}
+	if (unshare_flags & CLONE_VM) {
+		if (!current_is_single_threaded())
+>>>>>>> 0e91d2a... Nougat
 			return -EINVAL;
 	}
 
@@ -1901,6 +2003,7 @@ SYSCALL_DEFINE1(unshare, unsigned long, unshare_flags)
 	if (unshare_flags & CLONE_NEWUSER)
 		unshare_flags |= CLONE_THREAD | CLONE_FS;
 	/*
+<<<<<<< HEAD
 	 * If unsharing a pid namespace must also unshare the thread.
 	 */
 	if (unshare_flags & CLONE_NEWPID)
@@ -1911,11 +2014,21 @@ SYSCALL_DEFINE1(unshare, unsigned long, unshare_flags)
 	if (unshare_flags & CLONE_THREAD)
 		unshare_flags |= CLONE_VM;
 	/*
+=======
+>>>>>>> 0e91d2a... Nougat
 	 * If unsharing vm, must also unshare signal handlers.
 	 */
 	if (unshare_flags & CLONE_VM)
 		unshare_flags |= CLONE_SIGHAND;
 	/*
+<<<<<<< HEAD
+=======
+	 * If unsharing a signal handlers, must also unshare the signal queues.
+	 */
+	if (unshare_flags & CLONE_SIGHAND)
+		unshare_flags |= CLONE_THREAD;
+	/*
+>>>>>>> 0e91d2a... Nougat
 	 * If unsharing namespace, must also unshare filesystem information.
 	 */
 	if (unshare_flags & CLONE_NEWNS)
@@ -1952,6 +2065,14 @@ SYSCALL_DEFINE1(unshare, unsigned long, unshare_flags)
 			 */
 			exit_sem(current);
 		}
+<<<<<<< HEAD
+=======
+		if (unshare_flags & CLONE_NEWIPC) {
+			/* Orphan segments in old ns (see sem above). */
+			exit_shm(current);
+			shm_init_task(current);
+		}
+>>>>>>> 0e91d2a... Nougat
 
 		if (new_nsproxy)
 			switch_task_namespaces(current, new_nsproxy);

@@ -1143,9 +1143,14 @@ static int update_nodemask(struct cpuset *cs, struct cpuset *trialcs,
 	cs->mems_allowed = trialcs->mems_allowed;
 	mutex_unlock(&callback_mutex);
 
+<<<<<<< HEAD
 	update_tasks_nodemask(cs, oldmem, &heap);
 
 	heap_free(&heap);
+=======
+	/* use trialcs->mems_allowed as a temp variable */
+	update_nodemasks_hier(cs, &trialcs->mems_allowed);
+>>>>>>> 0e91d2a... Nougat
 done:
 	NODEMASK_FREE(oldmem);
 	return retval;

@@ -1255,6 +1255,7 @@ int kvm_vgic_vcpu_init(struct kvm_vcpu *vcpu)
 	if (!irqchip_in_kernel(vcpu->kvm))
 		return 0;
 
+<<<<<<< HEAD
 	if (vcpu->vcpu_id >= VGIC_MAX_CPUS)
 		return -EBUSY;
 
@@ -1265,6 +1266,15 @@ int kvm_vgic_vcpu_init(struct kvm_vcpu *vcpu)
 		if (i < VGIC_NR_PRIVATE_IRQS)
 			vgic_bitmap_set_irq_val(&dist->irq_cfg,
 						vcpu->vcpu_id, i, VGIC_CFG_EDGE);
+=======
+static int vgic_vcpu_init_maps(struct kvm_vcpu *vcpu, int nr_irqs)
+{
+	struct vgic_cpu *vgic_cpu = &vcpu->arch.vgic_cpu;
+	int nr_longs = BITS_TO_LONGS(nr_irqs - VGIC_NR_PRIVATE_IRQS);
+	int sz = nr_longs * sizeof(unsigned long);
+	vgic_cpu->pending_shared = kzalloc(sz, GFP_KERNEL);
+	vgic_cpu->vgic_irq_lr_map = kmalloc(nr_irqs, GFP_KERNEL);
+>>>>>>> 0e91d2a... Nougat
 
 		vgic_cpu->vgic_irq_lr_map[i] = LR_EMPTY;
 	}

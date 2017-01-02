@@ -314,6 +314,14 @@ struct qxl_device {
 	struct workqueue_struct *gc_queue;
 	struct work_struct gc_work;
 
+<<<<<<< HEAD
+=======
+	struct work_struct fb_work;
+
+	struct drm_property *hotplug_mode_update_property;
+	int monitors_config_width;
+	int monitors_config_height;
+>>>>>>> 0e91d2a... Nougat
 };
 
 /* forward declaration for QXL_INFO_IO */

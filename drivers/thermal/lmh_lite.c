@@ -53,6 +53,54 @@
 		} \
 	} while (0)
 
+<<<<<<< HEAD
+=======
+#define LMH_GET_RECURSSIVE_DATA(desc_arg, cmd_idx, cmd_buf, payload, next, \
+	size, cmd_id, dest_buf, ret)					\
+	do {								\
+		int idx = 0;						\
+		desc_arg.args[cmd_idx] = cmd_buf.list_start = next;	\
+		trace_lmh_event_call("GET_TYPE enter");			\
+		dmac_flush_range(payload, payload + sizeof(uint32_t) *	\
+			LMH_SCM_PAYLOAD_SIZE);				\
+		if (!is_scm_armv8()) {					\
+			ret = scm_call(SCM_SVC_LMH, cmd_id,		\
+				(void *) &cmd_buf, SCM_BUFFER_SIZE(cmd_buf), \
+				&size, SCM_BUFFER_SIZE(size));		\
+		} else {						\
+			ret = scm_call2(SCM_SIP_FNID(SCM_SVC_LMH,	\
+				cmd_id), &desc_arg);			\
+			size = desc_arg.ret[0];				\
+		}							\
+		/* Have barrier before reading from TZ data */		\
+		mb();							\
+		trace_lmh_event_call("GET_TYPE exit");			\
+		if (ret) {						\
+			pr_err("Error in SCM v%d get type. cmd:%x err:%d\n", \
+				(is_scm_armv8()) ? 8 : 7, cmd_id, ret);	\
+			break;						\
+		}							\
+		if (!size) {						\
+			pr_err("No LMH device supported.\n");		\
+			ret = -ENODEV;					\
+			break;						\
+		}							\
+		if (!dest_buf) {					\
+			dest_buf = devm_kzalloc(lmh_data->dev,		\
+				sizeof(uint32_t) * size, GFP_KERNEL);	\
+			if (!dest_buf) {				\
+				ret = -ENOMEM;				\
+				break;					\
+			}						\
+		}							\
+		for (idx = next;					\
+			idx < min((next + LMH_SCM_PAYLOAD_SIZE), size); \
+			idx++)						\
+			dest_buf[idx] = payload[idx - next];		\
+		next += LMH_SCM_PAYLOAD_SIZE;				\
+	} while (next < size)						\
+
+>>>>>>> 0e91d2a... Nougat
 struct __attribute__((__packed__)) lmh_sensor_info {
 	uint32_t			name;
 	uint32_t			node_id;
@@ -101,6 +149,28 @@ struct lmh_sensor_data {
 	struct list_head		list_ptr;
 };
 
+<<<<<<< HEAD
+=======
+struct lmh_default_data {
+	uint32_t			default_profile;
+	uint32_t			odcm_reg_addr[LMH_ODCM_MAX_COUNT];
+};
+
+static struct lmh_default_data		lmh_lite_data = {
+	.default_profile = 0,
+};
+static struct lmh_default_data		lmh_v1_data = {
+	.default_profile = 1,
+	.odcm_reg_addr = {	0x09981030, /* CPU0 */
+				0x09991030, /* CPU1 */
+				0x099A1028, /* APC0_L2 */
+				0x099B1030, /* CPU2 */
+				0x099C1030, /* CPU3 */
+				0x099D1028, /* APC1_l2 */
+	},
+};
+static struct lmh_default_data		*lmh_hw_data;
+>>>>>>> 0e91d2a... Nougat
 static struct lmh_driver_data		*lmh_data;
 static DECLARE_RWSEM(lmh_sensor_access);
 static DEFINE_MUTEX(lmh_sensor_read);
@@ -258,7 +328,13 @@ static void lmh_read_and_update(struct lmh_driver_data *lmh_dat)
 	list_for_each_entry(lmh_sensor, &lmh_sensor_list, list_ptr)
 		lmh_sensor->last_read_value = 0;
 	payload.count = 0;
+<<<<<<< HEAD
 	desc_arg.args[0] = cmd_buf.addr = SCM_BUFFER_PHYS(&payload);
+=======
+	cmd_buf.addr = SCM_BUFFER_PHYS(&payload);
+	/* &payload may be a physical address > 4 GB */
+	desc_arg.args[0] = SCM_BUFFER_PHYS(&payload);
+>>>>>>> 0e91d2a... Nougat
 	desc_arg.args[1] = cmd_buf.size
 			= SCM_BUFFER_SIZE(struct lmh_sensor_packet);
 	desc_arg.arginfo = SCM_ARGS(2, SCM_RW, SCM_VAL);
@@ -381,6 +457,7 @@ static void lmh_notify(struct work_struct *work)
 		lmh_dat->intr_state = LMH_ISR_MONITOR;
 		goto notify_exit;
 	}
+<<<<<<< HEAD
 	lmh_read_and_notify(lmh_dat);
 	if (!lmh_dat->intr_status_val) {
 		pr_debug("LMH not throttling. Enabling interrupt\n");
@@ -388,6 +465,8 @@ static void lmh_notify(struct work_struct *work)
 		trace_lmh_event_call("Lmh Zero throttle Interrupt Clear");
 		goto notify_exit;
 	}
+=======
+>>>>>>> 0e91d2a... Nougat
 
 notify_exit:
 	if (lmh_dat->intr_state == LMH_ISR_POLLING)
@@ -419,6 +498,10 @@ static int lmh_get_sensor_devicetree(struct platform_device *pdev)
 	char *key = NULL;
 	struct device_node *node = pdev->dev.of_node;
 	struct resource *lmh_intr_base = NULL;
+<<<<<<< HEAD
+=======
+	/*struct resource *lmh_odcm_base = NULL;*/
+>>>>>>> 0e91d2a... Nougat
 
 	key = "qcom,lmh-trim-err-offset";
 	ret = of_property_read_u32(node, key,
@@ -570,7 +653,13 @@ static int lmh_get_sensor_list(void)
 
 	do {
 		payload->count = next;
+<<<<<<< HEAD
 		desc_arg.args[0] = cmd_buf.addr = payload_phys;
+=======
+		cmd_buf.addr = payload_phys;
+		/* payload_phys may be a physical address > 4 GB */
+		desc_arg.args[0] = payload_phys;
+>>>>>>> 0e91d2a... Nougat
 		desc_arg.args[1] = cmd_buf.size = SCM_BUFFER_SIZE(struct
 				lmh_sensor_packet);
 		desc_arg.arginfo = SCM_ARGS(2, SCM_RW, SCM_VAL);
@@ -704,6 +793,7 @@ static int lmh_get_dev_info(void)
 		goto get_dev_exit;
 	}
 
+<<<<<<< HEAD
 	do {
 		desc_arg.args[0] = cmd_buf.list_addr = SCM_BUFFER_PHYS(payload);
 		desc_arg.args[1] = cmd_buf.list_size =
@@ -751,6 +841,27 @@ static int lmh_get_dev_info(void)
 			lmh_data->dev_info.levels[idx] = payload[idx - next];
 		next += LMH_GET_PROFILE_SIZE;
 	} while (next < size);
+=======
+	cmd_buf.list_addr = SCM_BUFFER_PHYS(payload);
+	/* &payload may be a physical address > 4 GB */
+	desc_arg.args[0] = SCM_BUFFER_PHYS(payload);
+	desc_arg.args[1] = cmd_buf.list_size =
+		SCM_BUFFER_SIZE(uint32_t) * LMH_GET_PROFILE_SIZE;
+	desc_arg.arginfo = SCM_ARGS(3, SCM_RW, SCM_VAL, SCM_VAL);
+	LMH_GET_RECURSSIVE_DATA(desc_arg, 2, cmd_buf, payload, next, size,
+		LMH_GET_PROFILES, lmh_data->dev_info.levels, ret);
+	if (ret)
+		goto get_dev_exit;
+	lmh_data->dev_info.level_ct = size;
+	lmh_data->dev_info.curr_level = LMH_DEFAULT_PROFILE;
+	ret = lmh_set_level(&lmh_data->dev_info.dev_ops,
+		lmh_hw_data->default_profile);
+	if (ret) {
+		pr_err("Error switching to default profile%d, err:%d\n",
+			lmh_data->dev_info.curr_level, ret);
+		goto get_dev_exit;
+	}
+>>>>>>> 0e91d2a... Nougat
 
 get_dev_exit:
 	if (ret)
@@ -784,6 +895,408 @@ dev_init_exit:
 	return ret;
 }
 
+<<<<<<< HEAD
+=======
+static int lmh_debug_read(struct lmh_debug_ops *ops, uint32_t **buf)
+{
+	int ret = 0, size = 0, tz_ret = 0;
+	static uint32_t curr_size;
+	struct scm_desc desc_arg;
+	static uint32_t *payload;
+	struct {
+		uint32_t buf_addr;
+		uint32_t buf_size;
+	} cmd_buf;
+
+	desc_arg.arginfo = SCM_ARGS(0);
+	trace_lmh_event_call("GET_DEBUG_READ_SIZE enter");
+	if (!is_scm_armv8()) {
+		ret = scm_call(SCM_SVC_LMH, LMH_DEBUG_READ_BUF_SIZE,
+			NULL, 0, &size, SCM_BUFFER_SIZE(size));
+	} else {
+		ret = scm_call2(SCM_SIP_FNID(SCM_SVC_LMH,
+			LMH_DEBUG_READ_BUF_SIZE), &desc_arg);
+		size = desc_arg.ret[0];
+	}
+	trace_lmh_event_call("GET_DEBUG_READ_SIZE exit");
+	if (ret) {
+		pr_err("Error in SCM v%d get debug buffer size call. err:%d\n",
+				(is_scm_armv8()) ? 8 : 7, ret);
+		goto get_dbg_exit;
+	}
+	if (!size) {
+		pr_err("No Debug data to read.\n");
+		ret = -ENODEV;
+		goto get_dbg_exit;
+	}
+	size = SCM_BUFFER_SIZE(uint32_t) * size * LMH_READ_LINE_LENGTH;
+	if (curr_size != size) {
+		if (payload)
+			devm_kfree(lmh_data->dev, payload);
+		payload = devm_kzalloc(lmh_data->dev, size, GFP_KERNEL);
+		if (!payload) {
+			pr_err("payload buffer alloc failed\n");
+			ret = -ENOMEM;
+			goto get_dbg_exit;
+		}
+		curr_size = size;
+	}
+
+	cmd_buf.buf_addr = SCM_BUFFER_PHYS(payload);
+	/* &payload may be a physical address > 4 GB */
+	desc_arg.args[0] = SCM_BUFFER_PHYS(payload);
+	desc_arg.args[1] = cmd_buf.buf_size = curr_size;
+	desc_arg.arginfo = SCM_ARGS(2, SCM_RW, SCM_VAL);
+	trace_lmh_event_call("GET_DEBUG_READ enter");
+	dmac_flush_range(payload, payload + curr_size);
+	if (!is_scm_armv8()) {
+		ret = scm_call(SCM_SVC_LMH, LMH_DEBUG_READ,
+			(void *) &cmd_buf, SCM_BUFFER_SIZE(cmd_buf),
+			&tz_ret, SCM_BUFFER_SIZE(tz_ret));
+	} else {
+		ret = scm_call2(SCM_SIP_FNID(SCM_SVC_LMH,
+			LMH_DEBUG_READ), &desc_arg);
+		tz_ret = desc_arg.ret[0];
+	}
+	/* Have memory barrier before we access the TZ data */
+	mb();
+	trace_lmh_event_call("GET_DEBUG_READ exit");
+	if (ret) {
+		pr_err("Error in SCM v%d get debug read. err:%d\n",
+				(is_scm_armv8()) ? 8 : 7, ret);
+		goto get_dbg_exit;
+	}
+	if (tz_ret) {
+		pr_err("TZ API returned error. err:%d\n", tz_ret);
+		ret = tz_ret;
+		goto get_dbg_exit;
+	}
+	trace_lmh_debug_data("Debug read", payload,
+		curr_size / sizeof(uint32_t));
+
+get_dbg_exit:
+	if (ret && payload) {
+		devm_kfree(lmh_data->dev, payload);
+		payload = NULL;
+		curr_size = 0;
+	}
+	*buf = payload;
+
+	return (ret < 0) ? ret : curr_size;
+}
+
+static int lmh_debug_config_write(uint32_t cmd_id, uint32_t *buf, int size)
+{
+	int ret = 0, size_bytes = 0;
+	struct scm_desc desc_arg;
+	uint32_t *payload = NULL;
+	struct {
+		uint32_t buf_addr;
+		uint32_t buf_size;
+		uint32_t node;
+		uint32_t node_id;
+		uint32_t read_type;
+	} cmd_buf;
+
+	trace_lmh_debug_data("Config LMH", buf, size);
+	size_bytes = (size - 3) * sizeof(uint32_t);
+	payload = devm_kzalloc(lmh_data->dev, size_bytes, GFP_KERNEL);
+	if (!payload) {
+		ret = -ENOMEM;
+		goto set_cfg_exit;
+	}
+	memcpy(payload, &buf[3], size_bytes);
+
+	cmd_buf.buf_addr = SCM_BUFFER_PHYS(payload);
+	/* &payload may be a physical address > 4 GB */
+	desc_arg.args[0] = SCM_BUFFER_PHYS(payload);
+	desc_arg.args[1] = cmd_buf.buf_size = size_bytes;
+	desc_arg.args[2] = cmd_buf.node = buf[0];
+	desc_arg.args[3] = cmd_buf.node_id = buf[1];
+	desc_arg.args[4] = cmd_buf.read_type = buf[2];
+	desc_arg.arginfo = SCM_ARGS(5, SCM_RO, SCM_VAL, SCM_VAL, SCM_VAL,
+					SCM_VAL);
+	trace_lmh_event_call("CONFIG_DEBUG_WRITE enter");
+	dmac_flush_range(payload, payload + size_bytes);
+	if (!is_scm_armv8())
+		ret = scm_call(SCM_SVC_LMH, cmd_id, (void *) &cmd_buf,
+			SCM_BUFFER_SIZE(cmd_buf), NULL, 0);
+	else
+		ret = scm_call2(SCM_SIP_FNID(SCM_SVC_LMH, cmd_id), &desc_arg);
+	/* Have memory barrier before we access the TZ data */
+	mb();
+	trace_lmh_event_call("CONFIG_DEBUG_WRITE exit");
+	if (ret) {
+		pr_err("Error in SCM v%d config debug read. err:%d\n",
+				(is_scm_armv8()) ? 8 : 7, ret);
+		goto set_cfg_exit;
+	}
+
+set_cfg_exit:
+	return ret;
+}
+
+static int lmh_debug_config_read(struct lmh_debug_ops *ops, uint32_t *buf,
+	int size)
+{
+	return lmh_debug_config_write(LMH_DEBUG_SET, buf, size);
+}
+
+static int lmh_debug_get_types(struct lmh_debug_ops *ops, bool is_read,
+	uint32_t **buf)
+{
+	int ret = 0;
+	uint32_t size = 0, next = 0;
+	struct scm_desc desc_arg;
+	uint32_t *payload = NULL, *dest_buf = NULL;
+	struct {
+		uint32_t list_addr;
+		uint32_t list_size;
+		uint32_t cmd_type;
+		uint32_t list_start;
+	} cmd_buf;
+
+	if (is_read && lmh_data->debug_info.read_type) {
+		*buf = lmh_data->debug_info.read_type;
+		trace_lmh_debug_data("Data type",
+			lmh_data->debug_info.read_type,
+			lmh_data->debug_info.read_type_count);
+		return lmh_data->debug_info.read_type_count;
+	} else if (!is_read && lmh_data->debug_info.config_type) {
+		*buf = lmh_data->debug_info.config_type;
+		trace_lmh_debug_data("Config type",
+			lmh_data->debug_info.config_type,
+			lmh_data->debug_info.config_type_count);
+		return lmh_data->debug_info.config_type_count;
+	}
+	payload = devm_kzalloc(lmh_data->dev, sizeof(uint32_t) *
+		LMH_SCM_PAYLOAD_SIZE, GFP_KERNEL);
+	if (!payload) {
+		ret = -ENOMEM;
+		goto get_type_exit;
+	}
+	cmd_buf.list_addr = SCM_BUFFER_PHYS(payload);
+	/* &payload may be a physical address > 4 GB */
+	desc_arg.args[0] = SCM_BUFFER_PHYS(payload);
+	desc_arg.args[1] = cmd_buf.list_size =
+		SCM_BUFFER_SIZE(uint32_t) * LMH_SCM_PAYLOAD_SIZE;
+	desc_arg.args[2] = cmd_buf.cmd_type = (is_read) ?
+			LMH_DEBUG_READ_TYPE : LMH_DEBUG_CONFIG_TYPE;
+	desc_arg.arginfo = SCM_ARGS(4, SCM_RW, SCM_VAL, SCM_VAL, SCM_VAL);
+	LMH_GET_RECURSSIVE_DATA(desc_arg, 3, cmd_buf, payload, next, size,
+		LMH_DEBUG_GET_TYPE, dest_buf, ret);
+	if (ret)
+		goto get_type_exit;
+	pr_debug("Total %s types:%d\n", (is_read) ? "read" : "config", size);
+	if (is_read) {
+		lmh_data->debug_info.read_type = *buf = dest_buf;
+		lmh_data->debug_info.read_type_count = size;
+		trace_lmh_debug_data("Data type", dest_buf, size);
+	} else {
+		lmh_data->debug_info.config_type = *buf = dest_buf;
+		lmh_data->debug_info.config_type_count = size;
+		trace_lmh_debug_data("Config type", dest_buf, size);
+	}
+
+get_type_exit:
+	if (ret) {
+		devm_kfree(lmh_data->dev, lmh_data->debug_info.read_type);
+		devm_kfree(lmh_data->dev, lmh_data->debug_info.config_type);
+		lmh_data->debug_info.config_type_count = 0;
+		lmh_data->debug_info.read_type_count = 0;
+	}
+	devm_kfree(lmh_data->dev, payload);
+	return (ret) ? ret : size;
+}
+
+static int lmh_debug_lmh_config(struct lmh_debug_ops *ops, uint32_t *buf,
+	int size)
+{
+	return lmh_debug_config_write(LMH_DEBUG_SET, buf, size);
+}
+
+static void lmh_voltage_scale_set(uint32_t voltage)
+{
+	char trace_buf[MAX_TRACE_EVENT_MSG_LEN] = "";
+
+	mutex_lock(&scm_lmh_lock);
+	writel_relaxed(voltage, lmh_data->dpm_voltage_scale_reg);
+	mutex_unlock(&scm_lmh_lock);
+	snprintf(trace_buf, MAX_TRACE_EVENT_MSG_LEN,
+		"DPM voltage scale %d mV", voltage);
+	pr_debug("%s\n", trace_buf);
+	trace_lmh_event_call(trace_buf);
+}
+
+static void write_to_odcm(bool enable)
+{
+	uint32_t idx = 0, data = enable ? 1 : 0;
+
+	for (; idx < LMH_ODCM_MAX_COUNT; idx++)
+		writel_relaxed(data, lmh_data->odcm_reg[idx]);
+}
+
+static void evaluate_and_config_odcm(uint32_t rail_uV, unsigned long state)
+{
+	uint32_t rail_mV = rail_uV / 1000;
+	static bool prev_state, disable_odcm;
+
+	mutex_lock(&lmh_odcm_access);
+	switch (state) {
+	case REGULATOR_EVENT_VOLTAGE_CHANGE:
+		if (!disable_odcm)
+			break;
+		pr_debug("Disable ODCM\n");
+		write_to_odcm(false);
+		lmh_data->odcm_enabled = false;
+		disable_odcm = false;
+		break;
+	case REGULATOR_EVENT_PRE_VOLTAGE_CHANGE:
+		disable_odcm = false;
+		prev_state = lmh_data->odcm_enabled;
+		if (rail_mV > lmh_data->odcm_thresh_mV) {
+			if (lmh_data->odcm_enabled)
+				break;
+			/* Enable ODCM before the voltage increases */
+			pr_debug("Enable ODCM for voltage %u mV\n", rail_mV);
+			write_to_odcm(true);
+			lmh_data->odcm_enabled = true;
+		} else {
+			if (!lmh_data->odcm_enabled)
+				break;
+			/* Disable ODCM after the voltage decreases */
+			pr_debug("Disable ODCM for voltage %u mV\n", rail_mV);
+			disable_odcm = true;
+		}
+		break;
+	case REGULATOR_EVENT_ABORT_VOLTAGE_CHANGE:
+		disable_odcm = false;
+		if (prev_state == lmh_data->odcm_enabled)
+			break;
+		pr_debug("Reverting ODCM state to %s\n",
+			prev_state ? "enabled" : "disabled");
+		write_to_odcm(prev_state);
+		lmh_data->odcm_enabled = prev_state;
+		break;
+	default:
+		break;
+	}
+	mutex_unlock(&lmh_odcm_access);
+}
+
+static int lmh_voltage_change_notifier(struct notifier_block *nb_data,
+	unsigned long event, void *data)
+{
+	uint32_t voltage = 0;
+	static uint32_t last_voltage;
+	static bool change_needed;
+
+	if (event == REGULATOR_EVENT_VOLTAGE_CHANGE) {
+		/* Convert from uV to mV */
+		pr_debug("Received event POST_VOLTAGE_CHANGE\n");
+		voltage = ((unsigned long)data) / 1000;
+		if (change_needed == 1 &&
+			(last_voltage == voltage)) {
+			lmh_voltage_scale_set(voltage);
+			change_needed = 0;
+		}
+		if (lmh_data->odcm_reg[0])
+			evaluate_and_config_odcm(0, event);
+	} else if (event == REGULATOR_EVENT_PRE_VOLTAGE_CHANGE) {
+		struct pre_voltage_change_data *change_data =
+			(struct pre_voltage_change_data *)data;
+		last_voltage = change_data->min_uV / 1000;
+		if (change_data->min_uV > change_data->old_uV)
+			/* Going from low to high apply change first */
+			lmh_voltage_scale_set(last_voltage);
+		else
+			/* Going from high to low apply change after */
+			change_needed = 1;
+		pr_debug("Received event PRE_VOLTAGE_CHANGE\n");
+		pr_debug("max = %lu mV min = %lu mV previous = %lu mV\n",
+			change_data->max_uV / 1000, change_data->min_uV / 1000,
+			change_data->old_uV / 1000);
+
+		if (lmh_data->odcm_reg[0])
+			evaluate_and_config_odcm(change_data->max_uV, event);
+	} else if (event == REGULATOR_EVENT_ABORT_VOLTAGE_CHANGE) {
+		pr_debug("Received event ABORT_VOLTAGE_CHANGE\n");
+		if (lmh_data->odcm_reg[0])
+			evaluate_and_config_odcm(0, event);
+	}
+
+	return NOTIFY_OK;
+}
+
+static void lmh_dpm_remove(void)
+{
+	if (!IS_ERR_OR_NULL(lmh_data->regulator) &&
+		lmh_data->dpm_notifier_blk.notifier_call != NULL) {
+		regulator_unregister_notifier(lmh_data->regulator,
+			&(lmh_data->dpm_notifier_blk));
+		lmh_data->regulator = NULL;
+	}
+}
+
+static void lmh_dpm_init(void)
+{
+	int ret = 0;
+
+	lmh_data->dpm_voltage_scale_reg = devm_ioremap(lmh_data->dev,
+			(phys_addr_t)APCS_DPM_VOLTAGE_SCALE, 4);
+	if (!lmh_data->dpm_voltage_scale_reg) {
+		ret = -ENODEV;
+		pr_err("Error mapping LMH DPM voltage scale register\n");
+		goto dpm_init_exit;
+	}
+
+	lmh_data->dpm_notifier_blk.notifier_call = lmh_voltage_change_notifier;
+	ret = regulator_register_notifier(lmh_data->regulator,
+		&(lmh_data->dpm_notifier_blk));
+	if (ret) {
+		pr_err("DPM regulator notification registration failed. err:%d\n",
+			ret);
+		goto dpm_init_exit;
+	}
+
+dpm_init_exit:
+	if (ret) {
+		if (lmh_data->dpm_notifier_blk.notifier_call)
+			regulator_unregister_notifier(lmh_data->regulator,
+				&(lmh_data->dpm_notifier_blk));
+		devm_regulator_put(lmh_data->regulator);
+		lmh_data->dpm_notifier_blk.notifier_call = NULL;
+		lmh_data->regulator = NULL;
+	}
+}
+
+
+static int lmh_debug_init(void)
+{
+	int ret = 0;
+
+	if (lmh_check_tz_debug_cmds()) {
+		pr_debug("Debug commands not available.\n");
+		return -ENODEV;
+	}
+
+	lmh_data->debug_info.debug_ops.debug_read = lmh_debug_read;
+	lmh_data->debug_info.debug_ops.debug_config_read
+		= lmh_debug_config_read;
+	lmh_data->debug_info.debug_ops.debug_config_lmh
+		= lmh_debug_lmh_config;
+	lmh_data->debug_info.debug_ops.debug_get_types
+		= lmh_debug_get_types;
+	ret = lmh_debug_register(&lmh_data->debug_info.debug_ops);
+	if (ret) {
+		pr_err("Error registering debug ops. err:%d\n", ret);
+		goto debug_init_exit;
+	}
+
+debug_init_exit:
+	return ret;
+}
+>>>>>>> 0e91d2a... Nougat
 static int lmh_sensor_init(struct platform_device *pdev)
 {
 	int ret = 0;

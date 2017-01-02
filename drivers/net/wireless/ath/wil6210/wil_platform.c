@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Qualcomm Atheros, Inc.
+ * Copyright (c) 2014-2016 Qualcomm Atheros, Inc.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -28,7 +28,8 @@
  * It returns a handle which is used with the rest of the API
  *
  */
-void *wil_platform_init(struct device *dev, struct wil_platform_ops *ops)
+void *wil_platform_init(struct device *dev, struct wil_platform_ops *ops,
+			const struct wil_platform_rops *rops, void *wil_handle)
 {
 	void *handle = NULL;
 
@@ -37,6 +38,7 @@ void *wil_platform_init(struct device *dev, struct wil_platform_ops *ops)
 		return NULL;
 	}
 
+<<<<<<< HEAD
 #ifdef CONFIG_WIL6210_PLATFORM_MSM
 	handle = wil_platform_msm_init(dev, ops);
 	if (handle)
@@ -44,6 +46,9 @@ void *wil_platform_init(struct device *dev, struct wil_platform_ops *ops)
 #endif
 
 	/* other platform specific init functions should be called here */
+=======
+	handle = msm_11ad_dev_init(dev, ops, rops, wil_handle);
+>>>>>>> 0e91d2a... Nougat
 
 	return handle;
 }

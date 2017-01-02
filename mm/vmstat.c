@@ -417,6 +417,7 @@ void dec_zone_page_state(struct page *page, enum zone_stat_item item)
 EXPORT_SYMBOL(dec_zone_page_state);
 #endif
 
+<<<<<<< HEAD
 /*
  * Update the zone counters for one cpu.
  *
@@ -436,6 +437,23 @@ EXPORT_SYMBOL(dec_zone_page_state);
  * bouncing and will have to be only done when necessary.
  */
 void refresh_cpu_vm_stats(int cpu)
+=======
+
+static int fold_diff(int *diff)
+{
+	int i;
+	int changes = 0;
+
+	for (i = 0; i < NR_VM_ZONE_STAT_ITEMS; i++)
+		if (diff[i]) {
+			atomic_long_add(diff[i], &vm_stat[i]);
+			changes++;
+	}
+	return changes;
+}
+
+static int refresh_cpu_vm_stats(bool do_pagesets)
+>>>>>>> 0e91d2a... Nougat
 {
 	struct zone *zone;
 	int i;
@@ -462,6 +480,7 @@ void refresh_cpu_vm_stats(int cpu)
 				p->expire = 3;
 #endif
 			}
+<<<<<<< HEAD
 		cond_resched();
 #ifdef CONFIG_NUMA
 		/*
@@ -488,6 +507,29 @@ void refresh_cpu_vm_stats(int cpu)
 
 		if (p->pcp.count)
 			drain_zone_pages(zone, &p->pcp);
+=======
+		}
+#ifdef CONFIG_NUMA
+		if (do_pagesets) {
+			cond_resched();
+			if (!__this_cpu_read(p->expire) ||
+			       !__this_cpu_read(p->pcp.count))
+				continue;
+
+			if (zone_to_nid(zone) == numa_node_id()) {
+				__this_cpu_write(p->expire, 0);
+				continue;
+			}
+
+			if (__this_cpu_dec_return(p->expire))
+				continue;
+
+			if (__this_cpu_read(p->pcp.count)) {
+				drain_zone_pages(zone, this_cpu_ptr(&p->pcp));
+				changes++;
+			}
+		}
+>>>>>>> 0e91d2a... Nougat
 #endif
 	}
 
@@ -748,6 +790,7 @@ const char * const vmstat_text[] = {
 #ifdef CONFIG_VM_EVENT_COUNTERS
 	"pgpgin",
 	"pgpgout",
+	"pgpgoutclean",
 	"pswpin",
 	"pswpout",
 
@@ -1276,8 +1319,68 @@ int sysctl_stat_interval __read_mostly = HZ;
 
 static void vmstat_update(struct work_struct *w)
 {
+<<<<<<< HEAD
 	refresh_cpu_vm_stats(smp_processor_id());
 	schedule_delayed_work(&__get_cpu_var(vmstat_work),
+=======
+	if (refresh_cpu_vm_stats(true)) {
+		schedule_delayed_work_on(smp_processor_id(),
+				this_cpu_ptr(&vmstat_work),
+			round_jiffies_relative(sysctl_stat_interval));
+	} else {
+		cpumask_set_cpu(smp_processor_id(), cpu_stat_off);
+	}
+}
+
+void quiet_vmstat(void)
+{
+	if (system_state != SYSTEM_RUNNING)
+		return;
+
+	do {
+		if (!cpumask_test_and_set_cpu(smp_processor_id(), cpu_stat_off))
+			cancel_delayed_work(this_cpu_ptr(&vmstat_work));
+
+	} while (refresh_cpu_vm_stats(false));
+}
+
+static bool need_update(int cpu)
+{
+	struct zone *zone;
+
+	for_each_populated_zone(zone) {
+		struct per_cpu_pageset *p = per_cpu_ptr(zone->pageset, cpu);
+
+		BUILD_BUG_ON(sizeof(p->vm_stat_diff[0]) != 1);
+		if (memchr_inv(p->vm_stat_diff, 0, NR_VM_ZONE_STAT_ITEMS))
+			return true;
+
+	}
+	return false;
+}
+
+
+static void vmstat_shepherd(struct work_struct *w);
+
+static DECLARE_DEFERRABLE_WORK(shepherd, vmstat_shepherd);
+
+static void vmstat_shepherd(struct work_struct *w)
+{
+	int cpu;
+
+	get_online_cpus();
+	
+	for_each_cpu(cpu, cpu_stat_off)
+		if (need_update(cpu) &&
+			cpumask_test_and_clear_cpu(cpu, cpu_stat_off))
+
+			schedule_delayed_work_on(cpu, &per_cpu(vmstat_work, cpu),
+				__round_jiffies_relative(sysctl_stat_interval, cpu));
+
+	put_online_cpus();
+
+	schedule_delayed_work(&shepherd,
+>>>>>>> 0e91d2a... Nougat
 		round_jiffies_relative(sysctl_stat_interval));
 }
 

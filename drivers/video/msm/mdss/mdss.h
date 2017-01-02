@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -20,6 +20,7 @@
 #include <linux/types.h>
 #include <linux/workqueue.h>
 #include <linux/irqreturn.h>
+#include <linux/irqdomain.h>
 #include <linux/mdss_io_util.h>
 #include <linux/msm_iommu_domains.h>
 
@@ -47,6 +48,7 @@ enum mdss_iommu_domain_type {
 	MDSS_IOMMU_MAX_DOMAIN
 };
 
+<<<<<<< HEAD
 struct mdss_iommu_map_type {
 	char *client_name;
 	char *ctx_name;
@@ -54,6 +56,14 @@ struct mdss_iommu_map_type {
 	struct msm_iova_partition partitions[1];
 	int npartitions;
 	int domain_idx;
+=======
+enum mdss_bus_vote_type {
+	VOTE_INDEX_DISABLE,
+	VOTE_INDEX_LOW,
+	VOTE_INDEX_MID,
+	VOTE_INDEX_HIGH,
+	VOTE_INDEX_MAX,
+>>>>>>> 0e91d2a... Nougat
 };
 
 struct mdss_hw_settings {
@@ -97,11 +107,24 @@ struct mdss_prefill_data {
 	u32 post_scaler_pixels;
 	u32 pp_pixels;
 	u32 fbc_lines;
+<<<<<<< HEAD
 };
 
 struct mdss_mdp_ppb {
 	u32 ctl_off;
 	u32 cfg_off;
+=======
+	u32 ts_threshold;
+	u32 ts_end;
+	u32 ts_overhead;
+	struct mult_factor ts_rate;
+	struct simplified_prefill_factors prefill_factors;
+};
+
+struct mdss_mdp_dsc {
+	u32 num;
+	char __iomem *base;
+>>>>>>> 0e91d2a... Nougat
 };
 
 enum mdss_hw_index {
@@ -110,12 +133,14 @@ enum mdss_hw_index {
 	MDSS_HW_DSI1,
 	MDSS_HW_HDMI,
 	MDSS_HW_EDP,
+	MDSS_HW_MISC,
 	MDSS_MAX_HW_BLK
 };
 
 enum mdss_bus_clients {
 	MDSS_MDP_RT,
 	MDSS_DSI_RT,
+	MDSS_HW_RT,
 	MDSS_MDP_NRT,
 	MDSS_IOMMU_RT,
 	MDSS_MAX_BUS_CLIENTS
@@ -124,11 +149,125 @@ enum mdss_bus_clients {
 enum mdss_hw_quirk {
 	MDSS_QUIRK_BWCPANIC,
 	MDSS_QUIRK_DOWNSCALE_HANG,
+<<<<<<< HEAD
 	MDSS_QUIRK_DOWNSCALE_HFLIP_MDPCLK,
 	MDSS_QUIRK_SVS_PLUS_VOTING,
 	MDSS_QUIRK_MAX,
 };
 
+=======
+	MDSS_QUIRK_DSC_RIGHT_ONLY_PU,
+	MDSS_QUIRK_DSC_2SLICE_PU_THRPUT,
+	MDSS_QUIRK_DMA_BI_DIR,
+	MDSS_QUIRK_FMT_PACK_PATTERN,
+	MDSS_QUIRK_NEED_SECURE_MAP,
+	MDSS_QUIRK_SRC_SPLIT_ALWAYS,
+	MDSS_QUIRK_MAX,
+};
+
+enum mdss_hw_capabilities {
+	MDSS_CAPS_YUV_CONFIG,
+	MDSS_CAPS_SCM_RESTORE_NOT_REQUIRED,
+	MDSS_CAPS_3D_MUX_UNDERRUN_RECOVERY_SUPPORTED,
+	MDSS_CAPS_MIXER_1_FOR_WB,
+	MDSS_CAPS_QSEED3,
+	MDSS_CAPS_DEST_SCALER,
+	MDSS_CAPS_10_BIT_SUPPORTED,
+	MDSS_CAPS_MAX,
+};
+
+enum mdss_qos_settings {
+	MDSS_QOS_PER_PIPE_IB,
+	MDSS_QOS_OVERHEAD_FACTOR,
+	MDSS_QOS_CDP,
+	MDSS_QOS_OTLIM,
+	MDSS_QOS_PER_PIPE_LUT,
+	MDSS_QOS_SIMPLIFIED_PREFILL,
+	MDSS_QOS_VBLANK_PANIC_CTRL,
+	MDSS_QOS_TS_PREFILL,
+	MDSS_QOS_REMAPPER,
+	MDSS_QOS_IB_NOCR,
+	MDSS_QOS_MAX,
+};
+
+enum mdss_mdp_pipe_type {
+	MDSS_MDP_PIPE_TYPE_INVALID = -1,
+	MDSS_MDP_PIPE_TYPE_VIG = 0,
+	MDSS_MDP_PIPE_TYPE_RGB,
+	MDSS_MDP_PIPE_TYPE_DMA,
+	MDSS_MDP_PIPE_TYPE_CURSOR,
+	MDSS_MDP_PIPE_TYPE_MAX,
+};
+
+struct reg_bus_client {
+	char name[MAX_CLIENT_NAME_LEN];
+	short usecase_ndx;
+	u32 id;
+	struct list_head list;
+};
+
+struct mdss_smmu_client {
+	struct device *dev;
+	struct dma_iommu_mapping *mmu_mapping;
+	struct dss_module_power mp;
+	struct reg_bus_client *reg_bus_clt;
+	bool domain_attached;
+	bool handoff_pending;
+	char __iomem *mmu_base;
+};
+
+struct mdss_mdp_qseed3_lut_tbl {
+	bool valid;
+	u32 *dir_lut;
+	u32 *cir_lut;
+	u32 *sep_lut;
+};
+
+struct mdss_scaler_block {
+	u32 vig_scaler_off;
+	u32 vig_scaler_lut_off;
+	u32 has_dest_scaler;
+	char __iomem *dest_base;
+	u32 ndest_scalers;
+	u32 *dest_scaler_off;
+	u32 *dest_scaler_lut_off;
+	struct mdss_mdp_qseed3_lut_tbl lut_tbl;
+};
+
+struct mdss_data_type;
+
+struct mdss_smmu_ops {
+	int (*smmu_attach)(struct mdss_data_type *mdata);
+	int (*smmu_detach)(struct mdss_data_type *mdata);
+	int (*smmu_get_domain_id)(u32 type);
+	struct dma_buf_attachment  * (*smmu_dma_buf_attach)(
+			struct dma_buf *dma_buf, struct device *devce,
+			int domain);
+	int (*smmu_map_dma_buf)(struct dma_buf *dma_buf,
+			struct sg_table *table, int domain,
+			dma_addr_t *iova, unsigned long *size, int dir);
+	void (*smmu_unmap_dma_buf)(struct sg_table *table, int domain,
+			int dir, struct dma_buf *dma_buf);
+	int (*smmu_dma_alloc_coherent)(struct device *dev, size_t size,
+			dma_addr_t *phys, dma_addr_t *iova, void *cpu_addr,
+			gfp_t gfp, int domain);
+	void (*smmu_dma_free_coherent)(struct device *dev, size_t size,
+			void *cpu_addr, dma_addr_t phys, dma_addr_t iova,
+			int domain);
+	int (*smmu_map)(int domain, phys_addr_t iova, phys_addr_t phys, int
+			gfp_order, int prot);
+	void (*smmu_unmap)(int domain, unsigned long iova, int gfp_order);
+	char * (*smmu_dsi_alloc_buf)(struct device *dev, int size,
+			dma_addr_t *dmap, gfp_t gfp);
+	int (*smmu_dsi_map_buffer)(phys_addr_t phys, unsigned int domain,
+			unsigned long size, dma_addr_t *dma_addr,
+			void *cpu_addr, int dir);
+	void (*smmu_dsi_unmap_buffer)(dma_addr_t dma_addr, int domain,
+			unsigned long size, int dir);
+	void (*smmu_deinit)(struct mdss_data_type *mdata);
+};
+
+>>>>>>> 0e91d2a... Nougat
 struct mdss_data_type {
 	u32 mdp_rev;
 	struct clk *mdp_clk[MDSS_MAX_CLK];
@@ -161,12 +300,31 @@ struct mdss_data_type {
 	DECLARE_BITMAP(mdss_quirk_map, MDSS_QUIRK_MAX);
 	
 	DECLARE_BITMAP(mmb_alloc_map, MAX_DRV_SUP_MMB_BLKS);
+<<<<<<< HEAD
 
 	u32 has_bwc;
+=======
+	
+	DECLARE_BITMAP(mdss_qos_map, MDSS_QOS_MAX);
+	
+	DECLARE_BITMAP(mdss_caps_map, MDSS_CAPS_MAX);
+
+	u32 has_bwc;
+	
+>>>>>>> 0e91d2a... Nougat
 	u32 default_panic_lut0;
 	u32 default_panic_lut1;
 	u32 default_robust_lut;
 
+<<<<<<< HEAD
+=======
+	
+	u32 default_panic_lut_per_pipe_linear;
+	u32 default_panic_lut_per_pipe_tile;
+	u32 default_robust_lut_per_pipe_linear;
+	u32 default_robust_lut_per_pipe_tile;
+
+>>>>>>> 0e91d2a... Nougat
 	u32 has_decimation;
 	bool has_fixed_qos_arbiter_enabled;
 	bool has_panic_ctrl;
@@ -181,12 +339,20 @@ struct mdss_data_type {
 	bool has_pingpong_split;
 	bool has_pixel_ram;
 	bool needs_hist_vote;
+<<<<<<< HEAD
+=======
+	bool has_ubwc;
+	bool has_wb_ubwc;
+	bool has_separate_rotator;
+>>>>>>> 0e91d2a... Nougat
 
 	u32 default_ot_rd_limit;
 	u32 default_ot_wr_limit;
 
-	u32 mdp_irq_mask;
+	struct irq_domain *irq_domain;
+	u32 *mdp_irq_mask;
 	u32 mdp_hist_irq_mask;
+	u32 mdp_intf_irq_mask;
 
 	int suspend_fs_ena;
 	u8 clk_ena;
@@ -205,12 +371,38 @@ struct mdss_data_type {
 
 	u32 rot_block_size;
 
+<<<<<<< HEAD
+=======
+	
+	u32 hw_rt_bus_hdl;
+	u32 hw_rt_bus_ref_cnt;
+
+	
+	u32 bus_hdl;
+	u32 bus_ref_cnt;
+	struct mutex bus_lock;
+
+	
+	u32 reg_bus_hdl;
+	u32 reg_bus_usecase_ndx;
+	struct list_head reg_bus_clist;
+	struct mutex reg_bus_lock;
+	struct reg_bus_client *reg_bus_clt;
+	struct reg_bus_client *pp_reg_bus_clt;
+
+>>>>>>> 0e91d2a... Nougat
 	u32 axi_port_cnt;
 	u32 nrt_axi_port_cnt;
 	u32 bus_channels;
 	u32 curr_bw_uc_idx;
+<<<<<<< HEAD
 	u32 bus_hdl;
+=======
+	u32 ao_bw_uc_idx; 
+>>>>>>> 0e91d2a... Nougat
 	struct msm_bus_scale_pdata *bus_scale_table;
+	struct msm_bus_scale_pdata *reg_bus_scale_table;
+	struct msm_bus_scale_pdata *hw_rt_bus_scale_table;
 	u32 max_bw_low;
 	u32 max_bw_high;
 	u32 max_bw_per_pipe;
@@ -235,9 +427,15 @@ struct mdss_data_type {
 	u32 enable_bw_release;
 	u32 enable_rotator_bw_release;
 	u32 serialize_wait4pp;
+<<<<<<< HEAD
+=======
+	u32 wait4autorefresh;
+	u32 lines_before_active;
+>>>>>>> 0e91d2a... Nougat
 
 	struct mdss_hw_settings *hw_settings;
 
+	int rects_per_sspp[MDSS_MDP_PIPE_TYPE_MAX];
 	struct mdss_mdp_pipe *vig_pipes;
 	struct mdss_mdp_pipe *rgb_pipes;
 	struct mdss_mdp_pipe *dma_pipes;
@@ -249,8 +447,10 @@ struct mdss_data_type {
 	u8  ncursor_pipes;
 	u32 max_cursor_size;
 
-	u32 nppb;
-	struct mdss_mdp_ppb *ppb;
+	u32 nppb_ctl;
+	u32 *ppb_ctl;
+	u32 nppb_cfg;
+	u32 *ppb_cfg;
 	char __iomem *slave_pingpong_base;
 
 	struct mdss_mdp_mixer *mixer_intf;
@@ -305,13 +505,41 @@ struct mdss_data_type {
 
 	u64 ab[MDSS_MAX_BUS_CLIENTS];
 	u64 ib[MDSS_MAX_BUS_CLIENTS];
+<<<<<<< HEAD
+=======
+	struct mdss_pp_block_off pp_block_off;
+
+	struct mdss_mdp_cdm *cdm_off;
+	u32 ncdm;
+	struct mutex cdm_lock;
+
+	struct mdss_mdp_dsc *dsc_off;
+	u32 ndsc;
+
+	struct mdss_max_bw_settings *max_bw_settings;
+	u32 bw_mode_bitmap;
+	u32 max_bw_settings_cnt;
+	bool bw_limit_pending;
+
+	struct mdss_max_bw_settings *max_per_pipe_bw_settings;
+	u32 mdss_per_pipe_bw_cnt;
+	u32 min_bw_per_pipe;
+
+	u32 bcolor0;
+	u32 bcolor1;
+	u32 bcolor2;
+	struct mdss_scaler_block *scaler_off;
+>>>>>>> 0e91d2a... Nougat
 };
+
 extern struct mdss_data_type *mdss_res;
 
 struct irq_info {
 	u32 irq;
 	u32 irq_mask;
+	u32 irq_wake_mask;
 	u32 irq_ena;
+	u32 irq_wake_ena;
 	u32 irq_buzy;
 };
 
@@ -332,6 +560,8 @@ struct mdss_util_intf {
 	int (*register_irq)(struct mdss_hw *hw);
 	void (*enable_irq)(struct mdss_hw *hw);
 	void (*disable_irq)(struct mdss_hw *hw);
+	void (*enable_wake_irq)(struct mdss_hw *hw);
+	void (*disable_wake_irq)(struct mdss_hw *hw);
 	void (*disable_irq_nosync)(struct mdss_hw *hw);
 	int (*irq_dispatch)(u32 hw_ndx, int irq, void *ptr);
 	int (*get_iommu_domain)(u32 type);
@@ -342,9 +572,11 @@ struct mdss_util_intf {
 	void (*bus_bandwidth_ctrl)(int enable);
 	int (*bus_scale_set_quota)(int client, u64 ab_quota, u64 ib_quota);
 	struct mdss_panel_cfg* (*panel_intf_type)(int intf_val);
+	int (*dyn_clk_gating_ctrl)(int enable);
 };
 
 struct mdss_util_intf *mdss_get_util_intf(void);
+bool mdss_get_irq_enable_state(struct mdss_hw *hw);
 
 static inline struct ion_client *mdss_get_ionclient(void)
 {

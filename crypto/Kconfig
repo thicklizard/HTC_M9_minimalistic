@@ -517,6 +517,7 @@ config CRYPTO_SHA1_SPARC64
 	  SHA-1 secure hash standard (FIPS 180-1/DFIPS 180-2) implemented
 	  using sparc64 crypto instructions, when available.
 
+<<<<<<< HEAD
 config CRYPTO_SHA1_ARM
 	tristate "SHA1 digest algorithm (ARM-asm)"
 	depends on ARM
@@ -526,6 +527,8 @@ config CRYPTO_SHA1_ARM
 	  SHA-1 secure hash standard (FIPS 180-1/DFIPS 180-2) implemented
 	  using optimized ARM assembler.
 
+=======
+>>>>>>> 0e91d2a... Nougat
 config CRYPTO_SHA1_PPC
 	tristate "SHA1 digest algorithm (powerpc)"
 	depends on PPC
@@ -737,6 +740,7 @@ config CRYPTO_AES_SPARC64
 	  for some popular block cipher mode is supported too, including
 	  ECB and CBC.
 
+<<<<<<< HEAD
 config CRYPTO_AES_ARM
 	tristate "AES cipher algorithms (ARM-asm)"
 	depends on ARM
@@ -761,6 +765,8 @@ config CRYPTO_AES_ARM
 
 	  See <http://csrc.nist.gov/encryption/aes/> for more information.
 
+=======
+>>>>>>> 0e91d2a... Nougat
 config CRYPTO_ANUBIS
 	tristate "Anubis cipher algorithm"
 	select CRYPTO_ALGAPI

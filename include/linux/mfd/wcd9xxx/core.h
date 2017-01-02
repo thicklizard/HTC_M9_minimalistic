@@ -57,6 +57,18 @@ enum wcd9xxx_slim_slave_addr_type {
 	WCD9XXX_SLIM_SLAVE_ADDR_TYPE_TAIKO,
 };
 
+<<<<<<< HEAD
+=======
+enum codec_variant {
+	WCD9XXX,
+	WCD9330,
+	WCD9335,
+	WCD9326,
+	WCD9302,
+	WCD9306,
+};
+
+>>>>>>> 0e91d2a... Nougat
 enum {
 	/* INTR_REG 0 */
 	WCD9XXX_IRQ_SLIMBUS = 0,
@@ -189,6 +201,7 @@ struct wcd9xxx {
 	u8 version;
 
 	int reset_gpio;
+	struct device_node *wcd_rst_np;
 
 	int (*read_dev)(struct wcd9xxx *wcd9xxx, unsigned short reg,
 			int bytes, void *dest, bool interface_reg);

@@ -893,6 +893,10 @@ static void mtip_handle_tfe(struct driver_data *dd)
 			fail_reason = "thermal shutdown";
 		}
 		if (buf[288] == 0xBF) {
+<<<<<<< HEAD
+=======
+			set_bit(MTIP_DDF_REBUILD_FAILED_BIT, &dd->dd_flag);
+>>>>>>> 0e91d2a... Nougat
 			dev_info(&dd->pdev->dev,
 				"Drive indicates rebuild has failed.\n");
 			fail_all_ncq_cmds = 1;
@@ -1103,6 +1107,10 @@ static inline irqreturn_t mtip_handle_irq(struct driver_data *data)
 
 		/* Acknowledge the interrupt status on the port.*/
 		port_stat = readl(port->mmio + PORT_IRQ_STAT);
+		if (unlikely(port_stat == 0xFFFFFFFF)) {
+			mtip_check_surprise_removal(dd->pdev);
+			return IRQ_HANDLED;
+		}
 		writel(port_stat, port->mmio + PORT_IRQ_STAT);
 
 		/* Demux port status */
@@ -1200,15 +1208,11 @@ static bool mtip_pause_ncq(struct mtip_port *port,
 	reply = port->rxfis + RX_FIS_D2H_REG;
 	task_file_data = readl(port->mmio+PORT_TFDATA);
 
-	if (fis->command == ATA_CMD_SEC_ERASE_UNIT)
-		clear_bit(MTIP_DDF_SEC_LOCK_BIT, &port->dd->dd_flag);
-
 	if ((task_file_data & 1))
 		return false;
 
 	if (fis->command == ATA_CMD_SEC_ERASE_PREP) {
 		set_bit(MTIP_PF_SE_ACTIVE_BIT, &port->flags);
-		set_bit(MTIP_DDF_SEC_LOCK_BIT, &port->dd->dd_flag);
 		port->ic_pause_timer = jiffies;
 		return true;
 	} else if ((fis->command == ATA_CMD_DOWNLOAD_MICRO) &&
@@ -1220,6 +1224,8 @@ static bool mtip_pause_ncq(struct mtip_port *port,
 		((fis->command == 0xFC) &&
 			(fis->features == 0x27 || fis->features == 0x72 ||
 			 fis->features == 0x62 || fis->features == 0x26))) {
+		clear_bit(MTIP_DDF_SEC_LOCK_BIT, &port->dd->dd_flag);
+		clear_bit(MTIP_DDF_REBUILD_FAILED_BIT, &port->dd->dd_flag);
 		/* Com reset after secure erase or lowlevel format */
 		mtip_restart_port(port);
 		return false;
@@ -1303,6 +1309,11 @@ static int mtip_exec_internal_command(struct mtip_port *port,
 	struct mtip_cmd *int_cmd = &port->commands[MTIP_TAG_INTERNAL];
 	unsigned long to;
 	struct driver_data *dd = port->dd;
+<<<<<<< HEAD
+=======
+	int rv = 0;
+	unsigned long start;
+>>>>>>> 0e91d2a... Nougat
 
 	/* Make sure the buffer is 8 byte aligned. This is asic specific. */
 	if (buffer & 0x00000007) {
@@ -1375,6 +1386,8 @@ static int mtip_exec_internal_command(struct mtip_port *port,
 	/* Populate the command header */
 	int_cmd->command_header->byte_count = 0;
 
+	start = jiffies;
+
 	/* Issue the command to the hardware */
 	mtip_issue_non_ncq_command(port, MTIP_TAG_INTERNAL);
 
@@ -1382,11 +1395,17 @@ static int mtip_exec_internal_command(struct mtip_port *port,
 		/* Wait for the command to complete or timeout. */
 		if (wait_for_completion_interruptible_timeout(
 				&wait,
+<<<<<<< HEAD
 				msecs_to_jiffies(timeout)) <= 0) {
+=======
+				msecs_to_jiffies(timeout))) <= 0) {
+
+>>>>>>> 0e91d2a... Nougat
 			if (rv == -ERESTARTSYS) { /* interrupted */
 				dev_err(&dd->pdev->dev,
-					"Internal command [%02X] was interrupted after %lu ms\n",
-					fis->command, timeout);
+					"Internal command [%02X] was interrupted after %u ms\n",
+					fis->command,
+					jiffies_to_msecs(jiffies - start));
 				rv = -EINTR;
 				goto exec_ic_exit;
 			} else if (rv == 0) /* timeout */
@@ -3010,7 +3029,10 @@ static void mtip_hw_debugfs_exit(struct driver_data *dd)
 		debugfs_remove_recursive(dd->dfs_node);
 }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0e91d2a... Nougat
 /*
  * Perform any init/resume time hardware setup
  *
@@ -3214,11 +3236,146 @@ static int mtip_service_thread(void *data)
 
 		if (test_bit(MTIP_PF_SVC_THD_STOP_BIT, &port->flags))
 			break;
+<<<<<<< HEAD
 	}
+=======
+		msleep_interruptible(1000);
+		if (kthread_should_stop())
+			goto st_out;
+	}
+st_out:
+>>>>>>> 0e91d2a... Nougat
 	return 0;
 }
 
 /*
+<<<<<<< HEAD
+=======
+ * DMA region teardown
+ *
+ * @dd Pointer to driver_data structure
+ *
+ * return value
+ *      None
+ */
+static void mtip_dma_free(struct driver_data *dd)
+{
+	struct mtip_port *port = dd->port;
+
+	if (port->block1)
+		dmam_free_coherent(&dd->pdev->dev, BLOCK_DMA_ALLOC_SZ,
+					port->block1, port->block1_dma);
+
+	if (port->command_list) {
+		dmam_free_coherent(&dd->pdev->dev, AHCI_CMD_TBL_SZ,
+				port->command_list, port->command_list_dma);
+	}
+}
+
+/*
+ * DMA region setup
+ *
+ * @dd Pointer to driver_data structure
+ *
+ * return value
+ *      -ENOMEM Not enough free DMA region space to initialize driver
+ */
+static int mtip_dma_alloc(struct driver_data *dd)
+{
+	struct mtip_port *port = dd->port;
+
+	/* Allocate dma memory for RX Fis, Identify, and Sector Bufffer */
+	port->block1 =
+		dmam_alloc_coherent(&dd->pdev->dev, BLOCK_DMA_ALLOC_SZ,
+					&port->block1_dma, GFP_KERNEL);
+	if (!port->block1)
+		return -ENOMEM;
+	memset(port->block1, 0, BLOCK_DMA_ALLOC_SZ);
+
+	/* Allocate dma memory for command list */
+	port->command_list =
+		dmam_alloc_coherent(&dd->pdev->dev, AHCI_CMD_TBL_SZ,
+					&port->command_list_dma, GFP_KERNEL);
+	if (!port->command_list) {
+		dmam_free_coherent(&dd->pdev->dev, BLOCK_DMA_ALLOC_SZ,
+					port->block1, port->block1_dma);
+		port->block1 = NULL;
+		port->block1_dma = 0;
+		return -ENOMEM;
+	}
+	memset(port->command_list, 0, AHCI_CMD_TBL_SZ);
+
+	/* Setup all pointers into first DMA region */
+	port->rxfis         = port->block1 + AHCI_RX_FIS_OFFSET;
+	port->rxfis_dma     = port->block1_dma + AHCI_RX_FIS_OFFSET;
+	port->identify      = port->block1 + AHCI_IDFY_OFFSET;
+	port->identify_dma  = port->block1_dma + AHCI_IDFY_OFFSET;
+	port->log_buf       = port->block1 + AHCI_SECTBUF_OFFSET;
+	port->log_buf_dma   = port->block1_dma + AHCI_SECTBUF_OFFSET;
+	port->smart_buf     = port->block1 + AHCI_SMARTBUF_OFFSET;
+	port->smart_buf_dma = port->block1_dma + AHCI_SMARTBUF_OFFSET;
+
+	return 0;
+}
+
+static int mtip_hw_get_identify(struct driver_data *dd)
+{
+	struct smart_attr attr242;
+	unsigned char *buf;
+	int rv;
+
+	if (mtip_get_identify(dd->port, NULL) < 0)
+		return -EFAULT;
+
+	if (*(dd->port->identify + MTIP_FTL_REBUILD_OFFSET) ==
+		MTIP_FTL_REBUILD_MAGIC) {
+		set_bit(MTIP_PF_REBUILD_BIT, &dd->port->flags);
+		return MTIP_FTL_REBUILD_MAGIC;
+	}
+	mtip_dump_identify(dd->port);
+
+	/* check write protect, over temp and rebuild statuses */
+	rv = mtip_read_log_page(dd->port, ATA_LOG_SATA_NCQ,
+				dd->port->log_buf,
+				dd->port->log_buf_dma, 1);
+	if (rv) {
+		dev_warn(&dd->pdev->dev,
+			"Error in READ LOG EXT (10h) command\n");
+		/* non-critical error, don't fail the load */
+	} else {
+		buf = (unsigned char *)dd->port->log_buf;
+		if (buf[259] & 0x1) {
+			dev_info(&dd->pdev->dev,
+				"Write protect bit is set.\n");
+			set_bit(MTIP_DDF_WRITE_PROTECT_BIT, &dd->dd_flag);
+		}
+		if (buf[288] == 0xF7) {
+			dev_info(&dd->pdev->dev,
+				"Exceeded Tmax, drive in thermal shutdown.\n");
+			set_bit(MTIP_DDF_OVER_TEMP_BIT, &dd->dd_flag);
+		}
+		if (buf[288] == 0xBF) {
+			dev_info(&dd->pdev->dev,
+				"Drive indicates rebuild has failed.\n");
+			set_bit(MTIP_DDF_REBUILD_FAILED_BIT, &dd->dd_flag);
+		}
+	}
+
+	/* get write protect progess */
+	memset(&attr242, 0, sizeof(struct smart_attr));
+	if (mtip_get_smart_attr(dd->port, 242, &attr242))
+		dev_warn(&dd->pdev->dev,
+				"Unable to check write protect progress\n");
+	else
+		dev_info(&dd->pdev->dev,
+				"Write protect progress: %u%% (%u blocks)\n",
+				attr242.cur, le32_to_cpu(attr242.data));
+
+	return rv;
+}
+
+/*
+>>>>>>> 0e91d2a... Nougat
  * Called once for each card.
  *
  * @dd Pointer to the driver data structure.
@@ -3513,6 +3670,30 @@ out1:
 	return rv;
 }
 
+<<<<<<< HEAD
+=======
+static int mtip_standby_drive(struct driver_data *dd)
+{
+	int rv = 0;
+
+	if (dd->sr || !dd->port)
+		return -ENODEV;
+	/*
+	 * Send standby immediate (E0h) to the drive so that it
+	 * saves its state.
+	 */
+	if (!test_bit(MTIP_PF_REBUILD_BIT, &dd->port->flags) &&
+	    !test_bit(MTIP_DDF_REBUILD_FAILED_BIT, &dd->dd_flag) &&
+	    !test_bit(MTIP_DDF_SEC_LOCK_BIT, &dd->dd_flag)) {
+		rv = mtip_standby_immediate(dd->port);
+		if (rv)
+			dev_warn(&dd->pdev->dev,
+				"STANDBY IMMEDIATE failed\n");
+	}
+	return rv;
+}
+
+>>>>>>> 0e91d2a... Nougat
 /*
  * Called to deinitialize an interface.
  *
@@ -3547,6 +3728,7 @@ static int mtip_hw_exit(struct driver_data *dd)
 	/* Release the IRQ. */
 	irq_set_affinity_hint(dd->pdev->irq, NULL);
 	devm_free_irq(&dd->pdev->dev, dd->pdev->irq, dd);
+	msleep(1000);
 
 	/* Free the command/command header memory. */
 	dmam_free_coherent(&dd->pdev->dev,
@@ -3576,7 +3758,11 @@ static int mtip_hw_shutdown(struct driver_data *dd)
 	 * Send standby immediate (E0h) to the drive so that it
 	 * saves its state.
 	 */
+<<<<<<< HEAD
 	mtip_standby_immediate(dd->port);
+=======
+	mtip_standby_drive(dd);
+>>>>>>> 0e91d2a... Nougat
 
 	return 0;
 }
@@ -3599,7 +3785,7 @@ static int mtip_hw_suspend(struct driver_data *dd)
 	 * Send standby immediate (E0h) to the drive
 	 * so that it saves its state.
 	 */
-	if (mtip_standby_immediate(dd->port) != 0) {
+	if (mtip_standby_drive(dd) != 0) {
 		dev_err(&dd->pdev->dev,
 			"Failed standby-immediate command\n");
 		return -EFAULT;
@@ -3837,6 +4023,28 @@ static int mtip_block_getgeo(struct block_device *dev,
 	return 0;
 }
 
+static int mtip_block_open(struct block_device *dev, fmode_t mode)
+{
+	struct driver_data *dd;
+
+	if (dev && dev->bd_disk) {
+		dd = (struct driver_data *) dev->bd_disk->private_data;
+
+		if (dd) {
+			if (test_bit(MTIP_DDF_REMOVAL_BIT,
+							&dd->dd_flag)) {
+				return -ENODEV;
+			}
+			return 0;
+		}
+	}
+	return -ENODEV;
+}
+
+void mtip_block_release(struct gendisk *disk, fmode_t mode)
+{
+}
+
 /*
  * Block device operation function.
  *
@@ -3844,6 +4052,8 @@ static int mtip_block_getgeo(struct block_device *dev,
  * layer.
  */
 static const struct block_device_operations mtip_block_ops = {
+	.open		= mtip_block_open,
+	.release	= mtip_block_release,
 	.ioctl		= mtip_block_ioctl,
 #ifdef CONFIG_COMPAT
 	.compat_ioctl	= mtip_block_compat_ioctl,
@@ -3891,6 +4101,20 @@ static void mtip_make_request(struct request_queue *queue, struct bio *bio)
 			bio_endio(bio, -ENODATA);
 			return;
 		}
+<<<<<<< HEAD
+=======
+		if (unlikely(test_bit(MTIP_DDF_SEC_LOCK_BIT, &dd->dd_flag) ||
+			test_bit(MTIP_DDF_REBUILD_FAILED_BIT, &dd->dd_flag)))
+			return -ENODATA;
+	}
+
+	if (rq->cmd_flags & REQ_DISCARD) {
+		int err;
+
+		err = mtip_send_trim(dd, blk_rq_pos(rq), blk_rq_sectors(rq));
+		blk_mq_end_request(rq, err);
+		return 0;
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	if (unlikely(bio->bi_rw & REQ_DISCARD)) {
@@ -4145,6 +4369,11 @@ static int mtip_block_remove(struct driver_data *dd)
 {
 	struct kobject *kobj;
 
+<<<<<<< HEAD
+=======
+	mtip_hw_debugfs_exit(dd);
+
+>>>>>>> 0e91d2a... Nougat
 	if (dd->mtip_svc_handler) {
 		set_bit(MTIP_PF_SVC_THD_STOP_BIT, &dd->port->flags);
 		wake_up_interruptible(&dd->port->svc_wait);
@@ -4159,26 +4388,56 @@ static int mtip_block_remove(struct driver_data *dd)
 			kobject_put(kobj);
 		}
 	}
+<<<<<<< HEAD
 	mtip_hw_debugfs_exit(dd);
 
+=======
+
+	if (!dd->sr)
+		mtip_standby_drive(dd);
+	else
+		dev_info(&dd->pdev->dev, "device %s surprise removal\n",
+						dd->disk->disk_name);
+
+>>>>>>> 0e91d2a... Nougat
 	/*
 	 * Delete our gendisk structure. This also removes the device
 	 * from /dev
 	 */
+<<<<<<< HEAD
 	if (dd->disk) {
 		if (dd->disk->queue)
 			del_gendisk(dd->disk);
 		else
 			put_disk(dd->disk);
 	}
+=======
+	if (dd->bdev) {
+		bdput(dd->bdev);
+		dd->bdev = NULL;
+	}
+	if (dd->disk) {
+		del_gendisk(dd->disk);
+		if (dd->disk->queue) {
+			blk_cleanup_queue(dd->queue);
+			blk_mq_free_tag_set(&dd->tags);
+			dd->queue = NULL;
+		}
+		put_disk(dd->disk);
+	}
+	dd->disk  = NULL;
+>>>>>>> 0e91d2a... Nougat
 
 	spin_lock(&rssd_index_lock);
 	ida_remove(&rssd_index_ida, dd->index);
 	spin_unlock(&rssd_index_lock);
+<<<<<<< HEAD
 
 	blk_cleanup_queue(dd->queue);
 	dd->disk  = NULL;
 	dd->queue = NULL;
+=======
+>>>>>>> 0e91d2a... Nougat
 
 	/* De-initialize the protocol layer. */
 	mtip_hw_exit(dd);
@@ -4205,11 +4464,17 @@ static int mtip_block_shutdown(struct driver_data *dd)
 		dev_info(&dd->pdev->dev,
 			"Shutting down %s ...\n", dd->disk->disk_name);
 
+		del_gendisk(dd->disk);
 		if (dd->disk->queue) {
-			del_gendisk(dd->disk);
 			blk_cleanup_queue(dd->queue);
+<<<<<<< HEAD
 		} else
 			put_disk(dd->disk);
+=======
+			blk_mq_free_tag_set(&dd->tags);
+		}
+		put_disk(dd->disk);
+>>>>>>> 0e91d2a... Nougat
 		dd->disk  = NULL;
 		dd->queue = NULL;
 	}
@@ -4550,13 +4815,14 @@ static void mtip_pci_remove(struct pci_dev *pdev)
 	int counter = 0;
 	unsigned long flags;
 
-	set_bit(MTIP_DDF_REMOVE_PENDING_BIT, &dd->dd_flag);
+	set_bit(MTIP_DDF_REMOVAL_BIT, &dd->dd_flag);
 
 	spin_lock_irqsave(&dev_lock, flags);
 	list_del_init(&dd->online_list);
 	list_add(&dd->remove_list, &removing_list);
 	spin_unlock_irqrestore(&dev_lock, flags);
 
+<<<<<<< HEAD
 	if (mtip_check_surprise_removal(pdev)) {
 		while (!test_bit(MTIP_DDF_CLEANUP_BIT, &dd->dd_flag)) {
 			counter++;
@@ -4567,7 +4833,29 @@ static void mtip_pci_remove(struct pci_dev *pdev)
 				break;
 			}
 		}
+=======
+	mtip_check_surprise_removal(pdev);
+	synchronize_irq(dd->pdev->irq);
+
+	/* Spin until workers are done */
+	to = jiffies + msecs_to_jiffies(4000);
+	do {
+		msleep(20);
+	} while (atomic_read(&dd->irq_workers_active) != 0 &&
+		time_before(jiffies, to));
+
+	fsync_bdev(dd->bdev);
+
+	if (atomic_read(&dd->irq_workers_active) != 0) {
+		dev_warn(&dd->pdev->dev,
+			"Completion workers still active!\n");
+>>>>>>> 0e91d2a... Nougat
 	}
+
+	if (dd->sr)
+		blk_mq_stop_hw_queues(dd->queue);
+
+	set_bit(MTIP_DDF_REMOVE_PENDING_BIT, &dd->dd_flag);
 
 	/* Clean up the block layer. */
 	mtip_block_remove(dd);
@@ -4587,6 +4875,11 @@ static void mtip_pci_remove(struct pci_dev *pdev)
 	spin_unlock_irqrestore(&dev_lock, flags);
 
 	kfree(dd);
+<<<<<<< HEAD
+=======
+	set_bit(MTIP_DDF_REMOVE_DONE_BIT, &dd->dd_flag);
+
+>>>>>>> 0e91d2a... Nougat
 	pcim_iounmap_regions(pdev, 1 << MTIP_ABAR);
 }
 

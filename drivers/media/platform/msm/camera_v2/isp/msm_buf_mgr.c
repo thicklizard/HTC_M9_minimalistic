@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -26,8 +30,6 @@
 #include <media/v4l2-ioctl.h>
 #include <media/v4l2-device.h>
 #include <media/videobuf2-core.h>
-#include <media/msm_camera.h>
-#include <media/msm_isp.h>
 
 #include <linux/qcom_iommu.h>
 
@@ -37,14 +39,68 @@
 #undef CDBG
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
 
+<<<<<<< HEAD
+=======
+#define BUF_DEBUG_FULL 0
+#define MAX_LIST_COUNT 100
+
+static int msm_buf_check_head_sanity(struct msm_isp_bufq *bufq)
+{
+	int rc = 0;
+	struct list_head *prev = NULL;
+	struct list_head *next = NULL;
+
+	if (!bufq) {
+		pr_err("%s: Error! Invalid bufq\n", __func__);
+		return -EINVAL;
+	}
+
+	prev = bufq->head.prev;
+	next = bufq->head.next;
+
+	if (!prev) {
+		pr_err("%s: Error! bufq->head.prev is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!next) {
+		pr_err("%s: Error! bufq->head.next is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	if (prev->next != &bufq->head) {
+		pr_err("%s: Error! head prev->next is %pK should be %pK\n",
+			__func__, prev->next, &bufq->head);
+		return -EINVAL;
+	}
+
+	if (next->prev != &bufq->head) {
+		pr_err("%s: Error! head next->prev is %pK should be %pK\n",
+			__func__, next->prev, &bufq->head);
+		return -EINVAL;
+	}
+
+	return rc;
+}
+
+>>>>>>> 0e91d2a... Nougat
 struct msm_isp_bufq *msm_isp_get_bufq(
 	struct msm_isp_buf_mgr *buf_mgr,
 	uint32_t bufq_handle)
 {
 	struct msm_isp_bufq *bufq = NULL;
 	uint32_t bufq_index = bufq_handle & 0xFF;
+<<<<<<< HEAD
 	if (bufq_index > buf_mgr->num_buf_q)
 		return bufq;
+=======
+
+	
+	if ((bufq_handle == 0) ||
+		bufq_index >= BUF_MGR_NUM_BUF_Q ||
+		(bufq_index > buf_mgr->num_buf_q))
+		return NULL;
+>>>>>>> 0e91d2a... Nougat
 
 	bufq = &buf_mgr->bufq[bufq_index];
 	if (bufq->bufq_handle == bufq_handle)
@@ -190,17 +246,64 @@ static void msm_isp_unprepare_v4l2_buf(
 	struct buffer_cmd *buf_pending = NULL;
 	int domain_num;
 
+<<<<<<< HEAD
 	if (buf_mgr->secure_enable == NON_SECURE_MODE)
 		domain_num = buf_mgr->iommu_domain_num;
 	else
 		domain_num = buf_mgr->iommu_domain_num_secure;
+=======
+	if (!buf_mgr || !buf_info) {
+		pr_err("%s: NULL ptr %pK %pK\n", __func__,
+			buf_mgr, buf_info);
+		return;
+	}
+
+	bufq = msm_isp_get_bufq(buf_mgr, buf_info->bufq_handle);
+	if (!bufq) {
+		pr_err("%s: Invalid bufq, stream id %x\n",
+			__func__, stream_id);
+		return;
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	for (i = 0; i < buf_info->num_planes; i++) {
 		mapped_info = &buf_info->mapped_info[i];
 
+<<<<<<< HEAD
 		list_for_each_entry(buf_pending, &buf_mgr->buffer_q, list) {
 			if (!buf_pending)
 				break;
+=======
+		cam_smmu_put_phy_addr(buf_mgr->iommu_hdl, mapped_info->buf_fd);
+	}
+	return;
+}
+
+static int msm_isp_map_buf(struct msm_isp_buf_mgr *buf_mgr,
+	struct msm_isp_buffer_mapped_info *mapped_info, uint32_t fd)
+{
+	int rc = 0;
+	int ret;
+
+	if (!buf_mgr || !mapped_info) {
+		pr_err_ratelimited("%s: %d] NULL ptr buf_mgr %pK mapped_info %pK\n",
+			__func__, __LINE__, buf_mgr, mapped_info);
+		return -EINVAL;
+	}
+	ret = cam_smmu_get_phy_addr(buf_mgr->iommu_hdl,
+				fd,
+				CAM_SMMU_MAP_RW,
+				&(mapped_info->paddr),
+				&(mapped_info->len));
+
+	if (ret) {
+		rc = -EINVAL;
+		pr_err_ratelimited("%s: cannot map address", __func__);
+		goto smmu_map_error;
+	}
+	CDBG("%s: addr:%lu\n",
+		__func__, (unsigned long)mapped_info->paddr);
+>>>>>>> 0e91d2a... Nougat
 
 			if (buf_pending->mapped_info == mapped_info) {
 				ion_unmap_iommu(buf_mgr->client,
@@ -577,6 +680,7 @@ static int msm_isp_put_buf_unsafe(struct msm_isp_buf_mgr *buf_mgr,
 		return rc;
 	}
 
+<<<<<<< HEAD
 	switch (buf_info->state) {
 	case MSM_ISP_BUFFER_STATE_PREPARED:
 	case MSM_ISP_BUFFER_STATE_DEQUEUED:
@@ -587,6 +691,68 @@ static int msm_isp_put_buf_unsafe(struct msm_isp_buf_mgr *buf_mgr,
 			buf_mgr->vb2_ops->put_buf(buf_info->vb2_buf,
 				bufq->session_id, bufq->stream_id);
 		buf_info->state = MSM_ISP_BUFFER_STATE_QUEUED;
+=======
+	spin_lock_irqsave(&bufq->bufq_lock, flags);
+
+	rc = msm_isp_put_buf_unsafe(buf_mgr, bufq_handle, buf_index);
+
+	spin_unlock_irqrestore(&bufq->bufq_lock, flags);
+
+	return rc;
+}
+
+static int msm_isp_update_put_buf_cnt_unsafe(
+	struct msm_isp_buf_mgr *buf_mgr,
+	uint32_t id, uint32_t bufq_handle, int32_t buf_index,
+	struct timeval *tv, uint32_t frame_id, uint32_t pingpong_bit)
+{
+	int rc = -1;
+	struct msm_isp_bufq *bufq = NULL;
+	struct msm_isp_buffer *buf_info = NULL;
+	uint8_t *put_buf_mask = NULL;
+
+	bufq = msm_isp_get_bufq(buf_mgr, bufq_handle);
+	if (!bufq) {
+		pr_err("Invalid bufq\n");
+		return rc;
+	}
+
+	put_buf_mask = &bufq->put_buf_mask[pingpong_bit];
+
+	if (buf_index >= 0) {
+		buf_info = msm_isp_get_buf_ptr(buf_mgr, bufq_handle, buf_index);
+		if (!buf_info) {
+			pr_err("%s: buf not found\n", __func__);
+			return -EFAULT;
+		}
+		if (buf_info->state != MSM_ISP_BUFFER_STATE_DEQUEUED) {
+			pr_err(
+			"%s: Invalid state, bufq_handle %x stream id %x, state %d\n",
+			__func__, bufq_handle,
+			bufq->stream_id, buf_info->state);
+			return -EFAULT;
+		}
+		if (buf_info->pingpong_bit != pingpong_bit) {
+			pr_err("%s: Pingpong bit mismatch\n", __func__);
+			return -EFAULT;
+		}
+	}
+
+	if (bufq->buf_type != ISP_SHARE_BUF ||
+		(*put_buf_mask == 0)) {
+		if (buf_info)
+			buf_info->frame_id = frame_id;
+	}
+
+	if (bufq->buf_type == ISP_SHARE_BUF &&
+		((*put_buf_mask & (1 << id)) == 0)) {
+		*put_buf_mask |= (1 << id);
+		if (*put_buf_mask != ISP_SHARE_BUF_MASK) {
+			rc = *put_buf_mask;
+			return 1;
+		}
+		*put_buf_mask = 0;
+>>>>>>> 0e91d2a... Nougat
 		rc = 0;
 		break;
 	case MSM_ISP_BUFFER_STATE_DISPATCHED:
@@ -1138,6 +1304,7 @@ static int msm_isp_buf_mgr_debug(struct msm_isp_buf_mgr *buf_mgr)
 	}
 	snprintf(print_buf, print_buf_size, "%s\n", __func__);
 	for (i = 0; i < BUF_MGR_NUM_BUF_Q; i++) {
+<<<<<<< HEAD
 		if (buf_mgr->bufq[i].bufq_handle != 0) {
 			snprintf(temp_buf, sizeof(temp_buf),
 				"handle %x stream %x num_bufs %d",
@@ -1149,6 +1316,40 @@ static int msm_isp_buf_mgr_debug(struct msm_isp_buf_mgr *buf_mgr)
 				bufs = &buf_mgr->bufq[i].bufs[j];
 				if (!bufs) {
 					break;
+=======
+		bufq = &buf_mgr->bufq[i];
+
+		spin_lock_irqsave(&bufq->bufq_lock, flags);
+		if (!bufq->bufq_handle) {
+			spin_unlock_irqrestore(&bufq->bufq_lock, flags);
+			continue;
+		}
+
+		for (j = 0; j < bufq->num_bufs; j++) {
+			bufs = &bufq->bufs[j];
+			if (!bufs)
+				continue;
+
+			for (k = 0; k < bufs->num_planes; k++) {
+				start_addr = bufs->
+						mapped_info[k].paddr;
+				end_addr = bufs->mapped_info[k].paddr +
+					bufs->mapped_info[k].len - 1;
+				temp_delta = fault_addr - start_addr;
+				if (temp_delta < 0)
+					continue;
+
+				if (buf_addr_delta == -1 ||
+					temp_delta < buf_addr_delta) {
+					buf_addr_delta = temp_delta;
+					debug_stream_id = bufq->stream_id;
+					debug_buf_idx = j;
+					debug_buf_plane = k;
+					debug_start_addr = start_addr;
+					debug_end_addr = end_addr;
+					debug_frame_id = bufs->frame_id;
+					debug_state = bufs->state;
+>>>>>>> 0e91d2a... Nougat
 				}
 				for (k = 0; k < bufs->num_planes; k++) {
 					if (!start_addr)

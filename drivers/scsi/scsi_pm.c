@@ -178,8 +178,9 @@ static int sdev_runtime_suspend(struct device *dev)
 	const struct dev_pm_ops *pm = dev->driver ? dev->driver->pm : NULL;
 	int (*cb)(struct device *) = pm ? pm->runtime_suspend : NULL;
 	struct scsi_device *sdev = to_scsi_device(dev);
-	int err;
+	int err = 0;
 
+<<<<<<< HEAD
 	if (sdev->request_queue->dev)
 		return sdev_blk_runtime_suspend(sdev, cb);
 
@@ -187,6 +188,23 @@ static int sdev_runtime_suspend(struct device *dev)
 	if (err == -EAGAIN)
 		pm_schedule_suspend(dev, jiffies_to_msecs(
 					round_jiffies_up_relative(HZ/10)));
+=======
+	if (!sdev->request_queue->dev) {
+		err = scsi_dev_type_suspend(dev, do_scsi_runtime_suspend);
+		if (err == -EAGAIN)
+			pm_schedule_suspend(dev, jiffies_to_msecs(
+					round_jiffies_up_relative(HZ/10)));
+		return err;
+	}
+
+	if (pm && pm->runtime_suspend) {
+		err = blk_pre_runtime_suspend(sdev->request_queue);
+		if (err)
+			return err;
+		err = pm->runtime_suspend(dev);
+		blk_post_runtime_suspend(sdev->request_queue, err);
+	}
+>>>>>>> 0e91d2a... Nougat
 	return err;
 }
 
@@ -208,11 +226,22 @@ static int sdev_blk_runtime_resume(struct scsi_device *sdev,
 {
 	int err = 0;
 
+<<<<<<< HEAD
 	blk_pre_runtime_resume(sdev->request_queue);
 	if (cb)
 		err = cb(&sdev->sdev_gendev);
 	blk_post_runtime_resume(sdev->request_queue, err);
 
+=======
+	if (!sdev->request_queue->dev)
+		return scsi_dev_type_resume(dev, do_scsi_runtime_resume);
+
+	if (pm && pm->runtime_resume) {
+		blk_pre_runtime_resume(sdev->request_queue);
+		err = pm->runtime_resume(dev);
+		blk_post_runtime_resume(sdev->request_queue, err);
+	}
+>>>>>>> 0e91d2a... Nougat
 	return err;
 }
 

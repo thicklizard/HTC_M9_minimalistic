@@ -51,7 +51,14 @@ in TX data path and correct voting to RPM will be decided for booting.
 	1      -  WCN RPM power collapse enabled
 	1      -  WCN standalone power collapse enabled
 	6      -  GPIO strength value
+<<<<<<< HEAD
 
+=======
+- qcom,has-vsys-adc-channel: boolean flag to determine which ADC HW channel need
+to use for VBATT feature.
+- qcom,has-a2xb-split-reg: boolean flag to determine A2xb split timeout limit
+register is available or not.
+>>>>>>> 0e91d2a... Nougat
 
 Example:
 

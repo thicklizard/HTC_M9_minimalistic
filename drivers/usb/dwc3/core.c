@@ -206,12 +206,16 @@ static int dwc3_core_reset(struct dwc3 *dwc)
 		return ret;
 	}
 
-	dwc3_notify_event(dwc, DWC3_CONTROLLER_RESET_EVENT);
+	dwc3_notify_event(dwc, DWC3_CONTROLLER_RESET_EVENT, 0);
 
+<<<<<<< HEAD
 	/* Perform core and PHY soft reset */
 	dwc3_core_and_phy_soft_reset(dwc);
 
 	dwc3_notify_event(dwc, DWC3_CONTROLLER_POST_RESET_EVENT);
+=======
+	dwc3_notify_event(dwc, DWC3_CONTROLLER_POST_RESET_EVENT, 0);
+>>>>>>> 0e91d2a... Nougat
 
 	return 0;
 }
@@ -524,22 +528,22 @@ void dwc3_post_host_reset_core_init(struct dwc3 *dwc)
 {
 	dwc3_core_init(dwc);
 	dwc3_gadget_restart(dwc);
-	dwc3_notify_event(dwc, DWC3_CONTROLLER_POST_INITIALIZATION_EVENT);
+	dwc3_notify_event(dwc, DWC3_CONTROLLER_POST_INITIALIZATION_EVENT, 0);
 }
 
-static void (*notify_event) (struct dwc3 *, unsigned);
-void dwc3_set_notifier(void (*notify)(struct dwc3 *, unsigned))
+static void (*notify_event)(struct dwc3 *, unsigned, unsigned);
+void dwc3_set_notifier(void (*notify)(struct dwc3 *, unsigned, unsigned))
 {
 	notify_event = notify;
 }
 EXPORT_SYMBOL(dwc3_set_notifier);
 
-int dwc3_notify_event(struct dwc3 *dwc, unsigned event)
+int dwc3_notify_event(struct dwc3 *dwc, unsigned event, unsigned value)
 {
 	int ret = 0;
 
 	if (dwc->notify_event)
-		dwc->notify_event(dwc, event);
+		dwc->notify_event(dwc, event, value);
 	else
 		ret = -ENODEV;
 
@@ -554,7 +558,14 @@ static int dwc3_probe(struct platform_device *pdev)
 	struct device_node	*node = pdev->dev.of_node;
 	struct resource		*res;
 	struct dwc3		*dwc;
+<<<<<<< HEAD
 	struct device		*dev = &pdev->dev;
+=======
+	u8			lpm_nyet_threshold;
+	u8			hird_threshold;
+	u32			num_evt_buffs;
+	int			irq;
+>>>>>>> 0e91d2a... Nougat
 
 	int			ret = -ENOMEM;
 
@@ -584,6 +595,17 @@ static int dwc3_probe(struct platform_device *pdev)
 	dwc->xhci_resources[1].end = res->end;
 	dwc->xhci_resources[1].flags = res->flags;
 	dwc->xhci_resources[1].name = res->name;
+
+	irq = platform_get_irq(to_platform_device(dwc->dev), 0);
+	ret = devm_request_irq(dev, irq, dwc3_interrupt, IRQF_SHARED, "dwc3",
+			dwc);
+	if (ret) {
+		dev_err(dwc->dev, "failed to request irq #%d --> %d\n",
+				irq, ret);
+		return -ENODEV;
+	}
+
+	dwc->irq = irq;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
@@ -780,6 +802,7 @@ static int dwc3_probe(struct platform_device *pdev)
 		dev_err(dev, "Unsupported mode of operation %d\n", mode);
 		goto err2;
 	}
+<<<<<<< HEAD
 	dwc->mode = mode;
 
 	ret = dwc3_debugfs_init(dwc);
@@ -789,6 +812,9 @@ static int dwc3_probe(struct platform_device *pdev)
 	}
 
 	dwc3_notify_event(dwc, DWC3_CONTROLLER_POST_INITIALIZATION_EVENT);
+=======
+	dwc3_notify_event(dwc, DWC3_CONTROLLER_POST_INITIALIZATION_EVENT, 0);
+>>>>>>> 0e91d2a... Nougat
 
 	return 0;
 
@@ -867,8 +893,13 @@ static int dwc3_prepare(struct device *dev)
 	struct dwc3	*dwc = dev_get_drvdata(dev);
 	unsigned long	flags;
 
+<<<<<<< HEAD
 	/* Check if platform glue driver handling PM, if not then handle here */
 	if(!dwc3_notify_event(dwc, DWC3_CORE_PM_PREPARE_EVENT))
+=======
+	
+	if (!dwc3_notify_event(dwc, DWC3_CORE_PM_PREPARE_EVENT, 0))
+>>>>>>> 0e91d2a... Nougat
 		return 0;
 
 	spin_lock_irqsave(&dwc->lock, flags);
@@ -894,8 +925,13 @@ static void dwc3_complete(struct device *dev)
 	struct dwc3	*dwc = dev_get_drvdata(dev);
 	unsigned long	flags;
 
+<<<<<<< HEAD
 	/* Check if platform glue driver handling PM, if not then handle here */
 	if(!dwc3_notify_event(dwc, DWC3_CORE_PM_COMPLETE_EVENT))
+=======
+	
+	if (!dwc3_notify_event(dwc, DWC3_CORE_PM_COMPLETE_EVENT, 0))
+>>>>>>> 0e91d2a... Nougat
 		return;
 
 	spin_lock_irqsave(&dwc->lock, flags);
@@ -919,8 +955,13 @@ static int dwc3_suspend(struct device *dev)
 	struct dwc3	*dwc = dev_get_drvdata(dev);
 	unsigned long	flags;
 
+<<<<<<< HEAD
 	/* Check if platform glue driver handling PM, if not then handle here */
 	if(!dwc3_notify_event(dwc, DWC3_CORE_PM_SUSPEND_EVENT))
+=======
+	
+	if (!dwc3_notify_event(dwc, DWC3_CORE_PM_SUSPEND_EVENT, 0))
+>>>>>>> 0e91d2a... Nougat
 		return 0;
 
 	spin_lock_irqsave(&dwc->lock, flags);
@@ -951,8 +992,13 @@ static int dwc3_resume(struct device *dev)
 	unsigned long	flags;
 	int		ret;
 
+<<<<<<< HEAD
 	/* Check if platform glue driver handling PM, if not then handle here */
 	if(!dwc3_notify_event(dwc, DWC3_CORE_PM_RESUME_EVENT))
+=======
+	
+	if (!dwc3_notify_event(dwc, DWC3_CORE_PM_RESUME_EVENT, 0))
+>>>>>>> 0e91d2a... Nougat
 		return 0;
 
 	ret = usb_phy_init(dwc->usb3_phy);

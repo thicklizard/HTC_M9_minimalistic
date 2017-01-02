@@ -441,6 +441,7 @@ void edac_device_workq_setup(struct edac_device_ctl_info *edac_dev,
  */
 void edac_device_workq_teardown(struct edac_device_ctl_info *edac_dev)
 {
+<<<<<<< HEAD
 	int status;
 
 	status = cancel_delayed_work(&edac_dev->work);
@@ -448,6 +449,15 @@ void edac_device_workq_teardown(struct edac_device_ctl_info *edac_dev)
 		/* workq instance might be running, wait for it */
 		flush_workqueue(edac_workqueue);
 	}
+=======
+	if (!edac_dev->edac_check)
+		return;
+
+	edac_dev->op_state = OP_OFFLINE;
+
+	cancel_delayed_work_sync(&edac_dev->work);
+	flush_workqueue(edac_workqueue);
+>>>>>>> 0e91d2a... Nougat
 }
 
 /*

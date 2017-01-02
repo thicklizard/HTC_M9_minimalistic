@@ -1059,7 +1059,15 @@ get_map:
 		unsigned int e820_type = 0;
 		unsigned long m = (unsigned long)mem_map;
 
+<<<<<<< HEAD
 		d = (efi_memory_desc_t *)(m + (i * desc_size));
+=======
+#ifdef CONFIG_X86_64
+		m |= (u64)efi->efi_memmap_hi << 32;
+#endif
+
+		d = (efi_memory_desc_t *)(m + (i * efi->efi_memdesc_size));
+>>>>>>> 0e91d2a... Nougat
 		switch (d->type) {
 		case EFI_RESERVED_TYPE:
 		case EFI_RUNTIME_SERVICES_CODE:

@@ -1512,7 +1512,7 @@ int vmw_execbuf_process(struct drm_file *file_priv,
 
 	ret = ttm_eu_reserve_buffers(&sw_context->validate_nodes);
 	if (unlikely(ret != 0))
-		goto out_err;
+		goto out_err_nores;
 
 	ret = vmw_validate_buffers(dev_priv, sw_context);
 	if (unlikely(ret != 0))
@@ -1544,6 +1544,7 @@ int vmw_execbuf_process(struct drm_file *file_priv,
 	vmw_resource_relocations_free(&sw_context->res_relocations);
 
 	vmw_fifo_commit(dev_priv, command_size);
+	mutex_unlock(&dev_priv->binding_mutex);
 
 	vmw_query_bo_switch_commit(dev_priv, sw_context);
 	ret = vmw_execbuf_fence_commands(file_priv, dev_priv,
@@ -1559,7 +1560,12 @@ int vmw_execbuf_process(struct drm_file *file_priv,
 		DRM_ERROR("Fence submission error. Syncing.\n");
 
 	vmw_resource_list_unreserve(&sw_context->resource_list, false);
+<<<<<<< HEAD
 	ttm_eu_fence_buffer_objects(&sw_context->validate_nodes,
+=======
+
+	ttm_eu_fence_buffer_objects(&ticket, &sw_context->validate_nodes,
+>>>>>>> 0e91d2a... Nougat
 				    (void *) fence);
 
 	if (unlikely(dev_priv->pinned_bo != NULL &&

@@ -7,7 +7,14 @@ Required properties:
 
 - compatible:	The compatible name for the object (qcom,gpu-pwrlevels)
 
+<<<<<<< HEAD
 Each powerlevel definition is as follows:
+=======
+Properties:
+- qcom,speed-bin:		Speed bin identifier for the set - must match
+				the value read from the hardware
+- qcom,initial-pwrlevel:	GPU wakeup powerlevel
+>>>>>>> 0e91d2a... Nougat
 
 - reg:              Index of the power level (lower is considered higher
 		    performance)

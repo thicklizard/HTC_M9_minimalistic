@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -22,11 +22,58 @@
 #include <linux/clk.h>
 #include <linux/bitmap.h>
 
+#include <soc/qcom/event_timer.h>
 #include "mdss_fb.h"
 #include "mdss_mdp.h"
 #include "mdss_mdp_trace.h"
 #include "mdss_debug.h"
 
+<<<<<<< HEAD
+=======
+#define MDSS_MDP_QSEED3_VER_DOWNSCALE_LIM 2
+#define NUM_MIXERCFG_REGS 3
+#define MDSS_MDP_WB_OUTPUT_BPP	3
+struct mdss_mdp_mixer_cfg {
+	u32 config_masks[NUM_MIXERCFG_REGS];
+	bool border_enabled;
+	bool cursor_enabled;
+};
+
+static struct {
+	u32 flush_bit;
+	struct mdss_mdp_hwio_cfg base;
+	struct mdss_mdp_hwio_cfg ext;
+	struct mdss_mdp_hwio_cfg ext2;
+} mdp_pipe_hwio[MDSS_MDP_MAX_SSPP] = {
+	[MDSS_MDP_SSPP_VIG0]    = {  0, {  0, 3, 0 }, {  0, 1, 3 } },
+	[MDSS_MDP_SSPP_VIG1]    = {  1, {  3, 3, 0 }, {  2, 1, 3 } },
+	[MDSS_MDP_SSPP_VIG2]    = {  2, {  6, 3, 0 }, {  4, 1, 3 } },
+	[MDSS_MDP_SSPP_VIG3]    = { 18, { 26, 3, 0 }, {  6, 1, 3 } },
+	[MDSS_MDP_SSPP_RGB0]    = {  3, {  9, 3, 0 }, {  8, 1, 3 } },
+	[MDSS_MDP_SSPP_RGB1]    = {  4, { 12, 3, 0 }, { 10, 1, 3 } },
+	[MDSS_MDP_SSPP_RGB2]    = {  5, { 15, 3, 0 }, { 12, 1, 3 } },
+	[MDSS_MDP_SSPP_RGB3]    = { 19, { 29, 3, 0 }, { 14, 1, 3 } },
+	[MDSS_MDP_SSPP_DMA0]    = { 11, { 18, 3, 0 }, { 16, 1, 3 } },
+	[MDSS_MDP_SSPP_DMA1]    = { 12, { 21, 3, 0 }, { 18, 1, 3 } },
+	[MDSS_MDP_SSPP_DMA2]    = { 24, .ext2 = {  0, 4, 0 } },
+	[MDSS_MDP_SSPP_DMA3]    = { 25, .ext2 = {  4, 4, 0 } },
+	[MDSS_MDP_SSPP_CURSOR0] = { 22, .ext  = { 20, 4, 0 } },
+	[MDSS_MDP_SSPP_CURSOR1] = { 23, .ext  = { 26, 4, 0 } },
+};
+
+static struct {
+	struct mdss_mdp_hwio_cfg ext2;
+} mdp_pipe_rec1_hwio[MDSS_MDP_MAX_SSPP] = {
+	[MDSS_MDP_SSPP_DMA0]    = { .ext2 = {  8, 4, 0 } },
+	[MDSS_MDP_SSPP_DMA1]    = { .ext2 = { 12, 4, 0 } },
+	[MDSS_MDP_SSPP_DMA2]    = { .ext2 = { 16, 4, 0 } },
+	[MDSS_MDP_SSPP_DMA3]    = { .ext2 = { 20, 4, 0 } },
+};
+
+static void __mdss_mdp_mixer_write_cfg(struct mdss_mdp_mixer *mixer,
+		struct mdss_mdp_mixer_cfg *cfg);
+
+>>>>>>> 0e91d2a... Nougat
 static inline u64 fudge_factor(u64 val, u32 numer, u32 denom)
 {
 	u64 result = (val * (u64)numer);
@@ -42,10 +89,14 @@ static inline u64 apply_fudge_factor(u64 val,
 
 static DEFINE_MUTEX(mdss_mdp_ctl_lock);
 
+<<<<<<< HEAD
 static int mdss_mdp_mixer_free(struct mdss_mdp_mixer *mixer);
 static inline int __mdss_mdp_ctl_get_mixer_off(struct mdss_mdp_mixer *mixer);
 
 static inline u32 mdss_mdp_get_pclk_rate(struct mdss_mdp_ctl *ctl)
+=======
+static inline u64 mdss_mdp_get_pclk_rate(struct mdss_mdp_ctl *ctl)
+>>>>>>> 0e91d2a... Nougat
 {
 	struct mdss_panel_info *pinfo = &ctl->panel_data->panel_info;
 
@@ -189,8 +240,8 @@ static u32 mdss_mdp_perf_calc_pipe_prefill_video(struct mdss_mdp_prefill_params
 {
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
 	struct mdss_prefill_data *prefill = &mdata->prefill_data;
-	u32 prefill_bytes;
-	u32 latency_buf_bytes;
+	u32 prefill_bytes = 0;
+	u32 latency_buf_bytes = 0;
 	u32 y_buf_bytes = 0;
 	u32 y_scaler_bytes = 0;
 	u32 pp_bytes = 0, pp_lines = 0;
@@ -352,7 +403,7 @@ u32 mdss_mdp_perf_calc_smp_size(struct mdss_mdp_pipe *pipe,
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
 	u32 smp_bytes;
 
-	if (pipe->type == PIPE_TYPE_CURSOR)
+	if (pipe->type == MDSS_MDP_PIPE_TYPE_CURSOR)
 		return 0;
 
 	
@@ -416,8 +467,237 @@ exit:
 	return;
 }
 
+<<<<<<< HEAD
 static bool is_factor_needed(struct mdss_mdp_perf_params *perf_temp,
 	u64 bus_ib_quota)
+=======
+static u32 __calc_qseed3_mdp_clk_rate(struct mdss_mdp_pipe *pipe,
+	struct mdss_rect src, struct mdss_rect dst, u32 src_h,
+	u32 fps, u32 v_total)
+{
+	u32 active_line_cycle, backfill_cycle, total_cycle;
+	u32 ver_dwnscale;
+	u32 active_line;
+	u32 backfill_line;
+
+	ver_dwnscale = (src_h << PHASE_STEP_SHIFT) / dst.h;
+
+	if (ver_dwnscale > (MDSS_MDP_QSEED3_VER_DOWNSCALE_LIM
+			<< PHASE_STEP_SHIFT)) {
+		active_line = MDSS_MDP_QSEED3_VER_DOWNSCALE_LIM
+			<< PHASE_STEP_SHIFT;
+		backfill_line = ver_dwnscale - active_line;
+	} else {
+		
+		active_line = ver_dwnscale;
+		backfill_line = 0;
+	}
+
+	active_line_cycle = mult_frac(active_line, src.w,
+		4) >> PHASE_STEP_SHIFT; 
+	if (active_line_cycle < dst.w)
+		active_line_cycle = dst.w;
+
+	backfill_cycle = mult_frac(backfill_line, src.w, 4) 
+		>> PHASE_STEP_SHIFT;
+
+	total_cycle = active_line_cycle + backfill_cycle;
+
+	pr_debug("line: active=%d backfill=%d vds=%d\n",
+		active_line, backfill_line, ver_dwnscale);
+	pr_debug("cycle: total=%d active=%d backfill=%d\n",
+		total_cycle, active_line_cycle, backfill_cycle);
+
+	return total_cycle * (fps * v_total);
+}
+
+static inline bool __is_vert_downscaling(u32 src_h,
+	struct mdss_rect dst){
+
+	return (src_h > dst.h);
+}
+
+static u32 get_pipe_mdp_clk_rate(struct mdss_mdp_pipe *pipe,
+	struct mdss_rect src, struct mdss_rect dst,
+	u32 fps, u32 v_total, u32 flags)
+{
+	struct mdss_mdp_mixer *mixer;
+	u32 rate, src_h;
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+
+	mixer = pipe->mixer_left;
+	src_h = DECIMATED_DIMENSION(src.h, pipe->vert_deci);
+
+	if (mixer->rotator_mode) {
+
+		rate = pipe->src.w * pipe->src.h * fps;
+		rate /= 4; 
+	} else if (test_bit(MDSS_CAPS_QSEED3, mdata->mdss_caps_map) &&
+		pipe->scaler.enable && __is_vert_downscaling(src_h, dst)) {
+
+		rate = __calc_qseed3_mdp_clk_rate(pipe, src, dst, src_h,
+			fps, v_total);
+	} else {
+
+		rate = dst.w;
+		if (src_h > dst.h)
+			rate = (rate * src_h) / dst.h;
+
+		rate *= v_total * fps;
+
+		
+		if (pipe->bwc_mode && !pipe->src_fmt->is_yuv &&
+		    pipe->src_fmt->bpp == 4) {
+			u32 bwc_rate =
+			mult_frac((src.w * src_h * fps), v_total, dst.h << 1);
+			pr_debug("src: w:%d h:%d fps:%d vtotal:%d dst h:%d\n",
+				src.w, src_h, fps, v_total, dst.h);
+			pr_debug("pipe%d: bwc_rate=%d normal_rate=%d\n",
+				pipe->num, bwc_rate, rate);
+			rate = max(bwc_rate, rate);
+		}
+	}
+
+	if (flags & PERF_CALC_PIPE_APPLY_CLK_FUDGE)
+		rate = mdss_mdp_clk_fudge_factor(mixer, rate);
+
+	return rate;
+}
+
+static u32 mdss_mdp_get_rotator_fps(struct mdss_mdp_pipe *pipe)
+{
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+	u32 fps;
+
+	if (pipe->src.w >= 3840 || pipe->src.h >= 3840)
+		fps = ROTATOR_LOW_FRAME_RATE;
+	else if (mdata->traffic_shaper_en)
+		fps = DEFAULT_ROTATOR_FRAME_RATE;
+	else if (pipe->frame_rate)
+		fps = pipe->frame_rate;
+	else
+		fps = DEFAULT_FRAME_RATE;
+
+	pr_debug("rotator fps:%d\n", fps);
+
+	return fps;
+}
+
+int mdss_mdp_get_panel_params(struct mdss_mdp_pipe *pipe,
+	struct mdss_mdp_mixer *mixer, u32 *fps, u32 *v_total,
+	u32 *h_total, u32 *xres)
+{
+
+	if (mixer->rotator_mode) {
+		*fps = mdss_mdp_get_rotator_fps(pipe);
+	} else if (mixer->type == MDSS_MDP_MIXER_TYPE_INTF) {
+		struct mdss_panel_info *pinfo;
+
+		if (!mixer->ctl)
+			return -EINVAL;
+
+		pinfo = &mixer->ctl->panel_data->panel_info;
+		if (pinfo->type == MIPI_VIDEO_PANEL) {
+			*fps = pinfo->panel_max_fps;
+			*v_total = pinfo->panel_max_vtotal;
+		} else {
+			*fps = mdss_panel_get_framerate(pinfo);
+			*v_total = mdss_panel_get_vtotal(pinfo);
+		}
+		*xres = get_panel_width(mixer->ctl);
+		*h_total = mdss_panel_get_htotal(pinfo, false);
+
+		if (is_pingpong_split(mixer->ctl->mfd))
+			*h_total += mdss_panel_get_htotal(
+				&mixer->ctl->panel_data->next->panel_info,
+				false);
+	} else {
+		*v_total = mixer->height;
+		*xres = mixer->width;
+		*h_total = mixer->width;
+	}
+
+	return 0;
+}
+
+int mdss_mdp_get_pipe_overlap_bw(struct mdss_mdp_pipe *pipe,
+	struct mdss_rect *roi, u64 *quota, u64 *quota_nocr, u32 flags)
+{
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+	struct mdss_mdp_mixer *mixer = pipe->mixer_left;
+	struct mdss_rect src, dst;
+	u32 v_total, fps, h_total, xres, src_h;
+	*quota = 0;
+	*quota_nocr = 0;
+
+	if (mdss_mdp_get_panel_params(pipe, mixer, &fps, &v_total,
+			&h_total, &xres)) {
+		pr_err(" error retreiving the panel params!\n");
+		return -EINVAL;
+	}
+
+	dst = pipe->dst;
+	src = pipe->src;
+
+	
+	if (roi && !mixer->ctl->is_video_mode && !pipe->src_split_req)
+		mdss_mdp_crop_rect(&src, &dst, roi);
+
+	src_h = DECIMATED_DIMENSION(src.h, pipe->vert_deci);
+
+	*quota = fps * src.w * src_h;
+
+	if (pipe->src_fmt->chroma_sample == MDSS_MDP_CHROMA_420)
+		if (pipe->vert_deci)
+			*quota *= 2;
+		else
+			*quota = (*quota * 3) / 2;
+	else
+		*quota *= pipe->src_fmt->bpp;
+
+	if (mixer->rotator_mode) {
+		if (test_bit(MDSS_QOS_OVERHEAD_FACTOR,
+				mdata->mdss_qos_map)) {
+			
+			*quota_nocr += (*quota * 2);
+			*quota = apply_comp_ratio_factor(*quota,
+				pipe->src_fmt, &pipe->comp_ratio);
+			*quota += apply_comp_ratio_factor(*quota,
+				pipe->src_fmt, &pipe->comp_ratio);
+		} else {
+			*quota *= 2; 
+		}
+	} else {
+
+		*quota = DIV_ROUND_UP_ULL(*quota * v_total, dst.h);
+		if (!mixer->ctl->is_video_mode)
+			*quota = DIV_ROUND_UP_ULL(*quota * h_total, xres);
+
+		*quota_nocr = *quota;
+
+		if (test_bit(MDSS_QOS_OVERHEAD_FACTOR,
+				mdata->mdss_qos_map))
+			*quota = apply_comp_ratio_factor(*quota,
+				pipe->src_fmt, &pipe->comp_ratio);
+	}
+
+
+	pr_debug("quota:%llu nocr:%llu src.w:%d src.h%d comp:[%d, %d]\n",
+		*quota, *quota_nocr, src.w, src_h, pipe->comp_ratio.numer,
+		pipe->comp_ratio.denom);
+
+	return 0;
+}
+
+static inline bool validate_comp_ratio(struct mult_factor *factor)
+{
+	return factor->numer && factor->denom;
+}
+
+u32 apply_comp_ratio_factor(u32 quota,
+	struct mdss_mdp_format_params *fmt,
+	struct mult_factor *factor)
+>>>>>>> 0e91d2a... Nougat
 {
 	return (test_bit(MDSS_MDP_BW_MODE_SINGLE_LAYER,
 			perf_temp->bw_vote_mode) &&
@@ -426,27 +706,247 @@ static bool is_factor_needed(struct mdss_mdp_perf_params *perf_temp,
 			perf_temp->bw_vote_mode);
 }
 
-static u32 mdss_mdp_get_rotator_fps(struct mdss_mdp_pipe *pipe)
+static u32 mdss_mdp_get_vbp_factor(struct mdss_mdp_ctl *ctl)
 {
-	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
-	u32 fps = DEFAULT_FRAME_RATE;
+	u32 fps, v_total, vbp, vbp_fac;
+	struct mdss_panel_info *pinfo;
 
+<<<<<<< HEAD
 	if (mdata->traffic_shaper_en)
 		fps = DEFAULT_ROTATOR_FRAME_RATE;
+=======
+	if (!ctl || !ctl->panel_data)
+		return 0;
 
-	if (pipe->src.w >= 3840 || pipe->src.h >= 3840)
-		fps = ROTATOR_LOW_FRAME_RATE;
+	pinfo = &ctl->panel_data->panel_info;
+	fps = mdss_panel_get_framerate(pinfo);
+	v_total = mdss_panel_get_vtotal(pinfo);
+	vbp = pinfo->lcdc.v_back_porch + pinfo->lcdc.v_pulse_width;
+	vbp += pinfo->prg_fet;
+>>>>>>> 0e91d2a... Nougat
 
+	vbp_fac = (vbp) ? fps * v_total / vbp : 0;
+	pr_debug("vbp_fac=%d vbp=%d v_total=%d\n", vbp_fac, vbp, v_total);
+
+<<<<<<< HEAD
 	return fps;
 }
 
+=======
+	return vbp_fac;
+}
+
+static u32 mdss_mdp_get_vbp_factor_max(struct mdss_mdp_ctl *ctl)
+{
+	u32 vbp_max = 0;
+	int i;
+	struct mdss_data_type *mdata;
+
+	if (!ctl || !ctl->mdata)
+		return 0;
+
+	mdata = ctl->mdata;
+	for (i = 0; i < mdata->nctl; i++) {
+		struct mdss_mdp_ctl *ctl = mdata->ctl_off + i;
+		u32 vbp_fac;
+
+		
+		if (test_bit(MDSS_QOS_SIMPLIFIED_PREFILL, mdata->mdss_qos_map)
+				&& !ctl->is_video_mode)
+			continue;
+
+		if (mdss_mdp_ctl_is_power_on(ctl)) {
+			vbp_fac = mdss_mdp_get_vbp_factor(ctl);
+			vbp_max = max(vbp_max, vbp_fac);
+		}
+	}
+
+	return vbp_max;
+}
+
+static u32 __calc_prefill_line_time_us(struct mdss_mdp_ctl *ctl)
+{
+	u32 fps, v_total, vbp, vbp_fac;
+	struct mdss_panel_info *pinfo;
+
+	if (!ctl || !ctl->panel_data)
+		return 0;
+
+	pinfo = &ctl->panel_data->panel_info;
+	fps = mdss_panel_get_framerate(pinfo);
+	v_total = mdss_panel_get_vtotal(pinfo);
+	vbp = pinfo->lcdc.v_back_porch + pinfo->lcdc.v_pulse_width;
+	vbp += pinfo->prg_fet;
+
+	vbp_fac = mult_frac(USEC_PER_SEC, vbp, fps * v_total); 
+	pr_debug("vbp_fac=%d vbp=%d v_total=%d fps=%d\n",
+		vbp_fac, vbp, v_total, fps);
+
+	return vbp_fac;
+}
+
+static u32 __get_min_prefill_line_time_us(struct mdss_mdp_ctl *ctl)
+{
+	u32 vbp_min = 0;
+	int i;
+	struct mdss_data_type *mdata;
+
+	if (!ctl || !ctl->mdata)
+		return 0;
+
+	mdata = ctl->mdata;
+	for (i = 0; i < mdata->nctl; i++) {
+		struct mdss_mdp_ctl *tmp_ctl = mdata->ctl_off + i;
+		u32 vbp_fac;
+
+		
+		if (!tmp_ctl->is_video_mode)
+			continue;
+
+		if (mdss_mdp_ctl_is_power_on(tmp_ctl)) {
+			vbp_fac = __calc_prefill_line_time_us(tmp_ctl);
+			vbp_min = min(vbp_min, vbp_fac);
+		}
+	}
+
+	return vbp_min;
+}
+
+static u32 mdss_mdp_calc_prefill_line_time(struct mdss_mdp_ctl *ctl,
+	struct mdss_mdp_pipe *pipe)
+{
+	u32 prefill_us = 0;
+	u32 prefill_amortized = 0;
+	struct mdss_mdp_mixer *mixer;
+	struct mdss_panel_info *pinfo;
+	u32 fps, v_total;
+
+	if (!ctl || !ctl->mdata)
+		return 0;
+
+	mixer = pipe->mixer_left;
+	if (!mixer)
+		return -EINVAL;
+
+	pinfo = &ctl->panel_data->panel_info;
+	fps = mdss_panel_get_framerate(pinfo);
+	v_total = mdss_panel_get_vtotal(pinfo);
+
+	
+	prefill_us = __get_min_prefill_line_time_us(ctl);
+
+	
+	if (mdss_mdp_is_amortizable_pipe(pipe, mixer, ctl->mdata)) {
+		prefill_amortized = mult_frac(USEC_PER_SEC, pipe->src.y,
+			fps * v_total);
+		prefill_us += prefill_amortized;
+	}
+
+	return prefill_us;
+}
+
+static inline bool __is_multirect_high_pipe(struct mdss_mdp_pipe *pipe)
+{
+	struct mdss_mdp_pipe *next_pipe = pipe->multirect.next;
+
+	return (pipe->src.y > next_pipe->src.y);
+}
+
+static u64 mdss_mdp_apply_prefill_factor(u64 prefill_bw,
+	struct mdss_mdp_ctl *ctl, struct mdss_mdp_pipe *pipe)
+{
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+	u64 total_prefill_bw;
+	u32 prefill_time_us;
+
+	if (test_bit(MDSS_QOS_TS_PREFILL, mdata->mdss_qos_map)) {
+
+		if (pipe->multirect.mode == MDSS_MDP_PIPE_MULTIRECT_SERIAL &&
+			__is_multirect_high_pipe(pipe)) {
+			total_prefill_bw = 0;
+			goto exit;
+		}
+
+		prefill_time_us = mdss_mdp_calc_prefill_line_time(ctl, pipe);
+		total_prefill_bw = prefill_time_us ? DIV_ROUND_UP_ULL(
+			USEC_PER_SEC * prefill_bw, prefill_time_us) : 0;
+	} else {
+		total_prefill_bw = prefill_bw *
+			mdss_mdp_get_vbp_factor_max(ctl);
+	}
+
+exit:
+	return total_prefill_bw;
+}
+
+u64 mdss_mdp_perf_calc_simplified_prefill(struct mdss_mdp_pipe *pipe,
+	u32 v_total, u32 fps, struct mdss_mdp_ctl *ctl)
+{
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+	struct simplified_prefill_factors *pfactors =
+			&mdata->prefill_data.prefill_factors;
+	u64 prefill_per_pipe = 0;
+	u32 prefill_lines = pfactors->xtra_ff_factor;
+
+
+	
+	if (!ctl->is_video_mode)
+		goto exit;
+
+	prefill_per_pipe = pipe->src.w * pipe->src_fmt->bpp;
+
+	
+	if (mdss_mdp_is_tile_format(pipe->src_fmt)) {
+		if (mdss_mdp_is_nv12_format(pipe->src_fmt))
+			prefill_lines += pfactors->fmt_mt_nv12_factor;
+		else
+			prefill_lines += pfactors->fmt_mt_factor;
+	} else {
+		prefill_lines += pfactors->fmt_linear_factor;
+	}
+
+	
+	if (pipe->src.h > pipe->dst.h) {
+		prefill_lines += pfactors->scale_factor;
+
+		prefill_per_pipe = fudge_factor(prefill_per_pipe,
+			DECIMATED_DIMENSION(pipe->src.h, pipe->vert_deci),
+			pipe->dst.h);
+	}
+
+	prefill_per_pipe *= prefill_lines;
+	prefill_per_pipe = mdss_mdp_apply_prefill_factor(prefill_per_pipe,
+		ctl, pipe);
+
+	pr_debug("pipe src: %dx%d bpp:%d\n",
+		pipe->src.w, pipe->src.h, pipe->src_fmt->bpp);
+	pr_debug("ff_factor:%d mt_nv12:%d mt:%d\n",
+		pfactors->xtra_ff_factor,
+		(mdss_mdp_is_tile_format(pipe->src_fmt) &&
+		mdss_mdp_is_nv12_format(pipe->src_fmt)) ?
+		pfactors->fmt_mt_nv12_factor : 0,
+		mdss_mdp_is_tile_format(pipe->src_fmt) ?
+		pfactors->fmt_mt_factor : 0);
+	pr_debug("pipe prefill:%llu lines:%d\n",
+		prefill_per_pipe, prefill_lines);
+
+exit:
+	return prefill_per_pipe;
+}
+
+
+>>>>>>> 0e91d2a... Nougat
 int mdss_mdp_perf_calc_pipe(struct mdss_mdp_pipe *pipe,
 	struct mdss_mdp_perf_params *perf, struct mdss_rect *roi,
 	u32 flags)
 {
 	struct mdss_mdp_mixer *mixer;
 	int fps = DEFAULT_FRAME_RATE;
+<<<<<<< HEAD
 	u32 quota, rate, v_total = 0, src_h, xres = 0, h_total = 0;
+=======
+	u32 v_total = 0, src_h, xres = 0, h_total = 0;
+>>>>>>> 0e91d2a... Nougat
 	struct mdss_rect src, dst;
 	bool is_fbc = false;
 	struct mdss_mdp_prefill_params prefill_params;
@@ -461,57 +961,46 @@ int mdss_mdp_perf_calc_pipe(struct mdss_mdp_pipe *pipe,
 	dst = pipe->dst;
 	src = pipe->src;
 
+<<<<<<< HEAD
 	if (mixer->rotator_mode) {
 		fps = mdss_mdp_get_rotator_fps(pipe);
 	} else if (mixer->type != MDSS_MDP_MIXER_TYPE_WRITEBACK) {
 		struct mdss_panel_info *pinfo;
+=======
+	src_h = DECIMATED_DIMENSION(src.h, pipe->vert_deci);
+>>>>>>> 0e91d2a... Nougat
 
-		if (!mixer->ctl)
-			return -EINVAL;
-
-		pinfo = &mixer->ctl->panel_data->panel_info;
-		if (pinfo->type == MIPI_VIDEO_PANEL) {
-			fps = pinfo->panel_max_fps;
-			v_total = pinfo->panel_max_vtotal;
-		} else {
-			fps = mdss_panel_get_framerate(pinfo);
-			v_total = mdss_panel_get_vtotal(pinfo);
-		}
-		xres = get_panel_width(mixer->ctl);
-		is_fbc = pinfo->fbc.enabled;
-		h_total = mdss_panel_get_htotal(pinfo, false);
-
-		if (is_pingpong_split(mixer->ctl->mfd))
-			h_total += mdss_panel_get_htotal(
-				&mixer->ctl->panel_data->next->panel_info,
-				false);
-	} else {
-		v_total = mixer->height;
-		xres = mixer->width;
-		h_total = mixer->width;
+	if (mdss_mdp_get_panel_params(pipe, mixer, &fps, &v_total,
+			&h_total, &xres)) {
+		pr_err(" error retreiving the panel params!\n");
+		return -EINVAL;
 	}
 
+	if (mixer->type == MDSS_MDP_MIXER_TYPE_INTF) {
+		if (!mixer->ctl)
+			return -EINVAL;
+		is_fbc = mixer->ctl->panel_data->panel_info.fbc.enabled;
+	}
+
+<<<<<<< HEAD
+=======
+	mixer->ctl->frame_rate = fps;
+
+	
+>>>>>>> 0e91d2a... Nougat
 	if (roi && !mixer->ctl->is_video_mode && !pipe->src_split_req)
 		mdss_mdp_crop_rect(&src, &dst, roi);
 
 	pr_debug("v_total=%d, xres=%d fps=%d\n", v_total, xres, fps);
-
-	src_h = DECIMATED_DIMENSION(src.h, pipe->vert_deci);
-
-	quota = fps * src.w * src_h;
-
 	pr_debug("src(w,h)(%d,%d) dst(w,h)(%d,%d) dst_y=%d bpp=%d yuv=%d\n",
 		 pipe->src.w, src_h, pipe->dst.w, pipe->dst.h, pipe->dst.y,
 		 pipe->src_fmt->bpp, pipe->src_fmt->is_yuv);
 
-	if (pipe->src_fmt->chroma_sample == MDSS_MDP_CHROMA_420)
-		if (pipe->vert_deci)
-			quota *= 2;
-		else
-			quota = (quota * 3) / 2;
-	else
-		quota *= pipe->src_fmt->bpp;
+	if (mdss_mdp_get_pipe_overlap_bw(pipe, roi, &perf->bw_overlap,
+			&perf->bw_overlap_nocr, flags))
+		pr_err("failure calculating overlap bw!\n");
 
+<<<<<<< HEAD
 	if (mixer->rotator_mode) {
 		rate = pipe->src.w * pipe->src.h * fps;
 		rate /= 4; 
@@ -567,6 +1056,17 @@ int mdss_mdp_perf_calc_pipe(struct mdss_mdp_pipe *pipe,
 		perf->mdp_clk_rate = mdss_mdp_clk_fudge_factor(mixer, rate);
 	else
 		perf->mdp_clk_rate = rate;
+=======
+	perf->mdp_clk_rate = get_pipe_mdp_clk_rate(pipe, src, dst,
+		fps, v_total, flags);
+
+	pr_debug("bw:%llu bw_nocr:%llu clk:%d\n", perf->bw_overlap,
+		perf->bw_overlap_nocr, perf->mdp_clk_rate);
+
+	if (pipe->flags & MDP_SOLID_FILL) {
+		perf->bw_overlap = 0;
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	if (mixer->ctl->intf_num == MDSS_MDP_NO_INTF ||
 		mdata->disable_prefill ||
@@ -594,6 +1094,11 @@ int mdss_mdp_perf_calc_pipe(struct mdss_mdp_pipe *pipe,
 	prefill_params.is_hflip = pipe->flags & MDP_FLIP_LR;
 	prefill_params.is_cmd = !mixer->ctl->is_video_mode;
 	prefill_params.pnum = pipe->num;
+<<<<<<< HEAD
+=======
+	prefill_params.is_ubwc = mdss_mdp_is_ubwc_format(pipe->src_fmt);
+	prefill_params.is_nv12 = mdss_mdp_is_nv12_format(pipe->src_fmt);
+>>>>>>> 0e91d2a... Nougat
 
 	mdss_mdp_get_bw_vote_mode(mixer, mdata->mdp_rev, perf,
 		PERF_CALC_VOTE_MODE_PER_PIPE, flags);
@@ -644,14 +1149,28 @@ static void mdss_mdp_perf_calc_mixer(struct mdss_mdp_mixer *mixer,
 	u32 prefill_bytes = 0;
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
 	bool apply_fudge = true;
+<<<<<<< HEAD
+=======
+	struct mdss_mdp_format_params *fmt = NULL;
+>>>>>>> 0e91d2a... Nougat
 
 	BUG_ON(num_pipes > MAX_PIPES_PER_LM);
 
 	memset(perf, 0, sizeof(*perf));
 
 	if (!mixer->rotator_mode) {
+<<<<<<< HEAD
 		if (mixer->type != MDSS_MDP_MIXER_TYPE_WRITEBACK) {
 			pinfo = &mixer->ctl->panel_data->panel_info;
+=======
+		pinfo = &mixer->ctl->panel_data->panel_info;
+		if (!pinfo) {
+			pr_err("pinfo is NULL\n");
+			goto exit;
+		}
+
+		if (mixer->type == MDSS_MDP_MIXER_TYPE_INTF) {
+>>>>>>> 0e91d2a... Nougat
 			if (pinfo->type == MIPI_VIDEO_PANEL) {
 				fps = pinfo->panel_max_fps;
 				v_total = pinfo->panel_max_vtotal;
@@ -659,11 +1178,23 @@ static void mdss_mdp_perf_calc_mixer(struct mdss_mdp_mixer *mixer,
 				fps = mdss_panel_get_framerate(pinfo);
 				v_total = mdss_panel_get_vtotal(pinfo);
 			}
+<<<<<<< HEAD
 
 			if (pinfo->type == WRITEBACK_PANEL)
 				pinfo = NULL;
+=======
+>>>>>>> 0e91d2a... Nougat
 		} else {
 			v_total = mixer->height;
+		}
+
+		
+		if (pinfo->type == WRITEBACK_PANEL) {
+			fmt = mdss_mdp_get_format_params(
+				mixer->ctl->dst_format);
+			if (fmt)
+				bpp = fmt->bpp;
+			pinfo = NULL;
 		}
 
 		perf->mdp_clk_rate = mixer->width * v_total * fps;
@@ -730,6 +1261,18 @@ static void mdss_mdp_perf_calc_mixer(struct mdss_mdp_mixer *mixer,
 			flags))
 			continue;
 
+<<<<<<< HEAD
+=======
+		if (!mdss_mdp_is_nrt_ctl_path(mixer->ctl)) {
+			u64 per_pipe_ib =
+			    test_bit(MDSS_QOS_IB_NOCR, mdata->mdss_qos_map) ?
+			    tmp.bw_overlap_nocr : tmp.bw_overlap;
+
+			perf->max_per_pipe_ib = max(perf->max_per_pipe_ib,
+			    per_pipe_ib);
+		}
+
+>>>>>>> 0e91d2a... Nougat
 		bitmap_or(perf->bw_vote_mode, perf->bw_vote_mode,
 			tmp.bw_vote_mode, MDSS_MDP_BW_MODE_MAX);
 
@@ -758,7 +1301,8 @@ static void mdss_mdp_perf_calc_mixer(struct mdss_mdp_mixer *mixer,
 			if (mdss_mdp_perf_is_overlap(y0, y1, pipe->dst.y,
 				(pipe->dst.y + pipe->dst.h)))
 				bw_max_region += bw_overlap[j];
-			pr_debug("v[%d](%d,%d)pipe[%d](%d,%d)bw(%llu %llu)\n",
+			pr_debug("pipe%d rect%d: v[%d](%d,%d)pipe[%d](%d,%d)bw(%llu %llu)\n",
+				pipe->num, pipe->multirect.num,
 				i, y0, y1, j, pipe->dst.y,
 				pipe->dst.y + pipe->dst.h, bw_overlap[j],
 				bw_max_region);
@@ -829,6 +1373,7 @@ int mdss_mdp_get_prefetch_lines(struct mdss_mdp_ctl *ctl)
 	return prefetch_avail;
 }
 
+<<<<<<< HEAD
 static u32 mdss_mdp_get_vbp_factor(struct mdss_mdp_ctl *ctl)
 {
 	u32 fps, v_total, vbp, vbp_fac;
@@ -872,6 +1417,8 @@ static u32 mdss_mdp_get_vbp_factor_max(struct mdss_mdp_ctl *ctl)
 	return vbp_max;
 }
 
+=======
+>>>>>>> 0e91d2a... Nougat
 static bool mdss_mdp_video_mode_intf_connected(struct mdss_mdp_ctl *ctl)
 {
 	int i;
@@ -929,9 +1476,9 @@ static void __mdss_mdp_perf_calc_ctl_helper(struct mdss_mdp_ctl *ctl,
 			perf->mdp_clk_rate = tmp.mdp_clk_rate;
 
 		if (ctl->intf_type) {
-			u32 clk_rate = mdss_mdp_get_pclk_rate(ctl);
+			u64 clk_rate = mdss_mdp_get_pclk_rate(ctl);
 			
-			clk_rate = mult_frac(clk_rate >> 1, 9, 8);
+			clk_rate = DIV_ROUND_UP_ULL((clk_rate >> 1) * 9, 8);
 			if (clk_rate > perf->mdp_clk_rate)
 				perf->mdp_clk_rate = clk_rate;
 		}
@@ -1017,6 +1564,57 @@ int mdss_mdp_perf_bw_check_pipe(struct mdss_mdp_perf_params *perf,
 			prefill_bw, vbp_fac, perf->bw_overlap);
 
 	
+<<<<<<< HEAD
+=======
+	panel_orientation = ctl->mfd->panel_orientation;
+	if (panel_orientation & MDP_FLIP_LR)
+		flags |= MDSS_MAX_BW_LIMIT_HFLIP;
+	if (panel_orientation & MDP_FLIP_UD)
+		flags |= MDSS_MAX_BW_LIMIT_VFLIP;
+
+	
+	if (pipe->flags & MDP_FLIP_LR)
+		flags |= MDSS_MAX_BW_LIMIT_HFLIP;
+	if (pipe->flags & MDP_FLIP_UD)
+		flags |= MDSS_MAX_BW_LIMIT_VFLIP;
+
+	flags |= ctl->mdata->bw_mode_bitmap;
+
+	for (i = 0; i < ctl->mdata->mdss_per_pipe_bw_cnt; i++) {
+		if (max_per_pipe_bw_settings[i].mdss_max_bw_mode & flags) {
+			threshold = max_per_pipe_bw_settings[i].mdss_max_bw_val;
+			if (threshold < max)
+				max = threshold;
+		}
+	}
+
+	return max;
+}
+
+int mdss_mdp_perf_bw_check_pipe(struct mdss_mdp_perf_params *perf,
+		struct mdss_mdp_pipe *pipe)
+{
+	struct mdss_data_type *mdata = pipe->mixer_left->ctl->mdata;
+	struct mdss_mdp_ctl *ctl = pipe->mixer_left->ctl;
+	u32 vbp_fac = 0, threshold = 0;
+	u64 prefill_bw, pipe_bw, max_pipe_bw;
+
+	
+	if (ctl->intf_type == MDSS_MDP_NO_INTF)
+		return 0;
+
+	if (test_bit(MDSS_QOS_SIMPLIFIED_PREFILL, mdata->mdss_qos_map)) {
+		prefill_bw = perf->bw_prefill;
+	} else {
+		vbp_fac = mdss_mdp_get_vbp_factor_max(ctl);
+		prefill_bw = perf->prefill_bytes * vbp_fac;
+	}
+	pipe_bw = max(prefill_bw, perf->bw_overlap);
+	pr_debug("prefill=%llu, vbp_fac=%u, overlap=%llu\n",
+			prefill_bw, vbp_fac, perf->bw_overlap);
+
+	
+>>>>>>> 0e91d2a... Nougat
 	pipe_bw = DIV_ROUND_UP_ULL(pipe_bw, 1000);
 
 	threshold = mdata->max_bw_per_pipe;
@@ -1523,7 +2121,36 @@ static struct mdss_mdp_mixer *mdss_mdp_mixer_alloc(
 	return mixer;
 }
 
+<<<<<<< HEAD
 static int mdss_mdp_mixer_free(struct mdss_mdp_mixer *mixer)
+=======
+struct mdss_mdp_mixer *mdss_mdp_mixer_assign(u32 id, bool wb, bool rot)
+{
+	struct mdss_mdp_mixer *mixer = NULL;
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+
+	mutex_lock(&mdss_mdp_ctl_lock);
+
+	if (rot && (mdata->wfd_mode == MDSS_MDP_WFD_DEDICATED))
+		mixer = mdata->mixer_wb + mdata->nmixers_wb;
+	else if (wb && id < mdata->nmixers_wb)
+		mixer = mdata->mixer_wb + id;
+	else if (!wb && id < mdata->nmixers_intf)
+		mixer = mdata->mixer_intf + id;
+
+	if (mixer && mixer->ref_cnt == 0) {
+		mixer->ref_cnt++;
+		mixer->params_changed++;
+	} else {
+		pr_err("mixer is in use already = %d\n", id);
+		mixer = NULL;
+	}
+	mutex_unlock(&mdss_mdp_ctl_lock);
+	return mixer;
+}
+
+int mdss_mdp_mixer_free(struct mdss_mdp_mixer *mixer)
+>>>>>>> 0e91d2a... Nougat
 {
 	if (!mixer)
 		return -ENODEV;
@@ -1579,6 +2206,7 @@ struct mdss_mdp_mixer *mdss_mdp_wb_mixer_alloc(int rotator)
 		goto error;
 	}
 
+<<<<<<< HEAD
 	ctl->mixer_left = mixer;
 
 	ctl->ops.start_fnc = mdss_mdp_writeback_start;
@@ -1596,11 +2224,38 @@ error:
 		mdss_mdp_mixer_free(mixer);
 	if (ctl)
 		mdss_mdp_ctl_free(ctl);
+=======
+	wb = mdss_mdp_wb_alloc(MDSS_MDP_WB_ROTATOR, ctl->num);
+	if (!wb) {
+		pr_err("Unable to allocate writeback block\n");
+		goto error;
+	}
+
+	ctl->mixer_left = mixer;
+
+	ctl->ops.start_fnc = mdss_mdp_writeback_start;
+	ctl->power_state = MDSS_PANEL_POWER_ON;
+	ctl->wb_type = MDSS_MDP_WB_CTL_TYPE_BLOCK;
+	mixer->ctl = ctl;
+	ctl->wb = wb;
+
+	if (ctl->ops.start_fnc)
+		ret = ctl->ops.start_fnc(ctl);
+
+	if (!ret)
+		return mixer;
+error:
+	if (wb)
+		mdss_mdp_wb_free(wb);
+	if (mixer)
+		mdss_mdp_mixer_free(mixer);
+	if (ctl)
+		mdss_mdp_ctl_free(ctl);
 
 	return NULL;
 }
 
-int mdss_mdp_wb_mixer_destroy(struct mdss_mdp_mixer *mixer)
+int mdss_mdp_block_mixer_destroy(struct mdss_mdp_mixer *mixer)
 {
 	struct mdss_mdp_ctl *ctl;
 
@@ -1619,22 +2274,145 @@ int mdss_mdp_wb_mixer_destroy(struct mdss_mdp_mixer *mixer)
 
 	mdss_mdp_ctl_free(ctl);
 
-	mdss_mdp_ctl_perf_update(ctl, 0);
+	mdss_mdp_ctl_perf_update(ctl, 0, true);
 
 	return 0;
 }
 
-int mdss_mdp_ctl_cmd_autorefresh_enable(struct mdss_mdp_ctl *ctl,
-		int frame_cnt)
+int mdss_mdp_display_wakeup_time(struct mdss_mdp_ctl *ctl,
+				 ktime_t *wakeup_time)
+{
+	struct mdss_panel_info *pinfo;
+	u64 clk_rate;
+	u32 clk_period;
+	u32 current_line, total_line;
+	u32 time_of_line, time_to_vsync, adjust_line_ns;
+
+	ktime_t current_time = ktime_get();
+
+	if (!ctl->ops.read_line_cnt_fnc)
+		return -ENOSYS;
+
+	pinfo = &ctl->panel_data->panel_info;
+	if (!pinfo)
+		return -ENODEV;
+
+	clk_rate = mdss_mdp_get_pclk_rate(ctl);
+
+	clk_rate = DIV_ROUND_UP_ULL(clk_rate, 1000); 
+	if (!clk_rate)
+		return -EINVAL;
+
+	clk_period = DIV_ROUND_UP_ULL(1000000000, clk_rate);
+	if (!clk_period)
+		return -EINVAL;
+
+	time_of_line = (pinfo->lcdc.h_back_porch +
+		 pinfo->lcdc.h_front_porch +
+		 pinfo->lcdc.h_pulse_width +
+		 pinfo->xres) * clk_period;
+
+	time_of_line /= 1000;	
+	if (!time_of_line)
+		return -EINVAL;
+
+	current_line = ctl->ops.read_line_cnt_fnc(ctl);
+
+	total_line = pinfo->lcdc.v_back_porch +
+		pinfo->lcdc.v_front_porch +
+		pinfo->lcdc.v_pulse_width +
+		pinfo->yres;
+
+	if (current_line >= total_line)
+		time_to_vsync = time_of_line * total_line;
+	else
+		time_to_vsync = time_of_line * (total_line - current_line);
+
+	if (pinfo->adjust_timer_delay_ms) {
+		adjust_line_ns = pinfo->adjust_timer_delay_ms
+			* 1000000; 
+
+		
+		if (time_to_vsync > adjust_line_ns)
+			time_to_vsync -= adjust_line_ns;
+	}
+
+	if (!time_to_vsync)
+		return -EINVAL;
+
+	*wakeup_time = ktime_add_ns(current_time, time_to_vsync);
+>>>>>>> 0e91d2a... Nougat
+
+	pr_debug("clk_rate=%lldkHz clk_period=%d cur_line=%d tot_line=%d\n",
+		clk_rate, clk_period, current_line, total_line);
+	pr_debug("time_to_vsync=%d current_time=%d wakeup_time=%d\n",
+		time_to_vsync, (int)ktime_to_ms(current_time),
+		(int)ktime_to_ms(*wakeup_time));
+
+	return 0;
+}
+
+<<<<<<< HEAD
+int mdss_mdp_wb_mixer_destroy(struct mdss_mdp_mixer *mixer)
+=======
+static void __cpu_pm_work_handler(struct work_struct *work)
+>>>>>>> 0e91d2a... Nougat
+{
+	struct mdss_mdp_ctl *ctl =
+		container_of(work, typeof(*ctl), cpu_pm_work);
+	ktime_t wakeup_time;
+	struct mdss_overlay_private *mdp5_data;
+
+	if (!ctl)
+		return;
+
+	if (mdss_mdp_display_wakeup_time(ctl, &wakeup_time))
+		return;
+
+	mdp5_data = mfd_to_mdp5_data(ctl->mfd);
+	activate_event_timer(mdp5_data->cpu_pm_hdl, wakeup_time);
+}
+
+<<<<<<< HEAD
+	mdss_mdp_ctl_perf_update(ctl, 0);
+=======
+void mdss_mdp_ctl_event_timer(void *data)
+{
+	struct mdss_overlay_private *mdp5_data =
+				(struct mdss_overlay_private *)data;
+	struct mdss_mdp_ctl *ctl = mdp5_data->ctl;
+>>>>>>> 0e91d2a... Nougat
+
+	if (mdp5_data->cpu_pm_hdl && ctl && ctl->autorefresh_frame_cnt)
+		schedule_work(&ctl->cpu_pm_work);
+}
+
+int mdss_mdp_ctl_cmd_set_autorefresh(struct mdss_mdp_ctl *ctl, int frame_cnt)
 {
 	int ret = 0;
+	struct mdss_overlay_private *mdp5_data = mfd_to_mdp5_data(ctl->mfd);
+
 	if (ctl->panel_data->panel_info.type == MIPI_CMD_PANEL) {
 		ret = mdss_mdp_cmd_set_autorefresh_mode(ctl, frame_cnt);
+		if (!ret) {
+			ctl->autorefresh_frame_cnt = frame_cnt;
+			if (frame_cnt)
+				mdss_mdp_ctl_event_timer(mdp5_data);
+		}
 	} else {
 		pr_err("Mode not supported for this panel\n");
 		ret = -EINVAL;
 	}
+
 	return ret;
+}
+
+int mdss_mdp_ctl_cmd_get_autorefresh(struct mdss_mdp_ctl *ctl)
+{
+	if (ctl->panel_data->panel_info.type == MIPI_CMD_PANEL)
+		return mdss_mdp_cmd_get_autorefresh_mode(ctl);
+	else
+		return 0;
 }
 
 int mdss_mdp_ctl_splash_finish(struct mdss_mdp_ctl *ctl, bool handoff)
@@ -1642,6 +2420,7 @@ int mdss_mdp_ctl_splash_finish(struct mdss_mdp_ctl *ctl, bool handoff)
 	switch (ctl->panel_data->panel_info.type) {
 	case MIPI_VIDEO_PANEL:
 	case EDP_PANEL:
+	case DTV_PANEL:
 		return mdss_mdp_video_reconfigure_splash_done(ctl, handoff);
 	case MIPI_CMD_PANEL:
 		return mdss_mdp_cmd_reconfigure_splash_done(ctl, handoff);
@@ -1670,6 +2449,527 @@ static inline int mdss_mdp_set_split_ctl(struct mdss_mdp_ctl *ctl,
 	return 0;
 }
 
+<<<<<<< HEAD
+=======
+static inline void __dsc_enable(struct mdss_mdp_mixer *mixer)
+{
+	mdss_mdp_pingpong_write(mixer->pingpong_base,
+			MDSS_MDP_REG_PP_DSC_MODE, 1);
+}
+
+static inline void __dsc_disable(struct mdss_mdp_mixer *mixer)
+{
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+	char __iomem *offset = mdata->mdp_base;
+
+	mdss_mdp_pingpong_write(mixer->pingpong_base,
+			MDSS_MDP_REG_PP_DSC_MODE, 0);
+
+	if (mixer->num == MDSS_MDP_INTF_LAYERMIXER0) {
+		offset += MDSS_MDP_DSC_0_OFFSET;
+	} else if (mixer->num == MDSS_MDP_INTF_LAYERMIXER1) {
+		offset += MDSS_MDP_DSC_1_OFFSET;
+	} else {
+		pr_err("invalid mixer numer=%d\n", mixer->num);
+		return;
+	}
+	writel_relaxed(0, offset + MDSS_MDP_REG_DSC_COMMON_MODE);
+}
+
+static void __dsc_config(struct mdss_mdp_mixer *mixer,
+	struct dsc_desc *dsc, u32 mode, bool ich_reset_override)
+{
+	u32 data;
+	int bpp, lsb;
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+	char __iomem *offset = mdata->mdp_base;
+	u32 initial_lines = dsc->initial_lines;
+	bool is_cmd_mode = !(mode & BIT(2));
+
+	data = mdss_mdp_pingpong_read(mixer->pingpong_base,
+			MDSS_MDP_REG_PP_DCE_DATA_OUT_SWAP);
+	data |= BIT(18); 
+	mdss_mdp_pingpong_write(mixer->pingpong_base,
+		MDSS_MDP_REG_PP_DCE_DATA_OUT_SWAP, data);
+
+	if (mixer->num == MDSS_MDP_INTF_LAYERMIXER0) {
+		offset += MDSS_MDP_DSC_0_OFFSET;
+	} else if (mixer->num == MDSS_MDP_INTF_LAYERMIXER1) {
+		offset += MDSS_MDP_DSC_1_OFFSET;
+	} else {
+		pr_err("invalid mixer numer=%d\n", mixer->num);
+		return;
+	}
+
+	writel_relaxed(mode, offset + MDSS_MDP_REG_DSC_COMMON_MODE);
+
+	data = 0;
+	if (ich_reset_override)
+		data = 3 << 28;
+
+	if (is_cmd_mode)
+		initial_lines += 1;
+
+	data |= (initial_lines << 20);
+	data |= ((dsc->slice_last_group_size - 1) << 18);
+	
+	lsb = dsc->bpp % 4;
+	bpp = dsc->bpp / 4;
+	bpp *= 4;	
+	bpp <<= 4;
+	bpp |= lsb;
+	data |= (bpp << 8);
+	data |= (dsc->block_pred_enable << 7);
+	data |= (dsc->line_buf_depth << 3);
+	data |= (dsc->enable_422 << 2);
+	data |= (dsc->convert_rgb << 1);
+	data |= dsc->input_10_bits;
+
+	pr_debug("%d %d %d %d %d %d %d %d %d, data=%x\n",
+		ich_reset_override,
+		initial_lines , dsc->slice_last_group_size,
+		dsc->bpp, dsc->block_pred_enable, dsc->line_buf_depth,
+		dsc->enable_422, dsc->convert_rgb, dsc->input_10_bits, data);
+
+	writel_relaxed(data, offset + MDSS_MDP_REG_DSC_ENC);
+
+	data = dsc->pic_width << 16;
+	data |= dsc->pic_height;
+	writel_relaxed(data, offset + MDSS_MDP_REG_DSC_PICTURE);
+
+	data = dsc->slice_width << 16;
+	data |= dsc->slice_height;
+	writel_relaxed(data, offset + MDSS_MDP_REG_DSC_SLICE);
+
+	data = dsc->chunk_size << 16;
+	writel_relaxed(data, offset + MDSS_MDP_REG_DSC_CHUNK_SIZE);
+
+	pr_debug("mix%d pic_w=%d pic_h=%d, slice_w=%d slice_h=%d, chunk=%d\n",
+		mixer->num, dsc->pic_width, dsc->pic_height,
+		dsc->slice_width, dsc->slice_height, dsc->chunk_size);
+	MDSS_XLOG(mixer->num, dsc->pic_width, dsc->pic_height,
+		dsc->slice_width, dsc->slice_height, dsc->chunk_size);
+
+	data = dsc->initial_dec_delay << 16;
+	data |= dsc->initial_xmit_delay;
+	writel_relaxed(data, offset + MDSS_MDP_REG_DSC_DELAY);
+
+	data = dsc->initial_scale_value;
+	writel_relaxed(data, offset + MDSS_MDP_REG_DSC_SCALE_INITIAL);
+
+	data = dsc->scale_decrement_interval;
+	writel_relaxed(data, offset + MDSS_MDP_REG_DSC_SCALE_DEC_INTERVAL);
+
+	data = dsc->scale_increment_interval;
+	writel_relaxed(data, offset + MDSS_MDP_REG_DSC_SCALE_INC_INTERVAL);
+
+	data = dsc->first_line_bpg_offset;
+	writel_relaxed(data, offset + MDSS_MDP_REG_DSC_FIRST_LINE_BPG_OFFSET);
+
+	data = dsc->nfl_bpg_offset << 16;
+	data |= dsc->slice_bpg_offset;
+	writel_relaxed(data, offset + MDSS_MDP_REG_DSC_BPG_OFFSET);
+
+	data = dsc->initial_offset << 16;
+	data |= dsc->final_offset;
+	writel_relaxed(data, offset + MDSS_MDP_REG_DSC_DSC_OFFSET);
+
+	data = dsc->det_thresh_flatness << 10;
+	data |= dsc->max_qp_flatness << 5;
+	data |= dsc->min_qp_flatness;
+	writel_relaxed(data, offset + MDSS_MDP_REG_DSC_FLATNESS);
+	writel_relaxed(0x983, offset + MDSS_MDP_REG_DSC_FLATNESS);
+
+	data = dsc->rc_model_size;	
+	writel_relaxed(data, offset + MDSS_MDP_REG_DSC_RC_MODEL_SIZE);
+
+	data = dsc->tgt_offset_lo << 18;
+	data |= dsc->tgt_offset_hi << 14;
+	data |= dsc->quant_incr_limit1 << 9;
+	data |= dsc->quant_incr_limit0 << 4;
+	data |= dsc->edge_factor;
+	writel_relaxed(data, offset + MDSS_MDP_REG_DSC_RC);
+}
+
+static void __dsc_config_thresh(struct mdss_mdp_mixer *mixer,
+	struct dsc_desc *dsc)
+{
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+	char __iomem *offset, *off;
+	u32 *lp;
+	char *cp;
+	int i;
+
+	offset = mdata->mdp_base;
+
+	if (mixer->num == MDSS_MDP_INTF_LAYERMIXER0) {
+		offset += MDSS_MDP_DSC_0_OFFSET;
+	} else if (mixer->num == MDSS_MDP_INTF_LAYERMIXER1) {
+		offset += MDSS_MDP_DSC_1_OFFSET;
+	} else {
+		pr_err("invalid mixer numer=%d\n", mixer->num);
+		return;
+	}
+
+	lp = dsc->buf_thresh;
+	off = offset + MDSS_MDP_REG_DSC_RC_BUF_THRESH;
+	for (i = 0; i < 14; i++) {
+		writel_relaxed(*lp++, off);
+		off += 4;
+	}
+
+	cp = dsc->range_min_qp;
+	off = offset + MDSS_MDP_REG_DSC_RANGE_MIN_QP;
+	for (i = 0; i < 15; i++) {
+		writel_relaxed(*cp++, off);
+		off += 4;
+	}
+
+	cp = dsc->range_max_qp;
+	off = offset + MDSS_MDP_REG_DSC_RANGE_MAX_QP;
+	for (i = 0; i < 15; i++) {
+		writel_relaxed(*cp++, off);
+		off += 4;
+	}
+
+	cp = dsc->range_bpg_offset;
+	off = offset + MDSS_MDP_REG_DSC_RANGE_BPG_OFFSET;
+	for (i = 0; i < 15; i++) {
+		writel_relaxed(*cp++, off);
+		off += 4;
+	}
+}
+
+static bool __is_dsc_merge_enabled(u32 common_mode)
+{
+	return common_mode & BIT(1);
+}
+
+static bool __dsc_is_3d_mux_enabled(struct mdss_mdp_ctl *ctl,
+	struct mdss_panel_info *pinfo)
+{
+	return ctl && is_dual_lm_single_display(ctl->mfd) &&
+	       pinfo && (pinfo->dsc_enc_total == 1);
+}
+
+static u32 __dsc_get_common_mode(struct mdss_mdp_ctl *ctl, bool mux_3d)
+{
+	u32 common_mode = 0;
+
+	if (ctl->is_video_mode)
+		common_mode = BIT(2);
+
+	if (mdss_mdp_is_both_lm_valid(ctl))
+		common_mode |= BIT(0);
+
+	if (is_dual_lm_single_display(ctl->mfd)) {
+		if (mux_3d)
+			common_mode &= ~BIT(0);
+		else if (mdss_mdp_is_both_lm_valid(ctl)) 
+			common_mode |= BIT(1);
+	}
+
+	return common_mode;
+}
+
+static void __dsc_get_pic_dim(struct mdss_mdp_mixer *mixer_l,
+	struct mdss_mdp_mixer *mixer_r, u32 *pic_w, u32 *pic_h)
+{
+	bool valid_l = mixer_l && mixer_l->valid_roi;
+	bool valid_r = mixer_r && mixer_r->valid_roi;
+
+	*pic_w = 0;
+	*pic_h = 0;
+
+	if (valid_l) {
+		*pic_w = mixer_l->roi.w;
+		*pic_h = mixer_l->roi.h;
+	}
+
+	if (valid_r) {
+		*pic_w += mixer_r->roi.w;
+		*pic_h = mixer_r->roi.h;
+	}
+}
+
+static bool __is_ich_reset_override_needed(bool pu_en, struct dsc_desc *dsc)
+{
+	return pu_en && dsc && (dsc->full_frame_slices > 1) &&
+	       (dsc->slice_width == dsc->pic_width);
+}
+
+static void __dsc_setup_dual_lm_single_display(struct mdss_mdp_ctl *ctl,
+	struct mdss_panel_info *pinfo)
+{
+	u32 pic_width = 0, pic_height = 0;
+	u32 intf_ip_w, enc_ip_w, common_mode, this_frame_slices;
+	bool valid_l, valid_r;
+	bool enable_right_dsc;
+	bool mux_3d, ich_reset_override;
+	struct dsc_desc *dsc;
+	struct mdss_mdp_mixer *mixer_l, *mixer_r;
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+
+	if (!pinfo || !ctl || !ctl->is_master ||
+	    !is_dual_lm_single_display(ctl->mfd))
+		return;
+
+	dsc = &pinfo->dsc;
+	mixer_l = ctl->mixer_left;
+	mixer_r = ctl->mixer_right;
+
+	mux_3d = __dsc_is_3d_mux_enabled(ctl, pinfo);
+	common_mode = __dsc_get_common_mode(ctl, mux_3d);
+	__dsc_get_pic_dim(mixer_l, mixer_r, &pic_width, &pic_height);
+
+	valid_l = mixer_l->valid_roi;
+	valid_r = mixer_r->valid_roi;
+	if (mdss_mdp_is_lm_swap_needed(mdata, ctl)) {
+		valid_l = true;
+		valid_r = false;
+	}
+
+	this_frame_slices = pic_width / dsc->slice_width;
+
+	
+	if ((pinfo->partial_update_enabled) && !mux_3d &&
+	    (dsc->full_frame_slices == 4) &&
+	    (mdss_has_quirk(mdata, MDSS_QUIRK_DSC_2SLICE_PU_THRPUT))) {
+
+		if (valid_l && valid_r) {
+			
+			pr_debug("full line (4 slices) or middle 2 slice partial update\n");
+			writel_relaxed(0x0,
+				mdata->mdp_base + mdata->ppb_ctl[0]);
+			writel_relaxed(0x0,
+				mdata->mdp_base + MDSS_MDP_REG_DCE_SEL);
+		} else if (valid_l || valid_r) {
+			
+			if (this_frame_slices == 2) {
+				pr_debug("2 slice parital update, use merge\n");
+
+				
+				common_mode = BIT(1) | BIT(0);
+
+				valid_r = true;
+				valid_l = true;
+
+				writel_relaxed(0x2 << 4, mdata->mdp_base +
+					mdata->ppb_ctl[0]);
+				writel_relaxed(BIT(0),
+					mdata->mdp_base + MDSS_MDP_REG_DCE_SEL);
+			} else {
+				pr_debug("only one slice partial update\n");
+				writel_relaxed(0x0, mdata->mdp_base +
+					mdata->ppb_ctl[0]);
+				writel_relaxed(0x0, mdata->mdp_base +
+					MDSS_MDP_REG_DCE_SEL);
+			}
+		}
+	} else {
+		writel_relaxed(0x0, mdata->mdp_base + MDSS_MDP_REG_DCE_SEL);
+	}
+
+	mdss_panel_dsc_update_pic_dim(dsc, pic_width, pic_height);
+
+	intf_ip_w = this_frame_slices * dsc->slice_width;
+	mdss_panel_dsc_pclk_param_calc(dsc, intf_ip_w);
+
+	enc_ip_w = intf_ip_w;
+	
+	if (__is_dsc_merge_enabled(common_mode))
+		enc_ip_w /= 2;
+	mdss_panel_dsc_initial_line_calc(dsc, enc_ip_w);
+
+	ich_reset_override = __is_ich_reset_override_needed(
+					pinfo->partial_update_enabled, dsc);
+	if (valid_l) {
+		__dsc_config(mixer_l, dsc, common_mode, ich_reset_override);
+		__dsc_config_thresh(mixer_l, dsc);
+		__dsc_enable(mixer_l);
+	} else {
+		__dsc_disable(mixer_l);
+	}
+
+	enable_right_dsc = valid_r;
+	if (mux_3d && valid_l)
+		enable_right_dsc = false;
+
+	if (enable_right_dsc) {
+		__dsc_config(mixer_r, dsc, common_mode, ich_reset_override);
+		__dsc_config_thresh(mixer_r, dsc);
+		__dsc_enable(mixer_r);
+	} else {
+		__dsc_disable(mixer_r);
+	}
+
+	pr_debug("mix%d: valid_l=%d mix%d: valid_r=%d mode=%d, pic_dim:%dx%d mux_3d=%d intf_ip_w=%d enc_ip_w=%d ich_ovrd=%d\n",
+		mixer_l->num, valid_l, mixer_r->num, valid_r,
+		common_mode, pic_width, pic_height,
+		mux_3d, intf_ip_w, enc_ip_w, ich_reset_override);
+
+	MDSS_XLOG(mixer_l->num, valid_l, mixer_r->num, valid_r,
+		  common_mode, pic_width, pic_height,
+		  mux_3d, intf_ip_w, enc_ip_w, ich_reset_override);
+}
+
+static void __dsc_setup_dual_lm_dual_display(
+	struct mdss_mdp_ctl *ctl, struct mdss_panel_info *pinfo,
+	struct mdss_mdp_ctl *sctl, struct mdss_panel_info *spinfo)
+{
+	u32 pic_width = 0, pic_height = 0;
+	u32 intf_ip_w, enc_ip_w, common_mode, this_frame_slices;
+	bool valid_l, valid_r;
+	bool ich_reset_override;
+	struct dsc_desc *dsc_l, *dsc_r;
+	struct mdss_mdp_mixer *mixer_l, *mixer_r;
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+
+	if (!pinfo || !ctl || !sctl || !spinfo ||
+	    !ctl->is_master || !ctl->mfd ||
+	    (ctl->mfd->split_mode != MDP_DUAL_LM_DUAL_DISPLAY))
+		return;
+
+	dsc_l = &pinfo->dsc;
+	dsc_r = &spinfo->dsc;
+
+	mixer_l = ctl->mixer_left;
+	mixer_r = ctl->mixer_right;
+
+	common_mode = __dsc_get_common_mode(ctl, false);
+	__dsc_get_pic_dim(mixer_l, mixer_r, &pic_width, &pic_height);
+
+	valid_l = mixer_l->valid_roi;
+	valid_r = mixer_r->valid_roi;
+	if (mdss_mdp_is_lm_swap_needed(mdata, ctl)) {
+		valid_l = true;
+		valid_r = false;
+	}
+
+	mdss_panel_dsc_update_pic_dim(dsc_l, pic_width, pic_height);
+	mdss_panel_dsc_update_pic_dim(dsc_r, pic_width, pic_height);
+
+	this_frame_slices = pic_width / dsc_l->slice_width;
+	intf_ip_w = this_frame_slices * dsc_l->slice_width;
+	if (valid_l && valid_r)
+		intf_ip_w /= 2;
+	mdss_panel_dsc_pclk_param_calc(dsc_l, intf_ip_w);
+	mdss_panel_dsc_pclk_param_calc(dsc_r, intf_ip_w);
+
+	enc_ip_w = intf_ip_w;
+	mdss_panel_dsc_initial_line_calc(dsc_l, enc_ip_w);
+	mdss_panel_dsc_initial_line_calc(dsc_r, enc_ip_w);
+
+	ich_reset_override = __is_ich_reset_override_needed(
+					pinfo->partial_update_enabled, dsc_l);
+
+	if (valid_l) {
+		__dsc_config(mixer_l, dsc_l, common_mode, ich_reset_override);
+		__dsc_config_thresh(mixer_l, dsc_l);
+		__dsc_enable(mixer_l);
+	} else {
+		__dsc_disable(mixer_l);
+	}
+
+	if (valid_r) {
+		__dsc_config(mixer_r, dsc_r, common_mode, ich_reset_override);
+		__dsc_config_thresh(mixer_r, dsc_r);
+		__dsc_enable(mixer_r);
+	} else {
+		__dsc_disable(mixer_r);
+	}
+
+	pr_debug("mix%d: valid_l=%d mix%d: valid_r=%d mode=%d, pic_dim:%dx%d intf_ip_w=%d enc_ip_w=%d ich_ovrd=%d\n",
+		mixer_l->num, valid_l, mixer_r->num, valid_r,
+		common_mode, pic_width, pic_height,
+		intf_ip_w, enc_ip_w, ich_reset_override);
+
+	MDSS_XLOG(mixer_l->num, valid_l, mixer_r->num, valid_r,
+		  common_mode, pic_width, pic_height,
+		  intf_ip_w, enc_ip_w, ich_reset_override);
+}
+
+static void __dsc_setup_single_lm_single_display(struct mdss_mdp_ctl *ctl,
+	struct mdss_panel_info *pinfo)
+{
+	u32 pic_width = 0, pic_height = 0;
+	u32 intf_ip_w, enc_ip_w, common_mode, this_frame_slices;
+	bool valid;
+	bool ich_reset_override;
+	struct dsc_desc *dsc;
+	struct mdss_mdp_mixer *mixer;
+
+	if (!pinfo || !ctl || !ctl->is_master)
+		return;
+
+	dsc = &pinfo->dsc;
+	mixer = ctl->mixer_left;
+	valid = mixer->valid_roi;
+
+	common_mode = __dsc_get_common_mode(ctl, false);
+	__dsc_get_pic_dim(mixer, NULL, &pic_width, &pic_height);
+
+	mdss_panel_dsc_update_pic_dim(dsc, pic_width, pic_height);
+
+	this_frame_slices = pic_width / dsc->slice_width;
+	intf_ip_w = this_frame_slices * dsc->slice_width;
+	mdss_panel_dsc_pclk_param_calc(dsc, intf_ip_w);
+
+	enc_ip_w = intf_ip_w;
+	mdss_panel_dsc_initial_line_calc(dsc, enc_ip_w);
+
+	ich_reset_override = __is_ich_reset_override_needed(
+					pinfo->partial_update_enabled, dsc);
+	if (valid) {
+		__dsc_config(mixer, dsc, common_mode, ich_reset_override);
+		__dsc_config_thresh(mixer, dsc);
+		__dsc_enable(mixer);
+	} else {
+		__dsc_disable(mixer);
+	}
+
+	pr_debug("mix%d: valid=%d mode=%d, pic_dim:%dx%d intf_ip_w=%d enc_ip_w=%d ich_ovrd=%d\n",
+		mixer->num, valid, common_mode, pic_width, pic_height,
+		intf_ip_w, enc_ip_w, ich_reset_override);
+
+	MDSS_XLOG(mixer->num, valid, common_mode, pic_width, pic_height,
+		  intf_ip_w, enc_ip_w, ich_reset_override);
+}
+
+void mdss_mdp_ctl_dsc_setup(struct mdss_mdp_ctl *ctl,
+	struct mdss_panel_info *pinfo)
+{
+	struct mdss_mdp_ctl *sctl;
+	struct mdss_panel_info *spinfo;
+
+	if (!is_dsc_compression(pinfo))
+		return;
+
+	if (!ctl->is_master) {
+		pr_debug("skip slave ctl because master will program for both\n");
+		return;
+	}
+
+	switch (ctl->mfd->split_mode) {
+	case MDP_DUAL_LM_SINGLE_DISPLAY:
+		__dsc_setup_dual_lm_single_display(ctl, pinfo);
+		break;
+	case MDP_DUAL_LM_DUAL_DISPLAY:
+		sctl = mdss_mdp_get_split_ctl(ctl);
+		if (sctl) {
+			spinfo = &sctl->panel_data->panel_info;
+			__dsc_setup_dual_lm_dual_display(ctl, pinfo, sctl,
+					spinfo);
+		}
+		break;
+	default:
+		
+		__dsc_setup_single_lm_single_display(ctl, pinfo);
+		break;
+	}
+}
+
+>>>>>>> 0e91d2a... Nougat
 static int mdss_mdp_ctl_fbc_enable(int enable,
 		struct mdss_mdp_mixer *mixer, struct mdss_panel_info *pdata)
 {
@@ -1682,6 +2982,11 @@ static int mdss_mdp_ctl_fbc_enable(int enable,
 	}
 
 	fbc = &pdata->fbc;
+
+	if (!fbc->enabled) {
+		pr_debug("FBC not enabled\n");
+		return -EINVAL;
+	}
 
 	if (mixer->num == MDSS_MDP_INTF_LAYERMIXER0 ||
 			mixer->num == MDSS_MDP_INTF_LAYERMIXER1) {
@@ -1751,7 +3056,7 @@ int mdss_mdp_ctl_setup(struct mdss_mdp_ctl *ctl)
 {
 	struct mdss_mdp_ctl *split_ctl;
 	u32 width, height;
-	int split_fb;
+	int split_fb, rc = 0;
 	u32 max_mixer_width;
 	struct mdss_panel_info *pinfo;
 	int intf_type, needs_split;
@@ -1813,6 +3118,13 @@ int mdss_mdp_ctl_setup(struct mdss_mdp_ctl *ctl)
 	ctl->mixer_left->roi = (struct mdss_rect) {0, 0, width, height};
 	ctl->valid_roi = true;
 
+	rc = mdss_mdp_pp_default_overlay_config(ctl->mfd, ctl->panel_data);
+	if (rc) {
+		pr_err("failed to set the pp config rc %dfb %d\n", rc,
+			ctl->mfd->index);
+		rc = 0;
+	}
+
 	if (ctl->mfd->split_mode == MDP_DUAL_LM_DUAL_DISPLAY) {
 		pr_debug("dual display detected\n");
 		return 0;
@@ -1849,7 +3161,6 @@ int mdss_mdp_ctl_setup(struct mdss_mdp_ctl *ctl)
 		ctl->opmode &= ~(MDSS_MDP_CTL_OP_PACK_3D_ENABLE |
 				  MDSS_MDP_CTL_OP_PACK_3D_H_ROW_INT);
 	}
-
 	return 0;
 }
 
@@ -1944,10 +3255,24 @@ int mdss_mdp_ctl_reconfig(struct mdss_mdp_ctl *ctl,
 skip_intf_reconfig:
 	ctl->width = get_panel_xres(&pdata->panel_info);
 	ctl->height = get_panel_yres(&pdata->panel_info);
-	if (ctl->mixer_left) {
-		ctl->mixer_left->width = ctl->width;
-		ctl->mixer_left->height = ctl->height;
+
+	if (ctl->mfd->split_mode == MDP_DUAL_LM_SINGLE_DISPLAY) {
+		if (ctl->mixer_left) {
+			ctl->mixer_left->width = ctl->width / 2;
+			ctl->mixer_left->height = ctl->height;
+		}
+		if (ctl->mixer_right) {
+			ctl->mixer_right->width = ctl->width / 2;
+			ctl->mixer_right->height = ctl->height;
+		}
+	} else {
+		if (ctl->mixer_left) {
+			ctl->mixer_left->width = ctl->width;
+			ctl->mixer_left->height = ctl->height;
+		}
 	}
+	ctl->roi = (struct mdss_rect) {0, 0, ctl->width, ctl->height};
+
 	ctl->border_x_off = pdata->panel_info.lcdc.border_left;
 	ctl->border_y_off = pdata->panel_info.lcdc.border_top;
 
@@ -2013,6 +3338,7 @@ struct mdss_mdp_ctl *mdss_mdp_ctl_init(struct mdss_panel_data *pdata,
 		ctl->intf_type = MDSS_INTF_DSI;
 		ctl->opmode = MDSS_MDP_CTL_OP_CMD_MODE;
 		ctl->ops.start_fnc = mdss_mdp_cmd_start;
+		INIT_WORK(&ctl->cpu_pm_work, __cpu_pm_work_handler);
 		break;
 	case DTV_PANEL:
 		ctl->is_video_mode = true;
@@ -2195,7 +3521,7 @@ static void mdss_mdp_ctl_pp_split_display_enable(bool enable,
 {
 	u32 cfg = 0, cntl = 0;
 
-	if (ctl->mdata->nppb == 0) {
+	if (!ctl->mdata->nppb_ctl || !ctl->mdata->nppb_cfg) {
 		pr_err("No PPB to enable PP split\n");
 		BUG();
 	}
@@ -2208,8 +3534,8 @@ static void mdss_mdp_ctl_pp_split_display_enable(bool enable,
 		cntl = BIT(5);			 
 	}
 
-	writel_relaxed(cfg, ctl->mdata->mdp_base + ctl->mdata->ppb[0].cfg_off);
-	writel_relaxed(cntl, ctl->mdata->mdp_base + ctl->mdata->ppb[0].ctl_off);
+	writel_relaxed(cfg, ctl->mdata->mdp_base + ctl->mdata->ppb_cfg[0]);
+	writel_relaxed(cntl, ctl->mdata->mdp_base + ctl->mdata->ppb_ctl[0]);
 }
 
 int mdss_mdp_ctl_destroy(struct mdss_mdp_ctl *ctl)
@@ -2260,8 +3586,29 @@ static void mdss_mdp_ctl_restore_sub(struct mdss_mdp_ctl *ctl)
 		MDSS_MDP_REG_DISP_INTF_SEL);
 	temp |= (ctl->intf_type << ((ctl->intf_num - MDSS_MDP_INTF0) * 8));
 	writel_relaxed(temp, ctl->mdata->mdp_base +
+<<<<<<< HEAD
 		MDSS_MDP_REG_DISP_INTF_SEL);
 	mdss_mdp_pp_resume(ctl, ctl->mixer_left->num);
+=======
+			MDSS_MDP_REG_DISP_INTF_SEL);
+
+	if (ctl->mfd && ctl->panel_data) {
+		ctl->mfd->ipc_resume = true;
+		mdss_mdp_pp_resume(ctl->mfd);
+
+		if (is_dsc_compression(&ctl->panel_data->panel_info)) {
+			if (ctl->pending_mode_switch != SWITCH_RESOLUTION)
+				mdss_mdp_ctl_dsc_setup(ctl,
+					&ctl->panel_data->panel_info);
+		} else if (ctl->panel_data->panel_info.compression_mode ==
+				COMPRESSION_FBC) {
+			ret = mdss_mdp_ctl_fbc_enable(1, ctl->mixer_left,
+					&ctl->panel_data->panel_info);
+			if (ret)
+				pr_err("Failed to restore FBC mode\n");
+		}
+	}
+>>>>>>> 0e91d2a... Nougat
 }
 
 void mdss_mdp_ctl_restore(void)
@@ -2285,7 +3632,13 @@ void mdss_mdp_ctl_restore(void)
 		if (sctl) {
 			mdss_mdp_ctl_restore_sub(sctl);
 			mdss_mdp_ctl_split_display_enable(1, ctl, sctl);
+<<<<<<< HEAD
+=======
+		} else if (is_pingpong_split(ctl->mfd)) {
+			mdss_mdp_ctl_pp_split_display_enable(1, ctl);
+>>>>>>> 0e91d2a... Nougat
 		}
+
 		if (ctl->ops.restore_fnc)
 			ctl->ops.restore_fnc(ctl);
 	}
@@ -2422,7 +3775,7 @@ int mdss_mdp_ctl_stop(struct mdss_mdp_ctl *ctl, int power_state)
 
 	pr_debug("ctl_num=%d, power_state=%d\n", ctl->num, ctl->power_state);
 
-	if (!mdss_mdp_ctl_is_power_on(ctl)) {
+	if (!ctl->mfd->panel_reconfig && !mdss_mdp_ctl_is_power_on(ctl)) {
 		pr_debug("%s %d already off!\n", __func__, __LINE__);
 		return 0;
 	}
@@ -2437,16 +3790,22 @@ int mdss_mdp_ctl_stop(struct mdss_mdp_ctl *ctl, int power_state)
 
 	if (ctl->ops.stop_fnc) {
 		ret = ctl->ops.stop_fnc(ctl, power_state);
-		mdss_mdp_ctl_fbc_enable(0, ctl->mixer_left,
-				&ctl->panel_data->panel_info);
+		if (ctl->panel_data->panel_info.compression_mode ==
+				COMPRESSION_FBC) {
+			mdss_mdp_ctl_fbc_enable(0, ctl->mixer_left,
+					&ctl->panel_data->panel_info);
+		}
 	} else {
 		pr_warn("no stop func for ctl=%d\n", ctl->num);
 	}
 
 	if (sctl && sctl->ops.stop_fnc) {
 		ret = sctl->ops.stop_fnc(sctl, power_state);
-		mdss_mdp_ctl_fbc_enable(0, sctl->mixer_left,
-				&sctl->panel_data->panel_info);
+		if (sctl->panel_data->panel_info.compression_mode ==
+				COMPRESSION_FBC) {
+			mdss_mdp_ctl_fbc_enable(0, sctl->mixer_left,
+					&sctl->panel_data->panel_info);
+		}
 	}
 	if (ret) {
 		pr_warn("error powering off intf ctl=%d\n", ctl->num);
@@ -2464,6 +3823,7 @@ int mdss_mdp_ctl_stop(struct mdss_mdp_ctl *ctl, int power_state)
 	mdss_mdp_ctl_write(ctl, MDSS_MDP_REG_CTL_TOP, 0);
 	if (sctl)
 		mdss_mdp_ctl_write(sctl, MDSS_MDP_REG_CTL_TOP, 0);
+<<<<<<< HEAD
 
 	if (ctl->mixer_left) {
 		off = __mdss_mdp_ctl_get_mixer_off(ctl->mixer_left);
@@ -2474,6 +3834,12 @@ int mdss_mdp_ctl_stop(struct mdss_mdp_ctl *ctl, int power_state)
 		off = __mdss_mdp_ctl_get_mixer_off(ctl->mixer_right);
 		mdss_mdp_ctl_write(ctl, off, 0);
 	}
+=======
+		mdss_mdp_reset_mixercfg(sctl);
+	}
+
+	mdss_mdp_reset_mixercfg(ctl);
+>>>>>>> 0e91d2a... Nougat
 
 	ctl->play_cnt = 0;
 
@@ -2496,6 +3862,49 @@ static void mdss_mdp_pipe_reset(struct mdss_mdp_mixer *mixer)
 	u32 bit = 0;
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
 	bool sw_rst_avail = mdss_mdp_pipe_is_sw_reset_available(mdata);
+<<<<<<< HEAD
+=======
+
+	pr_debug("pipe_map=0x%lx\n", pipe_map);
+	for_each_set_bit_from(bit, &pipe_map, MAX_PIPES_PER_LM) {
+		struct mdss_mdp_pipe *pipe;
+
+		pipe = mdss_mdp_pipe_search(mdata, 1 << bit,
+				MDSS_MDP_PIPE_RECT0);
+		if (pipe) {
+			mdss_mdp_pipe_fetch_halt(pipe, is_recovery);
+			if (sw_rst_avail)
+				mdss_mdp_pipe_clk_force_off(pipe);
+		}
+	}
+}
+
+static u32 mdss_mdp_poll_ctl_reset_status(struct mdss_mdp_ctl *ctl, u32 cnt)
+{
+	u32 status;
+	do {
+		udelay(50);
+		status = mdss_mdp_ctl_read(ctl, MDSS_MDP_REG_CTL_SW_RESET);
+		status &= 0x01;
+		pr_debug("status=%x, count=%d\n", status, cnt);
+		cnt--;
+	} while (cnt > 0 && status);
+
+	return status;
+}
+
+void mdss_mdp_check_ctl_reset_status(struct mdss_mdp_ctl *ctl)
+{
+	u32 status;
+
+	if (!ctl)
+		return;
+
+	status = mdss_mdp_ctl_read(ctl, MDSS_MDP_REG_CTL_SW_RESET);
+	status &= 0x01;
+	if (!status)
+		return;
+>>>>>>> 0e91d2a... Nougat
 
 	pr_debug("pipe_map=0x%lx\n", pipe_map);
 	for_each_set_bit_from(bit, &pipe_map, MAX_PIPES_PER_LM) {
@@ -2608,9 +4017,11 @@ void mdss_mdp_set_roi(struct mdss_mdp_ctl *ctl,
 	    (!l_roi->w && !l_roi->h && !r_roi->w && !r_roi->h) ||
 	    !ctl->panel_data->panel_info.partial_update_enabled) {
 
-		*l_roi = (struct mdss_rect) {0, 0,
-				ctl->mixer_left->width,
-				ctl->mixer_left->height};
+		if (ctl->mixer_left) {
+			*l_roi = (struct mdss_rect) {0, 0,
+					ctl->mixer_left->width,
+					ctl->mixer_left->height};
+		}
 
 		if (ctl->mixer_right) {
 			*r_roi = (struct mdss_rect) {0, 0,
@@ -2619,20 +4030,209 @@ void mdss_mdp_set_roi(struct mdss_mdp_ctl *ctl,
 		}
 	}
 
+<<<<<<< HEAD
 	mdss_mdp_set_mixer_roi(ctl, l_roi);
 
 	if (ctl->mixer_right)
 		mdss_mdp_set_mixer_roi(ctl->mixer_right->ctl, r_roi);
+=======
+	previous_frame_pu_type = mdss_mdp_get_pu_type(ctl);
+	if (ctl->mixer_left) {
+		mdss_mdp_set_mixer_roi(ctl->mixer_left, l_roi);
+		ctl->roi = ctl->mixer_left->roi;
+	}
+
+	if (ctl->mfd->split_mode == MDP_DUAL_LM_DUAL_DISPLAY) {
+		struct mdss_mdp_ctl *sctl = mdss_mdp_get_split_ctl(ctl);
+
+		if (sctl && sctl->mixer_left) {
+				mdss_mdp_set_mixer_roi(sctl->mixer_left, r_roi);
+				sctl->roi = sctl->mixer_left->roi;
+		}
+	} else if (is_dual_lm_single_display(ctl->mfd) && ctl->mixer_right) {
+
+		mdss_mdp_set_mixer_roi(ctl->mixer_right, r_roi);
+
+		
+		ctl->roi.w += ctl->mixer_right->roi.w;
+
+		
+		if (ctl->mixer_left && !ctl->mixer_left->valid_roi) {
+			ctl->roi = ctl->mixer_right->roi;
+			ctl->roi.x = left_lm_w_from_mfd(ctl->mfd) +
+				ctl->mixer_right->roi.x;
+		}
+	}
+
+	current_frame_pu_type = mdss_mdp_get_pu_type(ctl);
+
+	if (is_split_lm(ctl->mfd) && mdata->has_src_split &&
+	    (previous_frame_pu_type != current_frame_pu_type)) {
+		if (ctl->mixer_left)
+			ctl->mixer_left->roi_changed = true;
+		if (ctl->mixer_right)
+			ctl->mixer_right->roi_changed = true;
+	}
+}
+
+static void __mdss_mdp_mixer_update_cfg_masks(u32 pnum,
+		enum mdss_mdp_pipe_rect rect_num,
+		u32 stage, struct mdss_mdp_mixer_cfg *cfg)
+{
+	u32 masks[NUM_MIXERCFG_REGS] = { 0 };
+	int i;
+
+	if (pnum >= MDSS_MDP_MAX_SSPP)
+		return;
+
+	if (rect_num == MDSS_MDP_PIPE_RECT0) {
+		masks[0] = mdss_mdp_hwio_mask(&mdp_pipe_hwio[pnum].base, stage);
+		masks[1] = mdss_mdp_hwio_mask(&mdp_pipe_hwio[pnum].ext, stage);
+		masks[2] = mdss_mdp_hwio_mask(&mdp_pipe_hwio[pnum].ext2, stage);
+	} else { 
+		masks[2] = mdss_mdp_hwio_mask(&mdp_pipe_rec1_hwio[pnum].ext2,
+				stage);
+	}
+
+	for (i = 0; i < NUM_MIXERCFG_REGS; i++)
+		cfg->config_masks[i] |= masks[i];
+
+	pr_debug("pnum=%d stage=%d cfg=0x%08x ext=0x%08x\n",
+			pnum, stage, masks[0], masks[1]);
+}
+
+static void __mdss_mdp_mixer_get_offsets(u32 mixer_num,
+		u32 *offsets, size_t count)
+{
+	BUG_ON(count < NUM_MIXERCFG_REGS);
+
+	offsets[0] = MDSS_MDP_REG_CTL_LAYER(mixer_num);
+	offsets[1] = MDSS_MDP_REG_CTL_LAYER_EXTN(mixer_num);
+	offsets[2] = MDSS_MDP_REG_CTL_LAYER_EXTN2(mixer_num);
+}
+
+static inline int __mdss_mdp_mixer_get_hw_num(struct mdss_mdp_mixer *mixer)
+{
+	if (mixer->type == MDSS_MDP_MIXER_TYPE_WRITEBACK) {
+		u32 wb_offset;
+
+		if (test_bit(MDSS_CAPS_MIXER_1_FOR_WB,
+					mixer->ctl->mdata->mdss_caps_map))
+			wb_offset = MDSS_MDP_INTF_LAYERMIXER1;
+		else
+			wb_offset = MDSS_MDP_INTF_LAYERMIXER3;
+
+		return mixer->num + wb_offset;
+	} else if (mixer->num == MDSS_MDP_INTF_LAYERMIXER3) {
+		return 5;
+	} else {
+		return mixer->num;
+	}
+}
+
+static inline void __mdss_mdp_mixer_write_layer(struct mdss_mdp_ctl *ctl,
+		u32 mixer_num, u32 *values, size_t count)
+{
+	u32 off[NUM_MIXERCFG_REGS];
+	int i;
+
+	BUG_ON(!values || count < NUM_MIXERCFG_REGS);
+
+	__mdss_mdp_mixer_get_offsets(mixer_num, off, ARRAY_SIZE(off));
+
+	for (i = 0; i < count; i++)
+		mdss_mdp_ctl_write(ctl, off[i], values[i]);
+}
+
+static void __mdss_mdp_mixer_write_cfg(struct mdss_mdp_mixer *mixer,
+		struct mdss_mdp_mixer_cfg *cfg)
+{
+	u32 vals[NUM_MIXERCFG_REGS] = {0};
+	int i, mixer_num;
+
+	if (!mixer)
+		return;
+
+	mixer_num = __mdss_mdp_mixer_get_hw_num(mixer);
+
+	if (cfg) {
+		for (i = 0; i < NUM_MIXERCFG_REGS; i++)
+			vals[i] = cfg->config_masks[i];
+
+		if (cfg->border_enabled)
+			vals[0] |= MDSS_MDP_LM_BORDER_COLOR;
+		if (cfg->cursor_enabled)
+			vals[0] |= MDSS_MDP_LM_CURSOR_OUT;
+	}
+
+	__mdss_mdp_mixer_write_layer(mixer->ctl, mixer_num,
+			vals, ARRAY_SIZE(vals));
+
+	pr_debug("mixer=%d cfg=0%08x cfg_extn=0x%08x cfg_extn2=0x%08x\n",
+		mixer->num, vals[0], vals[1], vals[2]);
+	MDSS_XLOG(mixer->num, vals[0], vals[1], vals[2]);
+}
+
+void mdss_mdp_reset_mixercfg(struct mdss_mdp_ctl *ctl)
+{
+	u32 vals[NUM_MIXERCFG_REGS] = {0};
+	int i, nmixers;
+
+	if (!ctl)
+		return;
+
+	nmixers = MDSS_MDP_INTF_MAX_LAYERMIXER + MDSS_MDP_WB_MAX_LAYERMIXER;
+
+	for (i = 0; i < nmixers; i++)
+		__mdss_mdp_mixer_write_layer(ctl, i, vals, ARRAY_SIZE(vals));
+}
+
+bool mdss_mdp_mixer_reg_has_pipe(struct mdss_mdp_mixer *mixer,
+		struct mdss_mdp_pipe *pipe)
+{
+	u32 offs[NUM_MIXERCFG_REGS];
+	u32 cfgs[NUM_MIXERCFG_REGS];
+	struct mdss_mdp_mixer_cfg mixercfg;
+	int i, mixer_num;
+
+	if (!mixer)
+		return false;
+
+	memset(&mixercfg, 0, sizeof(mixercfg));
+
+	mixer_num = __mdss_mdp_mixer_get_hw_num(mixer);
+	__mdss_mdp_mixer_get_offsets(mixer_num, offs, NUM_MIXERCFG_REGS);
+
+	for (i = 0; i < NUM_MIXERCFG_REGS; i++)
+		cfgs[i] = mdss_mdp_ctl_read(mixer->ctl, offs[i]);
+
+	__mdss_mdp_mixer_update_cfg_masks(pipe->num, pipe->multirect.num, -1,
+			&mixercfg);
+	for (i = 0; i < NUM_MIXERCFG_REGS; i++) {
+		if (cfgs[i] & mixercfg.config_masks[i]) {
+			MDSS_XLOG(mixer->num, cfgs[0], cfgs[1]);
+			return true;
+		}
+	}
+
+	return false;
+>>>>>>> 0e91d2a... Nougat
 }
 
 static void mdss_mdp_mixer_setup(struct mdss_mdp_ctl *master_ctl,
 	int mixer_mux)
 {
-	int i;
+	int i, mixer_num;
 	int stage, screen_state, outsize;
+<<<<<<< HEAD
 	u32 off, blend_op, blend_stage, mpq_num;
 	u32 mixercfg = 0, mixer_op_mode = 0, bg_alpha_enable = 0,
 	    mixercfg_extn = 0;
+=======
+	u32 off, blend_op, blend_stage;
+	u32 mixer_op_mode = 0, bg_alpha_enable = 0;
+	struct mdss_mdp_mixer_cfg mixercfg;
+>>>>>>> 0e91d2a... Nougat
 	u32 fg_alpha = 0, bg_alpha = 0;
 	struct mdss_mdp_pipe *pipe;
 	struct mdss_mdp_ctl *ctl = NULL;
@@ -2649,6 +4249,7 @@ static void mdss_mdp_mixer_setup(struct mdss_mdp_ctl *master_ctl,
 
 	mixer->params_changed = 0;
 	
+<<<<<<< HEAD
 	if (mixer->rotator_mode) {
 		off = __mdss_mdp_ctl_get_mixer_off(mixer);
 		mdss_mdp_ctl_write(mixer->ctl, off, 0);
@@ -2656,6 +4257,37 @@ static void mdss_mdp_mixer_setup(struct mdss_mdp_ctl *master_ctl,
 	}
 
 	if (!ctl->valid_roi)
+=======
+	if (mixer_hw->rotator_mode) {
+		__mdss_mdp_mixer_write_cfg(mixer_hw, NULL);
+		return;
+	}
+
+	memset(&mixercfg, 0, sizeof(mixercfg));
+
+	if (lm_swap) {
+		if (mixer_mux == MDSS_MDP_MIXER_MUX_RIGHT)
+			mixer = mdss_mdp_mixer_get(master_ctl,
+				MDSS_MDP_MIXER_MUX_LEFT);
+		else
+			mixer = mdss_mdp_mixer_get(master_ctl,
+				MDSS_MDP_MIXER_MUX_RIGHT);
+		ctl_hw = mixer->ctl;
+	} else {
+		mixer = mixer_hw;
+	}
+
+	if ((ctl->mfd->split_mode == MDP_DUAL_LM_DUAL_DISPLAY) &&
+	    is_dsc_compression(&ctl->panel_data->panel_info) &&
+	    ctl->panel_data->panel_info.partial_update_enabled &&
+	    mdss_has_quirk(mdata, MDSS_QUIRK_DSC_RIGHT_ONLY_PU))
+		mdss_mdp_reset_mixercfg(ctl_hw);
+
+	if (!mixer->valid_roi) {
+		__mdss_mdp_mixer_write_cfg(mixer_hw, NULL);
+
+		MDSS_XLOG(mixer->num, mixer_hw->num, XLOG_FUNC_EXIT);
+>>>>>>> 0e91d2a... Nougat
 		return;
 
 	trace_mdp_mixer_update(mixer->num);
@@ -2666,14 +4298,15 @@ static void mdss_mdp_mixer_setup(struct mdss_mdp_ctl *master_ctl,
 	mdp_mixer_write(mixer, MDSS_MDP_REG_LM_OUT_SIZE, outsize);
 
 	if (screen_state == MDSS_SCREEN_FORCE_BLANK) {
-		mixercfg = MDSS_MDP_LM_BORDER_COLOR;
+		mixercfg.border_enabled = true;
 		goto update_mixer;
 	}
 
 	pipe = mixer->stage_pipe[MDSS_MDP_STAGE_BASE * MAX_PIPES_PER_STAGE];
 	if (pipe == NULL) {
-		mixercfg = MDSS_MDP_LM_BORDER_COLOR;
+		mixercfg.border_enabled = true;
 	} else {
+<<<<<<< HEAD
 		if (mdata->mdp_rev == MDSS_MDP_HW_REV_200) {
 			mpq_num = mdss_mdp_mpq_pipe_num_map(pipe->num);
 			mixercfg = 1 << (3 * mpq_num);
@@ -2687,6 +4320,12 @@ static void mdss_mdp_mixer_setup(struct mdss_mdp_ctl *master_ctl,
 		} else {
 			mixercfg = 1 << (3 * pipe->num);
 		}
+=======
+		__mdss_mdp_mixer_update_cfg_masks(pipe->num,
+				pipe->multirect.num, MDSS_MDP_STAGE_BASE,
+				&mixercfg);
+
+>>>>>>> 0e91d2a... Nougat
 		if (pipe->src_fmt->alpha_enable)
 			bg_alpha_enable = 1;
 	}
@@ -2699,8 +4338,14 @@ static void mdss_mdp_mixer_setup(struct mdss_mdp_ctl *master_ctl,
 
 		stage = i / MAX_PIPES_PER_STAGE;
 		if (stage != pipe->mixer_stage) {
+<<<<<<< HEAD
 			pr_err("pipe%d stage mismatch. pipe->mixer_stage=%d, mixer->stage_pipe=%d. skip staging it\n",
 				pipe->num, pipe->mixer_stage, stage);
+=======
+			pr_warn("pipe%d rec%d mixer:%d stage mismatch. pipe->mixer_stage=%d, mixer->stage_pipe=%d multirect_mode=%d. skip staging it\n",
+			    pipe->num, pipe->multirect.num, mixer->num,
+			    pipe->mixer_stage, stage, pipe->multirect.mode);
+>>>>>>> 0e91d2a... Nougat
 			mixer->stage_pipe[i] = NULL;
 			continue;
 		}
@@ -2777,6 +4422,7 @@ static void mdss_mdp_mixer_setup(struct mdss_mdp_ctl *master_ctl,
 		if (!pipe->src_fmt->alpha_enable && bg_alpha_enable)
 			mixer_op_mode = 0;
 
+<<<<<<< HEAD
 		if (mdata->mdp_rev == MDSS_MDP_HW_REV_200) {
 			mpq_num = mdss_mdp_mpq_pipe_num_map(pipe->num);
 			mixercfg |= stage << (3 * mpq_num);
@@ -2803,6 +4449,10 @@ static void mdss_mdp_mixer_setup(struct mdss_mdp_ctl *master_ctl,
 			else
 				mixercfg_extn |= BIT(14);
 		}
+=======
+		__mdss_mdp_mixer_update_cfg_masks(pipe->num,
+				pipe->multirect.num, stage, &mixercfg);
+>>>>>>> 0e91d2a... Nougat
 
 		trace_mdp_sspp_change(pipe);
 
@@ -2816,15 +4466,20 @@ static void mdss_mdp_mixer_setup(struct mdss_mdp_ctl *master_ctl,
 	}
 
 	if (mixer->cursor_enabled)
-		mixercfg |= MDSS_MDP_LM_CURSOR_OUT;
+		mixercfg.cursor_enabled = true;
 
 update_mixer:
+<<<<<<< HEAD
 	if (mixer->num == MDSS_MDP_INTF_LAYERMIXER3)
 		ctl->flush_bits |= BIT(20);
 	else if (mixer->type == MDSS_MDP_MIXER_TYPE_WRITEBACK)
 		ctl->flush_bits |= BIT(9) << mixer->num;
 	else
 		ctl->flush_bits |= BIT(6) << mixer->num;
+=======
+	mixer_num = __mdss_mdp_mixer_get_hw_num(mixer_hw);
+	ctl_hw->flush_bits |= BIT(mixer_num < 5 ? 6 + mixer_num : 20);
+>>>>>>> 0e91d2a... Nougat
 
 	
 	mixer_op_mode |=
@@ -2833,6 +4488,7 @@ update_mixer:
 	if (mixer->src_split_req && mixer_mux == MDSS_MDP_MIXER_MUX_RIGHT)
 		mixer_op_mode |= BIT(31);
 
+<<<<<<< HEAD
 	mdp_mixer_write(mixer, MDSS_MDP_REG_LM_OP_MODE, mixer_op_mode);
 	off = __mdss_mdp_ctl_get_mixer_off(mixer);
 	mdss_mdp_ctl_write(ctl, off, mixercfg);
@@ -2845,6 +4501,24 @@ update_mixer:
 		mixer_op_mode, mixer->roi.w, mixer->roi.h);
 	MDSS_XLOG(mixer->num, mixercfg, mixercfg_extn, mixer_op_mode,
 		mixer->roi.h, mixer->roi.w);
+=======
+	mdp_mixer_write(mixer_hw, MDSS_MDP_REG_LM_OP_MODE, mixer_op_mode);
+
+	mdp_mixer_write(mixer_hw, MDSS_MDP_REG_LM_BORDER_COLOR_0,
+		(mdata->bcolor0 & 0xFFF) | ((mdata->bcolor1 & 0xFFF) << 16));
+	mdp_mixer_write(mixer_hw, MDSS_MDP_REG_LM_BORDER_COLOR_1,
+		mdata->bcolor2 & 0xFFF);
+
+	__mdss_mdp_mixer_write_cfg(mixer_hw, &mixercfg);
+
+	pr_debug("mixer=%d hw=%d op_mode=0x%08x w=%d h=%d bc0=0x%x bc1=0x%x\n",
+		mixer->num, mixer_hw->num,
+		mixer_op_mode, mixer->roi.w, mixer->roi.h,
+		(mdata->bcolor0 & 0xFFF) | ((mdata->bcolor1 & 0xFFF) << 16),
+		mdata->bcolor2 & 0xFFF);
+	MDSS_XLOG(mixer->num, mixer_hw->num,
+		mixer_op_mode, mixer->roi.h, mixer->roi.w);
+>>>>>>> 0e91d2a... Nougat
 }
 
 int mdss_mdp_mixer_addr_setup(struct mdss_data_type *mdata,
@@ -3001,6 +4675,35 @@ struct mdss_mdp_pipe *mdss_mdp_get_staged_pipe(struct mdss_mdp_ctl *ctl,
 	return pipe;
 }
 
+<<<<<<< HEAD
+=======
+int mdss_mdp_get_pipe_flush_bits(struct mdss_mdp_pipe *pipe)
+{
+	if (WARN_ON(!pipe || pipe->num >= MDSS_MDP_MAX_SSPP))
+		return 0;
+
+	return BIT(mdp_pipe_hwio[pipe->num].flush_bit);
+}
+
+int mdss_mdp_async_ctl_flush(struct msm_fb_data_type *mfd,
+		u32 flush_bits)
+{
+	struct mdss_overlay_private *mdp5_data = mfd_to_mdp5_data(mfd);
+	struct mdss_mdp_ctl *ctl = mdp5_data->ctl;
+	struct mdss_mdp_ctl *sctl = mdss_mdp_get_split_ctl(ctl);
+	int ret = 0;
+
+	mutex_lock(&ctl->flush_lock);
+
+	mdss_mdp_ctl_write(ctl, MDSS_MDP_REG_CTL_FLUSH, flush_bits);
+	if ((!ctl->split_flush_en) && sctl)
+		mdss_mdp_ctl_write(sctl, MDSS_MDP_REG_CTL_FLUSH, flush_bits);
+
+	mutex_unlock(&ctl->flush_lock);
+	return ret;
+}
+
+>>>>>>> 0e91d2a... Nougat
 int mdss_mdp_mixer_pipe_update(struct mdss_mdp_pipe *pipe,
 			 struct mdss_mdp_mixer *mixer, int params_changed)
 {
@@ -3031,8 +4734,7 @@ int mdss_mdp_mixer_pipe_update(struct mdss_mdp_pipe *pipe,
 		for (i = MDSS_MDP_STAGE_UNUSED; i < MDSS_MDP_MAX_STAGE; i++) {
 			j = i * MAX_PIPES_PER_STAGE;
 
-			if (pipe->is_right_blend && (!pipe->src_split_req ||
-			    (pipe->src_split_req && !mixer->is_right_mixer)))
+			if (pipe->is_right_blend)
 				j++;
 
 			if (i == pipe->mixer_stage)
@@ -3081,26 +4783,51 @@ void mdss_mdp_mixer_unstage_all(struct mdss_mdp_mixer *mixer)
 int mdss_mdp_mixer_pipe_unstage(struct mdss_mdp_pipe *pipe,
 	struct mdss_mdp_mixer *mixer)
 {
-	int index;
-	u8 right_blend_index;
+	int i, right_blend;
 
 	if (!pipe)
 		return -EINVAL;
 	if (!mixer)
 		return -EINVAL;
 
+<<<<<<< HEAD
 	right_blend_index = pipe->is_right_blend &&
 		!(pipe->src_split_req && mixer->is_right_mixer);
 	index = (pipe->mixer_stage * MAX_PIPES_PER_STAGE) + right_blend_index;
 
 	if (pipe == mixer->stage_pipe[index]) {
+=======
+	right_blend = pipe->is_right_blend ? 1 : 0;
+	i = (pipe->mixer_stage * MAX_PIPES_PER_STAGE) + right_blend;
+	if ((i < MAX_PIPES_PER_LM) && (pipe == mixer->stage_pipe[i])) {
+>>>>>>> 0e91d2a... Nougat
 		pr_debug("unstage p%d from %s side of stage=%d lm=%d ndx=%d\n",
-			pipe->num, pipe->is_right_blend ? "right" : "left",
-			pipe->mixer_stage, mixer->num, index);
+				pipe->num, right_blend ? "right" : "left",
+				pipe->mixer_stage, mixer->num, i);
+	} else {
+		int stage;
 
-		mixer->params_changed++;
-		mixer->stage_pipe[index] = NULL;
+		for (i = 0; i < MAX_PIPES_PER_LM; i++) {
+			if (pipe != mixer->stage_pipe[i])
+				continue;
+
+			stage = i / MAX_PIPES_PER_STAGE;
+			right_blend = i & 1;
+
+			pr_warn("lm=%d pipe #%d stage=%d with %s blend, unstaged from %s side of stage=%d!\n",
+				mixer->num, pipe->num, pipe->mixer_stage,
+				pipe->is_right_blend ? "right" : "left",
+				right_blend ? "right" : "left", stage);
+			break;
+		}
+
+		
+		if (i == MAX_PIPES_PER_LM)
+			return 0;
 	}
+
+	mixer->params_changed++;
+	mixer->stage_pipe[i] = NULL;
 
 	return 0;
 }
@@ -3110,7 +4837,24 @@ int mdss_mdp_ctl_update_fps(struct mdss_mdp_ctl *ctl, int fps)
 	int ret = 0;
 	struct mdss_mdp_ctl *sctl = NULL;
 
+<<<<<<< HEAD
 	mutex_lock(&ctl->offlock);
+=======
+	if ((pinfo->dfps_update == DFPS_IMMEDIATE_PORCH_UPDATE_MODE_VFP) ||
+		(pinfo->dfps_update == DFPS_IMMEDIATE_PORCH_UPDATE_MODE_HFP) ||
+		(pinfo->dfps_update ==
+			DFPS_IMMEDIATE_MULTI_UPDATE_MODE_CLK_HFP) ||
+		(pinfo->dfps_update ==
+			DFPS_IMMEDIATE_MULTI_MODE_HFP_CALC_CLK) ||
+		pinfo->dfps_update == DFPS_IMMEDIATE_CLK_UPDATE_MODE) {
+		if (pinfo->type == DTV_PANEL)
+			new_fps = pinfo->lcdc.frame_rate;
+		else
+			new_fps = mdss_panel_get_framerate(pinfo);
+	} else {
+		new_fps = pinfo->new_fps;
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	sctl = mdss_mdp_get_split_ctl(ctl);
 
@@ -3122,6 +4866,7 @@ int mdss_mdp_ctl_update_fps(struct mdss_mdp_ctl *ctl, int fps)
 	return ret;
 }
 
+<<<<<<< HEAD
 int mdss_mdp_display_wakeup_time(struct mdss_mdp_ctl *ctl,
 				 ktime_t *wakeup_time)
 {
@@ -3182,6 +4927,8 @@ int mdss_mdp_display_wakeup_time(struct mdss_mdp_ctl *ctl,
 	return 0;
 }
 
+=======
+>>>>>>> 0e91d2a... Nougat
 int mdss_mdp_display_wait4comp(struct mdss_mdp_ctl *ctl)
 {
 	int ret;
@@ -3391,7 +5138,7 @@ int mdss_mdp_display_commit(struct mdss_mdp_ctl *ctl, void *arg,
 	}
 
 	ATRACE_BEGIN("postproc_programming");
-	if (ctl->mfd && ctl->mfd->dcm_state != DTM_ENTER)
+	if (ctl->is_video_mode && ctl->mfd && ctl->mfd->dcm_state != DTM_ENTER)
 		
 		mdss_mdp_pp_setup_locked(ctl);
 
@@ -3428,6 +5175,24 @@ int mdss_mdp_display_commit(struct mdss_mdp_ctl *ctl, void *arg,
 	if (ctl->ops.wait_pingpong && !mdata->serialize_wait4pp)
 		mdss_mdp_display_wait4pingpong(ctl, false);
 
+	
+	if (!ctl->is_video_mode && ctl->mfd &&
+			ctl->mfd->dcm_state != DTM_ENTER) {
+		
+		mutex_lock(&ctl->flush_lock);
+		mdss_mdp_pp_setup_locked(ctl);
+		if (sctl) {
+			if (ctl->split_flush_en) {
+				ctl->flush_bits |= sctl->flush_bits;
+				sctl->flush_bits = 0;
+				sctl_flush_bits = 0;
+			} else {
+				sctl_flush_bits = sctl->flush_bits;
+			}
+		}
+		ctl_flush_bits = ctl->flush_bits;
+		mutex_unlock(&ctl->flush_lock);
+	}
 	ctl->roi_bkup.w = ctl->roi.w;
 	ctl->roi_bkup.h = ctl->roi.h;
 

@@ -51,6 +51,12 @@ obj-$(CONFIG_CHARGER_MANAGER)	+= charger-manager.o
 obj-$(CONFIG_CHARGER_MAX8997)	+= max8997_charger.o
 obj-$(CONFIG_CHARGER_MAX8998)	+= max8998_charger.o
 obj-$(CONFIG_CHARGER_BQ2415X)	+= bq2415x_charger.o
+<<<<<<< HEAD
+=======
+obj-$(CONFIG_CHARGER_BQ24190)	+= bq24190_charger.o
+obj-$(CONFIG_CHARGER_BQ24735)	+= bq24735-charger.o
+obj-$(CONFIG_FUELGAUGE_STC3117)	+= stc3117_battery.o
+>>>>>>> 0e91d2a... Nougat
 obj-$(CONFIG_POWER_AVS)		+= avs/
 obj-$(CONFIG_SMB349_USB_CHARGER)   += smb349-charger.o
 obj-$(CONFIG_SMB349_DUAL_CHARGER)   += smb349-dual-charger.o
@@ -58,7 +64,9 @@ obj-$(CONFIG_SMB1351_USB_CHARGER) += smb1351-charger.o
 obj-$(CONFIG_SMB350_CHARGER)   += smb350_charger.o
 obj-$(CONFIG_SMB135X_CHARGER)   += smb135x-charger.o
 obj-$(CONFIG_SMB1360_CHARGER_FG) += smb1360-charger-fg.o
+obj-$(CONFIG_SMB138X_CHARGER)	+= smb138x-charger.o pmic-voter.o
 obj-$(CONFIG_SMB358_CHARGER)	+= smb358-charger.o
+obj-$(CONFIG_SMB23X_CHARGER)	+= smb23x-charger.o
 obj-$(CONFIG_BATTERY_BQ28400)	+= bq28400_battery.o
 obj-$(CONFIG_SMB137C_CHARGER)	+= smb137c-charger.o
 obj-$(CONFIG_QPNP_BMS)		+= qpnp-bms.o batterydata-lib.o
@@ -72,6 +80,11 @@ obj-$(CONFIG_HTC_BATT_8960) += htc_battery_8960.o
 obj-$(CONFIG_CHARGER_SMB347)	+= smb347-charger.o
 obj-$(CONFIG_CHARGER_TPS65090)	+= tps65090-charger.o
 obj-$(CONFIG_BATTERY_BCL)	+= battery_current_limit.o
+<<<<<<< HEAD
+=======
+obj-$(CONFIG_HTC_BATT)	+= htc_battery.o
+obj-$(CONFIG_HTC_BATT_PCN0016)	+= htc_charger.o
+>>>>>>> 0e91d2a... Nougat
 obj-$(CONFIG_MSM_BCL_CTL)	+= msm_bcl.o
 obj-$(CONFIG_MSM_BCL_PERIPHERAL_CTL) += bcl_peripheral.o
 obj-$(CONFIG_POWER_RESET)	+= reset/

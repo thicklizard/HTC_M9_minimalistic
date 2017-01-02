@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -37,16 +37,17 @@
 #define IPA_OUT_EV_RING 2
 #define IPA_IN_EV_RING 3
 
+#define HW_EVENT_RINGS_ALLOCATED 2
+
 #define PRIMARY_CMD_RING 0
 #define MHI_WORK_Q_MAX_SIZE 128
 
 #define MAX_XFER_WORK_ITEMS 100
 #define MHI_MAX_SUPPORTED_DEVICES 1
 
-#define MAX_NR_TRBS_PER_SOFT_CHAN 10
-#define MAX_NR_TRBS_PER_HARD_CHAN (128 + 16)
 #define MHI_PCIE_VENDOR_ID 0x17CB
 #define MHI_PCIE_DEVICE_ID_9x35 0x0300
+<<<<<<< HEAD
 #define MHI_PCIE_DEVICE_ID_9640 0x0301
 #define TRB_MAX_DATA_SIZE 0x1000
 
@@ -57,6 +58,16 @@
 #define MHI_M1_ENTRY_DELAY_MS 100
 #define MHI_XFER_DB_INTERVAL 8
 #define MHI_EV_DB_INTERVAL 32
+=======
+#define MHI_PCIE_DEVICE_ID_ZIRC 0x0301
+#define MHI_PCIE_DEVICE_ID_9x55 0x0302
+
+#define MHI_M2_DEBOUNCE_TMR_MS 10
+
+#define MHI_EV_DB_INTERVAL 1
+
+#define MHI_DEV_WAKE_DB 127
+>>>>>>> 0e91d2a... Nougat
 
 #define MHI_HANDLE_MAGIC 0x12344321
 /* PCIe Device Info */
@@ -93,8 +104,14 @@
 #define MHI_THREAD_SLEEP_TIMEOUT_MS 20
 #define MHI_RESUME_WAKE_RETRIES 20
 
-/* Debugging Capabilities*/
-#define MHI_DBG_MAX_EVENT_HISTORY 10
+#define IS_HW_EV_RING(_mhi_dev_ctxt, _EV_INDEX) (_EV_INDEX >= \
+				((_mhi_dev_ctxt)->mmio_info.nr_event_rings - \
+				((_mhi_dev_ctxt)->mmio_info.nr_hw_event_rings)))
+
+#define IS_SW_EV_RING(_mhi_dev_ctxt, _EV_INDEX) (_EV_INDEX < \
+				((_mhi_dev_ctxt)->mmio_info.nr_event_rings - \
+				((_mhi_dev_ctxt)->mmio_info.nr_hw_event_rings)))
+
 
 /* MHI Transfer Ring Elements 7.4.1*/
 #define TX_TRB_LEN

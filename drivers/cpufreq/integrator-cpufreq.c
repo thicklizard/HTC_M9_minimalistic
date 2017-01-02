@@ -207,6 +207,25 @@ static void __exit integrator_cpu_exit(void)
 	cpufreq_unregister_driver(&integrator_driver);
 }
 
+<<<<<<< HEAD
+=======
+static const struct of_device_id integrator_cpufreq_match[] = {
+	{ .compatible = "arm,core-module-integrator"},
+	{ },
+};
+
+static struct platform_driver integrator_cpufreq_driver = {
+	.driver = {
+		.name = "integrator-cpufreq",
+		.of_match_table = integrator_cpufreq_match,
+	},
+	.remove = __exit_p(integrator_cpufreq_remove),
+};
+
+module_platform_driver_probe(integrator_cpufreq_driver,
+			     integrator_cpufreq_probe);
+
+>>>>>>> 0e91d2a... Nougat
 MODULE_AUTHOR ("Russell M. King");
 MODULE_DESCRIPTION ("cpufreq driver for ARM Integrator CPUs");
 MODULE_LICENSE ("GPL");

@@ -201,31 +201,87 @@ __ATTR(_name, 0644, show_##_name, store_##_name)
 
 
 struct cpufreq_driver {
+<<<<<<< HEAD
 	char			name[CPUFREQ_NAME_LEN];
 	u8			flags;
+=======
+	char		name[CPUFREQ_NAME_LEN];
+	u8		flags;
+	void		*driver_data;
+>>>>>>> 0e91d2a... Nougat
 
 	/* needed by all drivers */
-	int	(*init)		(struct cpufreq_policy *policy);
-	int	(*verify)	(struct cpufreq_policy *policy);
+	int		(*init)(struct cpufreq_policy *policy);
+	int		(*verify)(struct cpufreq_policy *policy);
 
 	/* define one out of two */
+<<<<<<< HEAD
 	int	(*setpolicy)	(struct cpufreq_policy *policy);
 	int	(*target)	(struct cpufreq_policy *policy,	/* Deprecated */
 				 unsigned int target_freq,
 				 unsigned int relation);
 	int	(*target_index)	(struct cpufreq_policy *policy,
 				 unsigned int index);
+=======
+	int		(*setpolicy)(struct cpufreq_policy *policy);
+
+	/*
+	 * On failure, should always restore frequency to policy->restore_freq
+	 * (i.e. old freq).
+	 */
+	int		(*target)(struct cpufreq_policy *policy,
+				  unsigned int target_freq,
+				  unsigned int relation);	/* Deprecated */
+	int		(*target_index)(struct cpufreq_policy *policy,
+					unsigned int index);
+	/*
+	 * Only for drivers with target_index() and CPUFREQ_ASYNC_NOTIFICATION
+	 * unset.
+	 *
+	 * get_intermediate should return a stable intermediate frequency
+	 * platform wants to switch to and target_intermediate() should set CPU
+	 * to to that frequency, before jumping to the frequency corresponding
+	 * to 'index'. Core will take care of sending notifications and driver
+	 * doesn't have to handle them in target_intermediate() or
+	 * target_index().
+	 *
+	 * Drivers can return '0' from get_intermediate() in case they don't
+	 * wish to switch to intermediate frequency for some target frequency.
+	 * In that case core will directly call ->target_index().
+	 */
+	unsigned int	(*get_intermediate)(struct cpufreq_policy *policy,
+					    unsigned int index);
+	int		(*target_intermediate)(struct cpufreq_policy *policy,
+					       unsigned int index);
+>>>>>>> 0e91d2a... Nougat
 
 	/* should be defined, if possible */
-	unsigned int	(*get)	(unsigned int cpu);
+	unsigned int	(*get)(unsigned int cpu);
 
 	/* optional */
-	int	(*bios_limit)	(int cpu, unsigned int *limit);
+	int		(*bios_limit)(int cpu, unsigned int *limit);
 
+	int		(*exit)(struct cpufreq_policy *policy);
+	void		(*stop_cpu)(struct cpufreq_policy *policy);
+	int		(*suspend)(struct cpufreq_policy *policy);
+	int		(*resume)(struct cpufreq_policy *policy);
+
+<<<<<<< HEAD
 	int	(*exit)		(struct cpufreq_policy *policy);
 	int	(*suspend)	(struct cpufreq_policy *policy);
 	int	(*resume)	(struct cpufreq_policy *policy);
 	struct freq_attr	**attr;
+=======
+	/* Will be called after the driver is fully initialized */
+	void		(*ready)(struct cpufreq_policy *policy);
+
+	struct freq_attr **attr;
+
+	/* platform specific boost support code */
+	bool		boost_supported;
+	bool		boost_enabled;
+	int		(*set_boost)(int state);
+>>>>>>> 0e91d2a... Nougat
 };
 
 /* flags */
@@ -463,11 +519,45 @@ int cpufreq_frequency_table_target(struct cpufreq_policy *policy,
 void cpufreq_frequency_table_update_policy_cpu(struct cpufreq_policy *policy);
 ssize_t cpufreq_show_cpus(const struct cpumask *mask, char *buf);
 
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_CPU_FREQ
+int cpufreq_boost_trigger_state(int state);
+int cpufreq_boost_supported(void);
+int cpufreq_boost_enabled(void);
+int cpufreq_enable_boost_support(void);
+bool policy_has_boost_freq(struct cpufreq_policy *policy);
+#else
+static inline int cpufreq_boost_trigger_state(int state)
+{
+	return 0;
+}
+static inline int cpufreq_boost_supported(void)
+{
+	return 0;
+}
+static inline int cpufreq_boost_enabled(void)
+{
+	return 0;
+}
+
+static inline int cpufreq_enable_boost_support(void)
+{
+	return -EINVAL;
+}
+
+static inline bool policy_has_boost_freq(struct cpufreq_policy *policy)
+{
+	return false;
+}
+#endif
+>>>>>>> 0e91d2a... Nougat
 /* the following funtion is for cpufreq core use only */
 struct cpufreq_frequency_table *cpufreq_frequency_get_table(unsigned int cpu);
 
 /* the following are really really optional */
 extern struct freq_attr cpufreq_freq_attr_scaling_available_freqs;
+extern struct freq_attr cpufreq_freq_attr_scaling_boost_freqs;
 extern struct freq_attr *cpufreq_generic_attr[];
 void cpufreq_frequency_table_get_attr(struct cpufreq_frequency_table *table,
 				      unsigned int cpu);

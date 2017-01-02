@@ -2,8 +2,11 @@
 # Makefile for the msm networking support.
 #
 
+<<<<<<< HEAD
 obj-$(CONFIG_MSM_EMAC) += emac/
 obj-$(CONFIG_MSM_RMNET_BAM) += msm_rmnet_bam.o
+=======
+>>>>>>> 0e91d2a... Nougat
 obj-$(CONFIG_MSM_RMNET_MHI) += msm_rmnet_mhi.o
 obj-$(CONFIG_MSM_RMNET_SMUX) += msm_rmnet_smux.o
 obj-$(CONFIG_ECM_IPA) += ecm_ipa.o

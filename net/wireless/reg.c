@@ -1469,8 +1469,128 @@ static enum reg_request_treatment
 __regulatory_hint(struct wiphy *wiphy,
 		  struct regulatory_request *pending_request)
 {
+<<<<<<< HEAD
 	const struct ieee80211_regdomain *regd;
 	bool intersect = false;
+=======
+
+	core_request->intersect = false;
+	core_request->processed = false;
+
+	reg_update_last_request(core_request);
+
+	return reg_call_crda(core_request);
+}
+
+static enum reg_request_treatment
+__reg_process_hint_user(struct regulatory_request *user_request)
+{
+	struct regulatory_request *lr = get_last_request();
+
+	if (reg_request_indoor(user_request)) {
+		reg_is_indoor = true;
+		return REG_REQ_USER_HINT_HANDLED;
+	}
+
+	if (reg_request_cell_base(user_request))
+		return reg_ignore_cell_hint(user_request);
+
+	if (reg_request_cell_base(lr))
+		return REG_REQ_IGNORE;
+
+	if (lr->initiator == NL80211_REGDOM_SET_BY_COUNTRY_IE)
+		return REG_REQ_INTERSECT;
+	/*
+	 * If the user knows better the user should set the regdom
+	 * to their country before the IE is picked up
+	 */
+	if (lr->initiator == NL80211_REGDOM_SET_BY_USER &&
+	    lr->intersect)
+		return REG_REQ_IGNORE;
+	/*
+	 * Process user requests only after previous user/driver/core
+	 * requests have been processed
+	 */
+	if ((lr->initiator == NL80211_REGDOM_SET_BY_CORE ||
+	     lr->initiator == NL80211_REGDOM_SET_BY_DRIVER ||
+	     lr->initiator == NL80211_REGDOM_SET_BY_USER)) {
+		if (lr->intersect) {
+			if (!is_cfg80211_regdom_intersected())
+				return REG_REQ_IGNORE;
+		} else if (regdom_changes(lr->alpha2)) {
+			return REG_REQ_IGNORE;
+		}
+	}
+
+	if (!regdom_changes(user_request->alpha2))
+		return REG_REQ_ALREADY_SET;
+
+	return REG_REQ_OK;
+}
+
+/**
+ * reg_process_hint_user - process user regulatory requests
+ * @user_request: a pending user regulatory request
+ *
+ * The wireless subsystem can use this function to process
+ * a regulatory request initiated by userspace.
+ *
+ * Returns one of the different reg request treatment values.
+ */
+static enum reg_request_treatment
+reg_process_hint_user(struct regulatory_request *user_request)
+{
+	enum reg_request_treatment treatment;
+
+	treatment = __reg_process_hint_user(user_request);
+	if (treatment == REG_REQ_IGNORE ||
+	    treatment == REG_REQ_ALREADY_SET ||
+	    treatment == REG_REQ_USER_HINT_HANDLED) {
+		reg_free_request(user_request);
+		return treatment;
+	}
+
+	user_request->intersect = treatment == REG_REQ_INTERSECT;
+	user_request->processed = false;
+
+	reg_update_last_request(user_request);
+
+	user_alpha2[0] = user_request->alpha2[0];
+	user_alpha2[1] = user_request->alpha2[1];
+
+	return reg_call_crda(user_request);
+}
+
+static enum reg_request_treatment
+__reg_process_hint_driver(struct regulatory_request *driver_request)
+{
+	struct regulatory_request *lr = get_last_request();
+
+	if (!regdom_changes(driver_request->alpha2))
+		return REG_REQ_ALREADY_SET;
+
+	if (lr->initiator == NL80211_REGDOM_SET_BY_USER)
+		return REG_REQ_INTERSECT;
+	else
+		return REG_REQ_OK;
+
+}
+
+/**
+ * reg_process_hint_driver - process driver regulatory requests
+ * @driver_request: a pending driver regulatory request
+ *
+ * The wireless subsystem can use this function to process
+ * a regulatory request issued by an 802.11 driver.
+ *
+ * Returns one of the different reg request treatment values.
+ */
+static enum reg_request_treatment
+reg_process_hint_driver(struct wiphy *wiphy,
+			struct regulatory_request *driver_request)
+{
+	const struct ieee80211_regdomain *regd, *tmp;
+>>>>>>> 0e91d2a... Nougat
 	enum reg_request_treatment treatment;
 	struct regulatory_request *lr;
 

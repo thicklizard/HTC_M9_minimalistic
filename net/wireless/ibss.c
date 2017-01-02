@@ -28,9 +28,14 @@ void __cfg80211_ibss_joined(struct net_device *dev, const u8 *bssid)
 	if (!wdev->ssid_len)
 		return;
 
+<<<<<<< HEAD
 	bss = cfg80211_get_bss(wdev->wiphy, NULL, bssid,
 			       wdev->ssid, wdev->ssid_len,
 			       WLAN_CAPABILITY_IBSS, WLAN_CAPABILITY_IBSS);
+=======
+	bss = cfg80211_get_bss(wdev->wiphy, channel, bssid, NULL, 0,
+			       IEEE80211_BSS_TYPE_IBSS, IEEE80211_PRIVACY_ANY);
+>>>>>>> 0e91d2a... Nougat
 
 	if (WARN_ON(!bss))
 		return;

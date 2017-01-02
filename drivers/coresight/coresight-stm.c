@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -868,8 +872,6 @@ static int stm_probe(struct platform_device *pdev)
 	drvdata = devm_kzalloc(dev, sizeof(*drvdata), GFP_KERNEL);
 	if (!drvdata)
 		return -ENOMEM;
-	/* Store the driver data pointer for use in exported functions */
-	stmdrvdata = drvdata;
 	drvdata->dev = &pdev->dev;
 	platform_set_drvdata(pdev, drvdata);
 
@@ -947,6 +949,9 @@ static int stm_probe(struct platform_device *pdev)
 
 	if (boot_enable)
 		coresight_enable(drvdata->csdev);
+
+	/* Store the driver data pointer for use in exported functions */
+	stmdrvdata = drvdata;
 
 	return 0;
 err:

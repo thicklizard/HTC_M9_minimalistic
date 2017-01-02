@@ -358,6 +358,10 @@ int __init psci_init(void)
 
 static int __init cpu_psci_cpu_init(struct device_node *dn, unsigned int cpu)
 {
+<<<<<<< HEAD
+=======
+	pr_info("Initializing psci_cpu_init\n");
+>>>>>>> 0e91d2a... Nougat
 	return 0;
 }
 

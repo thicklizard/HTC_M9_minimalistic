@@ -422,10 +422,20 @@ static void ext4_handle_error(struct super_block *sb)
 		sb->s_flags |= MS_RDONLY;
 	}
 	if (test_opt(sb, ERRORS_PANIC)) {
+<<<<<<< HEAD
 		printk("EXT4-fs (device %s): panic forced after error and trigger apps watchdog bite reset ...\n",
 			sb->s_id);
 		msm_trigger_wdog_bite();
 	}
+=======
+		if (EXT4_SB(sb)->s_journal &&
+		  !(EXT4_SB(sb)->s_journal->j_flags & JBD2_REC_ERR))
+			return;
+		panic("EXT4-fs (device %s): panic forced after error\n",
+			sb->s_id);
+	}
+}
+>>>>>>> 0e91d2a... Nougat
 
 #ifdef CONFIG_EXT4_E2FSCK_RECOVER
 	if (test_opt(sb, ERRORS_RO) && strncmp(sb->s_id, "dm-", 3))
@@ -589,8 +599,12 @@ void __ext4_abort(struct super_block *sb, const char *function,
 			jbd2_journal_abort(EXT4_SB(sb)->s_journal, -EIO);
 		save_error_info(sb, function, line);
 	}
-	if (test_opt(sb, ERRORS_PANIC))
+	if (test_opt(sb, ERRORS_PANIC)) {
+		if (EXT4_SB(sb)->s_journal &&
+		  !(EXT4_SB(sb)->s_journal->j_flags & JBD2_REC_ERR))
+			return;
 		panic("EXT4-fs panic from previous error\n");
+	}
 }
 
 void ext4_msg(struct super_block *sb, const char *prefix, const char *fmt, ...)
@@ -4204,12 +4218,20 @@ static int ext4_freeze(struct super_block *sb)
 	
 	jbd2_journal_lock_updates(journal);
 
+<<<<<<< HEAD
 	error = jbd2_journal_flush(journal);
 	if (error < 0)
 		goto out;
+=======
+		error = jbd2_journal_flush(journal);
+		if (error < 0)
+			goto out;
 
-	
-	EXT4_CLEAR_INCOMPAT_FEATURE(sb, EXT4_FEATURE_INCOMPAT_RECOVER);
+		
+		EXT4_CLEAR_INCOMPAT_FEATURE(sb, EXT4_FEATURE_INCOMPAT_RECOVER);
+	}
+>>>>>>> 0e91d2a... Nougat
+
 	error = ext4_commit_super(sb, 1);
 out:
 	
@@ -4222,8 +4244,11 @@ static int ext4_unfreeze(struct super_block *sb)
 	if (sb->s_flags & MS_RDONLY)
 		return 0;
 
-	
-	EXT4_SET_INCOMPAT_FEATURE(sb, EXT4_FEATURE_INCOMPAT_RECOVER);
+	if (EXT4_SB(sb)->s_journal) {
+		
+		EXT4_SET_INCOMPAT_FEATURE(sb, EXT4_FEATURE_INCOMPAT_RECOVER);
+	}
+
 	ext4_commit_super(sb, 1);
 	return 0;
 }

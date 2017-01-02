@@ -22,6 +22,10 @@ help:
 	@echo '  from the kernel command line to build and install one of'
 	@echo '  the tools above'
 	@echo ''
+	@echo '  $$ make tools/all'
+	@echo ''
+	@echo '  builds all tools.'
+	@echo ''
 	@echo '  $$ make tools/install'
 	@echo ''
 	@echo '  installs all tools.'
@@ -50,6 +54,20 @@ selftests: FORCE
 turbostat x86_energy_perf_policy: FORCE
 	$(call descend,power/x86/$@)
 
+<<<<<<< HEAD
+=======
+tmon: FORCE
+	$(call descend,thermal/$@)
+
+all: acpi cgroup cpupower hv firewire lguest \
+		perf selftests turbostat usb \
+		virtio vm net x86_energy_perf_policy \
+		tmon
+
+acpi_install:
+	$(call descend,power/$(@:_install=),install)
+
+>>>>>>> 0e91d2a... Nougat
 cpupower_install:
 	$(call descend,power/$(@:_install=),install)
 

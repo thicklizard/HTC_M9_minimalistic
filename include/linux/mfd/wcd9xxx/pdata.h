@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -87,6 +87,7 @@
 
 #define WCD9XXX_DMIC_SAMPLE_RATE_UNDEFINED 0
 
+<<<<<<< HEAD
 #define WCD9XXX_SPKDRV_OCP_CURR_LIMIT_I_0P0_A	0
 #define WCD9XXX_SPKDRV_OCP_CURR_LIMIT_I_0P375_A 375
 #define WCD9XXX_SPKDRV_OCP_CURR_LIMIT_I_0P750_A 750
@@ -104,6 +105,9 @@
 #define WCD9XXX_SPKDRV_OCP_CURR_LIMIT_I_5P250_A 5250
 #define WCD9XXX_SPKDRV_OCP_CURR_LIMIT_I_5P625_A 5625
 #define WCD9XXX_SPKDRV_OCP_CURR_LIMIT_UNDEFINED (-1)
+=======
+#define WCD9XXX_DMIC_CLK_DRIVE_UNDEFINED 0
+>>>>>>> 0e91d2a... Nougat
 
 struct wcd9xxx_amic {
 	/*legacy mode, txfe_enable and txfe_buff take 7 input
@@ -196,6 +200,7 @@ struct wcd9xxx_pdata {
 	int irq_base;
 	int num_irqs;
 	int reset_gpio;
+	struct device_node *wcd_rst_np;
 	struct wcd9xxx_amic amic_settings;
 	struct slim_device slimbus_slave_device;
 	struct wcd9xxx_micbias_setting micbias;
@@ -204,6 +209,8 @@ struct wcd9xxx_pdata {
 	u32 mclk_rate;
 	u32 dmic_sample_rate;
 	u32 mad_dmic_sample_rate;
+	u32 ecpp_dmic_sample_rate;
+	u32 dmic_clk_drv;
 	enum codec_variant cdc_variant;
 	u16 use_pinctrl;
 };

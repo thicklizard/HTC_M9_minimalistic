@@ -75,7 +75,38 @@ extern struct device_node *of_irq_find_parent(struct device_node *child);
 
 extern void of_irq_init(const struct of_device_id *matches);
 
+<<<<<<< HEAD
 #endif /* CONFIG_OF_IRQ */
+=======
+#ifdef CONFIG_OF_IRQ
+extern int of_irq_count(struct device_node *dev);
+extern int of_irq_get(struct device_node *dev, int index);
+extern int of_irq_get_byname(struct device_node *dev, const char *name);
+#else
+static inline int of_irq_count(struct device_node *dev)
+{
+	return 0;
+}
+static inline int of_irq_get(struct device_node *dev, int index)
+{
+	return 0;
+}
+static inline int of_irq_get_byname(struct device_node *dev, const char *name)
+{
+	return 0;
+}
+#endif
+
+#if defined(CONFIG_OF)
+/*
+ * irq_of_parse_and_map() is used by all OF enabled platforms; but SPARC
+ * implements it differently.  However, the prototype is the same for all,
+ * so declare it here regardless of the CONFIG_OF_IRQ setting.
+ */
+extern unsigned int irq_of_parse_and_map(struct device_node *node, int index);
+extern struct device_node *of_irq_find_parent(struct device_node *child);
+extern void of_msi_configure(struct device *dev, struct device_node *np);
+>>>>>>> 0e91d2a... Nougat
 
 #else /* !CONFIG_OF */
 static inline unsigned int irq_of_parse_and_map(struct device_node *dev,

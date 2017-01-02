@@ -811,15 +811,34 @@ static int isp_pipeline_link_notify(struct media_pad *source,
 	int sink_use = isp_pipeline_pm_use_count(sink->entity);
 	int ret;
 
+<<<<<<< HEAD
 	if (!(flags & MEDIA_LNK_FL_ENABLED)) {
+=======
+	if (notification == MEDIA_DEV_NOTIFY_POST_LINK_CH &&
+	    !(flags & MEDIA_LNK_FL_ENABLED)) {
+>>>>>>> 0e91d2a... Nougat
 		/* Powering off entities is assumed to never fail. */
 		isp_pipeline_pm_power(source->entity, -sink_use);
 		isp_pipeline_pm_power(sink->entity, -source_use);
 		return 0;
 	}
 
+<<<<<<< HEAD
 	ret = isp_pipeline_pm_power(source->entity, sink_use);
 	if (ret < 0)
+=======
+	if (notification == MEDIA_DEV_NOTIFY_PRE_LINK_CH &&
+		(flags & MEDIA_LNK_FL_ENABLED)) {
+
+		ret = isp_pipeline_pm_power(source, sink_use);
+		if (ret < 0)
+			return ret;
+
+		ret = isp_pipeline_pm_power(sink, source_use);
+		if (ret < 0)
+			isp_pipeline_pm_power(source, -sink_use);
+
+>>>>>>> 0e91d2a... Nougat
 		return ret;
 
 	ret = isp_pipeline_pm_power(sink->entity, source_use);

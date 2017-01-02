@@ -424,9 +424,6 @@ void transport_deregister_session(struct se_session *se_sess)
 }
 EXPORT_SYMBOL(transport_deregister_session);
 
-/*
- * Called with cmd->t_state_lock held.
- */
 static void target_remove_from_state_list(struct se_cmd *cmd)
 {
 	struct se_device *dev = cmd->se_dev;
@@ -450,6 +447,7 @@ static int transport_cmd_check_stop(struct se_cmd *cmd, bool remove_from_lists)
 {
 	unsigned long flags;
 
+<<<<<<< HEAD
 	spin_lock_irqsave(&cmd->t_state_lock, flags);
 	/*
 	 * Determine if IOCTL context caller in requesting the stopping of this
@@ -468,6 +466,8 @@ static int transport_cmd_check_stop(struct se_cmd *cmd, bool remove_from_lists)
 		return 1;
 	}
 
+=======
+>>>>>>> 0e91d2a... Nougat
 	if (remove_from_lists) {
 		target_remove_from_state_list(cmd);
 
@@ -476,6 +476,10 @@ static int transport_cmd_check_stop(struct se_cmd *cmd, bool remove_from_lists)
 		 */
 		cmd->se_lun = NULL;
 	}
+
+	spin_lock_irqsave(&cmd->t_state_lock, flags);
+	if (write_pending)
+		cmd->t_state = TRANSPORT_WRITE_PENDING;
 
 	/*
 	 * Determine if frontend context caller is requesting the stopping of
@@ -541,9 +545,23 @@ static void transport_lun_remove_cmd(struct se_cmd *cmd)
 
 void transport_cmd_finish_abort(struct se_cmd *cmd, int remove)
 {
+<<<<<<< HEAD
+=======
+	bool ack_kref = (cmd->se_cmd_flags & SCF_ACK_KREF);
+
+	if (cmd->se_cmd_flags & SCF_SE_LUN_CMD)
+		transport_lun_remove_cmd(cmd);
+	/*
+	 * Allow the fabric driver to unmap any resources before
+	 * releasing the descriptor via TFO->release_cmd()
+	 */
+	if (remove)
+		cmd->se_tfo->aborted_task(cmd);
+
+>>>>>>> 0e91d2a... Nougat
 	if (transport_cmd_check_stop_to_fabric(cmd))
 		return;
-	if (remove)
+	if (remove && ack_kref)
 		transport_put_cmd(cmd);
 }
 
@@ -614,7 +632,7 @@ void target_complete_cmd(struct se_cmd *cmd, u8 scsi_status)
 	 * Check for case where an explict ABORT_TASK has been received
 	 * and transport_wait_for_tasks() will be waiting for completion..
 	 */
-	if (cmd->transport_state & CMD_T_ABORTED &&
+	if (cmd->transport_state & CMD_T_ABORTED ||
 	    cmd->transport_state & CMD_T_STOP) {
 		spin_unlock_irqrestore(&cmd->t_state_lock, flags);
 		complete_all(&cmd->t_transport_stop_comp);
@@ -1307,7 +1325,7 @@ int target_submit_cmd_map_sgls(struct se_cmd *se_cmd, struct se_session *se_sess
 	 * for fabrics using TARGET_SCF_ACK_KREF that expect a second
 	 * kref_put() to happen during fabric packet acknowledgement.
 	 */
-	ret = target_get_sess_cmd(se_sess, se_cmd, (flags & TARGET_SCF_ACK_KREF));
+	ret = target_get_sess_cmd(se_cmd, flags & TARGET_SCF_ACK_KREF);
 	if (ret)
 		return ret;
 	/*
@@ -1321,7 +1339,7 @@ int target_submit_cmd_map_sgls(struct se_cmd *se_cmd, struct se_session *se_sess
 	rc = transport_lookup_cmd_lun(se_cmd, unpacked_lun);
 	if (rc) {
 		transport_send_check_condition_and_sense(se_cmd, rc, 0);
-		target_put_sess_cmd(se_sess, se_cmd);
+		target_put_sess_cmd(se_cmd);
 		return 0;
 	}
 
@@ -1461,7 +1479,7 @@ int target_submit_tmr(struct se_cmd *se_cmd, struct se_session *se_sess,
 		se_cmd->se_tmr_req->ref_task_tag = tag;
 
 	/* See target_submit_cmd for commentary */
-	ret = target_get_sess_cmd(se_sess, se_cmd, (flags & TARGET_SCF_ACK_KREF));
+	ret = target_get_sess_cmd(se_cmd, flags & TARGET_SCF_ACK_KREF);
 	if (ret) {
 		core_tmr_release_req(se_cmd->se_tmr_req);
 		return ret;
@@ -1513,7 +1531,7 @@ bool target_stop_cmd(struct se_cmd *cmd, unsigned long *flags)
 void transport_generic_request_failure(struct se_cmd *cmd,
 		sense_reason_t sense_reason)
 {
-	int ret = 0;
+	int ret = 0, post_ret = 0;
 
 	pr_debug("-----[ Storage Engine Exception for cmd: %p ITT: 0x%08x"
 		" CDB: 0x%02x\n", cmd, cmd->se_tfo->get_task_tag(cmd),
@@ -1530,6 +1548,16 @@ void transport_generic_request_failure(struct se_cmd *cmd,
 	 * For SAM Task Attribute emulation for failed struct se_cmd
 	 */
 	transport_complete_task_attr(cmd);
+<<<<<<< HEAD
+=======
+	/*
+	 * Handle special case for COMPARE_AND_WRITE failure, where the
+	 * callback is expected to drop the per device ->caw_sem.
+	 */
+	if ((cmd->se_cmd_flags & SCF_COMPARE_AND_WRITE) &&
+	     cmd->transport_complete_callback)
+		cmd->transport_complete_callback(cmd, false, &post_ret);
+>>>>>>> 0e91d2a... Nougat
 
 	switch (sense_reason) {
 	case TCM_NON_EXISTENT_LUN:
@@ -1671,9 +1699,12 @@ static bool target_handle_task_attr(struct se_cmd *cmd)
 	return true;
 }
 
+static int __transport_check_aborted_status(struct se_cmd *, int);
+
 void target_execute_cmd(struct se_cmd *cmd)
 {
 	/*
+<<<<<<< HEAD
 	 * If the received CDB has aleady been aborted stop processing it here.
 	 */
 	if (transport_check_aborted_status(cmd, 1)) {
@@ -1696,9 +1727,21 @@ void target_execute_cmd(struct se_cmd *cmd)
 		return;
 	}
 	/*
+=======
+>>>>>>> 0e91d2a... Nougat
 	 * Determine if frontend context caller is requesting the stopping of
 	 * this command for frontend exceptions.
+	 *
+	 * If the received CDB has aleady been aborted stop processing it here.
 	 */
+<<<<<<< HEAD
+=======
+	spin_lock_irq(&cmd->t_state_lock);
+	if (__transport_check_aborted_status(cmd, 1)) {
+		spin_unlock_irq(&cmd->t_state_lock);
+		return;
+	}
+>>>>>>> 0e91d2a... Nougat
 	if (cmd->transport_state & CMD_T_STOP) {
 		pr_debug("%s:%d CMD_T_STOP for ITT: 0x%08x\n",
 			__func__, __LINE__,
@@ -1869,8 +1912,34 @@ static void target_complete_ok_work(struct work_struct *work)
 	 * Check for a callback, used by amongst other things
 	 * XDWRITE_READ_10 emulation.
 	 */
+<<<<<<< HEAD
 	if (cmd->transport_complete_callback)
 		cmd->transport_complete_callback(cmd);
+=======
+	if (cmd->transport_complete_callback) {
+		sense_reason_t rc;
+		bool caw = (cmd->se_cmd_flags & SCF_COMPARE_AND_WRITE);
+		bool zero_dl = !(cmd->data_length);
+		int post_ret = 0;
+
+		rc = cmd->transport_complete_callback(cmd, true, &post_ret);
+		if (!rc && !post_ret) {
+			if (caw && zero_dl)
+				goto queue_rsp;
+
+			return;
+		} else if (rc) {
+			ret = transport_send_check_condition_and_sense(cmd,
+						rc, 0);
+			if (ret == -EAGAIN || ret == -ENOMEM)
+				goto queue_full;
+
+			transport_lun_remove_cmd(cmd);
+			transport_cmd_check_stop_to_fabric(cmd);
+			return;
+		}
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	switch (cmd->data_direction) {
 	case DMA_FROM_DEVICE:
@@ -1954,24 +2023,19 @@ static inline void transport_free_pages(struct se_cmd *cmd)
 }
 
 /**
- * transport_release_cmd - free a command
- * @cmd:       command to free
+ * transport_put_cmd - release a reference to a command
+ * @cmd:       command to release
  *
- * This routine unconditionally frees a command, and reference counting
- * or list removal must be done in the caller.
+ * This routine releases our reference to the command and frees it if possible.
  */
-static int transport_release_cmd(struct se_cmd *cmd)
+static int transport_put_cmd(struct se_cmd *cmd)
 {
 	BUG_ON(!cmd->se_tfo);
-
-	if (cmd->se_cmd_flags & SCF_SCSI_TMR_CDB)
-		core_tmr_release_req(cmd->se_tmr_req);
-	if (cmd->t_task_cdb != cmd->__t_task_cdb)
-		kfree(cmd->t_task_cdb);
 	/*
 	 * If this cmd has been setup with target_get_sess_cmd(), drop
 	 * the kref and call ->release_cmd() in kref callback.
 	 */
+<<<<<<< HEAD
 	 if (cmd->check_release != 0)
 		return target_put_sess_cmd(cmd->se_sess, cmd);
 
@@ -2004,6 +2068,9 @@ static int transport_put_cmd(struct se_cmd *cmd)
 
 	transport_free_pages(cmd);
 	return transport_release_cmd(cmd);
+=======
+	return target_put_sess_cmd(cmd);
+>>>>>>> 0e91d2a... Nougat
 }
 
 void *transport_kmap_data_sg(struct se_cmd *cmd)
@@ -2168,36 +2235,78 @@ static void transport_write_pending_qf(struct se_cmd *cmd)
 	}
 }
 
+static bool
+__transport_wait_for_tasks(struct se_cmd *, bool, bool *, bool *,
+			   unsigned long *flags);
+
+static void target_wait_free_cmd(struct se_cmd *cmd, bool *aborted, bool *tas)
+{
+<<<<<<< HEAD
+=======
+	unsigned long flags;
+
+	spin_lock_irqsave(&cmd->t_state_lock, flags);
+	__transport_wait_for_tasks(cmd, true, aborted, tas, &flags);
+	spin_unlock_irqrestore(&cmd->t_state_lock, flags);
+}
+
 int transport_generic_free_cmd(struct se_cmd *cmd, int wait_for_tasks)
 {
+>>>>>>> 0e91d2a... Nougat
 	int ret = 0;
+	bool aborted = false, tas = false;
 
 	if (!(cmd->se_cmd_flags & SCF_SE_LUN_CMD)) {
 		if (wait_for_tasks && (cmd->se_cmd_flags & SCF_SCSI_TMR_CDB))
-			 transport_wait_for_tasks(cmd);
+			target_wait_free_cmd(cmd, &aborted, &tas);
 
-		ret = transport_release_cmd(cmd);
+		if (!aborted || tas)
+			ret = transport_put_cmd(cmd);
 	} else {
 		if (wait_for_tasks)
+<<<<<<< HEAD
 			transport_wait_for_tasks(cmd);
+=======
+			target_wait_free_cmd(cmd, &aborted, &tas);
+		/*
+		 * Handle WRITE failure case where transport_generic_new_cmd()
+		 * has already added se_cmd to state_list, but fabric has
+		 * failed command before I/O submission.
+		 */
+		if (cmd->state_active)
+			target_remove_from_state_list(cmd);
+>>>>>>> 0e91d2a... Nougat
 
 		if (cmd->se_lun)
 			transport_lun_remove_cmd(cmd);
 
-		ret = transport_put_cmd(cmd);
+		if (!aborted || tas)
+			ret = transport_put_cmd(cmd);
+	}
+	/*
+	 * If the task has been internally aborted due to TMR ABORT_TASK
+	 * or LUN_RESET, target_core_tmr.c is responsible for performing
+	 * the remaining calls to target_put_sess_cmd(), and not the
+	 * callers of this function.
+	 */
+	if (aborted) {
+		pr_debug("Detected CMD_T_ABORTED for ITT: %u\n",
+			cmd->se_tfo->get_task_tag(cmd));
+		wait_for_completion(&cmd->cmd_wait_comp);
+		cmd->se_tfo->release_cmd(cmd);
+		ret = 1;
 	}
 	return ret;
 }
 EXPORT_SYMBOL(transport_generic_free_cmd);
 
 /* target_get_sess_cmd - Add command to active ->sess_cmd_list
- * @se_sess:	session to reference
  * @se_cmd:	command descriptor to add
  * @ack_kref:	Signal that fabric will perform an ack target_put_sess_cmd()
  */
-int target_get_sess_cmd(struct se_session *se_sess, struct se_cmd *se_cmd,
-			       bool ack_kref)
+int target_get_sess_cmd(struct se_cmd *se_cmd, bool ack_kref)
 {
+	struct se_session *se_sess = se_cmd->se_sess;
 	unsigned long flags;
 	int ret = 0;
 
@@ -2224,39 +2333,68 @@ out:
 	spin_unlock_irqrestore(&se_sess->sess_cmd_lock, flags);
 
 	if (ret && ack_kref)
-		target_put_sess_cmd(se_sess, se_cmd);
+		target_put_sess_cmd(se_cmd);
 
 	return ret;
 }
 EXPORT_SYMBOL(target_get_sess_cmd);
 
+static void target_free_cmd_mem(struct se_cmd *cmd)
+{
+	transport_free_pages(cmd);
+
+	if (cmd->se_cmd_flags & SCF_SCSI_TMR_CDB)
+		core_tmr_release_req(cmd->se_tmr_req);
+	if (cmd->t_task_cdb != cmd->__t_task_cdb)
+		kfree(cmd->t_task_cdb);
+}
+
 static void target_release_cmd_kref(struct kref *kref)
 {
 	struct se_cmd *se_cmd = container_of(kref, struct se_cmd, cmd_kref);
 	struct se_session *se_sess = se_cmd->se_sess;
+	bool fabric_stop;
 
 	if (list_empty(&se_cmd->se_cmd_list)) {
 		spin_unlock(&se_sess->sess_cmd_lock);
+		target_free_cmd_mem(se_cmd);
 		se_cmd->se_tfo->release_cmd(se_cmd);
 		return;
 	}
-	if (se_sess->sess_tearing_down && se_cmd->cmd_wait_set) {
+
+	spin_lock(&se_cmd->t_state_lock);
+	fabric_stop = (se_cmd->transport_state & CMD_T_FABRIC_STOP);
+	spin_unlock(&se_cmd->t_state_lock);
+
+	if (se_cmd->cmd_wait_set || fabric_stop) {
+		list_del_init(&se_cmd->se_cmd_list);
 		spin_unlock(&se_sess->sess_cmd_lock);
+		target_free_cmd_mem(se_cmd);
 		complete(&se_cmd->cmd_wait_comp);
 		return;
 	}
-	list_del(&se_cmd->se_cmd_list);
+	list_del_init(&se_cmd->se_cmd_list);
 	spin_unlock(&se_sess->sess_cmd_lock);
 
+	target_free_cmd_mem(se_cmd);
 	se_cmd->se_tfo->release_cmd(se_cmd);
 }
 
 /* target_put_sess_cmd - Check for active I/O shutdown via kref_put
- * @se_sess:	session to reference
  * @se_cmd:	command descriptor to drop
  */
-int target_put_sess_cmd(struct se_session *se_sess, struct se_cmd *se_cmd)
+int target_put_sess_cmd(struct se_cmd *se_cmd)
 {
+<<<<<<< HEAD
+=======
+	struct se_session *se_sess = se_cmd->se_sess;
+
+	if (!se_sess) {
+		target_free_cmd_mem(se_cmd);
+		se_cmd->se_tfo->release_cmd(se_cmd);
+		return 1;
+	}
+>>>>>>> 0e91d2a... Nougat
 	return kref_put_spinlock_irqsave(&se_cmd->cmd_kref, target_release_cmd_kref,
 			&se_sess->sess_cmd_lock);
 }
@@ -2271,6 +2409,7 @@ void target_sess_cmd_list_set_waiting(struct se_session *se_sess)
 {
 	struct se_cmd *se_cmd;
 	unsigned long flags;
+	int rc;
 
 	spin_lock_irqsave(&se_sess->sess_cmd_lock, flags);
 	if (se_sess->sess_tearing_down) {
@@ -2280,8 +2419,15 @@ void target_sess_cmd_list_set_waiting(struct se_session *se_sess)
 	se_sess->sess_tearing_down = 1;
 	list_splice_init(&se_sess->sess_cmd_list, &se_sess->sess_wait_list);
 
-	list_for_each_entry(se_cmd, &se_sess->sess_wait_list, se_cmd_list)
-		se_cmd->cmd_wait_set = 1;
+	list_for_each_entry(se_cmd, &se_sess->sess_wait_list, se_cmd_list) {
+		rc = kref_get_unless_zero(&se_cmd->cmd_kref);
+		if (rc) {
+			se_cmd->cmd_wait_set = 1;
+			spin_lock(&se_cmd->t_state_lock);
+			se_cmd->transport_state |= CMD_T_FABRIC_STOP;
+			spin_unlock(&se_cmd->t_state_lock);
+		}
+	}
 
 	spin_unlock_irqrestore(&se_sess->sess_cmd_lock, flags);
 }
@@ -2294,14 +2440,22 @@ void target_wait_for_sess_cmds(struct se_session *se_sess)
 {
 	struct se_cmd *se_cmd, *tmp_cmd;
 	unsigned long flags;
+	bool tas;
 
 	list_for_each_entry_safe(se_cmd, tmp_cmd,
 				&se_sess->sess_wait_list, se_cmd_list) {
-		list_del(&se_cmd->se_cmd_list);
-
 		pr_debug("Waiting for se_cmd: %p t_state: %d, fabric state:"
 			" %d\n", se_cmd, se_cmd->t_state,
 			se_cmd->se_tfo->get_cmd_state(se_cmd));
+
+		spin_lock_irqsave(&se_cmd->t_state_lock, flags);
+		tas = (se_cmd->transport_state & CMD_T_TAS);
+		spin_unlock_irqrestore(&se_cmd->t_state_lock, flags);
+
+		if (!target_put_sess_cmd(se_cmd)) {
+			if (tas)
+				target_put_sess_cmd(se_cmd);
+		}
 
 		wait_for_completion(&se_cmd->cmd_wait_comp);
 		pr_debug("After cmd_wait_comp: se_cmd: %p t_state: %d"
@@ -2486,28 +2640,33 @@ int transport_clear_lun_from_sessions(struct se_lun *lun)
 	return 0;
 }
 
-/**
- * transport_wait_for_tasks - wait for completion to occur
- * @cmd:	command to wait
- *
- * Called from frontend fabric context to wait for storage engine
- * to pause and/or release frontend generated struct se_cmd.
- */
-bool transport_wait_for_tasks(struct se_cmd *cmd)
+static bool
+__transport_wait_for_tasks(struct se_cmd *cmd, bool fabric_stop,
+			   bool *aborted, bool *tas, unsigned long *flags)
+	__releases(&cmd->t_state_lock)
+	__acquires(&cmd->t_state_lock)
 {
-	unsigned long flags;
 
-	spin_lock_irqsave(&cmd->t_state_lock, flags);
+	assert_spin_locked(&cmd->t_state_lock);
+	WARN_ON_ONCE(!irqs_disabled());
+
+	if (fabric_stop)
+		cmd->transport_state |= CMD_T_FABRIC_STOP;
+
+	if (cmd->transport_state & CMD_T_ABORTED)
+		*aborted = true;
+
+	if (cmd->transport_state & CMD_T_TAS)
+		*tas = true;
+
 	if (!(cmd->se_cmd_flags & SCF_SE_LUN_CMD) &&
-	    !(cmd->se_cmd_flags & SCF_SCSI_TMR_CDB)) {
-		spin_unlock_irqrestore(&cmd->t_state_lock, flags);
+	    !(cmd->se_cmd_flags & SCF_SCSI_TMR_CDB))
 		return false;
-	}
 
 	if (!(cmd->se_cmd_flags & SCF_SUPPORTED_SAM_OPCODE) &&
-	    !(cmd->se_cmd_flags & SCF_SCSI_TMR_CDB)) {
-		spin_unlock_irqrestore(&cmd->t_state_lock, flags);
+	    !(cmd->se_cmd_flags & SCF_SCSI_TMR_CDB))
 		return false;
+<<<<<<< HEAD
 	}
 	/*
 	 * If we are already stopped due to an external event (ie: LUN shutdown)
@@ -2546,11 +2705,14 @@ bool transport_wait_for_tasks(struct se_cmd *cmd)
 
 		cmd->transport_state &= ~CMD_T_LUN_STOP;
 	}
+=======
+>>>>>>> 0e91d2a... Nougat
 
-	if (!(cmd->transport_state & CMD_T_ACTIVE)) {
-		spin_unlock_irqrestore(&cmd->t_state_lock, flags);
+	if (!(cmd->transport_state & CMD_T_ACTIVE))
 		return false;
-	}
+
+	if (fabric_stop && *aborted)
+		return false;
 
 	cmd->transport_state |= CMD_T_STOP;
 
@@ -2559,20 +2721,37 @@ bool transport_wait_for_tasks(struct se_cmd *cmd)
 		cmd, cmd->se_tfo->get_task_tag(cmd),
 		cmd->se_tfo->get_cmd_state(cmd), cmd->t_state);
 
-	spin_unlock_irqrestore(&cmd->t_state_lock, flags);
+	spin_unlock_irqrestore(&cmd->t_state_lock, *flags);
 
 	wait_for_completion(&cmd->t_transport_stop_comp);
 
-	spin_lock_irqsave(&cmd->t_state_lock, flags);
+	spin_lock_irqsave(&cmd->t_state_lock, *flags);
 	cmd->transport_state &= ~(CMD_T_ACTIVE | CMD_T_STOP);
 
 	pr_debug("wait_for_tasks: Stopped wait_for_completion("
 		"&cmd->t_transport_stop_comp) for ITT: 0x%08x\n",
 		cmd->se_tfo->get_task_tag(cmd));
 
+	return true;
+}
+
+/**
+ * transport_wait_for_tasks - wait for completion to occur
+ * @cmd:	command to wait
+ *
+ * Called from frontend fabric context to wait for storage engine
+ * to pause and/or release frontend generated struct se_cmd.
+ */
+bool transport_wait_for_tasks(struct se_cmd *cmd)
+{
+	unsigned long flags;
+	bool ret, aborted = false, tas = false;
+
+	spin_lock_irqsave(&cmd->t_state_lock, flags);
+	ret = __transport_wait_for_tasks(cmd, false, &aborted, &tas, &flags);
 	spin_unlock_irqrestore(&cmd->t_state_lock, flags);
 
-	return true;
+	return ret;
 }
 EXPORT_SYMBOL(transport_wait_for_tasks);
 
@@ -2802,21 +2981,58 @@ after_reason:
 }
 EXPORT_SYMBOL(transport_send_check_condition_and_sense);
 
-int transport_check_aborted_status(struct se_cmd *cmd, int send_status)
+static int __transport_check_aborted_status(struct se_cmd *cmd, int send_status)
+	__releases(&cmd->t_state_lock)
+	__acquires(&cmd->t_state_lock)
 {
+	assert_spin_locked(&cmd->t_state_lock);
+	WARN_ON_ONCE(!irqs_disabled());
+
 	if (!(cmd->transport_state & CMD_T_ABORTED))
 		return 0;
 
+<<<<<<< HEAD
 	if (!send_status || (cmd->se_cmd_flags & SCF_SENT_DELAYED_TAS))
+=======
+	/*
+	 * If cmd has been aborted but either no status is to be sent or it has
+	 * already been sent, just return
+	 */
+	if (!send_status || !(cmd->se_cmd_flags & SCF_SEND_DELAYED_TAS)) {
+		if (send_status)
+			cmd->se_cmd_flags |= SCF_SEND_DELAYED_TAS;
+>>>>>>> 0e91d2a... Nougat
 		return 1;
+	}
 
-	pr_debug("Sending delayed SAM_STAT_TASK_ABORTED status for CDB: 0x%02x ITT: 0x%08x\n",
-		 cmd->t_task_cdb[0], cmd->se_tfo->get_task_tag(cmd));
+	pr_debug("Sending delayed SAM_STAT_TASK_ABORTED status for CDB:"
+		" 0x%02x ITT: 0x%08x\n", cmd->t_task_cdb[0],
+		cmd->se_tfo->get_task_tag(cmd));
 
+<<<<<<< HEAD
 	cmd->se_cmd_flags |= SCF_SENT_DELAYED_TAS;
+=======
+	cmd->se_cmd_flags &= ~SCF_SEND_DELAYED_TAS;
+	cmd->scsi_status = SAM_STAT_TASK_ABORTED;
+	trace_target_cmd_complete(cmd);
+
+	spin_unlock_irq(&cmd->t_state_lock);
+>>>>>>> 0e91d2a... Nougat
 	cmd->se_tfo->queue_status(cmd);
+	spin_lock_irq(&cmd->t_state_lock);
 
 	return 1;
+}
+
+int transport_check_aborted_status(struct se_cmd *cmd, int send_status)
+{
+	int ret;
+
+	spin_lock_irq(&cmd->t_state_lock);
+	ret = __transport_check_aborted_status(cmd, send_status);
+	spin_unlock_irq(&cmd->t_state_lock);
+
+	return ret;
 }
 EXPORT_SYMBOL(transport_check_aborted_status);
 
@@ -2839,10 +3055,22 @@ void transport_send_task_abort(struct se_cmd *cmd)
 	 */
 	if (cmd->data_direction == DMA_TO_DEVICE) {
 		if (cmd->se_tfo->write_pending_status(cmd) != 0) {
+<<<<<<< HEAD
 			cmd->transport_state |= CMD_T_ABORTED;
 			smp_mb__after_atomic();
+=======
+			spin_lock_irqsave(&cmd->t_state_lock, flags);
+			if (cmd->se_cmd_flags & SCF_SEND_DELAYED_TAS) {
+				spin_unlock_irqrestore(&cmd->t_state_lock, flags);
+				goto send_abort;
+			}
+			cmd->se_cmd_flags |= SCF_SEND_DELAYED_TAS;
+			spin_unlock_irqrestore(&cmd->t_state_lock, flags);
+			return;
+>>>>>>> 0e91d2a... Nougat
 		}
 	}
+send_abort:
 	cmd->scsi_status = SAM_STAT_TASK_ABORTED;
 
 	transport_lun_remove_cmd(cmd);
@@ -2859,7 +3087,16 @@ static void target_tmr_work(struct work_struct *work)
 	struct se_cmd *cmd = container_of(work, struct se_cmd, work);
 	struct se_device *dev = cmd->se_dev;
 	struct se_tmr_req *tmr = cmd->se_tmr_req;
+	unsigned long flags;
 	int ret;
+
+	spin_lock_irqsave(&cmd->t_state_lock, flags);
+	if (cmd->transport_state & CMD_T_ABORTED) {
+		tmr->response = TMR_FUNCTION_REJECTED;
+		spin_unlock_irqrestore(&cmd->t_state_lock, flags);
+		goto check_stop;
+	}
+	spin_unlock_irqrestore(&cmd->t_state_lock, flags);
 
 	switch (tmr->function) {
 	case TMR_ABORT_TASK:
@@ -2888,9 +3125,17 @@ static void target_tmr_work(struct work_struct *work)
 		break;
 	}
 
+	spin_lock_irqsave(&cmd->t_state_lock, flags);
+	if (cmd->transport_state & CMD_T_ABORTED) {
+		spin_unlock_irqrestore(&cmd->t_state_lock, flags);
+		goto check_stop;
+	}
 	cmd->t_state = TRANSPORT_ISTATE_PROCESSING;
+	spin_unlock_irqrestore(&cmd->t_state_lock, flags);
+
 	cmd->se_tfo->queue_tm_rsp(cmd);
 
+check_stop:
 	transport_cmd_check_stop_to_fabric(cmd);
 }
 

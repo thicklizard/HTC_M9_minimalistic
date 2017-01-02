@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -98,6 +98,7 @@ enum dsi_panel_status_mode {
 	ESD_REG,
 	ESD_REG_NT35596,
 	ESD_TE,
+	ESD_TE_V2,
 	ESD_MAX,
 };
 
@@ -212,6 +213,7 @@ struct dsiphy_pll_divider_config {
 
 extern struct dsiphy_pll_divider_config pll_divider_config;
 
+<<<<<<< HEAD
 struct dsi_clk_mnd_table {
 	u8 lanes;
 	u8 bpp;
@@ -219,6 +221,16 @@ struct dsi_clk_mnd_table {
 	u8 pclk_m;
 	u8 pclk_n;
 	u8 pclk_d;
+=======
+	
+	struct msm_bus_scale_pdata *bus_scale_table;
+	u32 bus_handle;
+	u32 bus_refcount;
+
+	
+	struct mutex pm_qos_lock;
+	u32 pm_qos_req_cnt;
+>>>>>>> 0e91d2a... Nougat
 };
 
 static const struct dsi_clk_mnd_table mnd_table[] = {
@@ -325,6 +337,18 @@ enum BACKLIGHT_TO_BRIGHTNESS_HTC_V1 {
 #define DSI_EV_STOP_HS_CLK_LANE		0x40000000
 #define DSI_EV_MDP_BUSY_RELEASE		0x80000000
 
+<<<<<<< HEAD
+=======
+#define MDSS_DSI_VIDEO_COMPRESSION_MODE_CTRL	0x02a0
+#define MDSS_DSI_VIDEO_COMPRESSION_MODE_CTRL2	0x02a4
+#define MDSS_DSI_COMMAND_COMPRESSION_MODE_CTRL	0x02a8
+#define MDSS_DSI_COMMAND_COMPRESSION_MODE_CTRL2	0x02ac
+#define MDSS_DSI_COMMAND_COMPRESSION_MODE_CTRL3	0x02b0
+#define MSM_DBA_CHIP_NAME_MAX_LEN				20
+
+#define COLOR_TEMP_MODE	32
+
+>>>>>>> 0e91d2a... Nougat
 struct mdss_dsi_ctrl_pdata {
 	int ndx;	
 	int (*on) (struct mdss_panel_data *pdata);
@@ -395,13 +419,17 @@ struct mdss_dsi_ctrl_pdata {
 	u32 dsi_irq_mask;
 	struct mdss_hw *dsi_hw;
 	struct mdss_intf_recovery *recovery;
+	struct mdss_intf_recovery *mdp_callback;
 
 	struct dsi_panel_cmds on_cmds;
 	struct dsi_panel_cmds post_dms_on_cmds;
 	struct dsi_panel_cmds off_cmds;
 	struct dsi_panel_cmds status_cmds;
-	u32 status_cmds_rlen;
+	u32 *status_valid_params;
+	u32 *status_cmds_rlen;
 	u32 *status_value;
+	unsigned char *return_buf;
+	u32 groups; 
 	u32 status_error_count;
 	u32 max_status_error_count;
 
@@ -443,11 +471,41 @@ struct mdss_dsi_ctrl_pdata {
 	bool cmd_cfg_restore;
 	bool do_unicast;
 
+	bool idle_enabled;
 	int horizontal_idle_cnt;
 	struct panel_horizontal_idle *line_idle;
 	struct mdss_util_intf *mdss_util;
+<<<<<<< HEAD
 
 	bool dfps_status;	
+=======
+	struct dsi_shared_data *shared_data;
+
+	void *clk_mngr;
+	void *dsi_clk_handle;
+	void *mdp_clk_handle;
+	int m_dsi_vote_cnt;
+	int m_mdp_vote_cnt;
+	
+	struct mdss_dsi_debugfs_info *debugfs_info;
+
+	struct dsi_err_container err_cont;
+
+	struct kobject *kobj;
+	int fb_node;
+
+	
+	struct workqueue_struct *workq;
+	struct delayed_work dba_work;
+	char bridge_name[MSM_DBA_CHIP_NAME_MAX_LEN];
+	uint32_t bridge_index;
+	bool ds_registered;
+
+	bool timing_db_mode;
+	bool update_phy_timing; 
+
+	bool phy_power_off;
+>>>>>>> 0e91d2a... Nougat
 
 	
 	void *dsi_pwrctrl_data;			
@@ -458,7 +516,15 @@ struct mdss_dsi_ctrl_pdata {
 	struct dsi_panel_cmds sre_on_cmds;
 	struct dsi_panel_cmds sre_off_cmds;
 
+<<<<<<< HEAD
 	u32 sre_ebi_value;
+=======
+struct te_data {
+	bool irq_enabled;
+	int irq;
+	int count;
+	spinlock_t spinlock;
+>>>>>>> 0e91d2a... Nougat
 };
 
 struct dsi_status_data {
@@ -500,8 +566,13 @@ void mdss_dsi_irq_handler_config(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 void mdss_dsi_set_tx_power_mode(int mode, struct mdss_panel_data *pdata);
 int mdss_dsi_clk_div_config(struct mdss_panel_info *panel_info,
 			    int frame_rate);
+<<<<<<< HEAD
 int mdss_dsi_clk_refresh(struct mdss_panel_data *pdata);
 int mdss_dsi_clk_init(struct platform_device *pdev,
+=======
+int mdss_dsi_clk_refresh(struct mdss_panel_data *pdata, bool update_phy);
+int mdss_dsi_link_clk_init(struct platform_device *pdev,
+>>>>>>> 0e91d2a... Nougat
 		      struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 int mdss_dsi_shadow_clk_init(struct platform_device *pdev,
 		      struct mdss_dsi_ctrl_pdata *ctrl_pdata);
@@ -532,8 +603,13 @@ bool __mdss_dsi_clk_enabled(struct mdss_dsi_ctrl_pdata *ctrl, u8 clk_type);
 void mdss_dsi_ctrl_setup(struct mdss_dsi_ctrl_pdata *ctrl);
 void mdss_dsi_dln0_phy_err(struct mdss_dsi_ctrl_pdata *ctrl, bool print_en);
 void mdss_dsi_lp_cd_rx(struct mdss_dsi_ctrl_pdata *ctrl);
+<<<<<<< HEAD
 void mdss_dsi_get_hw_revision(struct mdss_dsi_ctrl_pdata *ctrl);
 u32 mdss_dsi_panel_cmd_read(struct mdss_dsi_ctrl_pdata *ctrl, char cmd0,
+=======
+void mdss_dsi_read_phy_revision(struct mdss_dsi_ctrl_pdata *ctrl);
+int mdss_dsi_panel_cmd_read(struct mdss_dsi_ctrl_pdata *ctrl, char cmd0,
+>>>>>>> 0e91d2a... Nougat
 		char cmd1, void (*fxn)(int), char *rbuf, int len);
 int mdss_dsi_panel_init(struct device_node *node,
 		struct mdss_dsi_ctrl_pdata *ctrl_pdata,
@@ -546,6 +622,19 @@ int mdss_panel_get_dst_fmt(u32 bpp, char mipi_mode, u32 pixel_packing,
 
 int mdss_dsi_register_recovery_handler(struct mdss_dsi_ctrl_pdata *ctrl,
 		struct mdss_intf_recovery *recovery);
+<<<<<<< HEAD
+=======
+void mdss_dsi_unregister_bl_settings(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
+void mdss_dsi_panel_dsc_pps_send(struct mdss_dsi_ctrl_pdata *ctrl,
+				struct mdss_panel_info *pinfo);
+void mdss_dsi_dsc_config(struct mdss_dsi_ctrl_pdata *ctrl,
+	struct dsc_desc *dsc);
+void mdss_dsi_dfps_config_8996(struct mdss_dsi_ctrl_pdata *ctrl);
+void mdss_dsi_set_burst_mode(struct mdss_dsi_ctrl_pdata *ctrl);
+void mdss_dsi_set_reg(struct mdss_dsi_ctrl_pdata *ctrl, int off,
+	u32 mask, u32 val);
+int mdss_dsi_phy_pll_reset_status(struct mdss_dsi_ctrl_pdata *ctrl);
+>>>>>>> 0e91d2a... Nougat
 
 static inline const char *__mdss_dsi_pm_name(enum dsi_pm_type module)
 {
@@ -619,7 +708,7 @@ static inline bool mdss_dsi_is_ctrl_clk_slave(struct mdss_dsi_ctrl_pdata *ctrl)
 
 static inline bool mdss_dsi_is_te_based_esd(struct mdss_dsi_ctrl_pdata *ctrl)
 {
-	return (ctrl->status_mode == ESD_TE) &&
+	return (ctrl->status_mode == ESD_TE || ctrl->status_mode == ESD_TE_V2) &&
 		gpio_is_valid(ctrl->disp_te_gpio) &&
 		mdss_dsi_is_left_ctrl(ctrl);
 }

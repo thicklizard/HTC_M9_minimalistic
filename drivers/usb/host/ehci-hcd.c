@@ -792,7 +792,11 @@ static irqreturn_t ehci_irq (struct usb_hcd *hcd)
 			if (ehci_is_TDI(ehci) && !(cmd & CMD_RUN) &&
 					(pstatus & PORT_SUSPEND))
 				ehci_writel(ehci, cmd | CMD_RUN,
+<<<<<<< HEAD
 						&ehci->regs->command);
+=======
+					&ehci->regs->command);
+>>>>>>> 0e91d2a... Nougat
 
 			if (pstatus & PORT_OWNER)
 				continue;

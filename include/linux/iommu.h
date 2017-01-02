@@ -22,6 +22,7 @@
 #include <linux/types.h>
 #include <linux/errno.h>
 #include <linux/err.h>
+#include <linux/of.h>
 #include <linux/types.h>
 #include <linux/scatterlist.h>
 
@@ -51,6 +52,10 @@ struct iommu_domain_geometry {
 	bool force_aperture;       /* DMA only allowed in mappable range? */
 };
 
+struct iommu_pgtbl_info {
+	void *pmds;
+};
+
 struct iommu_domain {
 	struct iommu_ops *ops;
 	void *priv;
@@ -67,6 +72,21 @@ enum iommu_attr {
 	DOMAIN_ATTR_PAGING,
 	DOMAIN_ATTR_WINDOWS,
 	DOMAIN_ATTR_COHERENT_HTW_DISABLE,
+<<<<<<< HEAD
+=======
+	DOMAIN_ATTR_PT_BASE_ADDR,
+	DOMAIN_ATTR_SECURE_VMID,
+	DOMAIN_ATTR_ATOMIC,
+	DOMAIN_ATTR_CONTEXT_BANK,
+	DOMAIN_ATTR_TTBR0,
+	DOMAIN_ATTR_CONTEXTIDR,
+	DOMAIN_ATTR_PROCID,
+	DOMAIN_ATTR_DYNAMIC,
+	DOMAIN_ATTR_NON_FATAL_FAULTS,
+	DOMAIN_ATTR_S1_BYPASS,
+	DOMAIN_ATTR_FAST,
+	DOMAIN_ATTR_PGTBL_INFO,
+>>>>>>> 0e91d2a... Nougat
 	DOMAIN_ATTR_MAX,
 };
 
@@ -86,7 +106,20 @@ enum iommu_attr {
  * @remove_device: remove device from iommu grouping
  * @domain_get_attr: Query domain attributes
  * @domain_set_attr: Change domain attributes
+ * @of_xlate: add OF master IDs to iommu grouping
  * @pgsize_bitmap: bitmap of supported page sizes
+<<<<<<< HEAD
+=======
+ * @get_pgsize_bitmap: gets a bitmap of supported page sizes for a domain
+ *                     This takes precedence over @pgsize_bitmap.
+ * @trigger_fault: trigger a fault on the device attached to an iommu domain
+ * @reg_read: read an IOMMU register
+ * @reg_write: write an IOMMU register
+ * @tlbi_domain: Invalidate all TLBs covering an iommu domain
+ * @enable_config_clocks: Enable all config clocks for this domain's IOMMU
+ * @disable_config_clocks: Disable all config clocks for this domain's IOMMU
+ * @priv: per-instance data private to the iommu driver
+>>>>>>> 0e91d2a... Nougat
  */
 struct iommu_ops {
 	int (*domain_init)(struct iommu_domain *domain);
@@ -121,8 +154,27 @@ struct iommu_ops {
 	int (*domain_set_windows)(struct iommu_domain *domain, u32 w_count);
 	/* Get the numer of window per domain */
 	u32 (*domain_get_windows)(struct iommu_domain *domain);
+<<<<<<< HEAD
+=======
+	int (*dma_supported)(struct iommu_domain *domain, struct device *dev,
+			     u64 mask);
+	void (*trigger_fault)(struct iommu_domain *domain, unsigned long flags);
+	unsigned long (*reg_read)(struct iommu_domain *domain,
+				  unsigned long offset);
+	void (*reg_write)(struct iommu_domain *domain, unsigned long val,
+			  unsigned long offset);
+	void (*tlbi_domain)(struct iommu_domain *domain);
+	int (*enable_config_clocks)(struct iommu_domain *domain);
+	void (*disable_config_clocks)(struct iommu_domain *domain);
 
+#ifdef CONFIG_OF_IOMMU
+	int (*of_xlate)(struct device *dev, struct of_phandle_args *args);
+#endif
+>>>>>>> 0e91d2a... Nougat
+
+	unsigned long (*get_pgsize_bitmap)(struct iommu_domain *domain);
 	unsigned long pgsize_bitmap;
+	void *priv;
 };
 
 #define IOMMU_GROUP_NOTIFY_ADD_DEVICE		1 /* Device added */
@@ -230,6 +282,43 @@ static inline int report_iommu_fault(struct iommu_domain *domain,
 	return ret;
 }
 
+<<<<<<< HEAD
+=======
+static inline size_t iommu_map_sg(struct iommu_domain *domain,
+				  unsigned long iova, struct scatterlist *sg,
+				  unsigned int nents, int prot)
+{
+	size_t ret;
+
+	trace_map_sg_start(iova, nents);
+	ret = domain->ops->map_sg(domain, iova, sg, nents, prot);
+	trace_map_sg_end(iova, nents);
+	return ret;
+}
+
+extern int iommu_dma_supported(struct iommu_domain *domain, struct device *dev,
+			       u64 mask);
+
+static inline void iommu_tlbiall(struct iommu_domain *domain)
+{
+	if (domain->ops->tlbi_domain)
+		domain->ops->tlbi_domain(domain);
+}
+
+static inline int iommu_enable_config_clocks(struct iommu_domain *domain)
+{
+	if (domain->ops->enable_config_clocks)
+		return domain->ops->enable_config_clocks(domain);
+	return 0;
+}
+
+static inline void iommu_disable_config_clocks(struct iommu_domain *domain)
+{
+	if (domain->ops->disable_config_clocks)
+		domain->ops->disable_config_clocks(domain);
+}
+
+>>>>>>> 0e91d2a... Nougat
 #else /* CONFIG_IOMMU_API */
 
 struct iommu_ops {};
@@ -411,6 +500,49 @@ static inline int iommu_domain_set_attr(struct iommu_domain *domain,
 	return -EINVAL;
 }
 
+<<<<<<< HEAD
+=======
+static inline struct device *iommu_device_create(struct device *parent,
+					void *drvdata,
+					const struct attribute_group **groups,
+					const char *fmt, ...)
+{
+	return ERR_PTR(-ENODEV);
+}
+
+static inline void iommu_device_destroy(struct device *dev)
+{
+}
+
+static inline int iommu_device_link(struct device *dev, struct device *link)
+{
+	return -EINVAL;
+}
+
+static inline void iommu_device_unlink(struct device *dev, struct device *link)
+{
+}
+
+static inline int iommu_dma_supported(struct iommu_domain *domain,
+		struct device *dev, u64 mask)
+{
+	return -EINVAL;
+}
+
+static inline void iommu_tlbiall(struct iommu_domain *domain)
+{
+}
+
+static inline int iommu_enable_config_clocks(struct iommu_domain *domain)
+{
+	return 0;
+}
+
+static inline void iommu_disable_config_clocks(struct iommu_domain *domain)
+{
+}
+
+>>>>>>> 0e91d2a... Nougat
 #endif /* CONFIG_IOMMU_API */
 
 #endif /* __LINUX_IOMMU_H */

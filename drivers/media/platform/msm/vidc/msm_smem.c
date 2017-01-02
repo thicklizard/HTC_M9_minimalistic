@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -41,8 +45,13 @@ static int get_device_address(struct smem_client *smem_client,
 	int domain, partition;
 	struct ion_client *clnt = NULL;
 
+<<<<<<< HEAD
 	if (!iova || !buffer_size || !hndl || !smem_client) {
 		dprintk(VIDC_ERR, "Invalid params: %p, %p, %p, %p\n",
+=======
+	if (!iova || !buffer_size || !hndl || !smem_client || !mapping_info) {
+		dprintk(VIDC_ERR, "Invalid params: %pK, %pK, %pK, %pK\n",
+>>>>>>> 0e91d2a... Nougat
 				smem_client, hndl, iova, buffer_size);
 		return -EINVAL;
 	}
@@ -58,12 +67,44 @@ static int get_device_address(struct smem_client *smem_client,
 				buffer_type, &domain, &partition);
 		if (rc) {
 			dprintk(VIDC_ERR,
+<<<<<<< HEAD
 					"Failed to get domain and partition: %d\n",
 					rc);
 			goto mem_domain_get_failed;
+=======
+				"%s: Failed to get context bank device\n",
+				 __func__);
+			rc = -EIO;
+			goto mem_map_failed;
+		}
+
+		
+		buf = ion_share_dma_buf(clnt, hndl);
+		if (IS_ERR_OR_NULL(buf)) {
+			rc = PTR_ERR(buf) ?: -ENOMEM;
+			dprintk(VIDC_ERR, "Share ION buf to DMA failed\n");
+			goto mem_map_failed;
+		}
+
+		
+		attach = dma_buf_attach(buf, cb->dev);
+		if (IS_ERR_OR_NULL(attach)) {
+			rc = PTR_ERR(attach) ?: -ENOMEM;
+			dprintk(VIDC_ERR, "Failed to attach dmabuf\n");
+			goto mem_buf_attach_failed;
+		}
+
+		
+		table = dma_buf_map_attachment(attach, DMA_BIDIRECTIONAL);
+		if (IS_ERR_OR_NULL(table)) {
+			rc = PTR_ERR(table) ?: -ENOMEM;
+			dprintk(VIDC_ERR, "Failed to map table\n");
+			goto mem_map_table_failed;
+>>>>>>> 0e91d2a... Nougat
 		}
 	}
 
+<<<<<<< HEAD
 	if (is_iommu_present(smem_client->res)) {
 		dprintk(VIDC_DBG,
 				"Calling ion_map_iommu - domain: %d, partition: %d\n",
@@ -73,6 +114,44 @@ static int get_device_address(struct smem_client *smem_client,
 		rc = ion_map_iommu(clnt, hndl, domain, partition, align,
 				0, iova, buffer_size, 0, 0);
 		trace_msm_smem_buffer_iommu_op_end("MAP", domain, partition,
+=======
+		
+		trace_msm_smem_buffer_iommu_op_start("MAP", 0, 0,
+			align, *iova, *buffer_size);
+
+		
+		rc = msm_dma_map_sg_lazy(cb->dev, table->sgl, table->nents,
+				DMA_BIDIRECTIONAL, buf);
+		if (rc != table->nents) {
+			dprintk(VIDC_ERR,
+				"Mapping failed with rc(%d), expected rc(%d)\n",
+				rc, table->nents);
+			rc = -ENOMEM;
+			goto mem_map_sg_failed;
+		}
+		if (table->sgl) {
+			dprintk(VIDC_DBG,
+				"%s: CB : %s, DMA buf: %pK, device: %pK, attach: %pK, table: %pK, table sgl: %pK, rc: %d, dma_address: %pa\n",
+				__func__, cb->name, buf, cb->dev, attach,
+				table, table->sgl, rc,
+				&table->sgl->dma_address);
+
+			*iova = table->sgl->dma_address;
+			*buffer_size = table->sgl->dma_length;
+		} else {
+			dprintk(VIDC_ERR, "sgl is NULL\n");
+			rc = -ENOMEM;
+			goto mem_map_sg_failed;
+		}
+
+		mapping_info->dev = cb->dev;
+		mapping_info->mapping = cb->mapping;
+		mapping_info->table = table;
+		mapping_info->attach = attach;
+		mapping_info->buf = buf;
+
+		trace_msm_smem_buffer_iommu_op_end("MAP", 0, 0,
+>>>>>>> 0e91d2a... Nougat
 			align, *iova, *buffer_size);
 	} else {
 		dprintk(VIDC_DBG, "Using physical memory address\n");
@@ -83,6 +162,10 @@ static int get_device_address(struct smem_client *smem_client,
 		goto mem_domain_get_failed;
 	}
 
+<<<<<<< HEAD
+=======
+	dprintk(VIDC_DBG, "mapped ion handle %pK to %pa\n", hndl, iova);
+>>>>>>> 0e91d2a... Nougat
 	return 0;
 mem_domain_get_failed:
 	return rc;
@@ -93,8 +176,13 @@ static void put_device_address(struct smem_client *smem_client,
 {
 	struct ion_client *clnt = NULL;
 
+<<<<<<< HEAD
 	if (!hndl || !smem_client) {
 		dprintk(VIDC_WARN, "Invalid params: %p, %p\n",
+=======
+	if (!hndl || !smem_client || !mapping_info) {
+		dprintk(VIDC_WARN, "Invalid params: %pK, %pK\n",
+>>>>>>> 0e91d2a... Nougat
 				smem_client, hndl);
 		return;
 	}
@@ -106,6 +194,7 @@ static void put_device_address(struct smem_client *smem_client,
 	}
 	if (is_iommu_present(smem_client->res)) {
 		dprintk(VIDC_DBG,
+<<<<<<< HEAD
 				"Calling ion_unmap_iommu - domain: %d, parition: %d\n",
 				domain_num, partition_num);
 
@@ -114,6 +203,23 @@ static void put_device_address(struct smem_client *smem_client,
 		ion_unmap_iommu(clnt, hndl, domain_num, partition_num);
 		trace_msm_smem_buffer_iommu_op_end("UNMAP", domain_num,
 				partition_num, 0, 0, 0);
+=======
+			"Calling dma_unmap_sg - device: %pK, address: %pa, buf: %pK, table: %pK, attach: %pK\n",
+			mapping_info->dev,
+			&mapping_info->table->sgl->dma_address,
+			mapping_info->buf, mapping_info->table,
+			mapping_info->attach);
+
+		trace_msm_smem_buffer_iommu_op_start("UNMAP", 0, 0, 0, 0, 0);
+		msm_dma_unmap_sg(mapping_info->dev, mapping_info->table->sgl,
+			mapping_info->table->nents, DMA_BIDIRECTIONAL,
+			mapping_info->buf);
+		dma_buf_unmap_attachment(mapping_info->attach,
+			mapping_info->table, DMA_BIDIRECTIONAL);
+		dma_buf_detach(mapping_info->buf, mapping_info->attach);
+		dma_buf_put(mapping_info->buf);
+		trace_msm_smem_buffer_iommu_op_end("UNMAP", 0, 0, 0, 0, 0);
+>>>>>>> 0e91d2a... Nougat
 	}
 }
 
@@ -127,8 +233,12 @@ static int ion_user_to_kernel(struct smem_client *client, int fd, u32 offset,
 	unsigned long align = SZ_4K;
 
 	hndl = ion_import_dma_buf(client->clnt, fd);
+<<<<<<< HEAD
+=======
+	dprintk(VIDC_DBG, "%s ion handle: %pK\n", __func__, hndl);
+>>>>>>> 0e91d2a... Nougat
 	if (IS_ERR_OR_NULL(hndl)) {
-		dprintk(VIDC_ERR, "Failed to get handle: %p, %d, %d, %p\n",
+		dprintk(VIDC_ERR, "Failed to get handle: %pK, %d, %d, %pK\n",
 				client, fd, offset, hndl);
 		rc = -ENOMEM;
 		goto fail_import_fd;
@@ -161,7 +271,11 @@ static int ion_user_to_kernel(struct smem_client *client, int fd, u32 offset,
 		goto fail_device_address;
 	}
 	dprintk(VIDC_DBG,
+<<<<<<< HEAD
 		"%s: ion_handle = 0x%p, fd = %d, device_addr = 0x%pa, size = %zx, kvaddr = 0x%p, buffer_type = %d, flags = 0x%lx\n",
+=======
+		"%s: ion_handle = %pK, fd = %d, device_addr = %pa, size = %zx, kvaddr = %pK, buffer_type = %d, flags = %#lx\n",
+>>>>>>> 0e91d2a... Nougat
 		__func__, mem->smem_priv, fd, &mem->device_addr, mem->size,
 		mem->kvaddr, mem->buffer_type, mem->flags);
         /* HTC_START: ION debug mechanism enhancement
@@ -235,7 +349,11 @@ static int alloc_ion_mem(struct smem_client *client, size_t size, u32 align,
 	hndl = ion_alloc(client->clnt, size, align, heap_mask, flags);
 	if (IS_ERR_OR_NULL(hndl)) {
 		dprintk(VIDC_ERR,
+<<<<<<< HEAD
 		"Failed to allocate shared memory = %p, %zx, %d, 0x%x\n",
+=======
+		"Failed to allocate shared memory = %pK, %zx, %d, %#x\n",
+>>>>>>> 0e91d2a... Nougat
 		client, size, align, flags);
 		rc = -ENOMEM;
 		goto fail_shared_mem_alloc;
@@ -273,7 +391,11 @@ static int alloc_ion_mem(struct smem_client *client, size_t size, u32 align,
 	}
 	mem->size = size;
 	dprintk(VIDC_DBG,
+<<<<<<< HEAD
 		"%s: ion_handle = 0x%p, device_addr = 0x%pa, size = 0x%zx, kvaddr = 0x%p, buffer_type = 0x%x, flags = 0x%lx\n",
+=======
+		"%s: ion_handle = %pK, device_addr = %pa, size = %#zx, kvaddr = %pK, buffer_type = %#x, flags = %#lx\n",
+>>>>>>> 0e91d2a... Nougat
 		__func__, mem->smem_priv, &mem->device_addr,
 		mem->size, mem->kvaddr,
 		mem->buffer_type, mem->flags);
@@ -374,7 +496,11 @@ static void free_ion_mem(struct smem_client *client, struct msm_smem *mem)
         /* HTC_END */
 
 	dprintk(VIDC_DBG,
+<<<<<<< HEAD
 		"%s: ion_handle = 0x%p, device_addr = 0x%pa, size = 0x%zx, kvaddr = 0x%p, buffer_type = 0x%x\n",
+=======
+		"%s: ion_handle = %pK, device_addr = %pa, size = %#zx, kvaddr = %pK, buffer_type = %#x\n",
+>>>>>>> 0e91d2a... Nougat
 		__func__, mem->smem_priv, &mem->device_addr,
 		mem->size, mem->kvaddr, mem->buffer_type);
 	rc = msm_smem_get_domain_partition((void *)client, mem->flags,
@@ -393,6 +519,12 @@ static void free_ion_mem(struct smem_client *client, struct msm_smem *mem)
 		trace_msm_smem_buffer_ion_op_start("FREE",
 				(u32)mem->buffer_type, -1, mem->size, -1,
 				mem->flags, -1);
+<<<<<<< HEAD
+=======
+		dprintk(VIDC_DBG,
+			"%s: Freeing handle %pK, client: %pK\n",
+			__func__, mem->smem_priv, client->clnt);
+>>>>>>> 0e91d2a... Nougat
 		ion_free(client->clnt, mem->smem_priv);
 		trace_msm_smem_buffer_ion_op_end("FREE", (u32)mem->buffer_type,
 			-1, mem->size, -1, mem->flags, -1);
@@ -450,6 +582,28 @@ struct msm_smem *msm_smem_user_to_kernel(void *clt, int fd, u32 offset,
 	return mem;
 }
 
+int8_t msm_smem_compare_buffers(void *clt, int fd, void *priv)
+{
+	struct smem_client *client = clt;
+	struct ion_handle *handle = NULL;
+	int8_t ret = 0;
+
+	if (!clt || !priv) {
+		dprintk(VIDC_ERR, "Invalid params: %pK, %pK\n",
+			clt, priv);
+		return false;
+	}
+	handle = ion_import_dma_buf(client->clnt, fd);
+	if (IS_ERR_OR_NULL(handle)) {
+                dprintk(VIDC_ERR, "Failed to get ion handle: %p for fd: %d clnt: %p\n",
+                                handle, fd, priv);
+                return -EBADF;
+        }
+	ret = handle == priv;
+	handle ? ion_free(client->clnt, handle) : 0;
+	return ret;
+}
+
 static int ion_cache_operations(struct smem_client *client,
 	struct msm_smem *mem, enum smem_cache_ops cache_op)
 {
@@ -457,7 +611,7 @@ static int ion_cache_operations(struct smem_client *client,
 	int rc = 0;
 	int msm_cache_ops = 0;
 	if (!mem || !client) {
-		dprintk(VIDC_ERR, "Invalid params: %p, %p\n",
+		dprintk(VIDC_ERR, "Invalid params: %pK, %pK\n",
 			mem, client);
 		return -EINVAL;
 	}
@@ -505,7 +659,7 @@ int msm_smem_cache_operations(void *clt, struct msm_smem *mem,
 	struct smem_client *client = clt;
 	int rc = 0;
 	if (!client) {
-		dprintk(VIDC_ERR, "Invalid params: %p\n",
+		dprintk(VIDC_ERR, "Invalid params: %pK\n",
 			client);
 		return -EINVAL;
 	}
@@ -669,6 +823,7 @@ int msm_smem_get_domain_partition(void *clt, u32 flags, enum hal_buffer
 		return -ENOENT;
 	}
 
+<<<<<<< HEAD
 	for (i = 0; i < iommu_group_set->count; i++) {
 		iommu_map = &iommu_group_set->iommu_maps[i];
 		if (iommu_map->is_secure == is_secure) {
@@ -679,6 +834,23 @@ int msm_smem_get_domain_partition(void *clt, u32 flags, enum hal_buffer
 					break;
 				}
 			}
+=======
+	if (is_secure && client->session_type == MSM_VIDC_ENCODER) {
+		if (buffer_type == HAL_BUFFER_INPUT)
+			buffer_type = HAL_BUFFER_OUTPUT;
+		else if (buffer_type == HAL_BUFFER_OUTPUT)
+			buffer_type = HAL_BUFFER_INPUT;
+	}
+
+	list_for_each_entry(cb, &client->res->context_banks, list) {
+		if (cb->is_secure == is_secure &&
+				cb->buffer_type & buffer_type) {
+			match = cb;
+			dprintk(VIDC_DBG,
+				"context bank found for CB : %s, device: %pK mapping: %pK\n",
+				match->name, match->dev, match->mapping);
+			break;
+>>>>>>> 0e91d2a... Nougat
 		}
 	}
 	dprintk(VIDC_DBG, "domain: %d, partition: %d found!\n",

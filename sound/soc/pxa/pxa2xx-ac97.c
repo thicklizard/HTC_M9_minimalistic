@@ -47,6 +47,7 @@ struct snd_ac97_bus_ops soc_ac97_ops = {
 	.warm_reset	= pxa2xx_ac97_warm_reset,
 	.reset	= pxa2xx_ac97_cold_reset,
 };
+<<<<<<< HEAD
 EXPORT_SYMBOL_GPL(soc_ac97_ops);
 
 static struct pxa2xx_pcm_dma_params pxa2xx_ac97_pcm_stereo_out = {
@@ -63,6 +64,23 @@ static struct pxa2xx_pcm_dma_params pxa2xx_ac97_pcm_stereo_in = {
 	.drcmr			= &DRCMR(11),
 	.dcmd			= DCMD_INCTRGADDR | DCMD_FLOWSRC |
 				  DCMD_BURST32 | DCMD_WIDTH4,
+=======
+
+static unsigned long pxa2xx_ac97_pcm_stereo_in_req = 11;
+static struct snd_dmaengine_dai_dma_data pxa2xx_ac97_pcm_stereo_in = {
+	.addr		= __PREG(PCDR),
+	.addr_width	= DMA_SLAVE_BUSWIDTH_4_BYTES,
+	.maxburst	= 32,
+	.filter_data	= &pxa2xx_ac97_pcm_stereo_in_req,
+};
+
+static unsigned long pxa2xx_ac97_pcm_stereo_out_req = 12;
+static struct snd_dmaengine_dai_dma_data pxa2xx_ac97_pcm_stereo_out = {
+	.addr		= __PREG(PCDR),
+	.addr_width	= DMA_SLAVE_BUSWIDTH_4_BYTES,
+	.maxburst	= 32,
+	.filter_data	= &pxa2xx_ac97_pcm_stereo_out_req,
+>>>>>>> 0e91d2a... Nougat
 };
 
 static struct pxa2xx_pcm_dma_params pxa2xx_ac97_pcm_aux_mono_out = {

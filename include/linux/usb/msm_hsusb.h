@@ -2,7 +2,7 @@
  *
  * Copyright (C) 2008 Google, Inc.
  * Author: Brian Swetland <swetland@google.com>
- * Copyright (c) 2009-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2009-2016, The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -54,6 +54,19 @@ enum usb_bus_vote {
 	USB_NO_PERF_VOTE = 0,
 	USB_MAX_PERF_VOTE,
 	USB_MIN_PERF_VOTE,
+};
+
+/**
+ * Requested USB votes for NOC frequency
+ *
+ * USB_NOC_NOM_VOTE    Vote for NOM set of NOC frequencies
+ * USB_NOC_SVS_VOTE    Vote for SVS set of NOC frequencies
+ *
+ */
+enum usb_noc_mode {
+	USB_NOC_NOM_VOTE = 0,
+	USB_NOC_SVS_VOTE,
+	USB_NOC_NUM_VOTE,
 };
 
 /**
@@ -302,6 +315,12 @@ struct msm_otg_platform_data {
 	int usb_id_gpio;
 	bool phy_dvdd_always_on;
 	bool emulation;
+<<<<<<< HEAD
+=======
+	bool enable_streaming;
+	bool enable_axi_prefetch;
+	bool enable_sdp_typec_current_limit;
+>>>>>>> 0e91d2a... Nougat
 };
 
 /* phy related flags */
@@ -372,6 +391,7 @@ struct msm_otg_platform_data {
  * @phy_csr_clk: clock struct of phy_csr_clk for USB PHY. This clock is
 		required to acess PHY CSR registers via AHB2PHY interface.
  * @bus_clks: bimc/snoc/pcnoc clock struct.
+ * @default_noc_mode: default frequency for NOC clocks - SVS or NOM
  * @core_clk_rate: core clk max frequency
  * @regs: ioremapped register base address.
  * @usb_phy_ctrl_reg: relevant PHY_CTRL_REG register base address.
@@ -431,6 +451,9 @@ struct msm_otg {
 	struct clk *bus_clks[USB_NUM_BUS_CLOCKS];
 	struct clk *phy_ref_clk;
 	long core_clk_rate;
+	long core_clk_svs_rate;
+	long core_clk_nominal_rate;
+	enum usb_noc_mode default_noc_mode;
 	struct resource *io_res;
 	void __iomem *regs;
 	void __iomem *phy_csr_regs;
@@ -556,7 +579,25 @@ struct msm_otg {
 	struct qpnp_vadc_chip	*vadc_dev;
 	int ext_id_irq;
 	bool phy_irq_pending;
+<<<<<<< HEAD
 	wait_queue_head_t	host_suspend_wait;
+=======
+	enum usb_id_state id_state;
+	bool rm_pulldown;
+/* Maximum debug message length */
+#define DEBUG_MSG_LEN   128UL
+/* Maximum number of messages */
+#define DEBUG_MAX_MSG   256UL
+	unsigned int dbg_idx;
+	rwlock_t dbg_lock;
+
+	char (buf[DEBUG_MAX_MSG])[DEBUG_MSG_LEN];   /* buffer */
+	unsigned int vbus_state;
+	unsigned int usb_irq_count;
+	int pm_qos_latency;
+	struct pm_qos_request pm_qos_req_dma;
+	struct delayed_work perf_vote_work;
+>>>>>>> 0e91d2a... Nougat
 };
 
 struct ci13xxx_platform_data {
@@ -569,6 +610,11 @@ struct ci13xxx_platform_data {
 	void *prv_data;
 	bool l1_supported;
 	bool enable_ahb2ahb_bypass;
+<<<<<<< HEAD
+=======
+	bool enable_streaming;
+	bool enable_axi_prefetch;
+>>>>>>> 0e91d2a... Nougat
 };
 
 /**
@@ -601,6 +647,8 @@ struct msm_hsic_host_platform_data {
 
 	/* gpio used to resume peripheral */
 	unsigned resume_gpio;
+	int *tlmm_init_seq;
+	int tlmm_seq_count;
 
 	/*swfi latency is required while driving resume on to the bus */
 	u32 swfi_latency;
@@ -669,7 +717,12 @@ bool msm_bam_hsic_lpm_ok(void);
 void msm_bam_usb_host_notify_on_resume(void);
 void msm_bam_hsic_host_notify_on_resume(void);
 bool msm_bam_hsic_host_pipe_empty(void);
+<<<<<<< HEAD
 void msm_bam_set_qdss_usb_active(bool is_active);
+=======
+bool msm_usb_bam_enable(enum usb_ctrl ctrl, bool bam_enable);
+int msm_do_bam_disable_enable(enum usb_ctrl ctrl);
+>>>>>>> 0e91d2a... Nougat
 #else
 static inline bool msm_bam_usb_lpm_ok(enum usb_ctrl ctrl) { return true; }
 static inline void msm_bam_notify_lpm_resume(enum usb_ctrl ctrl) {}
@@ -682,7 +735,15 @@ static inline bool msm_bam_hsic_lpm_ok(void) { return true; }
 static inline void msm_bam_hsic_host_notify_on_resume(void) {}
 static inline void msm_bam_usb_host_notify_on_resume(void) {}
 static inline bool msm_bam_hsic_host_pipe_empty(void) { return true; }
+<<<<<<< HEAD
 static inline void msm_bam_set_qdss_usb_active(bool is_active) {}
+=======
+static inline bool msm_usb_bam_enable(enum usb_ctrl ctrl, bool bam_enable)
+{
+	return true;
+}
+int msm_do_bam_disable_enable(enum usb_ctrl ctrl) { return true; }
+>>>>>>> 0e91d2a... Nougat
 #endif
 #ifdef CONFIG_USB_CI13XXX_MSM
 void msm_hw_bam_disable(bool bam_disable);
@@ -693,7 +754,7 @@ static inline void msm_hw_bam_disable(bool bam_disable)
 #endif
 
 #ifdef CONFIG_USB_DWC3_MSM
-int msm_ep_config(struct usb_ep *ep);
+int msm_ep_config(struct usb_ep *ep, struct usb_request *request);
 int msm_ep_unconfig(struct usb_ep *ep);
 void dwc3_tx_fifo_resize_request(struct usb_ep *ep, bool qdss_enable);
 int msm_data_fifo_config(struct usb_ep *ep, phys_addr_t addr, u32 size,
@@ -701,9 +762,12 @@ int msm_data_fifo_config(struct usb_ep *ep, phys_addr_t addr, u32 size,
 bool msm_dwc3_reset_ep_after_lpm(struct usb_gadget *gadget);
 int msm_dwc3_reset_dbm_ep(struct usb_ep *ep);
 
+<<<<<<< HEAD
 void msm_dwc3_restart_usb_session(struct usb_gadget *gadget);
 
 int msm_register_usb_ext_notification(struct usb_ext_notification *info);
+=======
+>>>>>>> 0e91d2a... Nougat
 #else
 static inline int msm_data_fifo_config(struct usb_ep *ep, phys_addr_t addr,
 	u32 size, u8 dst_pipe_idx)
@@ -711,7 +775,7 @@ static inline int msm_data_fifo_config(struct usb_ep *ep, phys_addr_t addr,
 	return -ENODEV;
 }
 
-static inline int msm_ep_config(struct usb_ep *ep)
+static inline int msm_ep_config(struct usb_ep *ep, struct usb_request *request)
 {
 	return -ENODEV;
 }
@@ -727,6 +791,7 @@ static inline void dwc3_tx_fifo_resize_request(
 	return;
 }
 
+<<<<<<< HEAD
 static inline void msm_dwc3_restart_usb_session(struct usb_gadget *gadget)
 {
 	return;
@@ -738,6 +803,8 @@ static inline int msm_register_usb_ext_notification(
 	return -ENODEV;
 }
 
+=======
+>>>>>>> 0e91d2a... Nougat
 static inline bool msm_dwc3_reset_ep_after_lpm(struct usb_gadget *gadget)
 {
 	return false;

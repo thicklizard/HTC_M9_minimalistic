@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -53,28 +57,65 @@
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
+<<<<<<< HEAD
+=======
+
+		cpu-map {
+			cluster0 {
+				core0 {
+					cpu = <&CPU0>;
+				};
+				core1 {
+					cpu = <&CPU1>;
+				};
+				core2 {
+					cpu = <&CPU2>;
+				};
+				core3 {
+					cpu = <&CPU3>;
+				};
+			};
+		};
+
+>>>>>>> 0e91d2a... Nougat
 		CPU0: cpu@0 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a7";
 			reg = <0x0>;
+<<<<<<< HEAD
+=======
+			qcom,sleep-status = <&cpu0_slp_sts>;
+			qcom,limits-info = <&mitigation_profile0>;
+>>>>>>> 0e91d2a... Nougat
 		};
 
 		CPU1: cpu@1 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a7";
 			reg = <0x1>;
+<<<<<<< HEAD
+=======
+			qcom,sleep-status = <&cpu1_slp_sts>;
+			qcom,limits-info = <&mitigation_profile2>;
+>>>>>>> 0e91d2a... Nougat
 		};
 
 		CPU2: cpu@2 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a7";
 			reg = <0x2>;
+<<<<<<< HEAD
+=======
+			qcom,sleep-status = <&cpu2_slp_sts>;
+			qcom,limits-info = <&mitigation_profile1>;
+>>>>>>> 0e91d2a... Nougat
 		};
 
 		CPU3: cpu@3 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a7";
 			reg = <0x3>;
+<<<<<<< HEAD
 		};
 	};
 
@@ -124,6 +165,53 @@
 			linux,reserve-region;
 			reg = <0x0 0x83000000 0x0 0xc00000>;
 			label = "cont_splash_mem";
+=======
+			qcom,sleep-status = <&cpu3_slp_sts>;
+			qcom,limits-info = <&mitigation_profile2>;
+		};
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		external_image_mem: external_image__region@0 {
+			reg = <0x0 0x87a00000 0x0 0x0600000>;
+			compatible = "removed-dma-pool";
+			no-map;
+		};
+
+		modem_adsp_mem: modem_adsp_region@0 {
+			reg = <0x0 0x88000000 0x0 0x05500000>;
+			compatible = "removed-dma-pool";
+			no-map;
+		};
+
+		peripheral_mem: pheripheral_region@0 {
+			reg = <0x0 0x8d500000 0x0 0x0500000>;
+			compatible = "removed-dma-pool";
+			no-map;
+		};
+
+		venus_qseecom_mem: venus_qseecom_region@0 {
+			compatible = "shared-dma-pool";
+			reusable;
+			alloc-ranges = <0x0 0x80000000 0x0 0x10000000>;
+			alignment = <0 0x400000>;
+			size = <0 0x0600000>;
+		};
+
+		audio_mem: audio_region@0 {
+			compatible = "shared-dma-pool";
+			reusable;
+			alignment = <0 0x400000>;
+			size = <0 0x400000>;
+		};
+
+		cont_splash_mem: splash_region@83000000 {
+			reg = <0x0 0x83000000 0x0 0xc00000>;
+>>>>>>> 0e91d2a... Nougat
 		};
 	};
 
@@ -132,7 +220,10 @@
 
 #include "msm8909-ion.dtsi"
 #include "msm8909-smp2p.dtsi"
+<<<<<<< HEAD
 #include "msm8909-camera.dtsi"
+=======
+>>>>>>> 0e91d2a... Nougat
 #include "msm8909-ipcrouter.dtsi"
 #include "msm-gdsc-8916.dtsi"
 #include "msm8909-iommu.dtsi"
@@ -159,7 +250,13 @@
 
 	restart@4ab000 {
 		compatible = "qcom,pshold";
+<<<<<<< HEAD
 		reg = <0x4ab000 0x4>;
+=======
+		reg =	<0x4ab000 0x4>,
+			<0x193d100 0x4>;
+		reg-names = "pshold-base", "tcsr-boot-misc-detect";
+>>>>>>> 0e91d2a... Nougat
 	};
 
 	timer {
@@ -248,8 +345,13 @@
 
 	clock_gcc_mdss: qcom,gcc-mdss@1ac8300 {
 		compatible = "qcom,gcc-mdss-8909";
+<<<<<<< HEAD
 		clocks = <&mdss_dsi0_pll clk_pixel_clk_src>,
 			 <&mdss_dsi0_pll clk_byte_clk_src>;
+=======
+		clocks = <&mdss_dsi0_pll clk_dsi_pll0_pixel_clk_src>,
+			 <&mdss_dsi0_pll clk_dsi_pll0_byte_clk_src>;
+>>>>>>> 0e91d2a... Nougat
 		clock-names = "pixel_src", "byte_src";
 		#clock-cells = <1>;
 	};
@@ -271,7 +373,11 @@
 		reg-names = "rcg-base", "efuse";
 		qcom,safe-freq = < 400000000 >;
 		cpu-vdd-supply = <&pm8909_s1_corner_ao>;
+<<<<<<< HEAD
 		qcom,enable-opp;
+=======
+		qcom,a7ssmux-opp-store-vcorner = <&CPU0>;
+>>>>>>> 0e91d2a... Nougat
 		clocks = <&clock_gcc clk_gpll0_ao_clk_src>,
 			 <&clock_gcc clk_a7sspll>;
 		clock-names = "clk-4", "clk-5";
@@ -279,7 +385,11 @@
 			<          0 0>,
 			<  400000000 4>,
 			<  800000000 5>,
+<<<<<<< HEAD
 			< 1305600000 7>;
+=======
+			< 1267200000 7>;
+>>>>>>> 0e91d2a... Nougat
 		qcom,speed2-bin-v0 =
 			<          0 0>,
 			<  400000000 4>,
@@ -312,7 +422,11 @@
 	};
 
 	qcom,cpu-bwmon {
+<<<<<<< HEAD
 		compatible = "qcom,bimc-bwmon";
+=======
+		compatible = "qcom,bimc-bwmon2";
+>>>>>>> 0e91d2a... Nougat
 		reg = <0x408000 0x300>, <0x401000 0x200>;
 		reg-names = "base", "global_base";
 		interrupts = <0 183 4>;
@@ -338,7 +452,11 @@
 			 < 1094400 >,
 			 < 1190400 >,
 			 < 1248000 >,
+<<<<<<< HEAD
 			 < 1305600 >;
+=======
+			 < 1267200 >;
+>>>>>>> 0e91d2a... Nougat
 	};
 
 
@@ -382,22 +500,35 @@
 
 	qcom,sensor-information {
 		compatible = "qcom,sensor-information";
+<<<<<<< HEAD
 		sensor_information0: qcom,sensor-information@0 {
+=======
+		sensor_information0: qcom,sensor-information-0 {
+>>>>>>> 0e91d2a... Nougat
 			qcom,sensor-type = "tsens";
 			qcom,sensor-name = "tsens_tz_sensor0";
 			qcom,alias-name = "pop_mem";
 		};
 
+<<<<<<< HEAD
 		sensor_information1: qcom,sensor-information@1 {
+=======
+		sensor_information1: qcom,sensor-information-1 {
+>>>>>>> 0e91d2a... Nougat
 			qcom,sensor-type =  "tsens";
 			qcom,sensor-name = "tsens_tz_sensor1";
 		};
 
+<<<<<<< HEAD
 		sensor_information2: qcom,sensor-information@2 {
+=======
+		sensor_information2: qcom,sensor-information-2 {
+>>>>>>> 0e91d2a... Nougat
 			qcom,sensor-type =  "tsens";
 			qcom,sensor-name = "tsens_tz_sensor2";
 		};
 
+<<<<<<< HEAD
 		sensor_information3: qcom,sensor-information@3 {
 			qcom,sensor-type =  "tsens";
 			qcom,sensor-name = "tsens_tz_sensor3";
@@ -414,6 +545,61 @@
 			qcom,sensor-type = "adc";
 			qcom,sensor-name = "pa_therm0";
 		};
+=======
+		sensor_information3: qcom,sensor-information-3 {
+			qcom,sensor-type =  "tsens";
+			qcom,sensor-name = "tsens_tz_sensor3";
+		};
+
+		sensor_information4: qcom,sensor-information-4 {
+			qcom,sensor-type = "tsens";
+			qcom,sensor-name = "tsens_tz_sensor4";
+		};
+
+		sensor_information5: qcom,sensor-information-5 {
+			qcom,sensor-type = "adc";
+			qcom,sensor-name = "pa_therm0";
+		};
+
+		sensor_information6: qcom,sensor-information-6 {
+			qcom,sensor-type = "adc";
+			qcom,sensor-name = "case_therm";
+		};
+
+		sensor_information7: qcom,sensor-information-7 {
+			qcom,sensor-type = "alarm";
+			qcom,sensor-name = "pm8909_tz";
+			qcom,scaling-factor = <1000>;
+		};
+
+		sensor_information8: qcom,sensor-information-8 {
+			qcom,sensor-type = "adc";
+			qcom,sensor-name = "xo_therm";
+		};
+
+		sensor_information9: qcom,sensor-information-9 {
+			qcom,sensor-type = "adc";
+			qcom,sensor-name = "xo_therm_buf";
+		};
+	};
+
+	mitigation_profile0: qcom,limit_info-0 {
+		qcom,temperature-sensor = <&sensor_information3>;
+		qcom,boot-frequency-mitigate;
+		qcom,emergency-frequency-mitigate;
+	};
+
+	mitigation_profile1: qcom,limit_info-1 {
+		qcom,temperature-sensor = <&sensor_information3>;
+		qcom,boot-frequency-mitigate;
+		qcom,hotplug-mitigation-enable;
+	};
+
+	mitigation_profile2: qcom,limit_info-2 {
+		qcom,temperature-sensor = <&sensor_information4>;
+		qcom,boot-frequency-mitigate;
+		qcom,hotplug-mitigation-enable;
+>>>>>>> 0e91d2a... Nougat
 	};
 
 	qcom,msm-thermal {
@@ -423,6 +609,7 @@
 		qcom,limit-temp = <60>;
 		qcom,temp-hysteresis = <10>;
 		qcom,freq-step = <2>;
+<<<<<<< HEAD
 		qcom,freq-control-mask = <0xf>;
 		qcom,core-limit-temp = <80>;
 		qcom,core-temp-hysteresis = <10>;
@@ -437,6 +624,22 @@
 		qcom,freq-mitigation-control-mask = <0x01>;
 		qcom,online-hotplug-core;
 		qcom,therm-reset-temp = <115>;
+=======
+		qcom,core-limit-temp = <80>;
+		qcom,core-temp-hysteresis = <10>;
+		qcom,hotplug-temp = <97>;
+		qcom,hotplug-temp-hysteresis = <12>;
+		qcom,freq-mitigation-temp = <97>;
+		qcom,freq-mitigation-temp-hysteresis = <12>;
+		qcom,freq-mitigation-value = <400000>;
+		qcom,online-hotplug-core;
+		qcom,therm-reset-temp = <115>;
+		qcom,disable-cx-phase-ctrl;
+		qcom,disable-gfx-phase-ctrl;
+		qcom,disable-vdd-mx;
+		qcom,disable-psm;
+		qcom,disable-ocr;
+>>>>>>> 0e91d2a... Nougat
 		qcom,vdd-restriction-temp = <5>;
 		qcom,vdd-restriction-temp-hysteresis = <10>;
 		vdd-dig-supply = <&pm8909_s1_floor_corner>;
@@ -448,6 +651,7 @@
 		};
 	};
 
+<<<<<<< HEAD
 	qcom,supply-lm@1946000 {
 		compatible = "qcom,supply-lm";
 		interrupts = <0 133 4>;
@@ -458,12 +662,15 @@
 		gpu-dev-opp = <&msm_gpu>;
 	};
 
+=======
+>>>>>>> 0e91d2a... Nougat
 	qcom,ipc-spinlock@1905000 {
 		compatible = "qcom,ipc-spinlock-sfpb";
 		reg = <0x1905000 0x8000>;
 		qcom,num-locks = <8>;
 	};
 
+<<<<<<< HEAD
 	msm_vidc: qcom,vidc@1d00000 {
 		compatible = "qcom,msm-vidc";
 		reg = <0x01d00000 0xff000>;
@@ -548,6 +755,8 @@
 			};
 		};
 	};
+=======
+>>>>>>> 0e91d2a... Nougat
 
 	qcom,smem@87d00000 {
 		compatible = "qcom,smem";
@@ -617,6 +826,10 @@
 		interrupts = <0 29 1>;
 		qcom,rx-ring-size = <32>;
 		qcom,max-rx-mtu = <4096>;
+<<<<<<< HEAD
+=======
+		qcom,fast-shutdown;
+>>>>>>> 0e91d2a... Nougat
 	};
 
 	qcom,smdtty {
@@ -712,7 +925,11 @@
 		compatible = "qcom,iris_fm";
 	};
 
+<<<<<<< HEAD
 	qcom,wcnss-wlan@a000000 {
+=======
+	wcnss: qcom,wcnss-wlan@a000000 {
+>>>>>>> 0e91d2a... Nougat
 		compatible = "qcom,wcnss_wlan";
 		reg = <0x0a000000 0x280000>,
 			<0xb011008 0x04>,
@@ -748,6 +965,27 @@
 		qcom,iris-vddpa-supply   = <&pm8909_l9>;
 		qcom,iris-vdddig-supply  = <&pm8909_l5>;
 
+<<<<<<< HEAD
+=======
+		qcom,iris-vddxo-voltage-level = <1800000 0 1800000>;
+		qcom,iris-vddrfa-voltage-level = <1300000 0 1300000>;
+		qcom,iris-vddpa-voltage-level = <3300000 0 3300000>;
+		qcom,iris-vdddig-voltage-level = <1800000 0 1800000>;
+
+		qcom,vddmx-voltage-level = <5 1 7>;
+		qcom,vddcx-voltage-level = <5 1 7>;
+		qcom,vddpx-voltage-level = <1800000 0 1800000>;
+
+		qcom,iris-vddxo-current = <10000>;
+		qcom,iris-vddrfa-current = <100000>;
+		qcom,iris-vddpa-current = <515000>;
+		qcom,iris-vdddig-current = <10000>;
+
+		qcom,pronto-vddmx-current = <0>;
+		qcom,pronto-vddcx-current = <0>;
+		qcom,pronto-vddpx-current = <0>;
+
+>>>>>>> 0e91d2a... Nougat
 		pinctrl-names = "wcnss_default", "wcnss_sleep",
 						"wcnss_gpio_default";
 		pinctrl-0 = <&wcnss_default>;
@@ -766,6 +1004,10 @@
 		qcom,wlan-rx-buff-count = <512>;
 		qcom,has-autodetect-xo;
 		qcom,is-pronto-v3;
+<<<<<<< HEAD
+=======
+		qcom,is-pronto-vadc;
+>>>>>>> 0e91d2a... Nougat
 		qcom,has-pronto-hw;
 		qcom,wcnss-adc_tm = <&pm8909_adc_tm>;
 	};
@@ -788,7 +1030,10 @@
 		qcom,hsusb-otg-mode = <1>; /* DEVICE only */
 		qcom,hsusb-otg-otg-control = <2>; /* PMIC */
 		qcom,dp-manual-pullup;
+<<<<<<< HEAD
 		qcom,hsusb-otg-disable-reset;
+=======
+>>>>>>> 0e91d2a... Nougat
 		qcom,phy-dvdd-always-on;
 		qcom,hsusb-otg-mpm-dpsehv-int = <49>;
 		qcom,hsusb-otg-mpm-dmsehv-int = <58>;
@@ -815,13 +1060,21 @@
 				"phy_reset_clk", "phy_por_clk", "phy_csr_clk",
 				"xo";
 		qcom,bus-clk-rate = <400000000 200000000 100000000>;
+<<<<<<< HEAD
+=======
+		qcom,max-nominal-sysclk-rate = <100000000>;
+		qcom,boost-sysclk-with-streaming;
+>>>>>>> 0e91d2a... Nougat
 	};
 
 	android_usb: android_usb@086000c8 {
 		compatible = "qcom,android-usb";
 		reg = <0x086000c8 0xc8>;
 		qcom,pm-qos-latency = <2 1001 12701>;
+<<<<<<< HEAD
 		qcom,streaming-func = "mtp";
+=======
+>>>>>>> 0e91d2a... Nougat
 	};
 
 	qcom,usbbam@78c4000 {
@@ -830,10 +1083,15 @@
 		reg-names = "hsusb";
 		interrupts = <0 135 0>;
 		interrupt-names = "hsusb";
+<<<<<<< HEAD
+=======
+		qcom,bam-type = <1>;
+>>>>>>> 0e91d2a... Nougat
 		qcom,usb-bam-num-pipes = <2>;
 		qcom,usb-bam-fifo-baseaddr = <0x08603800>;
 		qcom,ignore-core-reset-ack;
 		qcom,disable-clk-gating;
+<<<<<<< HEAD
 
 		qcom,pipe0 {
 			label = "hsusb-qdss-in-0";
@@ -845,12 +1103,27 @@
 			qcom,src-bam-physical-address = <0x884000>;
 			qcom,src-bam-pipe-index = <0>;
 			qcom,dst-bam-physical-address = <0x78c4000>;
+=======
+		qcom,reset-bam-on-disconnect;
+
+		qcom,pipe0 {
+			label = "hsusb-qdss-in-0";
+			qcom,usb-bam-mem-type = <2>;
+			qcom,dir = <1>;
+			qcom,pipe-num = <0>;
+			qcom,peer-bam = <0>;
+			qcom,peer-bam-physical-address = <0x884000>;
+			qcom,src-bam-pipe-index = <0>;
+>>>>>>> 0e91d2a... Nougat
 			qcom,dst-bam-pipe-index = <0>;
 			qcom,data-fifo-offset = <0x0>;
 			qcom,data-fifo-size = <0x600>;
 			qcom,descriptor-fifo-offset = <0x600>;
 			qcom,descriptor-fifo-size = <0x200>;
+<<<<<<< HEAD
 			qcom,reset-bam-on-connect;
+=======
+>>>>>>> 0e91d2a... Nougat
 		};
 	};
 
@@ -967,7 +1240,13 @@
 
 		qcom,bus-width = <8>;
 
+<<<<<<< HEAD
 		qcom,cpu-dma-latency-us = <2 241 501>;
+=======
+		qcom,pm-qos-irq-type = "affine_irq";
+		qcom,pm-qos-irq-latency = <2 250>;
+
+>>>>>>> 0e91d2a... Nougat
 		qcom,msm-bus,name = "sdhc1";
 		qcom,msm-bus,num-cases = <8>;
 		qcom,msm-bus,num-paths = <1>;
@@ -987,6 +1266,10 @@
 			 <&clock_gcc clk_gcc_sdcc1_apps_clk>;
 		clock-names = "iface_clk", "core_clk";
 		qcom,clk-rates = <400000 25000000 50000000 100000000 177770000>;
+<<<<<<< HEAD
+=======
+		qcom,devfreq,freq-table = <50000000 177770000>;
+>>>>>>> 0e91d2a... Nougat
 
 		status = "disabled";
 	};
@@ -1001,7 +1284,13 @@
 
 		qcom,bus-width = <4>;
 
+<<<<<<< HEAD
 		qcom,cpu-dma-latency-us = <2 241 501>;
+=======
+		qcom,pm-qos-irq-type = "affine_irq";
+		qcom,pm-qos-irq-latency = <2 250>;
+
+>>>>>>> 0e91d2a... Nougat
 		qcom,msm-bus,name = "sdhc2";
 		qcom,msm-bus,num-cases = <8>;
 		qcom,msm-bus,num-paths = <1>;
@@ -1021,6 +1310,10 @@
 		clock-names = "iface_clk", "core_clk";
 
 		qcom,clk-rates = <400000 25000000 50000000 100000000 200000000>;
+<<<<<<< HEAD
+=======
+		qcom,devfreq,freq-table = <50000000 200000000>;
+>>>>>>> 0e91d2a... Nougat
 
 		status = "disabled";
 	};
@@ -1075,6 +1368,7 @@
 	};
 
 	spi_0: spi@78ba000 { /* BLSP1 QUP6 */
+<<<<<<< HEAD
                 compatible = "qcom,spi-qup-v2";
                 #address-cells = <1>;
                 #size-cells = <0>;
@@ -1097,17 +1391,56 @@
                 qcom,bam-consumer-pipe-index = <14>;
                 qcom,bam-producer-pipe-index = <15>;
                 qcom,master-id = <86>;
+=======
+		compatible = "qcom,spi-qup-v2";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg-names = "spi_physical", "spi_bam_physical";
+		reg = <0x78ba000 0x600>,
+		      <0x7884000 0x23000>;
+		interrupt-names = "spi_irq", "spi_bam_irq";
+		interrupts = <0 100 0>, <0 238 0>;
+		spi-max-frequency = <19200000>;
+		pinctrl-names = "spi_default", "spi_sleep";
+		pinctrl-0 = <&spi0_default &spi0_cs0_active>;
+		pinctrl-1 = <&spi0_sleep &spi0_cs0_sleep>;
+		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
+		<&clock_gcc clk_gcc_blsp1_qup6_spi_apps_clk>;
+		clock-names = "iface_clk", "core_clk";
+		qcom,infinite-mode = <0>;
+		qcom,use-bam;
+		qcom,use-pinctrl;
+		qcom,ver-reg-exists;
+		qcom,bam-consumer-pipe-index = <14>;
+		qcom,bam-producer-pipe-index = <15>;
+		qcom,master-id = <86>;
+};
+
+	dma_blsp1: qcom,sps-dma@7884000 { /* BLSP1 */
+		#dma-cells = <4>;
+		compatible = "qcom,sps-dma";
+		reg = <0x7884000 0x23000>;
+		interrupts = <0 238 0>;
+		qcom,summing-threshold = <10>;
+>>>>>>> 0e91d2a... Nougat
 	};
 
 	i2c_2: i2c@78b6000 { /* BLSP1 QUP2 */
 		compatible = "qcom,i2c-msm-v2";
 		#address-cells = <1>;
 		#size-cells = <0>;
+<<<<<<< HEAD
 		reg-names = "qup_phys_addr", "bam_phys_addr";
 		reg = <0x78b6000 0x1000>,
 		      <0x7884000 0x23000>;
 		interrupt-names = "qup_irq", "bam_irq";
 		interrupts = <0 96 0>, <0 238 0>;
+=======
+		reg-names = "qup_phys_addr";
+		reg = <0x78b6000 0x1000>;
+		interrupt-names = "qup_irq";
+		interrupts = <0 96 0>;
+>>>>>>> 0e91d2a... Nougat
 		qcom,clk-freq-out = <400000>;
 		qcom,clk-freq-in  = <19200000>;
 		clock-names = "iface_clk", "core_clk";
@@ -1119,8 +1452,14 @@
 		pinctrl-1 = <&i2c_2_sleep>;
 		qcom,noise-rjct-scl = <0>;
 		qcom,noise-rjct-sda = <0>;
+<<<<<<< HEAD
 		qcom,bam-pipe-idx-cons = <6>;
 		qcom,bam-pipe-idx-prod = <7>;
+=======
+		dmas = <&dma_blsp1 6 64 0x20000020 0x20>,
+			<&dma_blsp1 7 32 0x20000020 0x20>;
+		dma-names = "tx", "rx";
+>>>>>>> 0e91d2a... Nougat
 		qcom,master-id = <86>;
 	};
 
@@ -1128,11 +1467,18 @@
 		compatible = "qcom,i2c-msm-v2";
 		#address-cells = <1>;
 		#size-cells = <0>;
+<<<<<<< HEAD
 		reg-names = "qup_phys_addr", "bam_phys_addr";
 		reg = <0x78b8000 0x1000>,
 		      <0x7884000 0x23000>;
 		interrupt-names = "qup_irq", "bam_irq";
 		interrupts = <0 98 0>, <0 238 0>;
+=======
+		reg-names = "qup_phys_addr";
+		reg = <0x78b8000 0x1000>;
+		interrupt-names = "qup_irq";
+		interrupts = <0 98 0>;
+>>>>>>> 0e91d2a... Nougat
 		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
 			 <&clock_gcc clk_gcc_blsp1_qup4_i2c_apps_clk>;
 		clock-names = "iface_clk", "core_clk";
@@ -1143,12 +1489,19 @@
 		pinctrl-1 = <&i2c_4_sleep>;
 		qcom,noise-rjct-scl = <0>;
 		qcom,noise-rjct-sda = <0>;
+<<<<<<< HEAD
 		qcom,bam-pipe-idx-cons = <10>;
 		qcom,bam-pipe-idx-prod = <11>;
+=======
+		dmas = <&dma_blsp1 10 64 0x20000020 0x20>,
+			<&dma_blsp1 11 32 0x20000020 0x20>;
+		dma-names = "tx", "rx";
+>>>>>>> 0e91d2a... Nougat
 		qcom,master-id = <86>;
 	};
 
 	 i2c_5: i2c@78b9000 { /* BLSP1 QUP5 */
+<<<<<<< HEAD
                compatible = "qcom,i2c-msm-v2";
                #address-cells = <1>;
                #size-cells = <0>;
@@ -1171,11 +1524,36 @@
                qcom,bam-pipe-idx-prod = <13>;
                qcom,master-id = <86>;
        };
+=======
+		compatible = "qcom,i2c-msm-v2";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg-names = "qup_phys_addr";
+		reg = <0x78b9000 0x1000>;
+		interrupt-names = "qup_irq";
+		interrupts = <0 99 0>;
+		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
+			 <&clock_gcc clk_gcc_blsp1_qup5_i2c_apps_clk>;
+		clock-names = "iface_clk", "core_clk";
+		qcom,clk-freq-out = <100000>;
+		qcom,clk-freq-in  = <19200000>;
+		pinctrl-names = "i2c_active", "i2c_sleep";
+		pinctrl-0 = <&i2c_5_active>;
+		pinctrl-1 = <&i2c_5_sleep>;
+		qcom,noise-rjct-scl = <0>;
+		qcom,noise-rjct-sda = <0>;
+		dmas = <&dma_blsp1 12 64 0x20000020 0x20>,
+		<&dma_blsp1 13 32 0x20000020 0x20>;
+		dma-names = "tx", "rx";
+		qcom,master-id = <86>;
+};
+>>>>>>> 0e91d2a... Nougat
 
 	i2c_3: i2c@78b7000 { /* BLSP1 QUP3 */
 		compatible = "qcom,i2c-msm-v2";
 		#address-cells = <1>;
 		#size-cells = <0>;
+<<<<<<< HEAD
 		reg-names = "qup_phys_addr", "bam_phys_addr";
 		reg = <0x78b7000 0x1000>,
 		      <0x7884000 0x23000>;
@@ -1183,6 +1561,14 @@
 		interrupts = <0 97 0>, <0 238 0>;
 		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
 		         <&clock_gcc clk_gcc_blsp1_qup3_i2c_apps_clk>;
+=======
+		reg-names = "qup_phys_addr";
+		reg = <0x78b7000 0x1000>;
+		interrupt-names = "qup_irq";
+		interrupts = <0 97 0>;
+		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
+			 <&clock_gcc clk_gcc_blsp1_qup3_i2c_apps_clk>;
+>>>>>>> 0e91d2a... Nougat
 		clock-names = "iface_clk", "core_clk";
 		qcom,clk-freq-out = <100000>;
 		qcom,clk-freq-in  = <19200000>;
@@ -1191,8 +1577,14 @@
 		pinctrl-1 = <&i2c_3_sleep>;
 		qcom,noise-rjct-scl = <0>;
 		qcom,noise-rjct-sda = <0>;
+<<<<<<< HEAD
 		qcom,bam-pipe-idx-cons = <8>;
 		qcom,bam-pipe-idx-prod = <9>;
+=======
+		dmas = <&dma_blsp1 8 64 0x20000020 0x20>,
+			<&dma_blsp1 9  32 0x20000020 0x20>;
+		dma-names = "tx", "rx";
+>>>>>>> 0e91d2a... Nougat
 		qcom,master-id = <86>;
 	};
 
@@ -1200,6 +1592,7 @@
 		compatible = "qcom,i2c-msm-v2";
 		#address-cells = <1>;
 		#size-cells = <0>;
+<<<<<<< HEAD
 		reg-names = "qup_phys_addr", "bam_phys_addr";
 		reg = <0x78b5000 0x1000>,
 		      <0x7884000 0x23000>;
@@ -1207,6 +1600,14 @@
 		interrupts = <0 95 0>, <0 238 0>;
 		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
 		         <&clock_gcc clk_gcc_blsp1_qup1_i2c_apps_clk>;
+=======
+		reg-names = "qup_phys_addr";
+		reg = <0x78b5000 0x1000>;
+		interrupt-names = "qup_irq";
+		interrupts = <0 95 0>;
+		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
+			 <&clock_gcc clk_gcc_blsp1_qup1_i2c_apps_clk>;
+>>>>>>> 0e91d2a... Nougat
 		clock-names = "iface_clk", "core_clk";
 		qcom,clk-freq-out = <100000>;
 		qcom,clk-freq-in  = <19200000>;
@@ -1215,8 +1616,14 @@
 		pinctrl-1 = <&i2c_1_sleep>;
 		qcom,noise-rjct-scl = <0>;
 		qcom,noise-rjct-sda = <0>;
+<<<<<<< HEAD
 		qcom,bam-pipe-idx-cons = <4>;
 		qcom,bam-pipe-idx-prod = <5>;
+=======
+		dmas = <&dma_blsp1 4 64 0x20000020 0x20>,
+			<&dma_blsp1 5  32 0x20000020 0x20>;
+		dma-names = "tx", "rx";
+>>>>>>> 0e91d2a... Nougat
 		qcom,master-id = <86>;
 	};
 
@@ -1246,9 +1653,15 @@
 		qcom,scm_core_clk_src-freq = <80000000>;
 
 		qcom,pas-id = <9>;
+<<<<<<< HEAD
 		qcom,proxy-timeout-ms = <5000>;
 		qcom,firmware-name = "venus";
 		linux,contiguous-region = <&venus_qseecom_mem>;
+=======
+		qcom,proxy-timeout-ms = <100>;
+		qcom,firmware-name = "venus";
+		memory-region = <&venus_qseecom_mem>;
+>>>>>>> 0e91d2a... Nougat
 	};
 
 	pcm0: qcom,msm-pcm {
@@ -1264,6 +1677,16 @@
 		compatible = "qcom,msm-pcm-dsp";
 		qcom,msm-pcm-dsp-id = <1>;
 		qcom,msm-pcm-low-latency;
+<<<<<<< HEAD
+=======
+		qcom,latency-level = "regular";
+	};
+
+	pcm2: qcom,msm-ultra-low-latency {
+		compatible = "qcom,msm-pcm-dsp";
+		qcom,msm-pcm-dsp-id = <2>;
+		qcom,msm-pcm-low-latency;
+>>>>>>> 0e91d2a... Nougat
 		qcom,latency-level = "ultra";
 	};
 
@@ -1273,6 +1696,10 @@
 
 	compress: qcom,msm-compress-dsp {
 		compatible = "qcom,msm-compress-dsp";
+<<<<<<< HEAD
+=======
+		qcom,adsp-version = "MDSP 1.2";
+>>>>>>> 0e91d2a... Nougat
 	};
 
 	voip: qcom,msm-voip-dsp {
@@ -1324,6 +1751,16 @@
 		dai_mi2s3: qcom,msm-dai-q6-mi2s-quat {
 			compatible = "qcom,msm-dai-q6-mi2s";
 			qcom,msm-dai-q6-mi2s-dev-id = <3>;
+<<<<<<< HEAD
+=======
+			qcom,msm-mi2s-rx-lines = <0>;
+			qcom,msm-mi2s-tx-lines = <3>;
+		};
+
+		dai_mi2s5: qcom,msm-dai-q6-mi2s-quin {
+			compatible = "qcom,msm-dai-q6-mi2s";
+			qcom,msm-dai-q6-mi2s-dev-id = <5>;
+>>>>>>> 0e91d2a... Nougat
 			qcom,msm-mi2s-rx-lines = <1>;
 			qcom,msm-mi2s-tx-lines = <2>;
 		};
@@ -1334,6 +1771,16 @@
 			qcom,msm-mi2s-rx-lines = <0>;
 			qcom,msm-mi2s-tx-lines = <3>;
 		};
+<<<<<<< HEAD
+=======
+
+		dai_mi2s6: qcom,msm-dai-q6-mi2s-senary {
+			compatible = "qcom,msm-dai-q6-mi2s";
+			qcom,msm-dai-q6-mi2s-dev-id = <6>;
+			qcom,msm-mi2s-rx-lines = <0>;
+			qcom,msm-mi2s-tx-lines = <3>;
+		};
+>>>>>>> 0e91d2a... Nougat
 	};
 
 	dai_hdmi: qcom,msm-dai-q6-hdmi {
@@ -1397,6 +1844,14 @@
 			qcom,msm-dai-q6-dev-id = <12289>;
 		};
 
+<<<<<<< HEAD
+=======
+		bt_a2dp_rx: qcom,msm-dai-q6-bt-a2dp-rx {
+			compatible = "qcom,msm-dai-q6-dev";
+			qcom,msm-dai-q6-dev-id = <12290>;
+		};
+
+>>>>>>> 0e91d2a... Nougat
 		int_fm_rx: qcom,msm-dai-q6-int-fm-rx {
 			compatible = "qcom,msm-dai-q6-dev";
 			qcom,msm-dai-q6-dev-id = <12292>;
@@ -1469,6 +1924,14 @@
 		compatible = "qcom,msm-audio-ion";
 	};
 
+<<<<<<< HEAD
+=======
+	qcom,adsprpc-mem {
+		compatible = "qcom,msm-adsprpc-mem-region";
+		memory-region = <&modem_adsp_mem>;
+	};
+
+>>>>>>> 0e91d2a... Nougat
 	qcom,msm-adsp-loader {
 		compatible = "qcom,adsp-loader";
 		qcom,adsp-state = <0>;
@@ -1480,9 +1943,42 @@
 		reg = <0x0770600C 0x4>,
 			<0x07706010 0x4>;
 		reg-names = "avtimer_lsb_addr", "avtimer_msb_addr";
+<<<<<<< HEAD
 		qcom,clk_div = <27>;
 	};
 
+=======
+		qcom,clk-div = <27>;
+	};
+
+	qcom,memshare {
+		compatible = "qcom,memshare";
+
+		qcom,client_1 {
+			compatible = "qcom,memshare-peripheral";
+			qcom,peripheral-size = <0x200000>;
+			qcom,client-id = <0>;
+			qcom,allocate-boot-time;
+			label = "modem";
+		};
+
+		qcom,client_2 {
+			compatible = "qcom,memshare-peripheral";
+			qcom,peripheral-size = <0x300000>;
+			qcom,client-id = <2>;
+			label = "modem";
+		};
+
+		qcom,client_3 {
+			compatible = "qcom,memshare-peripheral";
+			qcom,peripheral-size = <0>;
+			qcom,client-id = <1>;
+			label = "modem";
+		};
+	};
+
+
+>>>>>>> 0e91d2a... Nougat
 	qcom_tzlog: tz-log@8600720 {
 		compatible = "qcom,tz-log";
 		reg = <0x08600720 0x1000>;
@@ -1559,9 +2055,15 @@
 		qcom,ce-opp-freq = <100000000>;
 	};
 
+<<<<<<< HEAD
 	qcom_seecom: qseecom@87e00000 {
 		compatible = "qcom,qseecom";
 		reg = <0x87e00000 0x80000>;
+=======
+	qcom_seecom: qseecom@87a00000 {
+		compatible = "qcom,qseecom";
+		reg = <0x87a00000 0x200000>;
+>>>>>>> 0e91d2a... Nougat
 		reg-names = "secapp-region";
 		qcom,disk-encrypt-pipe-pair = <2>;
 		qcom,hlos-ce-hw-instance = <0>;
@@ -1619,9 +2121,15 @@
 		qcom,gpio-proxy-unvote = <&smp2pgpio_ssr_smp2p_4_in 2 0>;
 		qcom,gpio-stop-ack = <&smp2pgpio_ssr_smp2p_4_in 3 0>;
 
+<<<<<<< HEAD
                 /* GPIO output to wcnss */
 		qcom,gpio-force-stop = <&smp2pgpio_ssr_smp2p_4_out 0 0>;
 		linux,contiguous-region = <&peripheral_mem>;
+=======
+		/* GPIO output to wcnss */
+		qcom,gpio-force-stop = <&smp2pgpio_ssr_smp2p_4_out 0 0>;
+		memory-region = <&peripheral_mem>;
+>>>>>>> 0e91d2a... Nougat
 	};
 
 	qcom,mss@4080000 {
@@ -1637,6 +2145,10 @@
 
 		interrupts = <0 24 1>;
 		vdd_cx-supply = <&pm8909_s1_corner>;
+<<<<<<< HEAD
+=======
+		vdd_cx-voltage = <7>;
+>>>>>>> 0e91d2a... Nougat
 		vdd_mx-supply = <&pm8909_l3_corner_ao>;
 		vdd_mx-uV = <3>;
 		vdd_pll-supply = <&pm8909_l7>;
@@ -1663,7 +2175,11 @@
 
 		/* GPIO output to mss */
 		qcom,gpio-force-stop = <&smp2pgpio_ssr_smp2p_1_out 0 0>;
+<<<<<<< HEAD
 		linux,contiguous-region = <&modem_adsp_mem>;
+=======
+		memory-region = <&modem_adsp_mem>;
+>>>>>>> 0e91d2a... Nougat
 	};
 
 	mcd {
@@ -1678,6 +2194,29 @@
 				"iface_clk", "bus_clk";
 		qcom,ce-opp-freq = <100000000>;
 	};
+<<<<<<< HEAD
+=======
+
+	cpu0_slp_sts: cpu-sleep-status@b088008 {
+		reg = <0xb088008 0x100>;
+		qcom,sleep-status-mask= <0x80000>;
+	};
+
+	cpu1_slp_sts: cpu-sleep-status@b098008 {
+		reg = <0xb098008 0x100>;
+		qcom,sleep-status-mask= <0x80000>;
+	};
+
+	cpu2_slp_sts: cpu-sleep-status@b0a8008 {
+		reg = <0xb0a8008 0x100>;
+		qcom,sleep-status-mask= <0x80000>;
+	};
+
+	cpu3_slp_sts: cpu-sleep-status@b0b8008 {
+		reg = <0xb0b8008 0x100>;
+		qcom,sleep-status-mask= <0x80000>;
+	};
+>>>>>>> 0e91d2a... Nougat
 };
 
 &gdsc_venus {
@@ -1714,4 +2253,7 @@
 	clocks = <&clock_gcc clk_gcc_oxili_gfx3d_clk>;
 	status = "okay";
 };
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0e91d2a... Nougat

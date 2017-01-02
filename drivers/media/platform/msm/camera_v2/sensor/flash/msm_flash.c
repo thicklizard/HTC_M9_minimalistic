@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2009-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -274,7 +274,6 @@ static int32_t msm_flash_gpio_init(
 	int32_t i = 0;
 	int32_t rc = 0;
 
-	CDBG("Enter");
 	for (i = 0; i < flash_ctrl->flash_num_sources; i++)
 		flash_ctrl->flash_op_current[i] = LED_FULL;
 
@@ -295,7 +294,6 @@ static int32_t msm_flash_gpio_init(
 
 	rc = flash_ctrl->func_tbl->camera_flash_off(flash_ctrl, flash_data);
 
-	CDBG("Exit");
 	return rc;
 }
 
@@ -305,7 +303,7 @@ static int32_t msm_flash_i2c_release(
 	int32_t rc = 0;
 
 	if (!(&flash_ctrl->power_info) || !(&flash_ctrl->flash_i2c_client)) {
-		pr_err("%s:%d failed: %p %p\n",
+		pr_err("%s:%d failed: %pK %pK\n",
 			__func__, __LINE__, &flash_ctrl->power_info,
 			&flash_ctrl->flash_i2c_client);
 		return -EINVAL;
@@ -597,13 +595,12 @@ static int32_t msm_flash_release(
 static int32_t msm_flash_config(struct msm_flash_ctrl_t *flash_ctrl,
 	void __user *argp)
 {
-	int32_t rc = -EINVAL;
+	int32_t rc = 0;
 	struct msm_flash_cfg_data_t *flash_data =
 		(struct msm_flash_cfg_data_t *) argp;
 
 	mutex_lock(flash_ctrl->flash_mutex);
 
-	CDBG("Enter %s type %d\n", __func__, flash_data->cfg_type);
 
 	switch (flash_data->cfg_type) {
 	case CFG_FLASH_INIT:
@@ -660,7 +657,6 @@ static int32_t msm_flash_config(struct msm_flash_ctrl_t *flash_ctrl,
 
 	mutex_unlock(flash_ctrl->flash_mutex);
 
-	CDBG("Exit %s type %d\n", __func__, flash_data->cfg_type);
 
 	return rc;
 }
@@ -671,7 +667,6 @@ static long msm_flash_subdev_ioctl(struct v4l2_subdev *sd,
 	struct msm_flash_ctrl_t *fctrl = NULL;
 	void __user *argp = (void __user *)arg;
 
-	CDBG("Enter\n");
 
 	if (!sd) {
 		pr_err("sd NULL\n");
@@ -687,6 +682,13 @@ static long msm_flash_subdev_ioctl(struct v4l2_subdev *sd,
 		return msm_flash_get_subdev_id(fctrl, argp);
 	case VIDIOC_MSM_FLASH_CFG:
 		return msm_flash_config(fctrl, argp);
+<<<<<<< HEAD
+=======
+	case MSM_SD_NOTIFY_FREEZE:
+		return 0;
+	case MSM_SD_UNNOTIFY_FREEZE:
+		return 0;
+>>>>>>> 0e91d2a... Nougat
 	case MSM_SD_SHUTDOWN:
 		if (!fctrl->func_tbl) {
 			pr_err("fctrl->func_tbl NULL\n");
@@ -699,7 +701,6 @@ static long msm_flash_subdev_ioctl(struct v4l2_subdev *sd,
 		pr_err_ratelimited("invalid cmd %d\n", cmd);
 		return -ENOIOCTLCMD;
 	}
-	CDBG("Exit\n");
 }
 
 static struct v4l2_subdev_core_ops msm_flash_subdev_core_ops = {
@@ -712,6 +713,7 @@ static struct v4l2_subdev_ops msm_flash_subdev_ops = {
 
 static const struct v4l2_subdev_internal_ops msm_flash_internal_ops;
 
+<<<<<<< HEAD
 static int32_t msm_flash_get_gpio_dt_data(struct device_node *of_node,
 		struct msm_flash_ctrl_t *fctrl)
 {
@@ -791,6 +793,8 @@ free_gpio_conf:
 	return rc;
 }
 
+=======
+>>>>>>> 0e91d2a... Nougat
 static int32_t msm_flash_get_pmic_source_info(
 	struct device_node *of_node,
 	struct msm_flash_ctrl_t *fctrl)
@@ -980,20 +984,27 @@ static int32_t msm_flash_get_dt_data(struct device_node *of_node,
 	}
 
 	
-	rc = msm_flash_get_gpio_dt_data(of_node, fctrl);
-	if (rc < 0) {
-		pr_err("%s:%d msm_flash_get_gpio_dt_data failed rc %d\n",
-			__func__, __LINE__, rc);
-		return rc;
-	}
-
-	
 	rc = msm_flash_get_pmic_source_info(of_node, fctrl);
 	if (rc < 0) {
 		pr_err("%s:%d msm_flash_get_pmic_source_info failed rc %d\n",
 			__func__, __LINE__, rc);
 		return rc;
 	}
+
+	
+	rc = msm_sensor_driver_get_gpio_data(
+		&(fctrl->power_info.gpio_conf), of_node);
+	if (rc < 0) {
+		pr_err("%s:%d msm_sensor_driver_get_gpio_data failed rc %d\n",
+			__func__, __LINE__, rc);
+		return rc;
+	}
+
+	if (fctrl->flash_driver_type == FLASH_DRIVER_DEFAULT)
+		fctrl->flash_driver_type = FLASH_DRIVER_GPIO;
+	CDBG("%s:%d fctrl->flash_driver_type = %d", __func__, __LINE__,
+		fctrl->flash_driver_type);
+
 	return rc;
 }
 
@@ -1011,7 +1022,19 @@ static long msm_flash_subdev_do_ioctl(
 	struct msm_flash_init_info_t32 flash_init_info32;
 	struct msm_flash_init_info_t flash_init_info;
 
+<<<<<<< HEAD
 	CDBG("Enter");
+=======
+
+	if (!file || !arg) {
+		pr_err("%s:failed NULL parameter\n", __func__);
+		return -EINVAL;
+	}
+	vdev = video_devdata(file);
+	sd = vdev_to_v4l2_subdev(vdev);
+	u32 = (struct msm_flash_cfg_data_t32 *)arg;
+
+>>>>>>> 0e91d2a... Nougat
 	flash_data.cfg_type = u32->cfg_type;
 	for (i = 0; i < MAX_LED_TRIGGERS; i++) {
 		flash_data.flash_current[i] = u32->flash_current[i];
@@ -1056,7 +1079,6 @@ static long msm_flash_subdev_do_ioctl(
 		u32->flash_current[i] = flash_data.flash_current[i];
 		u32->flash_duration[i] = flash_data.flash_duration[i];
 	}
-	CDBG("Exit");
 	return rc;
 }
 

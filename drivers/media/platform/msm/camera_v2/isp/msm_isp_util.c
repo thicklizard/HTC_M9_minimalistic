@@ -27,6 +27,7 @@ static struct msm_isp_bandwidth_mgr isp_bandwidth_mgr;
 static uint64_t msm_isp_cpp_clk_rate;
 
 #define VFE40_8974V2_VERSION 0x1001001A
+<<<<<<< HEAD
 static struct msm_bus_vectors msm_isp_init_vectors[] = {
 	{
 		.src = MSM_BUS_MASTER_VFE,
@@ -74,6 +75,8 @@ static struct msm_bus_scale_pdata msm_isp_bus_client_pdata = {
 	ARRAY_SIZE(msm_isp_bus_client_config),
 	.name = "msm_camera_isp",
 };
+=======
+>>>>>>> 0e91d2a... Nougat
 
 
 void msm_camera_io_dump_2(void __iomem *addr, int size)
@@ -126,37 +129,42 @@ void msm_isp_print_fourcc_error(const char *origin, uint32_t fourcc_format)
 	return;
 }
 
-int msm_isp_init_bandwidth_mgr(enum msm_isp_hw_client client)
+int msm_isp_init_bandwidth_mgr(struct vfe_device *vfe_dev,
+			enum msm_isp_hw_client client)
 {
 	int rc = 0;
+
 	mutex_lock(&bandwidth_mgr_mutex);
-	isp_bandwidth_mgr.client_info[client].active = 1;
-	if (isp_bandwidth_mgr.use_count++) {
+	if (isp_bandwidth_mgr.client_info[client].active) {
 		mutex_unlock(&bandwidth_mgr_mutex);
 		return rc;
 	}
-	isp_bandwidth_mgr.bus_client =
-		msm_bus_scale_register_client(&msm_isp_bus_client_pdata);
-	if (!isp_bandwidth_mgr.bus_client) {
-		pr_err("%s: client register failed\n", __func__);
-		mutex_unlock(&bandwidth_mgr_mutex);
-		return -EINVAL;
+	isp_bandwidth_mgr.client_info[client].active = 1;
+	isp_bandwidth_mgr.use_count++;
+	if (vfe_dev && !isp_bandwidth_mgr.bus_client) {
+		rc = vfe_dev->hw_info->vfe_ops.platform_ops.init_bw_mgr(vfe_dev,
+				&isp_bandwidth_mgr);
+		if (!rc) {
+			isp_bandwidth_mgr.update_bw =
+			vfe_dev->hw_info->vfe_ops.platform_ops.update_bw;
+			isp_bandwidth_mgr.deinit_bw_mgr =
+			vfe_dev->hw_info->vfe_ops.platform_ops.deinit_bw_mgr;
+		}
+	}
+	if (rc) {
+		isp_bandwidth_mgr.use_count--;
+		isp_bandwidth_mgr.client_info[client].active = 0;
 	}
 
-	isp_bandwidth_mgr.bus_vector_active_idx = 1;
-	msm_bus_scale_client_update_request(
-	   isp_bandwidth_mgr.bus_client,
-	   isp_bandwidth_mgr.bus_vector_active_idx);
-
 	mutex_unlock(&bandwidth_mgr_mutex);
-	return 0;
+	return rc;
 }
 
 int msm_isp_update_bandwidth(enum msm_isp_hw_client client,
 	uint64_t ab, uint64_t ib)
 {
-	int i;
-	struct msm_bus_paths *path;
+	int rc;
+
 	mutex_lock(&bandwidth_mgr_mutex);
 	if (!isp_bandwidth_mgr.use_count ||
 		!isp_bandwidth_mgr.bus_client) {
@@ -168,6 +176,7 @@ int msm_isp_update_bandwidth(enum msm_isp_hw_client client,
 
 	isp_bandwidth_mgr.client_info[client].ab = ab;
 	isp_bandwidth_mgr.client_info[client].ib = ib;
+<<<<<<< HEAD
 	ALT_VECTOR_IDX(isp_bandwidth_mgr.bus_vector_active_idx);
 	path =
 		&(msm_isp_bus_client_pdata.usecase[
@@ -194,6 +203,9 @@ int msm_isp_update_bandwidth(enum msm_isp_hw_client client,
 		path->vectors[0].ib,
 		isp_bandwidth_mgr.client_info,
 		sched_clock());
+=======
+	rc = isp_bandwidth_mgr.update_bw(&isp_bandwidth_mgr);
+>>>>>>> 0e91d2a... Nougat
 	mutex_unlock(&bandwidth_mgr_mutex);
 	return 0;
 }
@@ -206,22 +218,24 @@ void msm_isp_deinit_bandwidth_mgr(enum msm_isp_hw_client client)
 	}
 	mutex_lock(&bandwidth_mgr_mutex);
 	memset(&isp_bandwidth_mgr.client_info[client], 0,
-		   sizeof(struct msm_isp_bandwidth_info));
-	if (--isp_bandwidth_mgr.use_count) {
-		mutex_unlock(&bandwidth_mgr_mutex);
-		return;
-	}
+			sizeof(struct msm_isp_bandwidth_info));
+	if (isp_bandwidth_mgr.use_count) {
+		isp_bandwidth_mgr.use_count--;
+		if (isp_bandwidth_mgr.use_count) {
+			mutex_unlock(&bandwidth_mgr_mutex);
+			return;
+		}
 
-	if (!isp_bandwidth_mgr.bus_client) {
-		pr_err("%s:%d error: bus client invalid\n", __func__, __LINE__);
-		mutex_unlock(&bandwidth_mgr_mutex);
-		return;
-	}
+		if (!isp_bandwidth_mgr.bus_client) {
+			pr_err("%s:%d error: bus client invalid\n",
+				__func__, __LINE__);
+			mutex_unlock(&bandwidth_mgr_mutex);
+			return;
+		}
 
-	msm_bus_scale_client_update_request(
-	   isp_bandwidth_mgr.bus_client, 0);
-	msm_bus_scale_unregister_client(isp_bandwidth_mgr.bus_client);
-	isp_bandwidth_mgr.bus_client = 0;
+		isp_bandwidth_mgr.deinit_bw_mgr(
+				&isp_bandwidth_mgr);
+	}
 	mutex_unlock(&bandwidth_mgr_mutex);
 }
 
@@ -243,15 +257,6 @@ void msm_isp_util_get_bandwidth_stats(struct vfe_device *vfe_dev,
 	stats->last_overflow_ib = vfe_dev->msm_isp_last_overflow_ib;
 	stats->vfe_clk_rate = vfe_dev->msm_isp_vfe_clk_rate;
 	stats->cpp_clk_rate = msm_isp_cpp_clk_rate;
-}
-
-void msm_isp_util_update_last_overflow_ab_ib(struct vfe_device *vfe_dev)
-{
-	struct msm_bus_paths *path;
-	 path = &(msm_isp_bus_client_pdata.usecase[
-		  isp_bandwidth_mgr.bus_vector_active_idx]);
-	vfe_dev->msm_isp_last_overflow_ab = path->vectors[0].ab;
-	vfe_dev->msm_isp_last_overflow_ib = path->vectors[0].ib;
 }
 
 void msm_isp_util_update_clk_rate(long clock_rate)
@@ -286,6 +291,7 @@ uint32_t msm_isp_get_framedrop_period(
 	return 1;
 }
 
+<<<<<<< HEAD
 int msm_isp_get_clk_info(struct vfe_device *vfe_dev,
 	struct platform_device *pdev, struct msm_cam_clk_info *vfe_clk_info)
 {
@@ -340,7 +346,23 @@ static inline void msm_isp_get_timestamp(struct msm_isp_timestamp *time_stamp)
 	ktime_get_ts(&ts);
 	time_stamp->buf_time.tv_sec = ts.tv_sec;
 	time_stamp->buf_time.tv_usec = ts.tv_nsec/1000;
+=======
+void msm_isp_get_timestamp(struct msm_isp_timestamp *time_stamp,
+	struct vfe_device *vfe_dev)
+{
+	struct timespec ts;
+>>>>>>> 0e91d2a... Nougat
 	do_gettimeofday(&(time_stamp->event_time));
+	if (vfe_dev->vt_enable) {
+		msm_isp_get_avtimer_ts(time_stamp);
+		time_stamp->buf_time.tv_sec    = time_stamp->vt_time.tv_sec;
+		time_stamp->buf_time.tv_usec   = time_stamp->vt_time.tv_usec;
+	} else	{
+		get_monotonic_boottime(&ts);
+		time_stamp->buf_time.tv_sec    = ts.tv_sec;
+		time_stamp->buf_time.tv_usec   = ts.tv_nsec/1000;
+	}
+
 }
 
 int msm_isp_subscribe_event(struct v4l2_subdev *sd, struct v4l2_fh *fh,
@@ -382,46 +404,36 @@ int msm_isp_unsubscribe_event(struct v4l2_subdev *sd, struct v4l2_fh *fh,
 	return rc;
 }
 
+<<<<<<< HEAD
 static int msm_isp_get_max_clk_rate(struct vfe_device *vfe_dev, long *rate)
+=======
+int msm_isp_subscribe_event(struct v4l2_subdev *sd, struct v4l2_fh *fh,
+	struct v4l2_event_subscription *sub)
 {
-	int           clk_idx = 0;
-	unsigned long max_value = ~0;
-	long          round_rate = 0;
-
-	if (!vfe_dev || !rate) {
-		pr_err("%s:%d failed: vfe_dev %p rate %p\n", __func__, __LINE__,
-			vfe_dev, rate);
-		return -EINVAL;
-	}
-
-	*rate = 0;
-	if (!vfe_dev->hw_info) {
-		pr_err("%s:%d failed: vfe_dev->hw_info %p\n", __func__,
-			__LINE__, vfe_dev->hw_info);
-		return -EINVAL;
-	}
-
-	clk_idx = vfe_dev->hw_info->vfe_clk_idx;
-	if (clk_idx >= vfe_dev->num_clk) {
-		pr_err("%s:%d failed: clk_idx %d max array size %d\n",
-			__func__, __LINE__, clk_idx,
-			vfe_dev->num_clk);
-		return -EINVAL;
-	}
-
-	round_rate = clk_round_rate(vfe_dev->vfe_clk[clk_idx], max_value);
-	if (round_rate < 0) {
-		pr_err("%s: Invalid vfe clock rate\n", __func__);
-		return -EINVAL;
-	}
-
-	*rate = round_rate;
-	return 0;
+	return msm_isp_process_event_subscription(fh, sub, true);
 }
 
-static int msm_isp_get_clk_rates(struct vfe_device *vfe_dev,
-	struct msm_isp_clk_rates *rates)
+int msm_isp_unsubscribe_event(struct v4l2_subdev *sd, struct v4l2_fh *fh,
+	struct v4l2_event_subscription *sub)
 {
+	return msm_isp_process_event_subscription(fh, sub, false);
+}
+
+static int msm_isp_start_fetch_engine(struct vfe_device *vfe_dev,
+	void *arg)
+>>>>>>> 0e91d2a... Nougat
+{
+	struct msm_vfe_fetch_eng_start *fe_cfg = arg;
+	vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id =
+		fe_cfg->frame_id;
+	return vfe_dev->hw_info->vfe_ops.core_ops.
+		start_fetch_eng(vfe_dev, arg);
+}
+
+static int msm_isp_start_fetch_engine_multi_pass(struct vfe_device *vfe_dev,
+	void *arg)
+{
+<<<<<<< HEAD
 	struct device_node *of_node;
 	int32_t  rc = 0;
 	uint32_t nominal = 0, turbo = 0;
@@ -450,12 +462,27 @@ static int msm_isp_get_clk_rates(struct vfe_device *vfe_dev,
 		pr_err("%s: nominal rate error\n", __func__);
 		return -EINVAL;
 	}
+=======
+	struct msm_vfe_fetch_eng_multi_pass_start *fe_cfg = arg;
+	struct msm_vfe_axi_stream *stream_info = NULL;
+	int i = 0, rc;
+	uint32_t wm_reload_mask = 0;
+	vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id =
+		fe_cfg->frame_id;
 
-	rc = of_property_read_u32(of_node, "max-clk-turbo",
-		&turbo);
-	if (rc < 0 || !turbo) {
-		pr_err("%s: turbo rate error\n", __func__);
+	if (fe_cfg->offline_pass == OFFLINE_SECOND_PASS) {
+		for (i = 0; i < VFE_AXI_SRC_MAX; i++) {
+			stream_info = &vfe_dev->axi_data.stream_info[i];
+			if (stream_info->stream_id == fe_cfg->output_stream_id)
+				break;
+		}
+>>>>>>> 0e91d2a... Nougat
+
+		if (i == VFE_AXI_SRC_MAX) {
+			pr_err("%s: Couldn't find streamid 0x%X\n", __func__,
+				fe_cfg->output_stream_id);
 			return -EINVAL;
+<<<<<<< HEAD
 	}
 	rates->nominal_rate = nominal;
 	rates->high_rate = turbo;
@@ -472,15 +499,37 @@ static int msm_isp_set_clk_rate(struct vfe_device *vfe_dev, long *rate)
 		pr_err("%s: Invalid vfe clock rate\n", __func__);
 		return round_rate;
 	}
+=======
+		}
 
-	rc = clk_set_rate(vfe_dev->vfe_clk[clk_idx], round_rate);
-	if (rc < 0) {
-		pr_err("%s: Vfe set rate error\n", __func__);
-		return rc;
+		msm_isp_reset_framedrop(vfe_dev, stream_info);
+>>>>>>> 0e91d2a... Nougat
+
+		rc = msm_isp_cfg_offline_ping_pong_address(vfe_dev, stream_info,
+			VFE_PING_FLAG, fe_cfg->output_buf_idx);
+		if (rc < 0) {
+			pr_err("%s: Fetch engine config failed\n", __func__);
+			return -EINVAL;
+		}
+		for (i = 0; i < stream_info->num_planes; i++) {
+			vfe_dev->hw_info->vfe_ops.axi_ops.
+			enable_wm(vfe_dev->vfe_base, stream_info->wm[i],
+					1);
+			wm_reload_mask |= (1 << stream_info->wm[i]);
+		}
+		vfe_dev->hw_info->vfe_ops.core_ops.reg_update(vfe_dev,
+			VFE_SRC_MAX);
+		vfe_dev->hw_info->vfe_ops.axi_ops.reload_wm(vfe_dev,
+			vfe_dev->vfe_base, wm_reload_mask);
 	}
+<<<<<<< HEAD
 	*rate = round_rate;
 	vfe_dev->msm_isp_vfe_clk_rate = round_rate;
 	return 0;
+=======
+	return vfe_dev->hw_info->vfe_ops.core_ops.
+		start_fetch_eng_multi_pass(vfe_dev, arg);
+>>>>>>> 0e91d2a... Nougat
 }
 
 void msm_isp_fetch_engine_done_notify(struct vfe_device *vfe_dev,
@@ -511,6 +560,13 @@ int msm_isp_cfg_pix(struct vfe_device *vfe_dev,
 		return -EINVAL;
 	}
 
+<<<<<<< HEAD
+=======
+	pix_cfg = &input_cfg->d.pix_cfg;
+	vfe_dev->hvx_cmd = pix_cfg->hvx_cmd;
+	vfe_dev->is_split = input_cfg->d.pix_cfg.is_split;
+
+>>>>>>> 0e91d2a... Nougat
 	vfe_dev->axi_data.src_info[VFE_PIX_0].pixel_clock =
 		input_cfg->input_pix_clk;
 	vfe_dev->axi_data.src_info[VFE_PIX_0].input_mux =
@@ -577,6 +633,106 @@ int msm_isp_cfg_input(struct vfe_device *vfe_dev, void *arg)
 		pr_err("%s: Invalid input source\n", __func__);
 		rc = -EINVAL;
 	}
+<<<<<<< HEAD
+=======
+
+	pixel_clock = input_cfg->input_pix_clk;
+	rc = vfe_dev->hw_info->vfe_ops.platform_ops.set_clk_rate(vfe_dev,
+		&pixel_clock);
+	if (rc < 0) {
+		pr_err("%s: clock set rate failed\n", __func__);
+		return rc;
+	}
+	return rc;
+}
+
+static int msm_isp_set_dual_HW_master_slave_mode(
+	struct vfe_device *vfe_dev, void *arg)
+{
+	int rc = 0, i, j;
+	struct msm_isp_set_dual_hw_ms_cmd *dual_hw_ms_cmd = NULL;
+	struct msm_vfe_src_info *src_info = NULL;
+	unsigned long flags;
+
+	if (!vfe_dev || !arg) {
+		pr_err("%s: Error! Invalid input vfe_dev %pK arg %pK\n",
+			__func__, vfe_dev, arg);
+		return -EINVAL;
+	}
+
+	dual_hw_ms_cmd = (struct msm_isp_set_dual_hw_ms_cmd *)arg;
+	vfe_dev->common_data->ms_resource.dual_hw_type = DUAL_HW_MASTER_SLAVE;
+	vfe_dev->vfe_ub_policy = MSM_WM_UB_EQUAL_SLICING;
+	if (dual_hw_ms_cmd->primary_intf < VFE_SRC_MAX) {
+		ISP_DBG("%s: vfe %d primary_intf %d\n", __func__,
+			vfe_dev->pdev->id, dual_hw_ms_cmd->primary_intf);
+		src_info = &vfe_dev->axi_data.
+			src_info[dual_hw_ms_cmd->primary_intf];
+		src_info->dual_hw_ms_info.dual_hw_ms_type =
+			dual_hw_ms_cmd->dual_hw_ms_type;
+	}
+
+	
+	if (src_info != NULL &&
+		dual_hw_ms_cmd->dual_hw_ms_type == MS_TYPE_MASTER) {
+		src_info->dual_hw_type = DUAL_HW_MASTER_SLAVE;
+		ISP_DBG("%s: vfe %d Master\n", __func__, vfe_dev->pdev->id);
+
+		src_info->dual_hw_ms_info.sof_info =
+			&vfe_dev->common_data->ms_resource.master_sof_info;
+		vfe_dev->common_data->ms_resource.sof_delta_threshold =
+			dual_hw_ms_cmd->sof_delta_threshold;
+	} else if (src_info != NULL) {
+		spin_lock_irqsave(
+			&vfe_dev->common_data->common_dev_data_lock,
+			flags);
+		src_info->dual_hw_type = DUAL_HW_MASTER_SLAVE;
+		ISP_DBG("%s: vfe %d Slave\n", __func__, vfe_dev->pdev->id);
+
+		for (j = 0; j < MS_NUM_SLAVE_MAX; j++) {
+			if (vfe_dev->common_data->ms_resource.
+				reserved_slave_mask & (1 << j))
+				continue;
+
+			vfe_dev->common_data->ms_resource.reserved_slave_mask |=
+				(1 << j);
+			vfe_dev->common_data->ms_resource.num_slave++;
+			src_info->dual_hw_ms_info.sof_info =
+				&vfe_dev->common_data->ms_resource.
+				slave_sof_info[j];
+			src_info->dual_hw_ms_info.slave_id = j;
+			ISP_DBG("%s: Slave id %d\n", __func__, j);
+			break;
+		}
+		spin_unlock_irqrestore(
+			&vfe_dev->common_data->common_dev_data_lock,
+			flags);
+
+		if (j == MS_NUM_SLAVE_MAX) {
+			pr_err("%s: Error! Cannot find free aux resource\n",
+				__func__);
+			return -EBUSY;
+		}
+	}
+	ISP_DBG("%s: vfe %d num_src %d\n", __func__, vfe_dev->pdev->id,
+		dual_hw_ms_cmd->num_src);
+	for (i = 0; i < dual_hw_ms_cmd->num_src; i++) {
+		if (dual_hw_ms_cmd->input_src[i] >= VFE_SRC_MAX) {
+			pr_err("%s: Error! Invalid SRC param %d\n", __func__,
+				dual_hw_ms_cmd->input_src[i]);
+			return -EINVAL;
+		}
+		ISP_DBG("%s: vfe %d src %d type %d\n", __func__,
+			vfe_dev->pdev->id, dual_hw_ms_cmd->input_src[i],
+			dual_hw_ms_cmd->dual_hw_ms_type);
+		src_info = &vfe_dev->axi_data.
+			src_info[dual_hw_ms_cmd->input_src[i]];
+		src_info->dual_hw_type = DUAL_HW_MASTER_SLAVE;
+		src_info->dual_hw_ms_info.dual_hw_ms_type =
+			dual_hw_ms_cmd->dual_hw_ms_type;
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	return rc;
 }
 
@@ -588,7 +744,7 @@ static int msm_isp_proc_cmd_list_unlocked(struct vfe_device *vfe_dev, void *arg)
 	struct msm_vfe_cfg_cmd_list cmd, cmd_next;
 
 	if (!vfe_dev || !arg) {
-		pr_err("%s:%d failed: vfe_dev %p arg %p", __func__, __LINE__,
+		pr_err("%s:%d failed: vfe_dev %pK arg %pK", __func__, __LINE__,
 			vfe_dev, arg);
 		return -EINVAL;
 	}
@@ -658,7 +814,7 @@ static int msm_isp_proc_cmd_list_compat(struct vfe_device *vfe_dev, void *arg)
 	struct msm_vfe_cfg_cmd2 current_cmd;
 
 	if (!vfe_dev || !arg) {
-		pr_err("%s:%d failed: vfe_dev %p arg %p", __func__, __LINE__,
+		pr_err("%s:%d failed: vfe_dev %pK arg %pK", __func__, __LINE__,
 			vfe_dev, arg);
 		return -EINVAL;
 	}
@@ -706,18 +862,21 @@ static int msm_isp_proc_cmd_list(struct vfe_device *vfe_dev, void *arg)
 }
 #endif 
 
-
 static long msm_isp_ioctl_unlocked(struct v4l2_subdev *sd,
 	unsigned int cmd, void *arg)
 {
 	long rc = 0;
+<<<<<<< HEAD
+=======
+	long rc2 = 0;
+>>>>>>> 0e91d2a... Nougat
 	struct vfe_device *vfe_dev = v4l2_get_subdevdata(sd);
 
 	if (!vfe_dev || !vfe_dev->vfe_base) {
-		pr_err("%s:%d failed: invalid params %p\n",
+		pr_err("%s:%d failed: invalid params %pK\n",
 			__func__, __LINE__, vfe_dev);
 		if (vfe_dev)
-			pr_err("%s:%d failed %p\n", __func__,
+			pr_err("%s:%d failed %pK\n", __func__,
 				__LINE__, vfe_dev->vfe_base);
 		return -EINVAL;
 	}
@@ -766,12 +925,38 @@ static long msm_isp_ioctl_unlocked(struct v4l2_subdev *sd,
 		break;
 	case VIDIOC_MSM_ISP_AXI_RESET:
 		mutex_lock(&vfe_dev->core_mutex);
+<<<<<<< HEAD
 		rc = msm_isp_axi_reset(vfe_dev, arg);
+=======
+		if (atomic_read(&vfe_dev->error_info.overflow_state)
+			!= HALT_ENFORCED) {
+			rc = msm_isp_stats_reset(vfe_dev);
+			rc2 = msm_isp_axi_reset(vfe_dev, arg);
+			if (!rc && rc2)
+				rc = rc2;
+		} else {
+			pr_err_ratelimited("%s: no HW reset, halt enforced.\n",
+				__func__);
+		}
+>>>>>>> 0e91d2a... Nougat
 		mutex_unlock(&vfe_dev->core_mutex);
 		break;
 	case VIDIOC_MSM_ISP_AXI_RESTART:
 		mutex_lock(&vfe_dev->core_mutex);
+<<<<<<< HEAD
 		rc = msm_isp_axi_restart(vfe_dev, arg);
+=======
+		if (atomic_read(&vfe_dev->error_info.overflow_state)
+			!= HALT_ENFORCED) {
+			rc = msm_isp_stats_restart(vfe_dev);
+			rc2 = msm_isp_axi_restart(vfe_dev, arg);
+			if (!rc && rc2)
+				rc = rc2;
+		} else {
+			pr_err_ratelimited("%s: no AXI restart, halt enforced.\n",
+				__func__);
+		}
+>>>>>>> 0e91d2a... Nougat
 		mutex_unlock(&vfe_dev->core_mutex);
 		break;
 	case VIDIOC_MSM_ISP_INPUT_CFG:
@@ -779,10 +964,34 @@ static long msm_isp_ioctl_unlocked(struct v4l2_subdev *sd,
 		rc = msm_isp_cfg_input(vfe_dev, arg);
 		mutex_unlock(&vfe_dev->core_mutex);
 		break;
+<<<<<<< HEAD
+=======
+	case VIDIOC_MSM_ISP_AHB_CLK_CFG:
+		mutex_lock(&vfe_dev->core_mutex);
+		if (vfe_dev->hw_info->vfe_ops.core_ops.ahb_clk_cfg)
+			rc = vfe_dev->hw_info->vfe_ops.core_ops.
+					ahb_clk_cfg(vfe_dev, arg);
+		else
+			rc = -EOPNOTSUPP;
+		mutex_unlock(&vfe_dev->core_mutex);
+		break;
+	case VIDIOC_MSM_ISP_SET_DUAL_HW_MASTER_SLAVE:
+		mutex_lock(&vfe_dev->core_mutex);
+		rc = msm_isp_set_dual_HW_master_slave_mode(vfe_dev, arg);
+		mutex_unlock(&vfe_dev->core_mutex);
+		break;
+>>>>>>> 0e91d2a... Nougat
 	case VIDIOC_MSM_ISP_FETCH_ENG_START:
 		mutex_lock(&vfe_dev->core_mutex);
 		rc = vfe_dev->hw_info->vfe_ops.core_ops.
 			start_fetch_eng(vfe_dev, arg);
+		mutex_unlock(&vfe_dev->core_mutex);
+		break;
+
+	case VIDIOC_MSM_ISP_FETCH_ENG_MULTI_PASS_START:
+	case VIDIOC_MSM_ISP_MAP_BUF_START_MULTI_PASS_FE:
+		mutex_lock(&vfe_dev->core_mutex);
+		rc = msm_isp_start_fetch_engine_multi_pass(vfe_dev, arg);
 		mutex_unlock(&vfe_dev->core_mutex);
 		break;
 	case VIDIOC_MSM_ISP_REG_UPDATE_CMD:
@@ -828,6 +1037,17 @@ static long msm_isp_ioctl_unlocked(struct v4l2_subdev *sd,
 		rc = msm_isp_smmu_attach(vfe_dev->buf_mgr, arg);
 		mutex_unlock(&vfe_dev->core_mutex);
 		break;
+<<<<<<< HEAD
+=======
+	case MSM_SD_NOTIFY_FREEZE:
+		vfe_dev->isp_sof_debug = 0;
+		vfe_dev->isp_raw0_debug = 0;
+		vfe_dev->isp_raw1_debug = 0;
+		vfe_dev->isp_raw2_debug = 0;
+		break;
+	case MSM_SD_UNNOTIFY_FREEZE:
+		break;
+>>>>>>> 0e91d2a... Nougat
 	case MSM_SD_SHUTDOWN:
 		while (vfe_dev->vfe_open_cnt != 0)
 			msm_isp_close_node(sd, NULL);
@@ -849,10 +1069,10 @@ static long msm_isp_ioctl_compat(struct v4l2_subdev *sd,
 	long rc = 0;
 
 	if (!vfe_dev || !vfe_dev->vfe_base) {
-		pr_err("%s:%d failed: invalid params %p\n",
+		pr_err("%s:%d failed: invalid params %pK\n",
 			__func__, __LINE__, vfe_dev);
 		if (vfe_dev)
-			pr_err("%s:%d failed %p\n", __func__,
+			pr_err("%s:%d failed %pK\n", __func__,
 				__LINE__, vfe_dev->vfe_base);
 		return -EINVAL;
 	}
@@ -898,13 +1118,13 @@ static int msm_isp_send_hw_cmd(struct vfe_device *vfe_dev,
 	uint32_t *cfg_data, uint32_t cmd_len)
 {
 	if (!vfe_dev || !reg_cfg_cmd) {
-		pr_err("%s:%d failed: vfe_dev %p reg_cfg_cmd %p\n", __func__,
+		pr_err("%s:%d failed: vfe_dev %pK reg_cfg_cmd %pK\n", __func__,
 			__LINE__, vfe_dev, reg_cfg_cmd);
 		return -EINVAL;
 	}
 	if ((reg_cfg_cmd->cmd_type != VFE_CFG_MASK) &&
 		(!cfg_data || !cmd_len)) {
-		pr_err("%s:%d failed: cmd type %d cfg_data %p cmd_len %d\n",
+		pr_err("%s:%d failed: cmd type %d cfg_data %pK cmd_len %d\n",
 			__func__, __LINE__, reg_cfg_cmd->cmd_type, cfg_data,
 			cmd_len);
 		return -EINVAL;
@@ -919,12 +1139,13 @@ static int msm_isp_send_hw_cmd(struct vfe_device *vfe_dev,
 			(UINT_MAX - reg_cfg_cmd->u.rw_info.len)) ||
 			((reg_cfg_cmd->u.rw_info.reg_offset +
 			reg_cfg_cmd->u.rw_info.len) >
-			resource_size(vfe_dev->vfe_mem))) {
-			pr_err("%s:%d reg_offset %d len %d res %d\n",
+			vfe_dev->vfe_base_size) ||
+			(reg_cfg_cmd->u.rw_info.reg_offset & 0x3)) {
+			pr_err_ratelimited("%s:%d regoffset %d len %d res %d\n",
 				__func__, __LINE__,
 				reg_cfg_cmd->u.rw_info.reg_offset,
 				reg_cfg_cmd->u.rw_info.len,
-				(uint32_t)resource_size(vfe_dev->vfe_mem));
+				(uint32_t)vfe_dev->vfe_base_size);
 			return -EINVAL;
 		}
 
@@ -932,7 +1153,7 @@ static int msm_isp_send_hw_cmd(struct vfe_device *vfe_dev,
 			(UINT_MAX - reg_cfg_cmd->u.rw_info.len)) ||
 			((reg_cfg_cmd->u.rw_info.cmd_data_offset +
 			reg_cfg_cmd->u.rw_info.len) > cmd_len)) {
-			pr_err("%s:%d cmd_data_offset %d len %d cmd_len %d\n",
+			pr_err_ratelimited("%s:%d cmd_data_offset %d len %d cmd_len %d\n",
 				__func__, __LINE__,
 				reg_cfg_cmd->u.rw_info.cmd_data_offset,
 				reg_cfg_cmd->u.rw_info.len, cmd_len);
@@ -947,7 +1168,12 @@ static int msm_isp_send_hw_cmd(struct vfe_device *vfe_dev,
 	case VFE_READ_DMI_16BIT:
 	case VFE_READ_DMI_32BIT:
 	case VFE_READ_DMI_64BIT: {
+<<<<<<< HEAD
 		if (reg_cfg_cmd->cmd_type == VFE_WRITE_DMI_64BIT) {
+=======
+		if (reg_cfg_cmd->cmd_type == VFE_WRITE_DMI_64BIT ||
+			reg_cfg_cmd->cmd_type == VFE_READ_DMI_64BIT) {
+>>>>>>> 0e91d2a... Nougat
 			if ((reg_cfg_cmd->u.dmi_info.hi_tbl_offset <=
 				reg_cfg_cmd->u.dmi_info.lo_tbl_offset) ||
 				(reg_cfg_cmd->u.dmi_info.hi_tbl_offset -
@@ -1015,9 +1241,10 @@ static int msm_isp_send_hw_cmd(struct vfe_device *vfe_dev,
 		uint32_t temp;
 		if ((UINT_MAX - sizeof(temp) <
 			reg_cfg_cmd->u.mask_info.reg_offset) ||
-			(resource_size(vfe_dev->vfe_mem) <
+			(vfe_dev->vfe_base_size <
 			reg_cfg_cmd->u.mask_info.reg_offset +
-			sizeof(temp))) {
+			sizeof(temp)) ||
+			(reg_cfg_cmd->u.mask_info.reg_offset & 0x3)) {
 			pr_err("%s: VFE_CFG_MASK: Invalid length\n", __func__);
 			return -EINVAL;
 		}
@@ -1155,7 +1382,8 @@ static int msm_isp_send_hw_cmd(struct vfe_device *vfe_dev,
 				sizeof(__u32));
 			return -EINVAL;
 		}
-		rc = msm_isp_get_max_clk_rate(vfe_dev, &rate);
+		rc = vfe_dev->hw_info->vfe_ops.platform_ops.get_max_clk_rate(
+							vfe_dev, &rate);
 		if (rc < 0) {
 			pr_err("%s:%d failed: rc %d\n", __func__, __LINE__, rc);
 			return -EINVAL;
@@ -1176,7 +1404,8 @@ static int msm_isp_send_hw_cmd(struct vfe_device *vfe_dev,
 				sizeof(struct msm_isp_clk_rates));
 			return -EINVAL;
 		}
-		rc = msm_isp_get_clk_rates(vfe_dev, &rates);
+		rc = vfe_dev->hw_info->vfe_ops.platform_ops.get_clk_rates(
+							vfe_dev, &rates);
 		if (rc < 0) {
 			pr_err("%s:%d failed: rc %d\n", __func__, __LINE__, rc);
 			return -EINVAL;
@@ -1313,12 +1542,23 @@ int msm_isp_cal_word_per_line(uint32_t output_format,
 	case V4L2_PIX_FMT_SGBRG10:
 	case V4L2_PIX_FMT_SGRBG10:
 	case V4L2_PIX_FMT_SRGGB10:
+	case V4L2_PIX_FMT_Y10:
+	case V4L2_PIX_FMT_SBGGR10DPCM6:
+	case V4L2_PIX_FMT_SGBRG10DPCM6:
+	case V4L2_PIX_FMT_SGRBG10DPCM6:
+	case V4L2_PIX_FMT_SRGGB10DPCM6:
+	case V4L2_PIX_FMT_SBGGR10DPCM8:
+	case V4L2_PIX_FMT_SGBRG10DPCM8:
+	case V4L2_PIX_FMT_SGRBG10DPCM8:
+	case V4L2_PIX_FMT_SRGGB10DPCM8:
+	case V4L2_PIX_FMT_META10:
 		val = CAL_WORD(pixel_per_line, 5, 32);
 		break;
 	case V4L2_PIX_FMT_SBGGR12:
 	case V4L2_PIX_FMT_SGBRG12:
 	case V4L2_PIX_FMT_SGRBG12:
 	case V4L2_PIX_FMT_SRGGB12:
+	case V4L2_PIX_FMT_Y12:
 		val = CAL_WORD(pixel_per_line, 3, 16);
 		break;
 	case V4L2_PIX_FMT_SBGGR14:
@@ -1351,6 +1591,7 @@ int msm_isp_cal_word_per_line(uint32_t output_format,
 	case V4L2_PIX_FMT_NV41:
 	case V4L2_PIX_FMT_NV16:
 	case V4L2_PIX_FMT_NV61:
+	case V4L2_PIX_FMT_GREY:
 		val = CAL_WORD(pixel_per_line, 1, 8);
 		break;
 	case V4L2_PIX_FMT_YUYV:
@@ -1384,6 +1625,14 @@ enum msm_isp_pack_fmt msm_isp_get_pack_format(uint32_t output_format)
 	case V4L2_PIX_FMT_SGBRG10:
 	case V4L2_PIX_FMT_SGRBG10:
 	case V4L2_PIX_FMT_SRGGB10:
+	case V4L2_PIX_FMT_SBGGR10DPCM6:
+	case V4L2_PIX_FMT_SGBRG10DPCM6:
+	case V4L2_PIX_FMT_SGRBG10DPCM6:
+	case V4L2_PIX_FMT_SRGGB10DPCM6:
+	case V4L2_PIX_FMT_SBGGR10DPCM8:
+	case V4L2_PIX_FMT_SGBRG10DPCM8:
+	case V4L2_PIX_FMT_SGRBG10DPCM8:
+	case V4L2_PIX_FMT_SRGGB10DPCM8:
 	case V4L2_PIX_FMT_SBGGR12:
 	case V4L2_PIX_FMT_SGBRG12:
 	case V4L2_PIX_FMT_SGRBG12:
@@ -1392,6 +1641,9 @@ enum msm_isp_pack_fmt msm_isp_get_pack_format(uint32_t output_format)
 	case V4L2_PIX_FMT_SGBRG14:
 	case V4L2_PIX_FMT_SGRBG14:
 	case V4L2_PIX_FMT_SRGGB14:
+	case V4L2_PIX_FMT_GREY:
+	case V4L2_PIX_FMT_Y10:
+	case V4L2_PIX_FMT_Y12:
 		return MIPI;
 	case V4L2_PIX_FMT_QBGGR8:
 	case V4L2_PIX_FMT_QGBRG8:
@@ -1468,6 +1720,14 @@ int msm_isp_get_bit_per_pixel(uint32_t output_format)
 	case V4L2_PIX_FMT_SGBRG10:
 	case V4L2_PIX_FMT_SGRBG10:
 	case V4L2_PIX_FMT_SRGGB10:
+	case V4L2_PIX_FMT_SBGGR10DPCM6:
+	case V4L2_PIX_FMT_SGBRG10DPCM6:
+	case V4L2_PIX_FMT_SGRBG10DPCM6:
+	case V4L2_PIX_FMT_SRGGB10DPCM6:
+	case V4L2_PIX_FMT_SBGGR10DPCM8:
+	case V4L2_PIX_FMT_SGBRG10DPCM8:
+	case V4L2_PIX_FMT_SGRBG10DPCM8:
+	case V4L2_PIX_FMT_SRGGB10DPCM8:
 	case V4L2_PIX_FMT_QBGGR10:
 	case V4L2_PIX_FMT_QGBRG10:
 	case V4L2_PIX_FMT_QGRBG10:
@@ -1478,6 +1738,8 @@ int msm_isp_get_bit_per_pixel(uint32_t output_format)
 	case V4L2_PIX_FMT_P16GBRG10:
 	case V4L2_PIX_FMT_P16GRBG10:
 	case V4L2_PIX_FMT_P16RGGB10:
+	case V4L2_PIX_FMT_META10:
+	case MSM_V4L2_PIX_FMT_META10:
 		return 10;
 	case V4L2_PIX_FMT_SBGGR12:
 	case V4L2_PIX_FMT_SGBRG12:
@@ -1515,8 +1777,33 @@ void msm_isp_update_error_frame_count(struct vfe_device *vfe_dev)
 {
 	struct msm_vfe_error_info *error_info = &vfe_dev->error_info;
 	error_info->info_dump_frame_count++;
+<<<<<<< HEAD
 	if (error_info->info_dump_frame_count == 0)
 		error_info->info_dump_frame_count++;
+=======
+}
+
+
+static int msm_isp_process_iommu_page_fault(struct vfe_device *vfe_dev)
+{
+	int rc = vfe_dev->buf_mgr->pagefault_debug_disable;
+
+	pr_err("%s:%d] VFE%d Handle Page fault! vfe_dev %pK\n", __func__,
+		__LINE__,  vfe_dev->pdev->id, vfe_dev);
+
+	msm_isp_halt_send_error(vfe_dev, ISP_EVENT_IOMMU_P_FAULT);
+
+	if (vfe_dev->buf_mgr->pagefault_debug_disable == 0) {
+		vfe_dev->buf_mgr->pagefault_debug_disable = 1;
+		vfe_dev->buf_mgr->ops->buf_mgr_debug(vfe_dev->buf_mgr,
+			vfe_dev->page_fault_addr);
+		msm_isp_print_ping_pong_address(vfe_dev,
+			vfe_dev->page_fault_addr);
+		vfe_dev->hw_info->vfe_ops.axi_ops.
+			read_wm_ping_pong_addr(vfe_dev);
+	}
+	return rc;
+>>>>>>> 0e91d2a... Nougat
 }
 
 void msm_isp_process_error_info(struct vfe_device *vfe_dev)
@@ -1567,9 +1854,10 @@ static inline void msm_isp_update_error_info(struct vfe_device *vfe_dev,
 	vfe_dev->error_info.error_count++;
 }
 
-static void msm_isp_process_overflow_irq(
+void msm_isp_process_overflow_irq(
 	struct vfe_device *vfe_dev,
-	uint32_t *irq_status0, uint32_t *irq_status1)
+	uint32_t *irq_status0, uint32_t *irq_status1,
+	uint32_t force_overflow)
 {
 	uint32_t overflow_mask;
 
@@ -1592,11 +1880,16 @@ static void msm_isp_process_overflow_irq(
 	
 	vfe_dev->hw_info->vfe_ops.core_ops.
 		get_overflow_mask(&overflow_mask);
-	overflow_mask &= *irq_status1;
+	if (!force_overflow)
+		overflow_mask &= *irq_status1;
 
 	if (overflow_mask) {
 		struct msm_isp_event_data error_event;
 
+<<<<<<< HEAD
+=======
+                pr_err("%s: overflow_mask:0x%x\n", __func__, overflow_mask);
+>>>>>>> 0e91d2a... Nougat
 		if (vfe_dev->reset_pending == 1) {
 			pr_err("%s:%d failed: overflow %x during reset\n",
 				__func__, __LINE__, overflow_mask);
@@ -1605,6 +1898,7 @@ static void msm_isp_process_overflow_irq(
 			return;
 		}
 
+<<<<<<< HEAD
 		ISP_DBG("%s: Bus overflow detected: 0x%x, start recovery!\n",
 				__func__, overflow_mask);
 		atomic_set(&vfe_dev->error_info.overflow_state,
@@ -1620,16 +1914,69 @@ static void msm_isp_process_overflow_irq(
 		
 		vfe_dev->hw_info->vfe_ops.core_ops.
 			update_camif_state(vfe_dev, DISABLE_CAMIF_IMMEDIATELY);
+=======
+		ISP_DBG("%s: VFE%d Bus overflow detected: start recovery!\n",
+			__func__, vfe_dev->pdev->id);
+
+		
+		atomic_cmpxchg(&vfe_dev->error_info.overflow_state,
+			NO_OVERFLOW, OVERFLOW_DETECTED);
+		vfe_dev->recovery_irq0_mask = vfe_dev->irq0_mask;
+		vfe_dev->recovery_irq1_mask = vfe_dev->irq1_mask;
+
+		vfe_dev->hw_info->vfe_ops.core_ops.
+			set_halt_restart_mask(vfe_dev);
+
+		
+		if (vfe_dev->is_split) {
+			uint32_t other_vfe_id;
+			struct vfe_device *other_vfe_dev;
+
+			other_vfe_id = (vfe_dev->pdev->id == ISP_VFE0) ?
+				ISP_VFE1 : ISP_VFE0;
+			other_vfe_dev = vfe_dev->common_data->
+				dual_vfe_res->vfe_dev[other_vfe_id];
+			if (other_vfe_dev) {
+			  other_vfe_dev->recovery_irq0_mask =
+				  other_vfe_dev->irq0_mask;
+			  other_vfe_dev->recovery_irq1_mask =
+				  other_vfe_dev->irq1_mask;
+			}
+
+			atomic_cmpxchg(&(vfe_dev->common_data->dual_vfe_res->
+				vfe_dev[other_vfe_id]->
+				error_info.overflow_state),
+				NO_OVERFLOW, OVERFLOW_DETECTED);
+
+			vfe_dev->hw_info->vfe_ops.core_ops.
+				set_halt_restart_mask(vfe_dev->common_data->
+				dual_vfe_res->vfe_dev[other_vfe_id]);
+		}
+>>>>>>> 0e91d2a... Nougat
 
 		
 		*irq_status0 = 0;
 		*irq_status1 = 0;
 
+<<<<<<< HEAD
 		error_event.frame_id =
 			vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id;
 		error_event.u.error_info.error_mask = 1 << ISP_WM_BUS_OVERFLOW;
 		msm_isp_send_event(vfe_dev,
 			ISP_EVENT_WM_BUS_OVERFLOW, &error_event);
+=======
+		
+		if (atomic_read(&vfe_dev->error_info.overflow_state)
+			!= HALT_ENFORCED) {
+			memset(&error_event, 0, sizeof(error_event));
+			error_event.frame_id =
+				vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id;
+			error_event.u.error_info.err_type =
+				ISP_ERROR_BUS_OVERFLOW;
+			msm_isp_send_event(vfe_dev,
+				ISP_EVENT_ERROR, &error_event);
+		}
+>>>>>>> 0e91d2a... Nougat
 	}
 }
 
@@ -1641,6 +1988,7 @@ void msm_isp_reset_burst_count_and_frame_drop(
 		stream_info->stream_type != BURST_STREAM) {
 		return;
 	}
+<<<<<<< HEAD
 	if (stream_info->stream_type == BURST_STREAM &&
 		stream_info->num_burst_capture != 0) {
 		framedrop_period = msm_isp_get_framedrop_period(
@@ -1655,6 +2003,15 @@ void msm_isp_reset_burst_count_and_frame_drop(
 
 static void msm_isp_enqueue_tasklet_cmd(struct vfe_device *vfe_dev,
 	uint32_t irq_status0, uint32_t irq_status1, uint32_t iommu_page_fault)
+=======
+	if (stream_info->num_burst_capture != 0)
+		msm_isp_reset_framedrop(vfe_dev, stream_info);
+}
+
+static void msm_isp_enqueue_tasklet_cmd(struct vfe_device *vfe_dev,
+	uint32_t irq_status0, uint32_t irq_status1,
+	uint32_t ping_pong_status)
+>>>>>>> 0e91d2a... Nougat
 {
 	unsigned long flags;
 	struct msm_vfe_tasklet_queue_cmd *queue_cmd = NULL;
@@ -1670,8 +2027,13 @@ static void msm_isp_enqueue_tasklet_cmd(struct vfe_device *vfe_dev,
 	}
 	queue_cmd->vfeInterruptStatus0 = irq_status0;
 	queue_cmd->vfeInterruptStatus1 = irq_status1;
+<<<<<<< HEAD
 	queue_cmd->iommu_page_fault = iommu_page_fault;
 	msm_isp_get_timestamp(&queue_cmd->ts);
+=======
+	queue_cmd->vfePingPongStatus = ping_pong_status;
+	msm_isp_get_timestamp(&queue_cmd->ts, vfe_dev);
+>>>>>>> 0e91d2a... Nougat
 	queue_cmd->cmd_used = 1;
 	vfe_dev->taskletq_idx = (vfe_dev->taskletq_idx + 1) %
 		MSM_VFE_TASKLETQ_SIZE;
@@ -1683,7 +2045,7 @@ static void msm_isp_enqueue_tasklet_cmd(struct vfe_device *vfe_dev,
 irqreturn_t msm_isp_process_irq(int irq_num, void *data)
 {
 	struct vfe_device *vfe_dev = (struct vfe_device *) data;
-	uint32_t irq_status0, irq_status1;
+	uint32_t irq_status0, irq_status1, ping_pong_status;
 	uint32_t error_mask0, error_mask1;
 
 	vfe_dev->hw_info->vfe_ops.irq_ops.
@@ -1694,9 +2056,10 @@ irqreturn_t msm_isp_process_irq(int irq_num, void *data)
 			__func__, vfe_dev->pdev->id);
 		return IRQ_HANDLED;
 	}
-
+	ping_pong_status = vfe_dev->hw_info->vfe_ops.axi_ops.
+		get_pingpong_status(vfe_dev);
 	msm_isp_process_overflow_irq(vfe_dev,
-		&irq_status0, &irq_status1);
+		&irq_status0, &irq_status1, 0);
 
 	vfe_dev->hw_info->vfe_ops.core_ops.
 		get_error_mask(&error_mask0, &error_mask1);
@@ -1704,8 +2067,7 @@ irqreturn_t msm_isp_process_irq(int irq_num, void *data)
 	error_mask1 &= irq_status1;
 	irq_status0 &= ~error_mask0;
 	irq_status1 &= ~error_mask1;
-	if (!vfe_dev->ignore_error &&
-		((error_mask0 != 0) || (error_mask1 != 0)))
+	if ((error_mask0 != 0) || (error_mask1 != 0))
 		msm_isp_update_error_info(vfe_dev, error_mask0, error_mask1);
 
 	if ((irq_status0 == 0) && (irq_status1 == 0) &&
@@ -1715,7 +2077,12 @@ irqreturn_t msm_isp_process_irq(int irq_num, void *data)
 		return IRQ_HANDLED;
 	}
 
+<<<<<<< HEAD
 	msm_isp_enqueue_tasklet_cmd(vfe_dev, irq_status0, irq_status1, 0);
+=======
+	msm_isp_enqueue_tasklet_cmd(vfe_dev, irq_status0, irq_status1,
+					ping_pong_status);
+>>>>>>> 0e91d2a... Nougat
 
 	return IRQ_HANDLED;
 }
@@ -1727,7 +2094,19 @@ void msm_isp_do_tasklet(unsigned long data)
 	struct msm_vfe_irq_ops *irq_ops = &vfe_dev->hw_info->vfe_ops.irq_ops;
 	struct msm_vfe_tasklet_queue_cmd *queue_cmd;
 	struct msm_isp_timestamp ts;
+<<<<<<< HEAD
 	uint32_t irq_status0, irq_status1, iommu_page_fault;
+=======
+	uint32_t irq_status0, irq_status1, pingpong_status;
+
+	if (vfe_dev->vfe_base == NULL || vfe_dev->vfe_open_cnt == 0) {
+		ISP_DBG("%s: VFE%d open cnt = %d, device closed(base = %pK)\n",
+			__func__, vfe_dev->pdev->id, vfe_dev->vfe_open_cnt,
+			vfe_dev->vfe_base);
+		return;
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	while (atomic_read(&vfe_dev->irq_cnt)) {
 		spin_lock_irqsave(&vfe_dev->tasklet_lock, flags);
 		queue_cmd = list_first_entry(&vfe_dev->tasklet_q,
@@ -1742,6 +2121,7 @@ void msm_isp_do_tasklet(unsigned long data)
 		queue_cmd->cmd_used = 0;
 		irq_status0 = queue_cmd->vfeInterruptStatus0;
 		irq_status1 = queue_cmd->vfeInterruptStatus1;
+		pingpong_status = queue_cmd->vfePingPongStatus;
 		ts = queue_cmd->ts;
 		iommu_page_fault = queue_cmd->iommu_page_fault;
 		queue_cmd->iommu_page_fault = 0;
@@ -1769,8 +2149,15 @@ void msm_isp_do_tasklet(unsigned long data)
 		irq_ops->process_camif_irq(vfe_dev,
 			irq_status0, irq_status1, &ts);
 		irq_ops->process_stats_irq(vfe_dev,
-			irq_status0, irq_status1, &ts);
+			irq_status0, irq_status1,
+			pingpong_status, &ts);
 		irq_ops->process_axi_irq(vfe_dev,
+<<<<<<< HEAD
+=======
+			irq_status0, irq_status1,
+			pingpong_status, &ts);
+		irq_ops->process_camif_irq(vfe_dev,
+>>>>>>> 0e91d2a... Nougat
 			irq_status0, irq_status1, &ts);
 		irq_ops->process_reg_update(vfe_dev,
 			irq_status0, irq_status1, &ts);
@@ -1800,6 +2187,7 @@ static int msm_vfe_iommu_fault_handler(struct iommu_domain *domain,
 
 	if (token) {
 		vfe_dev = (struct vfe_device *)token;
+<<<<<<< HEAD
 		if (!vfe_dev->buf_mgr || !vfe_dev->buf_mgr->ops) {
 			pr_err("%s:%d] buf_mgr %p\n", __func__,
 				__LINE__, vfe_dev->buf_mgr);
@@ -1807,8 +2195,29 @@ static int msm_vfe_iommu_fault_handler(struct iommu_domain *domain,
 		}
 		if (!vfe_dev->buf_mgr->pagefault_debug)
 			msm_isp_enqueue_tasklet_cmd(vfe_dev, 0, 0, 1);
+=======
+		vfe_dev->page_fault_addr = iova;
+		if (!vfe_dev->buf_mgr || !vfe_dev->buf_mgr->ops ||
+			!vfe_dev->axi_data.num_active_stream) {
+			pr_err("%s:%d buf_mgr %pK active strms %d\n", __func__,
+				__LINE__, vfe_dev->buf_mgr,
+				vfe_dev->axi_data.num_active_stream);
+			goto end;
+		}
+
+		mutex_lock(&vfe_dev->core_mutex);
+		if (vfe_dev->vfe_open_cnt > 0) {
+			atomic_set(&vfe_dev->error_info.overflow_state,
+				HALT_ENFORCED);
+			msm_isp_process_iommu_page_fault(vfe_dev);
+		} else {
+			pr_err("%s: no handling, vfe open cnt = %d\n",
+				__func__, vfe_dev->vfe_open_cnt);
+		}
+		mutex_unlock(&vfe_dev->core_mutex);
+>>>>>>> 0e91d2a... Nougat
 	} else {
-		ISP_DBG("%s:%d] no token received: %p\n",
+		ISP_DBG("%s:%d] no token received: %pK\n",
 			__func__, __LINE__, token);
 		goto end;
 	}
@@ -1823,19 +2232,26 @@ int msm_isp_open_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 
 	ISP_DBG("%s open_cnt %u\n", __func__, vfe_dev->vfe_open_cnt);
 
+<<<<<<< HEAD
+=======
+	if (vfe_dev->common_data == NULL ||
+		vfe_dev->common_data->dual_vfe_res == NULL) {
+		pr_err("%s: Error in probe. No common_data or dual vfe res\n",
+			__func__);
+		return -EINVAL;
+	}
+
+	if (vfe_dev->pdev->id == ISP_VFE0)
+		vfe_dev->common_data->dual_vfe_res->epoch_sync_mask = 0;
+
+>>>>>>> 0e91d2a... Nougat
 	mutex_lock(&vfe_dev->realtime_mutex);
 	mutex_lock(&vfe_dev->core_mutex);
 
-	if (vfe_dev->vfe_open_cnt++ && vfe_dev->vfe_base) {
+	if (vfe_dev->vfe_open_cnt++) {
 		mutex_unlock(&vfe_dev->core_mutex);
 		mutex_unlock(&vfe_dev->realtime_mutex);
 		return 0;
-	}
-
-	if (vfe_dev->vfe_base) {
-		pr_err("%s:%d invalid params cnt %d base %p\n", __func__,
-			__LINE__, vfe_dev->vfe_open_cnt, vfe_dev->vfe_base);
-		vfe_dev->vfe_base = NULL;
 	}
 
 	vfe_dev->reset_pending = 0;
@@ -1853,6 +2269,8 @@ int msm_isp_open_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 
 	vfe_dev->hw_info->vfe_ops.core_ops.clear_status_reg(vfe_dev);
 
+	vfe_dev->vfe_hw_version = msm_camera_io_r(vfe_dev->vfe_base);
+	ISP_DBG("%s: HW Version: 0x%x\n", __func__, vfe_dev->vfe_hw_version);
 	rc = vfe_dev->hw_info->vfe_ops.core_ops.reset_hw(vfe_dev, 1, 1);
 	if (rc <= 0) {
 		pr_err("%s: reset timeout\n", __func__);
@@ -1862,8 +2280,6 @@ int msm_isp_open_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 		mutex_unlock(&vfe_dev->realtime_mutex);
 		return -EINVAL;
 	}
-	vfe_dev->vfe_hw_version = msm_camera_io_r(vfe_dev->vfe_base);
-	ISP_DBG("%s: HW Version: 0x%x\n", __func__, vfe_dev->vfe_hw_version);
 
 	vfe_dev->hw_info->vfe_ops.core_ops.init_hw_reg(vfe_dev);
 
@@ -1935,3 +2351,51 @@ int msm_isp_close_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	mutex_unlock(&vfe_dev->realtime_mutex);
 	return 0;
 }
+<<<<<<< HEAD
+=======
+
+void msm_isp_flush_tasklet(struct vfe_device *vfe_dev)
+{
+	unsigned long flags;
+	struct msm_vfe_tasklet_queue_cmd *queue_cmd;
+
+	spin_lock_irqsave(&vfe_dev->tasklet_lock, flags);
+	while (atomic_read(&vfe_dev->irq_cnt)) {
+		queue_cmd = list_first_entry(&vfe_dev->tasklet_q,
+		struct msm_vfe_tasklet_queue_cmd, list);
+		if (!queue_cmd) {
+			atomic_set(&vfe_dev->irq_cnt, 0);
+			break;
+		}
+		atomic_sub(1, &vfe_dev->irq_cnt);
+		list_del(&queue_cmd->list);
+		queue_cmd->cmd_used = 0;
+	}
+	spin_unlock_irqrestore(&vfe_dev->tasklet_lock, flags);
+
+	return;
+}
+
+void msm_isp_save_framedrop_values(struct vfe_device *vfe_dev,
+				enum msm_vfe_input_src frame_src)
+{
+	struct msm_vfe_axi_stream *stream_info = NULL;
+	uint32_t j = 0;
+	unsigned long flags;
+
+	for (j = 0; j < VFE_AXI_SRC_MAX; j++) {
+		stream_info = &vfe_dev->axi_data.stream_info[j];
+		if (stream_info->state != ACTIVE)
+			continue;
+		if (frame_src != SRC_TO_INTF(stream_info->stream_src))
+			continue;
+
+		stream_info =
+			&vfe_dev->axi_data.stream_info[j];
+		spin_lock_irqsave(&stream_info->lock, flags);
+		stream_info->activated_framedrop_period  =
+			stream_info->requested_framedrop_period;
+		spin_unlock_irqrestore(&stream_info->lock, flags);
+	}
+}
+>>>>>>> 0e91d2a... Nougat

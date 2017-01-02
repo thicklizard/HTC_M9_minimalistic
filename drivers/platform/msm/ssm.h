@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2013-2014, 2016 The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -37,7 +41,11 @@ enum ssm_ipc_req {
 	SSM_INVALID_REQ,
 };
 
+<<<<<<< HEAD
 /* OEM reuest commands list.*/
+=======
+/* OEM request commands list.*/
+>>>>>>> 0e91d2a... Nougat
 enum oem_req {
 	SSM_READY,
 	SSM_MODE_INFO_READY,
@@ -53,7 +61,11 @@ enum modem_mode_status {
 	FAILED = -1,
 };
 
+<<<<<<< HEAD
 /* tzapp encode mode reuest.*/
+=======
+/* tzapp encode mode request.*/
+>>>>>>> 0e91d2a... Nougat
 __packed struct tzapp_mode_enc_req {
 	uint32_t tzapp_ssm_cmd;
 	uint8_t  mode_info[4];

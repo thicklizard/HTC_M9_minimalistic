@@ -906,10 +906,22 @@ nouveau_connector_hotplug_work(struct work_struct *work)
 	NV_DEBUG(drm, "%splugged %s\n", plugged ? "" : "un",
 		 drm_get_connector_name(connector));
 
+<<<<<<< HEAD
 	if (plugged)
 		drm_helper_connector_dpms(connector, DRM_MODE_DPMS_ON);
 	else
 		drm_helper_connector_dpms(connector, DRM_MODE_DPMS_OFF);
+=======
+		mutex_lock(&drm->dev->mode_config.mutex);
+		if (plugged)
+			drm_helper_connector_dpms(connector, DRM_MODE_DPMS_ON);
+		else
+			drm_helper_connector_dpms(connector, DRM_MODE_DPMS_OFF);
+		mutex_unlock(&drm->dev->mode_config.mutex);
+
+		drm_helper_hpd_irq_event(connector->dev);
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	drm_helper_hpd_irq_event(dev);
 }

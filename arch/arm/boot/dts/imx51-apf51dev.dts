@@ -55,8 +55,13 @@
 
 &esdhc1 {
 	pinctrl-names = "default";
+<<<<<<< HEAD
 	pinctrl-0 = <&pinctrl_esdhc1_1>;
 	cd-gpios = <&gpio2 29 0>;
+=======
+	pinctrl-0 = <&pinctrl_esdhc1>;
+	cd-gpios = <&gpio2 29 GPIO_ACTIVE_LOW>;
+>>>>>>> 0e91d2a... Nougat
 	bus-width = <4>;
 	status = "okay";
 };

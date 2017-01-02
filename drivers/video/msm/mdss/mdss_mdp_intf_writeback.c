@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -49,6 +49,11 @@ struct mdss_mdp_writeback_ctx {
 	struct mdss_mdp_format_params *dst_fmt;
 	u16 width;
 	u16 height;
+<<<<<<< HEAD
+=======
+	u16 frame_rate;
+	enum mdss_mdp_csc_type csc_type;
+>>>>>>> 0e91d2a... Nougat
 	struct mdss_rect dst_rect;
 
 	u32 dnsc_factor_w;
@@ -70,7 +75,7 @@ struct mdss_mdp_writeback_ctx {
 static struct mdss_mdp_writeback_ctx wb_ctx_list[MDSS_MDP_MAX_WRITEBACK] = {
 	{
 		.type = MDSS_MDP_WRITEBACK_TYPE_ROTATOR,
-		.intr_type = MDSS_MDP_IRQ_WB_ROT_COMP,
+		.intr_type = MDSS_MDP_IRQ_TYPE_WB_ROT_COMP,
 		.intf_num = 0,
 		.xin_id = 3,
 		.clk_ctrl.reg_off = 0x2BC,
@@ -78,7 +83,7 @@ static struct mdss_mdp_writeback_ctx wb_ctx_list[MDSS_MDP_MAX_WRITEBACK] = {
 	},
 	{
 		.type = MDSS_MDP_WRITEBACK_TYPE_ROTATOR,
-		.intr_type = MDSS_MDP_IRQ_WB_ROT_COMP,
+		.intr_type = MDSS_MDP_IRQ_TYPE_WB_ROT_COMP,
 		.intf_num = 1,
 		.xin_id = 11,
 		.clk_ctrl.reg_off = 0x2BC,
@@ -86,7 +91,7 @@ static struct mdss_mdp_writeback_ctx wb_ctx_list[MDSS_MDP_MAX_WRITEBACK] = {
 	},
 	{
 		.type = MDSS_MDP_WRITEBACK_TYPE_LINE,
-		.intr_type = MDSS_MDP_IRQ_WB_ROT_COMP,
+		.intr_type = MDSS_MDP_IRQ_TYPE_WB_ROT_COMP,
 		.intf_num = 0,
 		.xin_id = 3,
 		.clk_ctrl.reg_off = 0x2BC,
@@ -94,7 +99,7 @@ static struct mdss_mdp_writeback_ctx wb_ctx_list[MDSS_MDP_MAX_WRITEBACK] = {
 	},
 	{
 		.type = MDSS_MDP_WRITEBACK_TYPE_LINE,
-		.intr_type = MDSS_MDP_IRQ_WB_ROT_COMP,
+		.intr_type = MDSS_MDP_IRQ_TYPE_WB_ROT_COMP,
 		.intf_num = 1,
 		.xin_id = 11,
 		.clk_ctrl.reg_off = 0x2BC,
@@ -102,7 +107,7 @@ static struct mdss_mdp_writeback_ctx wb_ctx_list[MDSS_MDP_MAX_WRITEBACK] = {
 	},
 	{
 		.type = MDSS_MDP_WRITEBACK_TYPE_WFD,
-		.intr_type = MDSS_MDP_IRQ_WB_WFD,
+		.intr_type = MDSS_MDP_IRQ_TYPE_WB_WFD_COMP,
 		.intf_num = 0,
 		.xin_id = 6,
 		.clk_ctrl.reg_off = 0x2BC,
@@ -143,6 +148,65 @@ static int mdss_mdp_writeback_addr_setup(struct mdss_mdp_writeback_ctx *ctx,
 	return 0;
 }
 
+<<<<<<< HEAD
+=======
+static int mdss_mdp_writeback_cdm_setup(struct mdss_mdp_writeback_ctx *ctx,
+	struct mdss_mdp_cdm *cdm, struct mdss_mdp_format_params *fmt)
+{
+	struct mdp_cdm_cfg setup;
+
+	switch (fmt->chroma_sample) {
+	case MDSS_MDP_CHROMA_RGB:
+		setup.horz_downsampling_type = MDP_CDM_CDWN_DISABLE;
+		setup.vert_downsampling_type = MDP_CDM_CDWN_DISABLE;
+		break;
+	case MDSS_MDP_CHROMA_H2V1:
+		setup.horz_downsampling_type = MDP_CDM_CDWN_COSITE;
+		setup.vert_downsampling_type = MDP_CDM_CDWN_DISABLE;
+		break;
+	case MDSS_MDP_CHROMA_420:
+		setup.horz_downsampling_type = MDP_CDM_CDWN_COSITE;
+		setup.vert_downsampling_type = MDP_CDM_CDWN_OFFSITE;
+		break;
+	case MDSS_MDP_CHROMA_H1V2:
+	default:
+		pr_err("%s: unsupported chroma sampling type\n", __func__);
+		return -EINVAL;
+	}
+
+	setup.out_format = fmt->format;
+	setup.mdp_csc_bit_depth = MDP_CDM_CSC_8BIT;
+	setup.output_width = ctx->width;
+	setup.output_height = ctx->height;
+	setup.csc_type = ctx->csc_type;
+	return mdss_mdp_cdm_setup(cdm, &setup);
+}
+
+void mdss_mdp_set_wb_cdp(struct mdss_mdp_writeback_ctx *ctx,
+	struct mdss_mdp_format_params *fmt)
+{
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+	u32 cdp_settings = 0x0;
+
+	/* Disable CDP for rotator in v1 */
+	if (ctx->type == MDSS_MDP_WRITEBACK_TYPE_ROTATOR &&
+			mdss_has_quirk(mdata, MDSS_QUIRK_ROTCDP))
+		goto exit;
+
+	cdp_settings = MDSS_MDP_CDP_ENABLE;
+
+	if (!mdss_mdp_is_linear_format(fmt))
+		cdp_settings |= MDSS_MDP_CDP_ENABLE_UBWCMETA;
+
+	/* 64-transactions for line mode otherwise we keep 32 */
+	if (ctx->type != MDSS_MDP_WRITEBACK_TYPE_ROTATOR)
+		cdp_settings |= MDSS_MDP_CDP_AHEAD_64;
+
+exit:
+	mdp_wb_write(ctx, MDSS_MDP_REG_WB_CDP_CTRL, cdp_settings);
+}
+
+>>>>>>> 0e91d2a... Nougat
 static int mdss_mdp_writeback_format_setup(struct mdss_mdp_writeback_ctx *ctx,
 		u32 format)
 {
@@ -171,7 +235,21 @@ static int mdss_mdp_writeback_format_setup(struct mdss_mdp_writeback_ctx *ctx,
 
 	chroma_samp = fmt->chroma_sample;
 
+<<<<<<< HEAD
 	if (ctx->type != MDSS_MDP_WRITEBACK_TYPE_ROTATOR && fmt->is_yuv) {
+=======
+	if (ctl->cdm) {
+		rc = mdss_mdp_writeback_cdm_setup(ctx, ctl->cdm, fmt);
+		if (rc) {
+			pr_err("%s: CDM config failed with error %d\n",
+				__func__, rc);
+			return rc;
+		}
+		ctl->flush_bits |= BIT(26);
+	}
+	if (ctx->type != MDSS_MDP_WRITEBACK_TYPE_ROTATOR &&
+		fmt->is_yuv && !ctl->cdm) {
+>>>>>>> 0e91d2a... Nougat
 		mdss_mdp_csc_setup(MDSS_MDP_BLOCK_WB, ctx->wb_num,
 				   MDSS_MDP_CSC_RGB2YUV_601);
 		opmode |= (1 << 8) |	
@@ -211,16 +289,23 @@ static int mdss_mdp_writeback_format_setup(struct mdss_mdp_writeback_ctx *ctx,
 			dst_format |= BIT(14); 
 	}
 
+<<<<<<< HEAD
 	mdata = mdss_mdp_get_mdata();
 	if (mdata && mdata->mdp_rev >= MDSS_MDP_HW_REV_102 &&
 			mdata->mdp_rev < MDSS_MDP_HW_REV_200) {
+=======
+	if (fmt->is_yuv && test_bit(MDSS_CAPS_YUV_CONFIG, mdata->mdss_caps_map))
+		dst_format |= BIT(15);
+
+	if (mdss_has_quirk(mdata, MDSS_QUIRK_FMT_PACK_PATTERN)) {
+>>>>>>> 0e91d2a... Nougat
 		pattern = (fmt->element[3] << 24) |
-			  (fmt->element[2] << 16) |
+			  (fmt->element[2] << 15) |
 			  (fmt->element[1] << 8)  |
 			  (fmt->element[0] << 0);
 	} else {
 		pattern = (fmt->element[3] << 24) |
-			  (fmt->element[2] << 15) |
+			  (fmt->element[2] << 16) |
 			  (fmt->element[1] << 8)  |
 			  (fmt->element[0] << 0);
 	}
@@ -230,14 +315,30 @@ static int mdss_mdp_writeback_format_setup(struct mdss_mdp_writeback_ctx *ctx,
 		      ((fmt->unpack_count - 1) << 12) |
 		      ((fmt->bpp - 1) << 9);
 
+	dst_format |= (fmt->unpack_dx_format << 21);
+
 	ystride0 = (ctx->dst_planes.ystride[0]) |
 		   (ctx->dst_planes.ystride[1] << 16);
 	ystride1 = (ctx->dst_planes.ystride[2]) |
 		   (ctx->dst_planes.ystride[3] << 16);
 	outsize = (ctx->dst_rect.h << 16) | ctx->dst_rect.w;
 
+<<<<<<< HEAD
 	if (ctx->type == MDSS_MDP_WRITEBACK_TYPE_ROTATOR &&
 			mdata && mdata->has_rot_dwnscale) {
+=======
+	if (mdss_mdp_is_ubwc_format(fmt)) {
+		opmode |= BIT(0);
+		dst_format |= BIT(31);
+		if (mdata->highest_bank_bit)
+			write_config |= (mdata->highest_bank_bit << 8);
+		if (fmt->format == MDP_RGB_565_UBWC)
+			write_config |= 0x8;
+	}
+
+	if (ctx->type == MDSS_MDP_WRITEBACK_TYPE_ROTATOR
+			&& mdata->has_rot_dwnscale) {
+>>>>>>> 0e91d2a... Nougat
 		dnsc_factor = (ctx->dnsc_factor_h) | (ctx->dnsc_factor_w << 16);
 		mdp_wb_write(ctx, MDSS_MDP_REG_WB_ROTATOR_PIPE_DOWNSCALER,
 								dnsc_factor);
@@ -270,6 +371,11 @@ static int mdss_mdp_writeback_prepare_wfd(struct mdss_mdp_ctl *ctl, void *arg)
 	ctx->opmode = 0;
 	ctx->width = ctl->width;
 	ctx->height = ctl->height;
+<<<<<<< HEAD
+=======
+	ctx->frame_rate = ctl->frame_rate;
+	ctx->csc_type = ctl->csc_type;
+>>>>>>> 0e91d2a... Nougat
 	ctx->dst_rect.x = 0;
 	ctx->dst_rect.y = 0;
 	ctx->dst_rect.w = ctx->width;
@@ -290,7 +396,13 @@ static int mdss_mdp_writeback_prepare_rot(struct mdss_mdp_ctl *ctl, void *arg)
 {
 	struct mdss_mdp_writeback_ctx *ctx;
 	struct mdss_mdp_writeback_arg *wb_args;
+<<<<<<< HEAD
 	struct mdss_mdp_rotator_session *rot;
+=======
+	struct mdss_rot_entry *entry;
+	struct mdp_rotation_item *item;
+	struct mdss_rot_perf *perf;
+>>>>>>> 0e91d2a... Nougat
 	struct mdss_data_type *mdata;
 	struct mdss_mdp_format_params *fmt;
 	u32 format;
@@ -307,6 +419,11 @@ static int mdss_mdp_writeback_prepare_rot(struct mdss_mdp_ctl *ctl, void *arg)
 		pr_err("unable to retrieve rot session ctl=%d\n", ctl->num);
 		return -ENODEV;
 	}
+<<<<<<< HEAD
+=======
+	item = &entry->item;
+	perf = entry->perf;
+>>>>>>> 0e91d2a... Nougat
 	mdata = ctl->mdata;
 	if (!mdata) {
 		pr_err("no mdata attached to ctl=%d", ctl->num);
@@ -321,6 +438,7 @@ static int mdss_mdp_writeback_prepare_rot(struct mdss_mdp_ctl *ctl, void *arg)
 	ctx->bwc_mode = rot->bwc_mode;
 	ctx->opmode |= ctx->bwc_mode;
 
+<<<<<<< HEAD
 	ctx->width = ctx->dst_rect.w = rot->dnsc_factor_w ?
 		rot->dst.w / rot->dnsc_factor_w : rot->dst.w;
 	ctx->height = ctx->dst_rect.h = rot->dnsc_factor_h ?
@@ -329,6 +447,17 @@ static int mdss_mdp_writeback_prepare_rot(struct mdss_mdp_ctl *ctl, void *arg)
 	ctx->dst_rect.y = rot->dst.y;
 	ctx->dnsc_factor_w = rot->dnsc_factor_w;
 	ctx->dnsc_factor_h = rot->dnsc_factor_h;
+=======
+	ctx->img_width = item->output.width;
+	ctx->img_height = item->output.height;
+	ctx->width = ctx->dst_rect.w = item->dst_rect.w;
+	ctx->height = ctx->dst_rect.h = item->dst_rect.h;
+	ctx->dst_rect.x = item->dst_rect.x;
+	ctx->dst_rect.y = item->dst_rect.y;
+	ctx->frame_rate = perf->config.frame_rate;
+	ctx->dnsc_factor_w = entry->dnsc_factor_w;
+	ctx->dnsc_factor_h = entry->dnsc_factor_h;
+>>>>>>> 0e91d2a... Nougat
 
 	ctx->rot90 = !!(rot->flags & MDP_ROT_90);
 
@@ -709,6 +838,12 @@ int mdss_mdp_writeback_start(struct mdss_mdp_ctl *ctl)
 {
 	struct mdss_mdp_writeback_ctx *ctx;
 	u32 mem_sel;
+<<<<<<< HEAD
+=======
+	u32 mixer_type = MDSS_MDP_MIXER_TYPE_UNUSED;
+	struct mdss_mdp_format_params *fmt = NULL;
+	bool is_rot;
+>>>>>>> 0e91d2a... Nougat
 
 	pr_debug("start ctl=%d\n", ctl->num);
 
@@ -724,6 +859,35 @@ int mdss_mdp_writeback_start(struct mdss_mdp_ctl *ctl)
 		pr_err("invalid writeback mode %d\n", mem_sel);
 		return -EINVAL;
 	}
+<<<<<<< HEAD
+=======
+
+	fmt = mdss_mdp_get_format_params(ctl->dst_format);
+	if (!fmt)
+		return -EINVAL;
+
+	is_rot = (ctx->type == MDSS_MDP_WRITEBACK_TYPE_ROTATOR) ? true : false;
+
+	if (ctl->mixer_left) {
+		mixer_type = ctl->mixer_left->type;
+		/*
+		 * If the WB mixer is dedicated, the rotator uses a virtual
+		 * mixer. Mark the mixer_type as UNUSED in such cases.
+		 */
+		if ((mixer_type == MDSS_MDP_MIXER_TYPE_WRITEBACK) && is_rot)
+			mixer_type = MDSS_MDP_MIXER_TYPE_UNUSED;
+	}
+
+	if (mdss_mdp_is_cdm_supported(ctl->mdata, ctl->intf_type,
+		mixer_type) && fmt->is_yuv) {
+		ctl->cdm = mdss_mdp_cdm_init(ctl, MDP_CDM_CDWN_OUTPUT_WB);
+		if (IS_ERR_OR_NULL(ctl->cdm)) {
+			pr_err("cdm block already in use\n");
+			ctl->cdm = NULL;
+			return -EBUSY;
+		}
+	}
+>>>>>>> 0e91d2a... Nougat
 	ctl->priv_data = ctx;
 	ctx->wb_num = ctl->num;	
 	ctx->base = ctl->wb_base;
@@ -739,7 +903,7 @@ int mdss_mdp_writeback_start(struct mdss_mdp_ctl *ctl)
 
 		
 		if (ctl->mdata->mdp_rev == MDSS_MDP_HW_REV_108) {
-			ctx->intr_type = MDSS_MDP_IRQ_WB_ROT_COMP;
+			ctx->intr_type = MDSS_MDP_IRQ_TYPE_WB_ROT_COMP;
 			ctx->intf_num = 2;
 		}
 	}

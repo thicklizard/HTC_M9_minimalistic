@@ -1890,6 +1890,7 @@ int sandybridge_pcode_write(struct drm_i915_private *dev_priv, u8 mbox, u32 val)
 int valleyview_punit_read(struct drm_i915_private *dev_priv, u8 addr, u32 *val);
 int valleyview_punit_write(struct drm_i915_private *dev_priv, u8 addr, u32 val);
 
+<<<<<<< HEAD
 #define __i915_read(x, y) \
 	u##x i915_read##x(struct drm_i915_private *dev_priv, u32 reg);
 
@@ -1923,6 +1924,70 @@ __i915_write(64, q)
 
 #define I915_WRITE64(reg, val)	i915_write64(dev_priv, (reg), (val))
 #define I915_READ64(reg)	i915_read64(dev_priv, (reg))
+=======
+/* intel_sideband.c */
+u32 vlv_punit_read(struct drm_i915_private *dev_priv, u8 addr);
+void vlv_punit_write(struct drm_i915_private *dev_priv, u8 addr, u32 val);
+u32 vlv_nc_read(struct drm_i915_private *dev_priv, u8 addr);
+u32 vlv_gpio_nc_read(struct drm_i915_private *dev_priv, u32 reg);
+void vlv_gpio_nc_write(struct drm_i915_private *dev_priv, u32 reg, u32 val);
+u32 vlv_cck_read(struct drm_i915_private *dev_priv, u32 reg);
+void vlv_cck_write(struct drm_i915_private *dev_priv, u32 reg, u32 val);
+u32 vlv_ccu_read(struct drm_i915_private *dev_priv, u32 reg);
+void vlv_ccu_write(struct drm_i915_private *dev_priv, u32 reg, u32 val);
+u32 vlv_bunit_read(struct drm_i915_private *dev_priv, u32 reg);
+void vlv_bunit_write(struct drm_i915_private *dev_priv, u32 reg, u32 val);
+u32 vlv_gps_core_read(struct drm_i915_private *dev_priv, u32 reg);
+void vlv_gps_core_write(struct drm_i915_private *dev_priv, u32 reg, u32 val);
+u32 vlv_dpio_read(struct drm_i915_private *dev_priv, enum pipe pipe, int reg);
+void vlv_dpio_write(struct drm_i915_private *dev_priv, enum pipe pipe, int reg, u32 val);
+u32 intel_sbi_read(struct drm_i915_private *dev_priv, u16 reg,
+		   enum intel_sbi_destination destination);
+void intel_sbi_write(struct drm_i915_private *dev_priv, u16 reg, u32 value,
+		     enum intel_sbi_destination destination);
+u32 vlv_flisdsi_read(struct drm_i915_private *dev_priv, u32 reg);
+void vlv_flisdsi_write(struct drm_i915_private *dev_priv, u32 reg, u32 val);
+
+int vlv_gpu_freq(struct drm_i915_private *dev_priv, int val);
+int vlv_freq_opcode(struct drm_i915_private *dev_priv, int val);
+
+#define FORCEWAKE_RENDER	(1 << 0)
+#define FORCEWAKE_MEDIA		(1 << 1)
+#define FORCEWAKE_ALL		(FORCEWAKE_RENDER | FORCEWAKE_MEDIA)
+
+
+#define I915_READ8(reg)		dev_priv->uncore.funcs.mmio_readb(dev_priv, (reg), true)
+#define I915_WRITE8(reg, val)	dev_priv->uncore.funcs.mmio_writeb(dev_priv, (reg), (val), true)
+
+#define I915_READ16(reg)	dev_priv->uncore.funcs.mmio_readw(dev_priv, (reg), true)
+#define I915_WRITE16(reg, val)	dev_priv->uncore.funcs.mmio_writew(dev_priv, (reg), (val), true)
+#define I915_READ16_NOTRACE(reg)	dev_priv->uncore.funcs.mmio_readw(dev_priv, (reg), false)
+#define I915_WRITE16_NOTRACE(reg, val)	dev_priv->uncore.funcs.mmio_writew(dev_priv, (reg), (val), false)
+
+#define I915_READ(reg)		dev_priv->uncore.funcs.mmio_readl(dev_priv, (reg), true)
+#define I915_WRITE(reg, val)	dev_priv->uncore.funcs.mmio_writel(dev_priv, (reg), (val), true)
+#define I915_READ_NOTRACE(reg)		dev_priv->uncore.funcs.mmio_readl(dev_priv, (reg), false)
+#define I915_WRITE_NOTRACE(reg, val)	dev_priv->uncore.funcs.mmio_writel(dev_priv, (reg), (val), false)
+
+/* Be very careful with read/write 64-bit values. On 32-bit machines, they
+ * will be implemented using 2 32-bit writes in an arbitrary order with
+ * an arbitrary delay between them. This can cause the hardware to
+ * act upon the intermediate value, possibly leading to corruption and
+ * machine death. You have been warned.
+ */
+#define I915_WRITE64(reg, val)	dev_priv->uncore.funcs.mmio_writeq(dev_priv, (reg), (val), true)
+#define I915_READ64(reg)	dev_priv->uncore.funcs.mmio_readq(dev_priv, (reg), true)
+
+#define I915_READ64_2x32(lower_reg, upper_reg) ({			\
+	u32 upper, lower, tmp;						\
+	tmp = I915_READ(upper_reg);					\
+	do {								\
+		upper = tmp;						\
+		lower = I915_READ(lower_reg);				\
+		tmp = I915_READ(upper_reg);				\
+	} while (upper != tmp);						\
+	(u64)upper << 32 | lower; })
+>>>>>>> 0e91d2a... Nougat
 
 #define POSTING_READ(reg)	(void)I915_READ_NOTRACE(reg)
 #define POSTING_READ16(reg)	(void)I915_READ16_NOTRACE(reg)

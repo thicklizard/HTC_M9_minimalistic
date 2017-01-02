@@ -639,6 +639,7 @@ config MSM_ADSPRPC
 	  applications DSP processor. Say M if you want to enable this
 	  module.
 
+<<<<<<< HEAD
 config CSDIO_VENDOR_ID
 	hex "Card VendorId"
 	depends on MMC_GENERIC_CSDIO
@@ -651,6 +652,19 @@ config CSDIO_DEVICE_ID
 	hex "CardDeviceId"
 	depends on MMC_GENERIC_CSDIO
 	default "0"
+=======
+config MSM_MDSP_TS
+	tristate "Qualcomm Technologies Inc MDSP TimeStamp driver"
+	depends on MSM_SMD
+	help
+	  Provides a high response mechanism that allows for AP to get
+	  timestamp from mDSP. It provides the device /dev/vsync_ts_diff
+	  for user to read the timestamp, and the timestamp is transferred
+	  through smd between mDSP and AP.
+
+config MSM_RDBG
+	tristate "Qualcomm Remote debug driver"
+>>>>>>> 0e91d2a... Nougat
 	help
 	  Enter device id for targeted sdio device, this may be overwritten by
 	  module parameters.

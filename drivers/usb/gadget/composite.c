@@ -17,7 +17,9 @@
 #include <linux/device.h>
 #include <linux/utsname.h>
 
+#include "gadget_chips.h"
 #include <linux/usb/composite.h>
+#include <linux/usb/msm_hsusb.h>
 #include <asm/unaligned.h>
 
 #define REQUEST_RESET_DELAYED (HZ / 10) 
@@ -561,6 +563,11 @@ static void reset_config(struct usb_composite_dev *cdev)
 
 	DBG(cdev, "reset config\n");
 
+	if (!cdev->config) {
+		pr_err("%s:cdev->config is already NULL\n", __func__);
+		return;
+	}
+
 	list_for_each_entry(f, &cdev->config->functions, list) {
 		if (f->disable)
 			f->disable(f);
@@ -815,8 +822,14 @@ void usb_remove_config(struct usb_composite_dev *cdev,
 		return;
 	}
 
-	if (cdev->config == config)
+	if (cdev->config == config) {
+		if (!gadget_is_dwc3(cdev->gadget) && !cdev->suspended) {
+			spin_unlock_irqrestore(&cdev->lock, flags);
+			msm_do_bam_disable_enable(CI_CTRL);
+			spin_lock_irqsave(&cdev->lock, flags);
+		}
 		reset_config(cdev);
+	}
 
 	list_del(&config->list);
 
@@ -1170,6 +1183,12 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 			check_os_type(USB_DT_DEVICE, w_length); 
 			cdev->desc.bNumConfigurations =
 				count_configs(cdev, USB_DT_DEVICE);
+			if (cdev->desc.bNumConfigurations == 0) {
+				pr_err("%s:config is not active. send stall\n",
+								__func__);
+				break;
+			}
+
 			cdev->desc.bMaxPacketSize0 =
 				cdev->gadget->ep0->maxpacket;
 			if (gadget_is_superspeed(gadget)) {
@@ -1191,7 +1210,9 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 			if (!gadget_is_dualspeed(gadget) ||
 			    gadget->speed >= USB_SPEED_SUPER)
 				break;
+			spin_lock(&cdev->lock);
 			device_qual(cdev);
+			spin_unlock(&cdev->lock);
 			value = min_t(int, w_length,
 				sizeof(struct usb_qualifier_descriptor));
 			break;
@@ -1201,6 +1222,7 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 				break;
 			
 		case USB_DT_CONFIG:
+<<<<<<< HEAD
 			check_os_type(USB_DT_CONFIG, w_length);
 			if (os_type == OS_MAC)
 				pr_info("%s: OS_MAC\n", __func__);
@@ -1209,7 +1231,12 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 			else if (os_type == OS_LINUX)
 				pr_info("%s: OS_LINUX\n", __func__);
 
+=======
+			get_os_type(w_length);
+			spin_lock(&cdev->lock);
+>>>>>>> 0e91d2a... Nougat
 			value = config_desc(cdev, w_value);
+			spin_unlock(&cdev->lock);
 			if (value >= 0)
 				value = min(w_length, (u16) value);
 			break;
@@ -1225,9 +1252,18 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 						USB_DT_OTG);
 			break;
 		case USB_DT_STRING:
+<<<<<<< HEAD
 			check_os_type(USB_DT_STRING, w_length); 
+=======
+			if (first_string_w_length == 0) {
+				first_string_w_length = w_length;
+				printk("[USB] first_string_w_length = %d \n",first_string_w_length);
+			}
+			spin_lock(&cdev->lock);
+>>>>>>> 0e91d2a... Nougat
 			value = get_string(cdev, req->buf,
 					w_index, w_value & 0xff);
+			spin_unlock(&cdev->lock);
 			if (value >= 0)
 				value = min(w_length, (u16) value);
 			break;
@@ -1427,10 +1463,20 @@ void composite_disconnect(struct usb_gadget *gadget)
 	unsigned long			flags;
 
 	spin_lock_irqsave(&cdev->lock, flags);
-	if (cdev->config)
+	if (cdev->config) {
+		if (!gadget_is_dwc3(gadget) && !cdev->suspended) {
+			spin_unlock_irqrestore(&cdev->lock, flags);
+			msm_do_bam_disable_enable(CI_CTRL);
+			spin_lock_irqsave(&cdev->lock, flags);
+		}
 		reset_config(cdev);
+<<<<<<< HEAD
 
 	if (cdev->driver->disconnect)
+=======
+	}
+	if (cdev->driver->disconnect) {
+>>>>>>> 0e91d2a... Nougat
 		cdev->driver->disconnect(cdev);
 
 	if (cdev->delayed_status != 0) {

@@ -89,6 +89,7 @@ struct mmc_ext_csd {
 	unsigned int            data_tag_unit_size;     /* DATA TAG UNIT size */
 	unsigned int		boot_ro_lock;		/* ro lock support */
 	bool			boot_ro_lockable;
+<<<<<<< HEAD
 	u8			raw_exception_status;	/* 54 */
 	u8			raw_partition_support;	/* 160 */
 	u8			raw_rpmb_size_mult;	/* 168 */
@@ -108,6 +109,51 @@ struct mmc_ext_csd {
 	u8			raw_bkops_status;	/* 246 */
 	u8			raw_sectors[4];		/* 212 - 4 bytes */
 
+=======
+	u8			raw_ext_csd_cmdq;	
+	u8			raw_ext_csd_cache_ctrl;	
+	u8			raw_exception_status;	
+	u8			raw_partition_support;	
+	u8			raw_rpmb_size_mult;	
+	u8			raw_erased_mem_count;	
+	u8			raw_ext_csd_bus_width;	
+	u8			strobe_support;		
+#define MMC_STROBE_SUPPORT	(1 << 0)
+	u8			raw_ext_csd_hs_timing;	
+	u8			raw_ext_csd_structure;	
+	u8			raw_card_type;		
+	u8			raw_drive_strength;	
+	u8			out_of_int_time;	
+	u8			raw_pwr_cl_52_195;	
+	u8			raw_pwr_cl_26_195;	
+	u8			raw_pwr_cl_52_360;	
+	u8			raw_pwr_cl_26_360;	
+	u8			raw_s_a_timeout;	
+	u8			raw_hc_erase_gap_size;	
+	u8			raw_erase_timeout_mult;	
+	u8			raw_hc_erase_grp_size;	
+	u8			raw_sec_trim_mult;	
+	u8			raw_sec_erase_mult;	
+	u8			raw_sec_feature_support;
+	u8			raw_trim_mult;		
+	u8			raw_pwr_cl_200_195;	
+	u8			raw_pwr_cl_200_360;	
+	u8			raw_pwr_cl_ddr_52_195;	
+	u8			raw_pwr_cl_ddr_52_360;	
+	u8			raw_pwr_cl_ddr_200_360;	
+	u8			cache_flush_policy;	
+#define MMC_BKOPS_URGENCY_MASK 0x3
+	u8			raw_bkops_status;	
+	u8			raw_sectors[4];		
+	u8			cmdq_depth;		
+	u8			cmdq_support;		
+	u8			barrier_support;	
+	u8			barrier_en;
+
+	u8			fw_version;		
+
+    bool			ffu_mode_op;	
+>>>>>>> 0e91d2a... Nougat
 	unsigned int            feature_support;
 #define MMC_DISCARD_FEATURE	BIT(0)                  /* CMD38 feature */
 };
@@ -290,6 +336,7 @@ struct mmc_bkops_stats {
  *       discard since the last idle BKOPS were scheduled
  */
 struct mmc_bkops_info {
+<<<<<<< HEAD
 	struct delayed_work	dw;
 	unsigned int		host_delay_ms;
 	unsigned int		delay_ms;
@@ -311,6 +358,17 @@ struct mmc_bkops_info {
  * amount of write or discard data.
  */
 #define BKOPS_SIZE_PERCENTAGE_TO_QUEUE_DELAYED_WORK 1 /* 1% */
+=======
+	struct mmc_bkops_stats stats;
+	bool needs_check;
+	bool needs_bkops;
+	u32  retry_counter;
+};
+
+enum mmc_pon_type {
+	MMC_LONG_PON = 1,
+	MMC_SHRT_PON,
+>>>>>>> 0e91d2a... Nougat
 };
 
 /*

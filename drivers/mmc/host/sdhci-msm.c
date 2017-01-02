@@ -2,7 +2,7 @@
  * drivers/mmc/host/sdhci-msm.c - Qualcomm MSM SDHCI Platform
  * driver source file
  *
- * Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -208,6 +208,8 @@ enum sdc_mpm_pin_state {
 
 #define SDHCI_NORMAL_REMOVE		0x00
 #define SDHCI_COMMAND_REMOVE		0x10
+
+#define MSM_PWR_IRQ_TIMEOUT_MS 5000
 
 #define MSM_PWR_IRQ_TIMEOUT_MS 5000
 
@@ -3193,7 +3195,7 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	
 	if (pdev->dev.of_node) {
 		ret = of_alias_get_id(pdev->dev.of_node, "sdhc");
-		if (ret < 0) {
+		if (ret <= 0) {
 			dev_err(&pdev->dev, "Failed to get slot index %d\n",
 				ret);
 			goto pltfm_free;
@@ -3205,6 +3207,12 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 			goto pltfm_free;
 		}
 
+<<<<<<< HEAD
+=======
+		if (ret <= 2)
+			sdhci_slot[ret-1] = msm_host;
+
+>>>>>>> 0e91d2a... Nougat
 		msm_host->pdata = sdhci_msm_populate_pdata(&pdev->dev,
 							   msm_host);
 		if (!msm_host->pdata) {
@@ -3355,6 +3363,8 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	host->quirks2 |= SDHCI_QUIRK2_IGNORE_DATATOUT_FOR_R1BCMD;
 	host->quirks2 |= SDHCI_QUIRK2_BROKEN_PRESET_VALUE;
 	host->quirks2 |= SDHCI_QUIRK2_USE_RESERVED_MAX_TIMEOUT;
+	host->quirks2 |= SDHCI_QUIRK2_NON_STANDARD_TUNING;
+	host->quirks2 |= SDHCI_QUIRK2_USE_PIO_FOR_EMMC_TUNING;
 
 	if (host->quirks2 & SDHCI_QUIRK2_ALWAYS_USE_BASE_CLOCK)
 		host->quirks2 |= SDHCI_QUIRK2_DIVIDE_TOUT_BY_4;
@@ -3401,6 +3411,7 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 	msm_host->mmc->caps |= msm_host->pdata->mmc_bus_width;
 	msm_host->mmc->caps |= msm_host->pdata->caps;
 	msm_host->mmc->caps2 |= msm_host->pdata->caps2;
+<<<<<<< HEAD
 	msm_host->mmc->caps2 |= MMC_CAP2_CORE_RUNTIME_PM;
 	msm_host->mmc->caps2 |= MMC_CAP2_PACKED_WR;
 	msm_host->mmc->caps2 |= MMC_CAP2_PACKED_WR_CONTROL;
@@ -3410,6 +3421,10 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 #if 0
 	msm_host->mmc->caps2 |= MMC_CAP2_POWEROFF_NOTIFY;
 	msm_host->mmc->caps2 |= MMC_CAP2_FULL_PWR_CYCLE;
+=======
+	msm_host->mmc->caps2 |= MMC_CAP2_BOOTPART_NOACC;
+	msm_host->mmc->caps2 |= MMC_CAP2_HS400_POST_TUNING;
+>>>>>>> 0e91d2a... Nougat
 	msm_host->mmc->caps2 |= MMC_CAP2_CLK_SCALE;
 	msm_host->mmc->caps2 |= MMC_CAP2_STOP_REQUEST;
 #endif
@@ -3473,6 +3488,7 @@ static int sdhci_msm_probe(struct platform_device *pdev)
 		} else {
 			spin_lock_irqsave(&host->lock, flags);
 			sdhci_msm_cfg_sdiowakeup_gpio_irq(host, false);
+			msm_host->sdio_pending_processing = false;
 			spin_unlock_irqrestore(&host->lock, flags);
 		}
 	}
@@ -3651,6 +3667,7 @@ static int sdhci_msm_cfg_sdio_wakeup(struct sdhci_host *host, bool enable)
 	      (sdhci_is_valid_mpm_wakeup_int(msm_host) ||
 	      sdhci_is_valid_gpio_wakeup_int(msm_host)) &&
 	      mmc_card_wake_sdio_irq(host->mmc))) {
+		msm_host->sdio_pending_processing = false;
 		return 1;
 	}
 

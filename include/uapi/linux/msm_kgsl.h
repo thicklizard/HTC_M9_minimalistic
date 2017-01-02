@@ -40,13 +40,13 @@
 /* This is a cmdbatch exclusive flag - use the CMDBATCH equivalent instead */
 #define KGSL_CONTEXT_SYNC               0x00000400
 #define KGSL_CONTEXT_PWR_CONSTRAINT     0x00000800
-
 #define KGSL_CONTEXT_PRIORITY_MASK      0x0000F000
 #define KGSL_CONTEXT_PRIORITY_SHIFT     12
 #define KGSL_CONTEXT_PRIORITY_UNDEF     0
 
 #define KGSL_CONTEXT_IFH_NOP            0x00010000
 #define KGSL_CONTEXT_SECURE             0x00020000
+#define KGSL_CONTEXT_NO_SNAPSHOT        0x00040000
 
 #define KGSL_CONTEXT_TYPE_MASK          0x01F00000
 #define KGSL_CONTEXT_TYPE_SHIFT         20
@@ -72,9 +72,22 @@
 #define KGSL_CMDBATCH_SUBMIT_IB_LIST	KGSL_CONTEXT_SUBMIT_IB_LIST /* 0x004 */
 #define KGSL_CMDBATCH_CTX_SWITCH	KGSL_CONTEXT_CTX_SWITCH     /* 0x008 */
 #define KGSL_CMDBATCH_PROFILING		0x00000010
+<<<<<<< HEAD
 #define KGSL_CMDBATCH_END_OF_FRAME	KGSL_CONTEXT_END_OF_FRAME   /* 0x100 */
 #define KGSL_CMDBATCH_SYNC		KGSL_CONTEXT_SYNC           /* 0x400 */
 #define KGSL_CMDBATCH_PWR_CONSTRAINT	KGSL_CONTEXT_PWR_CONSTRAINT /* 0x800 */
+=======
+#define KGSL_CMDBATCH_PROFILING_KTIME	0x00000020
+#define KGSL_CMDBATCH_END_OF_FRAME	KGSL_CONTEXT_END_OF_FRAME   
+#define KGSL_CMDBATCH_SYNC		KGSL_CONTEXT_SYNC           
+#define KGSL_CMDBATCH_PWR_CONSTRAINT	KGSL_CONTEXT_PWR_CONSTRAINT 
+
+
+
+#define KGSL_CMDLIST_IB                  0x00000001U
+#define KGSL_CMDLIST_CTXTSWITCH_PREAMBLE 0x00000002U
+#define KGSL_CMDLIST_IB_PREAMBLE         0x00000004U
+>>>>>>> 0e91d2a... Nougat
 
 /*
  * Reserve bits [16:19] and bits [28:31] for possible bits shared between
@@ -249,6 +262,7 @@ enum kgsl_timestamp_type {
 	KGSL_TIMESTAMP_QUEUED   = 0x00000003,
 };
 
+<<<<<<< HEAD
 /* property types - used with kgsl_device_getproperty */
 enum kgsl_property_type {
 	KGSL_PROP_DEVICE_INFO     = 0x00000001,
@@ -263,11 +277,36 @@ enum kgsl_property_type {
 	KGSL_PROP_PWRCTRL         = 0x0000000E,
 	KGSL_PROP_PWR_CONSTRAINT  = 0x00000012,
 };
+=======
+#define KGSL_PROP_DEVICE_INFO		0x1
+#define KGSL_PROP_DEVICE_SHADOW		0x2
+#define KGSL_PROP_DEVICE_POWER		0x3
+#define KGSL_PROP_SHMEM			0x4
+#define KGSL_PROP_SHMEM_APERTURES	0x5
+#define KGSL_PROP_MMU_ENABLE		0x6
+#define KGSL_PROP_INTERRUPT_WAITS	0x7
+#define KGSL_PROP_VERSION		0x8
+#define KGSL_PROP_GPU_RESET_STAT	0x9
+#define KGSL_PROP_PWRCTRL		0xE
+#define KGSL_PROP_PWR_CONSTRAINT	0x12
+#define KGSL_PROP_UCHE_GMEM_VADDR	0x13
+#define KGSL_PROP_SP_GENERIC_MEM	0x14
+#define KGSL_PROP_UCODE_VERSION		0x15
+#define KGSL_PROP_GPMU_VERSION		0x16
+#define KGSL_PROP_HIGHEST_BANK_BIT	0x17
+#define KGSL_PROP_DEVICE_BITNESS	0x18
+#define KGSL_PROP_DEVICE_QDSS_STM	0x19
+>>>>>>> 0e91d2a... Nougat
 
 struct kgsl_shadowprop {
 	unsigned long gpuaddr;
 	size_t size;
 	unsigned int flags; /* contains KGSL_FLAGS_ values */
+};
+
+struct kgsl_qdss_stm_prop {
+	uint64_t gpuaddr;
+	uint64_t size;
 };
 
 struct kgsl_version {

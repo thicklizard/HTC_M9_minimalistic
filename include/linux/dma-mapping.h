@@ -135,6 +135,19 @@ static inline int dma_set_coherent_mask(struct device *dev, u64 mask)
 
 extern u64 dma_get_required_mask(struct device *dev);
 
+<<<<<<< HEAD
+=======
+#ifndef arch_setup_dma_ops
+static inline void arch_setup_dma_ops(struct device *dev, u64 dma_base,
+				      u64 size, struct iommu_ops *iommu,
+				      bool coherent) { }
+#endif
+
+#ifndef arch_teardown_dma_ops
+static inline void arch_teardown_dma_ops(struct device *dev) { }
+#endif
+
+>>>>>>> 0e91d2a... Nougat
 static inline unsigned int dma_get_max_seg_size(struct device *dev)
 {
 	return dev->dma_parms ? dev->dma_parms->max_segment_size : 65536;

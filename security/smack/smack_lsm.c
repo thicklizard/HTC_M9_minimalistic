@@ -146,6 +146,81 @@ static int smk_copy_rules(struct list_head *nhead, struct list_head *ohead,
 	return rc;
 }
 
+<<<<<<< HEAD
+=======
+/**
+ * smk_ptrace_mode - helper function for converting PTRACE_MODE_* into MAY_*
+ * @mode - input mode in form of PTRACE_MODE_*
+ *
+ * Returns a converted MAY_* mode usable by smack rules
+ */
+static inline unsigned int smk_ptrace_mode(unsigned int mode)
+{
+	if (mode & PTRACE_MODE_ATTACH)
+		return MAY_READWRITE;
+	if (mode & PTRACE_MODE_READ)
+		return MAY_READ;
+
+	return 0;
+}
+
+/**
+ * smk_ptrace_rule_check - helper for ptrace access
+ * @tracer: tracer process
+ * @tracee_known: label entry of the process that's about to be traced
+ * @mode: ptrace attachment mode (PTRACE_MODE_*)
+ * @func: name of the function that called us, used for audit
+ *
+ * Returns 0 on access granted, -error on error
+ */
+static int smk_ptrace_rule_check(struct task_struct *tracer,
+				 struct smack_known *tracee_known,
+				 unsigned int mode, const char *func)
+{
+	int rc;
+	struct smk_audit_info ad, *saip = NULL;
+	struct task_smack *tsp;
+	struct smack_known *tracer_known;
+
+	if ((mode & PTRACE_MODE_NOAUDIT) == 0) {
+		smk_ad_init(&ad, func, LSM_AUDIT_DATA_TASK);
+		smk_ad_setfield_u_tsk(&ad, tracer);
+		saip = &ad;
+	}
+
+	rcu_read_lock();
+	tsp = __task_cred(tracer)->security;
+	tracer_known = smk_of_task(tsp);
+
+	if ((mode & PTRACE_MODE_ATTACH) &&
+	    (smack_ptrace_rule == SMACK_PTRACE_EXACT ||
+	     smack_ptrace_rule == SMACK_PTRACE_DRACONIAN)) {
+		if (tracer_known->smk_known == tracee_known->smk_known)
+			rc = 0;
+		else if (smack_ptrace_rule == SMACK_PTRACE_DRACONIAN)
+			rc = -EACCES;
+		else if (capable(CAP_SYS_PTRACE))
+			rc = 0;
+		else
+			rc = -EACCES;
+
+		if (saip)
+			smack_log(tracer_known->smk_known,
+				  tracee_known->smk_known,
+				  0, rc, saip);
+
+		rcu_read_unlock();
+		return rc;
+	}
+
+	/* In case of rule==SMACK_PTRACE_DEFAULT or mode==PTRACE_MODE_READ */
+	rc = smk_tskacc(tsp, tracee_known, smk_ptrace_mode(mode), saip);
+
+	rcu_read_unlock();
+	return rc;
+}
+
+>>>>>>> 0e91d2a... Nougat
 /*
  * LSM hooks.
  * We he, that is fun!

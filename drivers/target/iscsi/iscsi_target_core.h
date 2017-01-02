@@ -586,6 +586,15 @@ struct iscsi_conn {
 	struct iscsi_session	*sess;
 	/* Pointer to thread_set in use for this conn's threads */
 	struct iscsi_thread_set	*thread_set;
+<<<<<<< HEAD
+=======
+	int			bitmap_id;
+	int			rx_thread_active;
+	struct task_struct	*rx_thread;
+	struct completion	rx_login_comp;
+	int			tx_thread_active;
+	struct task_struct	*tx_thread;
+>>>>>>> 0e91d2a... Nougat
 	/* list_head for session connection list */
 	struct list_head	conn_list;
 } ____cacheline_aligned;

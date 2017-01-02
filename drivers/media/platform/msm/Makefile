@@ -8,4 +8,8 @@ obj-$(CONFIG_MSM_WFD) += wfd/
 obj-y += broadcast/
 obj-$(CONFIG_DVB_MPQ) += dvb/
 obj-$(CONFIG_MSMB_CAMERA) += camera_v2/
+<<<<<<< HEAD
 obj-$(CONFIG_MSM_VPU) += vpu/
+=======
+obj-y += sde/
+>>>>>>> 0e91d2a... Nougat

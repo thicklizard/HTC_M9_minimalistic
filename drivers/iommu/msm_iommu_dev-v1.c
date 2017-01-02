@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -426,8 +430,7 @@ static int msm_iommu_probe(struct platform_device *pdev)
 		ret = devm_request_threaded_irq(&pdev->dev, global_cfg_irq,
 				NULL,
 				msm_iommu_global_fault_handler,
-				IRQF_ONESHOT | IRQF_SHARED |
-				IRQF_TRIGGER_RISING,
+				IRQF_ONESHOT | IRQF_SHARED,
 				"msm_iommu_global_cfg_irq", pdev);
 		if (ret < 0)
 			pr_err("Request Global CFG IRQ %d failed with ret=%d\n",
@@ -440,8 +443,7 @@ static int msm_iommu_probe(struct platform_device *pdev)
 		ret = devm_request_threaded_irq(&pdev->dev, global_client_irq,
 				NULL,
 				msm_iommu_global_fault_handler,
-				IRQF_ONESHOT | IRQF_SHARED |
-				IRQF_TRIGGER_RISING,
+				IRQF_ONESHOT | IRQF_SHARED,
 				"msm_iommu_global_client_irq", pdev);
 		if (ret < 0)
 			pr_err("Request Global Client IRQ %d failed with ret=%d\n",

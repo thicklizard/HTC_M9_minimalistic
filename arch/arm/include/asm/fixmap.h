@@ -12,6 +12,25 @@
  * The cache flushing code in proc-xscale.S uses the virtual area between
  * 0xfffe0000 and 0xfffeffff.
  */
+<<<<<<< HEAD
+=======
+#define NR_FIX_BTMAPS          32
+#define FIX_BTMAPS_SLOTS       7
+#define TOTAL_FIX_BTMAPS       (NR_FIX_BTMAPS * FIX_BTMAPS_SLOTS)
+
+enum fixed_addresses {
+	FIX_EARLYCON_MEM_BASE,
+	FIX_SMP_MEM_BASE,
+	__end_of_permanent_fixed_addresses,
+	FIX_BTMAP_END = __end_of_permanent_fixed_addresses,
+	FIX_BTMAP_BEGIN = FIX_BTMAP_END + TOTAL_FIX_BTMAPS - 1,
+
+	FIX_KMAP_BEGIN = __end_of_permanent_fixed_addresses,
+	FIX_KMAP_END = FIX_KMAP_BEGIN + (KM_TYPE_NR * NR_CPUS) - 1,
+	/* Support writing RO kernel text via kprobes, jump labels, etc. */
+	FIX_TEXT_POKE0,
+	FIX_TEXT_POKE1,
+>>>>>>> 0e91d2a... Nougat
 
 #define FIXADDR_START		0xfff00000UL
 #define FIXADDR_TOP		0xfffe0000UL

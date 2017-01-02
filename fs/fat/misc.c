@@ -182,8 +182,11 @@ int fat_chain_add(struct inode *inode, int new_dclus, int nr_cluster)
 	return 0;
 }
 
+<<<<<<< HEAD
 extern struct timezone sys_tz;
 
+=======
+>>>>>>> 0e91d2a... Nougat
 /*
  * The epoch of FAT timestamp is 1980.
  *     :  bits :     value

@@ -137,7 +137,41 @@ static int uhid_hid_input(struct input_dev *input, unsigned int type,
 	uhid_queue(uhid, ev);
 	spin_unlock_irqrestore(&uhid->qlock, flags);
 
+<<<<<<< HEAD
 	return 0;
+=======
+	/*
+	 * Assumption: report_lock and devlock are both locked. So unlock
+	 * before sleeping.
+	 */
+	mutex_unlock(&uhid->report_lock);
+	mutex_unlock(&uhid->devlock);
+	ret = wait_event_interruptible_timeout(uhid->report_wait,
+				!uhid->report_running || !uhid->running,
+				5 * HZ);
+	ret = mutex_lock_interruptible(&uhid->devlock);
+	if (ret)
+		return ret;
+	ret = mutex_lock_interruptible(&uhid->report_lock);
+	if (ret) {
+		/*
+		 * Failed to lock, unlock previous mutex before exiting
+		 * this function.
+		 */
+		mutex_unlock(&uhid->devlock);
+		return ret;
+	}
+	if (!ret || !uhid->running || uhid->report_running)
+		ret = -EIO;
+	else if (ret < 0)
+		ret = -ERESTARTSYS;
+	else
+		ret = 0;
+
+	uhid->report_running = false;
+
+	return ret;
+>>>>>>> 0e91d2a... Nougat
 }
 
 static int uhid_hid_parse(struct hid_device *hid)

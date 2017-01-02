@@ -1413,10 +1413,30 @@ static void xennet_disconnect_backend(struct netfront_info *info)
 	xennet_end_access(info->tx_ring_ref, info->tx.sring);
 	xennet_end_access(info->rx_ring_ref, info->rx.sring);
 
+<<<<<<< HEAD
 	info->tx_ring_ref = GRANT_INVALID_REF;
 	info->rx_ring_ref = GRANT_INVALID_REF;
 	info->tx.sring = NULL;
 	info->rx.sring = NULL;
+=======
+		if (netif_running(info->netdev))
+			napi_synchronize(&queue->napi);
+
+		xennet_release_tx_bufs(queue);
+		xennet_release_rx_bufs(queue);
+		gnttab_free_grant_references(queue->gref_tx_head);
+		gnttab_free_grant_references(queue->gref_rx_head);
+
+		/* End access and free the pages */
+		xennet_end_access(queue->tx_ring_ref, queue->tx.sring);
+		xennet_end_access(queue->rx_ring_ref, queue->rx.sring);
+
+		queue->tx_ring_ref = GRANT_INVALID_REF;
+		queue->rx_ring_ref = GRANT_INVALID_REF;
+		queue->tx.sring = NULL;
+		queue->rx.sring = NULL;
+	}
+>>>>>>> 0e91d2a... Nougat
 }
 
 /**
@@ -1523,6 +1543,73 @@ static int setup_netfront(struct xenbus_device *dev, struct netfront_info *info)
 	return err;
 }
 
+<<<<<<< HEAD
+=======
+static void xennet_destroy_queues(struct netfront_info *info)
+{
+	unsigned int i;
+
+	rtnl_lock();
+
+	for (i = 0; i < info->netdev->real_num_tx_queues; i++) {
+		struct netfront_queue *queue = &info->queues[i];
+
+		if (netif_running(info->netdev))
+			napi_disable(&queue->napi);
+		netif_napi_del(&queue->napi);
+	}
+
+	rtnl_unlock();
+
+	kfree(info->queues);
+	info->queues = NULL;
+}
+
+static int xennet_create_queues(struct netfront_info *info,
+				unsigned int *num_queues)
+{
+	unsigned int i;
+	int ret;
+
+	info->queues = kcalloc(*num_queues, sizeof(struct netfront_queue),
+			       GFP_KERNEL);
+	if (!info->queues)
+		return -ENOMEM;
+
+	rtnl_lock();
+
+	for (i = 0; i < *num_queues; i++) {
+		struct netfront_queue *queue = &info->queues[i];
+
+		queue->id = i;
+		queue->info = info;
+
+		ret = xennet_init_queue(queue);
+		if (ret < 0) {
+			dev_warn(&info->netdev->dev,
+				 "only created %d queues\n", i);
+			*num_queues = i;
+			break;
+		}
+
+		netif_napi_add(queue->info->netdev, &queue->napi,
+			       xennet_poll, 64);
+		if (netif_running(info->netdev))
+			napi_enable(&queue->napi);
+	}
+
+	netif_set_real_num_tx_queues(info->netdev, *num_queues);
+
+	rtnl_unlock();
+
+	if (*num_queues == 0) {
+		dev_err(&info->netdev->dev, "no queues\n");
+		return -EINVAL;
+	}
+	return 0;
+}
+
+>>>>>>> 0e91d2a... Nougat
 /* Common code used when first setting up, and when resuming. */
 static int talk_to_netback(struct xenbus_device *dev,
 			   struct netfront_info *info)
@@ -1535,6 +1622,37 @@ static int talk_to_netback(struct xenbus_device *dev,
 	err = setup_netfront(dev, info);
 	if (err)
 		goto out;
+<<<<<<< HEAD
+=======
+	}
+
+	if (info->queues)
+		xennet_destroy_queues(info);
+
+	err = xennet_create_queues(info, &num_queues);
+	if (err < 0)
+		goto destroy_ring;
+
+	/* Create shared ring, alloc event channel -- for each queue */
+	for (i = 0; i < num_queues; ++i) {
+		queue = &info->queues[i];
+		err = setup_netfront(dev, queue, feature_split_evtchn);
+		if (err) {
+			/* setup_netfront() will tidy up the current
+			 * queue on error, but we need to clean up
+			 * those already allocated.
+			 */
+			if (i > 0) {
+				rtnl_lock();
+				netif_set_real_num_tx_queues(info->netdev, i);
+				rtnl_unlock();
+				goto destroy_ring;
+			} else {
+				goto out;
+			}
+		}
+	}
+>>>>>>> 0e91d2a... Nougat
 
 again:
 	err = xenbus_transaction_start(&xbt);
@@ -1945,7 +2063,17 @@ static int __init netif_init(void)
 	if (xen_hvm_domain() && !xen_platform_pci_unplug)
 		return -ENODEV;
 
+<<<<<<< HEAD
 	printk(KERN_INFO "Initialising Xen virtual ethernet driver.\n");
+=======
+	pr_info("Initialising Xen virtual ethernet driver\n");
+
+	/* Allow as many queues as there are CPUs if user has not
+	 * specified a value.
+	 */
+	if (xennet_max_queues == 0)
+		xennet_max_queues = num_online_cpus();
+>>>>>>> 0e91d2a... Nougat
 
 	return xenbus_register_frontend(&netfront_driver);
 }

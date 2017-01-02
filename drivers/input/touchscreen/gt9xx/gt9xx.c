@@ -1,6 +1,10 @@
 /* drivers/input/touchscreen/gt9xx.c
  *
+<<<<<<< HEAD
  * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+=======
+ * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * Linux Foundation chooses to take subject only to the GPLv2 license
  * terms, and distributes only under these terms.
@@ -51,6 +55,8 @@
 #include <linux/module.h>
 #include <linux/input/mt.h>
 #include <linux/debugfs.h>
+#include <linux/interrupt.h>
+#include <linux/delay.h>
 
 #define GOODIX_DEV_NAME	"Goodix-CTP"
 #define CFG_MAX_TOUCH_POINTS	5
@@ -652,7 +658,7 @@ void gtp_reset_guitar(struct goodix_ts_data *ts, int ms)
 	else
 		gpio_direction_output(ts->pdata->irq_gpio, 0);
 
-	usleep(RESET_DELAY_T3_US);
+	usleep_range(200, 250);
 	gpio_direction_output(ts->pdata->reset_gpio, 1);
 	msleep(RESET_DELAY_T4);
 
@@ -744,6 +750,7 @@ static u8 gtp_enter_sleep(struct goodix_ts_data *ts)
 			return ret;
 		}
 		return 0;
+<<<<<<< HEAD
 	} else {
 		usleep(5000);
 		while (retry++ < GTP_I2C_RETRY_5) {
@@ -753,6 +760,15 @@ static u8 gtp_enter_sleep(struct goodix_ts_data *ts)
 				return 0;
 			}
 			msleep(20);
+=======
+	}
+	usleep_range(5000, 5500);
+	while (retry++ < GTP_I2C_RETRY_5) {
+		ret = gtp_i2c_write(ts->client, i2c_control_buf, 3);
+		if (ret == 1) {
+			dev_dbg(&ts->client->dev, "GTP enter sleep!");
+			return 0;
+>>>>>>> 0e91d2a... Nougat
 		}
 		dev_err(&ts->client->dev, "GTP send sleep cmd failed.\n");
 		return ret;
@@ -815,7 +831,7 @@ err_retry:
 			} else {
 				ret = gpio_direction_output(
 						ts->pdata->irq_gpio, 1);
-				usleep(5000);
+				usleep_range(5000, 5500);
 			}
 		}
 		ret = gtp_i2c_test(ts->client);
@@ -1177,11 +1193,10 @@ Output:
 static int gtp_request_irq(struct goodix_ts_data *ts)
 {
 	int ret = 0;
-	const u8 irq_table[] = GTP_IRQ_TAB;
 
 	ret = request_threaded_irq(ts->client->irq, NULL,
 			goodix_ts_irq_handler,
-			irq_table[ts->int_trigger_type],
+			ts->pdata->irq_gpio_flags,
 			ts->client->name, ts);
 	if (ret) {
 		ts->use_irq = false;
@@ -1463,7 +1478,7 @@ static int goodix_power_init(struct goodix_ts_data *ts)
 			"Regulator get failed vdd ret=%d\n", ret);
 	}
 
-	ts->vcc_i2c = regulator_get(&ts->client->dev, "vcc-i2c");
+	ts->vcc_i2c = regulator_get(&ts->client->dev, "vcc_i2c");
 	if (IS_ERR(ts->vcc_i2c)) {
 		ret = PTR_ERR(ts->vcc_i2c);
 		dev_info(&ts->client->dev,

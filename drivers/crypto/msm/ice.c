@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -61,6 +65,190 @@ struct ice_device {
 	spinlock_t		lock;
 };
 
+<<<<<<< HEAD
+=======
+static int qti_ice_setting_config(struct request *req,
+		struct platform_device *pdev,
+		struct ice_crypto_setting *crypto_data,
+		struct ice_data_setting *setting)
+{
+	struct ice_device *ice_dev = NULL;
+
+	ice_dev = platform_get_drvdata(pdev);
+
+	if (!ice_dev) {
+		pr_debug("%s no ICE device\n", __func__);
+
+		
+		return 0;
+	}
+
+	if (ice_dev->is_ice_disable_fuse_blown) {
+		pr_err("%s ICE disabled fuse is blown\n", __func__);
+		return -EPERM;
+	}
+
+	if ((short)(crypto_data->key_index) >= 0) {
+
+		memcpy(&setting->crypto_data, crypto_data,
+				sizeof(setting->crypto_data));
+
+		if (rq_data_dir(req) == WRITE)
+			setting->encr_bypass = false;
+		else if (rq_data_dir(req) == READ)
+			setting->decr_bypass = false;
+		else {
+			
+			setting->encr_bypass = true;
+			setting->decr_bypass = true;
+		}
+	}
+
+	return 0;
+}
+
+static int qcom_ice_enable_clocks(struct ice_device *, bool);
+
+#ifdef CONFIG_MSM_BUS_SCALING
+
+static int qcom_ice_set_bus_vote(struct ice_device *ice_dev, int vote)
+{
+	int err = 0;
+
+	if (vote != ice_dev->bus_vote.curr_vote) {
+		err = msm_bus_scale_client_update_request(
+				ice_dev->bus_vote.client_handle, vote);
+		if (err) {
+			dev_err(ice_dev->pdev,
+				"%s:failed:client_handle=0x%x, vote=%d, err=%d\n",
+				__func__, ice_dev->bus_vote.client_handle,
+				vote, err);
+			goto out;
+		}
+		ice_dev->bus_vote.curr_vote = vote;
+	}
+out:
+	return err;
+}
+
+static int qcom_ice_get_bus_vote(struct ice_device *ice_dev,
+		const char *speed_mode)
+{
+	struct device *dev = ice_dev->pdev;
+	struct device_node *np = dev->of_node;
+	int err;
+	const char *key = "qcom,bus-vector-names";
+
+	if (!speed_mode) {
+		err = -EINVAL;
+		goto out;
+	}
+
+	if (ice_dev->bus_vote.is_max_bw_needed && !!strcmp(speed_mode, "MIN"))
+		err = of_property_match_string(np, key, "MAX");
+	else
+		err = of_property_match_string(np, key, speed_mode);
+out:
+	if (err < 0)
+		dev_err(dev, "%s: Invalid %s mode %d\n",
+				__func__, speed_mode, err);
+	return err;
+}
+
+static int qcom_ice_bus_register(struct ice_device *ice_dev)
+{
+	int err = 0;
+	struct msm_bus_scale_pdata *bus_pdata;
+	struct device *dev = ice_dev->pdev;
+	struct platform_device *pdev = to_platform_device(dev);
+	struct device_node *np = dev->of_node;
+
+	bus_pdata = msm_bus_cl_get_pdata(pdev);
+	if (!bus_pdata) {
+		dev_err(dev, "%s: failed to get bus vectors\n", __func__);
+		err = -ENODATA;
+		goto out;
+	}
+
+	err = of_property_count_strings(np, "qcom,bus-vector-names");
+	if (err < 0 || err != bus_pdata->num_usecases) {
+		dev_err(dev, "%s: Error = %d with qcom,bus-vector-names\n",
+				__func__, err);
+		goto out;
+	}
+	err = 0;
+
+	ice_dev->bus_vote.client_handle =
+			msm_bus_scale_register_client(bus_pdata);
+	if (!ice_dev->bus_vote.client_handle) {
+		dev_err(dev, "%s: msm_bus_scale_register_client failed\n",
+				__func__);
+		err = -EFAULT;
+		goto out;
+	}
+
+	
+	ice_dev->bus_vote.min_bw_vote = qcom_ice_get_bus_vote(ice_dev, "MIN");
+	ice_dev->bus_vote.max_bw_vote = qcom_ice_get_bus_vote(ice_dev, "MAX");
+out:
+	return err;
+}
+
+#else
+
+static int qcom_ice_set_bus_vote(struct ice_device *ice_dev, int vote)
+{
+	return 0;
+}
+
+static int qcom_ice_get_bus_vote(struct ice_device *ice_dev,
+		const char *speed_mode)
+{
+	return 0;
+}
+
+static int qcom_ice_bus_register(struct ice_device *ice_dev)
+{
+	return 0;
+}
+#endif 
+
+static int qcom_ice_get_vreg(struct ice_device *ice_dev)
+{
+	int ret = 0;
+
+	if (!ice_dev->is_regulator_available)
+		return 0;
+
+	if (ice_dev->reg)
+		return 0;
+
+	ice_dev->reg = devm_regulator_get(ice_dev->pdev, "vdd-hba");
+	if (IS_ERR(ice_dev->reg)) {
+		ret = PTR_ERR(ice_dev->reg);
+		dev_err(ice_dev->pdev, "%s: %s get failed, err=%d\n",
+			__func__, "vdd-hba-supply", ret);
+	}
+	return ret;
+}
+
+static void qcom_ice_config_proc_ignore(struct ice_device *ice_dev)
+{
+	u32 regval;
+	if (ICE_REV(ice_dev->ice_hw_version, MAJOR) == 2 &&
+	    ICE_REV(ice_dev->ice_hw_version, MINOR) == 0 &&
+	    ICE_REV(ice_dev->ice_hw_version, STEP) == 0) {
+		regval = qcom_ice_readl(ice_dev,
+				QCOM_ICE_REGS_ADVANCED_CONTROL);
+		regval |= 0x800;
+		qcom_ice_writel(ice_dev, regval,
+				QCOM_ICE_REGS_ADVANCED_CONTROL);
+		
+		mb();
+	}
+}
+
+>>>>>>> 0e91d2a... Nougat
 static void qcom_ice_low_power_mode_enable(struct ice_device *ice_dev)
 {
 	u32 regval;
@@ -615,12 +803,23 @@ static int qcom_ice_reset(struct  platform_device *pdev)
 }
 EXPORT_SYMBOL(qcom_ice_reset);
 
+<<<<<<< HEAD
 static int qcom_ice_config(struct platform_device *pdev, struct request *req,
 			struct ice_data_setting *setting)
+=======
+static int qcom_ice_config_start(struct platform_device *pdev,
+		struct request *req,
+		struct ice_data_setting *setting, bool async)
+>>>>>>> 0e91d2a... Nougat
 {
 	struct ice_crypto_setting *crypto_data;
 	struct ice_device *ice_dev;
 	union map_info *info;
+<<<<<<< HEAD
+=======
+	int ret = 0;
+	bool is_pfe = false;
+>>>>>>> 0e91d2a... Nougat
 
 	if (!pdev || !req || !setting) {
 		pr_err("%s: Invalid params passed\n", __func__);
@@ -642,12 +841,29 @@ static int qcom_ice_config(struct platform_device *pdev, struct request *req,
 		return 0;
 	}
 
+<<<<<<< HEAD
 	/*
 	 * info field in req->end_io_data could be used by mulitple dm or
 	 * non-dm entities. To ensure that we are running operation on dm
 	 * based request, check BIO_DONT_FREE flag
 	 */
 	if (bio_flagged(req->bio, BIO_DONTFREE)) {
+=======
+	ret = pfk_load_key_start(req->bio, &pfk_crypto_data, &is_pfe, async);
+	if (is_pfe) {
+		if (ret) {
+			if (ret != -EBUSY && ret != -EAGAIN)
+				pr_err("%s error %d while configuring ice key for PFE\n",
+						__func__, ret);
+			return ret;
+		}
+
+		return qti_ice_setting_config(req, pdev,
+				&pfk_crypto_data, setting);
+	}
+
+	if (bio_flagged(req->bio, BIO_INLINECRYPT)) {
+>>>>>>> 0e91d2a... Nougat
 		info = dm_get_rq_mapinfo(req);
 		if (!info) {
 			pr_err("%s info not available in request\n", __func__);
@@ -666,6 +882,7 @@ static int qcom_ice_config(struct platform_device *pdev, struct request *req,
 			return -ENODEV;
 		}
 
+<<<<<<< HEAD
 		if (crypto_data->key_index >= 0) {
 
 			memcpy(&setting->crypto_data, crypto_data,
@@ -681,6 +898,10 @@ static int qcom_ice_config(struct platform_device *pdev, struct request *req,
 				setting->decr_bypass = true;
 			}
 		}
+=======
+		return qti_ice_setting_config(req, pdev,
+				crypto_data, setting);
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	/*
@@ -690,7 +911,40 @@ static int qcom_ice_config(struct platform_device *pdev, struct request *req,
 	 */
 	return 0;
 }
+<<<<<<< HEAD
 EXPORT_SYMBOL(qcom_ice_config);
+=======
+EXPORT_SYMBOL(qcom_ice_config_start);
+
+static int qcom_ice_config_end(struct request *req)
+{
+	int ret = 0;
+	bool is_pfe = false;
+
+	if (!req) {
+		pr_err("%s: Invalid params passed\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!req->bio) {
+		
+		return 0;
+	}
+
+	ret = pfk_load_key_end(req->bio, &is_pfe);
+	if (is_pfe) {
+		if (ret != 0)
+			pr_err("%s error %d while end configuring ice key for PFE\n",
+								__func__, ret);
+		return ret;
+	}
+
+
+	return 0;
+}
+EXPORT_SYMBOL(qcom_ice_config_end);
+
+>>>>>>> 0e91d2a... Nougat
 
 static int qcom_ice_status(struct platform_device *pdev)
 {
@@ -728,7 +982,8 @@ const struct qcom_ice_variant_ops qcom_ice_ops = {
 	.reset            = qcom_ice_reset,
 	.resume           = qcom_ice_resume,
 	.suspend          = qcom_ice_suspend,
-	.config           = qcom_ice_config,
+	.config_start     = qcom_ice_config_start,
+	.config_end       = qcom_ice_config_end,
 	.status           = qcom_ice_status,
 };
 

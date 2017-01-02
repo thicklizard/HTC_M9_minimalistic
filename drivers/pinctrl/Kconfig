@@ -236,6 +236,21 @@ config PINCTRL_S3C64XX
 	depends on ARCH_S3C64XX
 	select PINCTRL_SAMSUNG
 
+<<<<<<< HEAD
+=======
+config PINCTRL_TCA6418
+	bool "TCA6418 pinctrl driver"
+	depends on OF
+	select I2C
+	select PINMUX
+	select PINCONF
+	select GPIOLIB
+	help
+	  Say Y here to enable the TCA6418 pinctrl driver
+
+source "drivers/pinctrl/berlin/Kconfig"
+source "drivers/pinctrl/freescale/Kconfig"
+>>>>>>> 0e91d2a... Nougat
 source "drivers/pinctrl/mvebu/Kconfig"
 source "drivers/pinctrl/sh-pfc/Kconfig"
 source "drivers/pinctrl/spear/Kconfig"

@@ -926,6 +926,7 @@ static void namespace_unlock(void)
 	list_splice_init(&unmounted, &head);
 	up_write(&namespace_sem);
 
+<<<<<<< HEAD
 	while (!list_empty(&head)) {
 		mnt = list_first_entry(&head, struct mount, mnt_hash);
 		list_del_init(&mnt->mnt_hash);
@@ -943,6 +944,15 @@ static void namespace_unlock(void)
 			dput(dentry);
 			mntput(&m->mnt);
 		}
+=======
+	synchronize_rcu_expedited();
+
+	while (!hlist_empty(&head)) {
+		mnt = hlist_entry(head.first, struct mount, mnt_hash);
+		hlist_del_init(&mnt->mnt_hash);
+		if (mnt->mnt_ex_mountpoint.mnt)
+			path_put(&mnt->mnt_ex_mountpoint);
+>>>>>>> 0e91d2a... Nougat
 		mntput(&mnt->mnt);
 	}
 }
@@ -1036,10 +1046,15 @@ static int do_umount(struct mount *mnt, int flags)
 	}
 	br_write_unlock(&vfsmount_lock);
 	namespace_unlock();
+<<<<<<< HEAD
 
 	pr_info("pid:%d(%s)(parent:%d/%s)  (%s) umounted filesystem.\n",
 			current->pid, current->comm, current->parent->pid,
 			current->parent->comm, sb->s_id);
+=======
+	if (retval == -EBUSY)
+		global_filetable_delayed_print(mnt);
+>>>>>>> 0e91d2a... Nougat
 	return retval;
 }
 

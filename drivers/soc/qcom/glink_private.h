@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -13,6 +13,17 @@
 #define _SOC_QCOM_GLINK_PRIVATE_H_
 
 #include <linux/ipc_logging.h>
+<<<<<<< HEAD
+=======
+#include <linux/kernel.h>
+#include <linux/kref.h>
+#include <linux/ratelimit.h>
+#include <linux/seq_file.h>
+#include <linux/spinlock.h>
+#include <linux/types.h>
+#include <linux/sched.h>
+#include <soc/qcom/glink.h>
+>>>>>>> 0e91d2a... Nougat
 
 #ifdef INIT_COMPLETION
 #define reinit_completion(x) INIT_COMPLETION(*(x))
@@ -813,7 +824,7 @@ struct rwref_lock {
 	unsigned read_count;
 	unsigned write_count;
 	spinlock_t lock;
-	struct completion count_zero;
+	wait_queue_head_t count_zero;
 
 	void (*release)(struct rwref_lock *);
 };
@@ -847,7 +858,7 @@ static inline void rwref_lock_init(struct rwref_lock *lock_ptr,
 	lock_ptr->read_count = 0;
 	lock_ptr->write_count = 0;
 	spin_lock_init(&lock_ptr->lock);
-	init_completion(&lock_ptr->count_zero);
+	init_waitqueue_head(&lock_ptr->count_zero);
 	lock_ptr->release = release;
 }
 
@@ -876,12 +887,14 @@ static inline void rwref_put(struct rwref_lock *lock_ptr)
 }
 
 /**
- * rwref_read_get() - gains a reference count for a read operation
+ * rwref_read_get_atomic() - gains a reference count for a read operation
  * lock_ptr:	pointer to lock structure
+ * is_atomic:   if True, do not wait when acquiring lock
  *
  * Multiple readers may acquire the lock as long as the write count is zero.
  */
-static inline void rwref_read_get(struct rwref_lock *lock_ptr)
+static inline void rwref_read_get_atomic(struct rwref_lock *lock_ptr,
+			bool is_atomic)
 {
 	unsigned long flags;
 
@@ -896,8 +909,22 @@ static inline void rwref_read_get(struct rwref_lock *lock_ptr)
 			break;
 		}
 		spin_unlock_irqrestore(&lock_ptr->lock, flags);
-		wait_for_completion(&lock_ptr->count_zero);
+		if (!is_atomic) {
+			wait_event(lock_ptr->count_zero,
+					lock_ptr->write_count == 0);
+		}
 	}
+}
+
+/**
+ * rwref_read_get() - gains a reference count for a read operation
+ * lock_ptr:	pointer to lock structure
+ *
+ * Multiple readers may acquire the lock as long as the write count is zero.
+ */
+static inline void rwref_read_get(struct rwref_lock *lock_ptr)
+{
+	rwref_read_get_atomic(lock_ptr, false);
 }
 
 /**
@@ -915,18 +942,20 @@ static inline void rwref_read_put(struct rwref_lock *lock_ptr)
 	spin_lock_irqsave(&lock_ptr->lock, flags);
 	BUG_ON(lock_ptr->read_count == 0);
 	if (--lock_ptr->read_count == 0)
-		complete(&lock_ptr->count_zero);
+		wake_up(&lock_ptr->count_zero);
 	spin_unlock_irqrestore(&lock_ptr->lock, flags);
 	kref_put(&lock_ptr->kref, rwref_lock_release);
 }
 
 /**
- * rwref_write_get() - gains a reference count for a write operation
+ * rwref_write_get_atomic() - gains a reference count for a write operation
  * lock_ptr:	pointer to lock structure
+ * is_atomic:   if True, do not wait when acquiring lock
  *
  * Only one writer may acquire the lock as long as the reader count is zero.
  */
-static inline void rwref_write_get(struct rwref_lock *lock_ptr)
+static inline void rwref_write_get_atomic(struct rwref_lock *lock_ptr,
+			bool is_atomic)
 {
 	unsigned long flags;
 
@@ -941,8 +970,23 @@ static inline void rwref_write_get(struct rwref_lock *lock_ptr)
 			break;
 		}
 		spin_unlock_irqrestore(&lock_ptr->lock, flags);
-		wait_for_completion(&lock_ptr->count_zero);
+		if (!is_atomic) {
+			wait_event(lock_ptr->count_zero,
+					(lock_ptr->read_count == 0 &&
+					lock_ptr->write_count == 0));
+		}
 	}
+}
+
+/**
+ * rwref_write_get() - gains a reference count for a write operation
+ * lock_ptr:	pointer to lock structure
+ *
+ * Only one writer may acquire the lock as long as the reader count is zero.
+ */
+static inline void rwref_write_get(struct rwref_lock *lock_ptr)
+{
+	rwref_write_get_atomic(lock_ptr, false);
 }
 
 /**
@@ -960,7 +1004,7 @@ static inline void rwref_write_put(struct rwref_lock *lock_ptr)
 	spin_lock_irqsave(&lock_ptr->lock, flags);
 	BUG_ON(lock_ptr->write_count != 1);
 	if (--lock_ptr->write_count == 0)
-		complete(&lock_ptr->count_zero);
+		wake_up(&lock_ptr->count_zero);
 	spin_unlock_irqrestore(&lock_ptr->lock, flags);
 	kref_put(&lock_ptr->kref, rwref_lock_release);
 }

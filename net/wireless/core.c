@@ -351,6 +351,20 @@ static void cfg80211_destroy_iface_wk(struct work_struct *work)
 }
 /* HTC_WIFI_END */
 
+static void cfg80211_sched_scan_stop_wk(struct work_struct *work)
+{
+	struct cfg80211_registered_device *rdev;
+
+	rdev = container_of(work, struct cfg80211_registered_device,
+			   sched_scan_stop_wk);
+
+	rtnl_lock();
+
+	__cfg80211_stop_sched_scan(rdev, false);
+
+	rtnl_unlock();
+}
+
 /* exported functions */
 
 struct wiphy *wiphy_new(const struct cfg80211_ops *ops, int sizeof_priv)
@@ -414,11 +428,18 @@ struct wiphy *wiphy_new(const struct cfg80211_ops *ops, int sizeof_priv)
 	rdev->wiphy.dev.class = &ieee80211_class;
 	rdev->wiphy.dev.platform_data = rdev;
 
+<<<<<<< HEAD
     /* HTC_WIFI_START */
     INIT_LIST_HEAD(&rdev->destroy_list);
     spin_lock_init(&rdev->destroy_list_lock);
     INIT_WORK(&rdev->destroy_work, cfg80211_destroy_iface_wk);
     /* HTC_WIFI_END */
+=======
+	INIT_LIST_HEAD(&rdev->destroy_list);
+	spin_lock_init(&rdev->destroy_list_lock);
+	INIT_WORK(&rdev->destroy_work, cfg80211_destroy_iface_wk);
+	INIT_WORK(&rdev->sched_scan_stop_wk, cfg80211_sched_scan_stop_wk);
+>>>>>>> 0e91d2a... Nougat
 
 #ifdef CONFIG_CFG80211_DEFAULT_PS
 	rdev->wiphy.flags |= WIPHY_FLAG_PS_ON_BY_DEFAULT;
@@ -685,8 +706,43 @@ int wiphy_register(struct wiphy *wiphy)
 		nl80211_send_reg_change_event(&request);
 	}
 
+<<<<<<< HEAD
 	cfg80211_debugfs_rdev_add(rdev);
 	mutex_unlock(&cfg80211_mutex);
+=======
+	/* Check that nobody globally advertises any capabilities they do not
+	 * advertise on all possible interface types.
+	 */
+	if (wiphy->extended_capabilities_len &&
+	    wiphy->num_iftype_ext_capab &&
+	    wiphy->iftype_ext_capab) {
+		u8 supported_on_all, j;
+		const struct wiphy_iftype_ext_capab *capab;
+
+		capab = wiphy->iftype_ext_capab;
+		for (j = 0; j < wiphy->extended_capabilities_len; j++) {
+			if (capab[0].extended_capabilities_len > j)
+				supported_on_all =
+					capab[0].extended_capabilities[j];
+			else
+				supported_on_all = 0x00;
+			for (i = 1; i < wiphy->num_iftype_ext_capab; i++) {
+				if (j >= capab[i].extended_capabilities_len) {
+					supported_on_all = 0x00;
+					break;
+				}
+				supported_on_all &=
+					capab[i].extended_capabilities[j];
+			}
+			if (WARN_ON(wiphy->extended_capabilities[j] &
+				    ~supported_on_all))
+				break;
+		}
+	}
+
+	rdev->wiphy.registered = true;
+	rtnl_unlock();
+>>>>>>> 0e91d2a... Nougat
 
 	/*
 	 * due to a locking dependency this has to be outside of the
@@ -799,6 +855,11 @@ void wiphy_unregister(struct wiphy *wiphy)
 	cancel_work_sync(&rdev->conn_work);
 	flush_work(&rdev->event_work);
 	cancel_delayed_work_sync(&rdev->dfs_update_channels_wk);
+<<<<<<< HEAD
+=======
+	flush_work(&rdev->destroy_work);
+	flush_work(&rdev->sched_scan_stop_wk);
+>>>>>>> 0e91d2a... Nougat
 
     /* HTC_WIFI_START */
     flush_work(&rdev->destroy_work);
@@ -1190,7 +1251,13 @@ static int cfg80211_netdev_notifier_call(struct notifier_block *nb,
 		break;
 	}
 
+<<<<<<< HEAD
 	return NOTIFY_DONE;
+=======
+	wireless_nlevent_flush();
+
+	return NOTIFY_OK;
+>>>>>>> 0e91d2a... Nougat
 }
 
 static struct notifier_block cfg80211_netdev_notifier = {

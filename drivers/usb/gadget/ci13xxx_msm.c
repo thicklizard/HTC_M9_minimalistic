@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2010-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -151,6 +155,7 @@ static void ci13xxx_msm_reset(void)
 	/* workaround for rx buffer collision issue */
 	temp = readl_relaxed(USB_GENCONFIG);
 	temp &= ~GENCONFIG_TXFIFO_IDLE_FORCE_DISABLE;
+	temp &= ~GENCONFIG_ULPI_SERIAL_EN;
 	writel_relaxed(temp, USB_GENCONFIG);
 
 	if (udc->gadget.l1_supported)

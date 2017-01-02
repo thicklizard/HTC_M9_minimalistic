@@ -76,6 +76,55 @@ static void gpio_enable(struct timed_output_dev *dev, int value)
 		hrtimer_start(&data->timer,
 			ktime_set(value / 1000, (value % 1000) * 1000000),
 			HRTIMER_MODE_REL);
+<<<<<<< HEAD
+=======
+	} else	//value = 0
+		VIB_INFO_LOG("off, active_low(%d)\n", data->active_low);
+
+	spin_unlock_irqrestore(&data->lock, flags);
+}
+
+#ifdef CONFIG_OF
+static int timed_gpio_dt_parse(struct device_node *node, struct timed_gpio_platform_data *pdata)
+{
+	int ret = 0;
+
+	ret = of_property_read_u32(node, "vib,gpio_used", (u32 *)&pdata->num_gpios);
+	if(ret) {
+		VIB_ERR_LOG("%s, vib,gpio_used error\n", __func__);
+		return ret;
+	}
+
+	ret = of_get_named_gpio(node, "vib,gpio", 0);
+	if(!gpio_is_valid(ret)) {
+		VIB_ERR_LOG("%s, vib,gpio error\n", __func__);
+		return -EINVAL;
+	}
+	else {
+		pdata->gpios = kzalloc(sizeof(struct timed_gpio), GFP_KERNEL);
+		pdata->gpios->gpio = ret;
+	}
+
+	ret = of_property_read_string(node, "vib,gpio_name", &pdata->gpios->name);
+	if(ret)
+	{
+		VIB_ERR_LOG("%s, vib,gpio_name error\n", __func__);
+		return ret;
+	}
+
+	ret = of_property_read_u32(node, "vib,gpio_timeout", (u32 *)&pdata->gpios->max_timeout);
+	if(ret) {
+		VIB_ERR_LOG("%s, vib,gpio_timeout error\n", __func__);
+		return ret;
+	}
+	VIB_INFO_LOG("%s, set max_timeout : %d\n", __func__, pdata->gpios->max_timeout);
+
+	ret = of_property_read_u32(node, "vib,active_low", (u32 *)&pdata->gpios->active_low);
+	if(ret)
+	{
+		VIB_ERR_LOG("%s, vib,active_low error\n", __func__);
+		return ret;
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	spin_unlock_irqrestore(&data->lock, flags);

@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -115,6 +115,52 @@
 #define QPNP_VADC_ABSOLUTE_RECALIB_OFFSET			8
 #define QPNP_VADC_RATIOMETRIC_RECALIB_OFFSET			12
 #define QPNP_VADC_RECALIB_MAXCNT				10
+<<<<<<< HEAD
+=======
+#define QPNP_VADC_OFFSET_DUMP					8
+#define QPNP_VADC_REG_DUMP					14
+
+/* QPNP VADC refreshed register set */
+#define QPNP_VADC_HC1_STATUS1					0x8
+
+#define QPNP_VADC_HC1_DATA_HOLD_CTL				0x3f
+#define QPNP_VADC_HC1_DATA_HOLD_CTL_FIELD			BIT(1)
+
+#define QPNP_VADC_HC1_ADC_DIG_PARAM				0x42
+#define QPNP_VADC_HC1_CAL_VAL					BIT(6)
+#define QPNP_VADC_HC1_CAL_VAL_SHIFT				6
+#define QPNP_VADC_HC1_CAL_SEL_MASK				0x30
+#define QPNP_VADC_HC1_CAL_SEL_SHIFT				4
+#define QPNP_VADC_HC1_DEC_RATIO_SEL				0xc
+#define QPNP_VADC_HC1_DEC_RATIO_SHIFT				2
+#define QPNP_VADC_HC1_FAST_AVG_CTL				0x43
+#define QPNP_VADC_HC1_FAST_AVG_SAMPLES_MASK			0x7
+#define QPNP_VADC_HC1_ADC_CH_SEL_CTL				0x44
+#define QPNP_VADC_HC1_DELAY_CTL					0x45
+#define QPNP_VADC_HC1_DELAY_CTL_MASK				0xf
+#define QPNP_VADC_MC1_EN_CTL1					0x46
+#define QPNP_VADC_HC1_ADC_EN					BIT(7)
+#define QPNP_VADC_MC1_CONV_REQ					0x47
+#define QPNP_VADC_HC1_CONV_REQ_START				BIT(7)
+
+#define QPNP_VADC_HC1_VBAT_MIN_THR0				0x48
+#define QPNP_VADC_HC1_VBAT_MIN_THR1				0x49
+
+#define QPNP_VADC_HC1_DATA0					0x50
+#define QPNP_VADC_HC1_DATA1					0x51
+#define QPNP_VADC_HC1_DATA_CHECK_USR				0x8000
+
+#define QPNP_VADC_HC1_VBAT_MIN_DATA0				0x52
+#define QPNP_VADC_MC1_VBAT_MIN_DATA1				0x53
+
+/*
+ * Conversion time varies between 213uS to 6827uS based on the decimation,
+ * clock rate, fast average samples with no measurement in queue.
+ */
+#define QPNP_VADC_HC1_CONV_TIME_MIN_US				213
+#define QPNP_VADC_HC1_CONV_TIME_MAX_US				214
+#define QPNP_VADC_HC1_ERR_COUNT					1600
+>>>>>>> 0e91d2a... Nougat
 
 struct qpnp_vadc_mode_state {
 	bool				meas_int_mode;
@@ -154,6 +200,11 @@ struct qpnp_vadc_chip {
 	struct qpnp_vadc_mode_state	*state_copy;
 	struct qpnp_vadc_thermal_data	*vadc_therm_chan;
 	struct power_supply		*vadc_chg_vote;
+<<<<<<< HEAD
+=======
+	bool				vadc_hc;
+	int				vadc_debug_count;
+>>>>>>> 0e91d2a... Nougat
 	struct sensor_device_attribute	sens_attr[0];
 };
 
@@ -293,6 +344,7 @@ static int32_t qpnp_vadc_status_debug(struct qpnp_vadc_chip *vadc)
 	int rc = 0;
 	u8 mode = 0, status1 = 0, chan = 0, dig = 0, en = 0, status2 = 0;
 
+<<<<<<< HEAD
 	rc = qpnp_vadc_read_reg(vadc, QPNP_VADC_MODE_CTL, &mode);
 	if (rc < 0) {
 		pr_err("mode ctl register read failed with %d\n", rc);
@@ -322,6 +374,24 @@ static int32_t qpnp_vadc_status_debug(struct qpnp_vadc_chip *vadc)
 		pr_err("status2 read failed with %d\n", rc);
 		return rc;
 	}
+=======
+	if (vadc->vadc_debug_count < 3) {
+		for (i = 0; i < QPNP_VADC_REG_DUMP; i++) {
+			rc = qpnp_vadc_read_reg(vadc, offset, buf, 8);
+			if (rc) {
+				pr_err("debug register dump failed\n");
+				return rc;
+			}
+			offset += QPNP_VADC_OFFSET_DUMP;
+			pr_err("row%d: 0%x 0%x 0%x 0%x 0%x 0%x 0%x 0%x\n",
+				i, buf[0], buf[1], buf[2], buf[3], buf[4],
+				buf[5], buf[6], buf[7]);
+		}
+	} else
+		pr_debug("VADC peripheral dumps got printed before\n");
+
+	vadc->vadc_debug_count++;
+>>>>>>> 0e91d2a... Nougat
 
 	rc = qpnp_vadc_read_reg(vadc, QPNP_VADC_EN_CTL1, &en);
 	if (rc < 0) {
@@ -1332,10 +1402,19 @@ int32_t qpnp_get_vadc_gain_and_offset(struct qpnp_vadc_chip *vadc,
 				enum qpnp_adc_calib_type calib_type)
 {
 	int rc = 0;
+	struct qpnp_vadc_result result;
 
 	rc = qpnp_vadc_is_valid(vadc);
 	if (rc < 0)
 		return rc;
+
+	if (!vadc->vadc_init_calib) {
+		rc = qpnp_vadc_read(vadc, REF_125V, &result);
+		if (rc) {
+			pr_debug("vadc read failed with rc = %d\n", rc);
+			return rc;
+		}
+	}
 
 	switch (calib_type) {
 	case CALIB_RATIOMETRIC:
@@ -2232,7 +2311,8 @@ static int qpnp_vadc_get_temp(struct thermal_zone_device *thermal,
 	rc = qpnp_vadc_read(vadc,
 				vadc_therm->vadc_channel, &result);
 	if (rc) {
-		pr_err("VADC read error with %d\n", rc);
+		if (rc != -EPROBE_DEFER)
+			pr_err("VADC read error with %d\n", rc);
 		return rc;
 	}
 
@@ -2338,6 +2418,14 @@ static int qpnp_vadc_probe(struct spmi_device *spmi)
 	}
 
 	vadc->vadc_therm_chan = adc_thermal;
+<<<<<<< HEAD
+=======
+	if (!strcmp(id->compatible, "qcom,qpnp-vadc-hc")) {
+		vadc->vadc_hc = true;
+		vadc->adc->adc_hc = true;
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	rc = qpnp_adc_get_devicetree_data(spmi, vadc->adc);
 	if (rc) {
 		dev_err(&spmi->dev, "failed to read device tree\n");

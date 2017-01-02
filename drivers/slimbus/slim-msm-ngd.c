@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -165,6 +165,7 @@ static int ngd_qmi_available(struct notifier_block *n, unsigned long code,
 	SLIM_INFO(dev, "Slimbus QMI NGD CB received event:%ld\n", code);
 	switch (code) {
 	case QMI_SERVER_ARRIVE:
+		atomic_set(&dev->ssr_in_progress, 0);
 		schedule_work(&qmi->ssr_up);
 		break;
 	default:
@@ -183,6 +184,7 @@ static int dsp_ssr_notify_cb(struct notifier_block *n, unsigned long code,
 	switch (code) {
 	case SUBSYS_BEFORE_SHUTDOWN:
 		SLIM_INFO(dev, "SLIM DSP SSR notify cb:%lu\n", code);
+		atomic_set(&dev->ssr_in_progress, 1);
 		
 		mutex_lock(&dev->tx_lock);
 		
@@ -288,6 +290,39 @@ static int ngd_get_tid(struct slim_controller *ctrl, struct slim_msg_txn *txn,
 	spin_unlock(&ctrl->txn_lock);
 	return 0;
 }
+<<<<<<< HEAD
+=======
+
+static void slim_reinit_tx_msgq(struct msm_slim_ctrl *dev)
+{
+	if (dev->state != MSM_CTRL_DOWN) {
+		msm_slim_disconnect_endp(dev, &dev->tx_msgq,
+					&dev->use_tx_msgqs);
+		msm_slim_connect_endp(dev, &dev->tx_msgq);
+	}
+}
+
+static int ngd_check_hw_status(struct msm_slim_ctrl *dev)
+{
+	void __iomem *ngd = dev->base + NGD_BASE(dev->ctrl.nr, dev->ver);
+	u32 laddr = readl_relaxed(ngd + NGD_STATUS);
+	int ret = 0;
+
+	
+	if (!(laddr & NGD_LADDR)) {
+		SLIM_WARN(dev, "NGD lost LADDR: status:0x%x\n", laddr);
+		ret = ngd_slim_power_up(dev, false);
+
+		if (ret) {
+			SLIM_WARN(dev, "slim resume ret:%d, state:%d\n",
+					ret, dev->state);
+			ret = -EREMOTEIO;
+		}
+	}
+	return ret;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static int ngd_xfer_msg(struct slim_controller *ctrl, struct slim_msg_txn *txn)
 {
 	DECLARE_COMPLETION_ONSTACK(done);
@@ -333,7 +368,6 @@ static int ngd_xfer_msg(struct slim_controller *ctrl, struct slim_msg_txn *txn)
 
 	
 	if (!report_sat) {
-
 		if (dev->state == MSM_CTRL_DOWN) {
 			u8 mc = (u8)txn->mc;
 			int timeout;
@@ -378,6 +412,15 @@ static int ngd_xfer_msg(struct slim_controller *ctrl, struct slim_msg_txn *txn)
 			msm_slim_put_ctrl(dev);
 			return -EREMOTEIO;
 		}
+<<<<<<< HEAD
+=======
+		ret = ngd_check_hw_status(dev);
+		if (ret) {
+			mutex_unlock(&dev->tx_lock);
+			msm_slim_put_ctrl(dev);
+			return ret;
+		}
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	if (txn->mt == SLIM_MSG_MT_CORE &&
@@ -539,6 +582,7 @@ static int ngd_xfer_msg(struct slim_controller *ctrl, struct slim_msg_txn *txn)
 							i, *(pbuf + i));
 			if (idx < MSM_TX_BUFS)
 				dev->wr_comp[idx] = NULL;
+<<<<<<< HEAD
 			
 			sps_get_bam_debug_info(dev->bam.hdl, 93,
 						SPS_BAM_PIPE(4), 0, 2);
@@ -547,6 +591,9 @@ static int ngd_xfer_msg(struct slim_controller *ctrl, struct slim_msg_txn *txn)
 							&dev->use_tx_msgqs);
 				msm_slim_connect_endp(dev, &dev->tx_msgq, NULL);
 			}
+=======
+			slim_reinit_tx_msgq(dev);
+>>>>>>> 0e91d2a... Nougat
 		} else if (!timeout) {
 			ret = -ETIMEDOUT;
 			SLIM_WARN(dev, "timeout non-BAM TX,len:%d", txn->rl);
@@ -647,6 +694,155 @@ static int ngd_user_msg(struct slim_controller *ctrl, u8 la, u8 mt, u8 mc,
 	return ngd_xfer_msg(ctrl, &txn);
 }
 
+<<<<<<< HEAD
+=======
+static int ngd_bulk_cb(void *ctx, int err)
+{
+	if (ctx)
+		complete(ctx);
+	return err;
+}
+
+static int ngd_bulk_wr(struct slim_controller *ctrl, u8 la, u8 mt, u8 mc,
+			struct slim_val_inf msgs[], int n,
+			int (*comp_cb)(void *ctx, int err), void *ctx)
+{
+	struct msm_slim_ctrl *dev = slim_get_ctrldata(ctrl);
+	int i, ret;
+	struct msm_slim_endp *endpoint = &dev->tx_msgq;
+	u32 *header;
+	DECLARE_COMPLETION_ONSTACK(done);
+
+	ret = msm_slim_get_ctrl(dev);
+	mutex_lock(&dev->tx_lock);
+
+	if ((pm_runtime_enabled(dev->dev) && ret < 0) ||
+			dev->state >= MSM_CTRL_ASLEEP) {
+		SLIM_WARN(dev, "vote failed/SSR in-progress ret:%d, state:%d",
+				ret, dev->state);
+		pm_runtime_set_suspended(dev->dev);
+		mutex_unlock(&dev->tx_lock);
+		msm_slim_put_ctrl(dev);
+		return -EREMOTEIO;
+	}
+	if (!pm_runtime_enabled(dev->dev) && dev->state == MSM_CTRL_ASLEEP) {
+		mutex_unlock(&dev->tx_lock);
+		ret = ngd_slim_runtime_resume(dev->dev);
+
+		if (ret) {
+			SLIM_ERR(dev, "slim resume failed ret:%d, state:%d",
+					ret, dev->state);
+			return -EREMOTEIO;
+		}
+		mutex_lock(&dev->tx_lock);
+	}
+
+	ret = ngd_check_hw_status(dev);
+	if (ret) {
+		mutex_unlock(&dev->tx_lock);
+		msm_slim_put_ctrl(dev);
+		return ret;
+	}
+
+	if (dev->use_tx_msgqs != MSM_MSGQ_ENABLED) {
+		SLIM_WARN(dev, "bulk wr not supported");
+		ret = -EPROTONOSUPPORT;
+		goto retpath;
+	}
+	if (dev->bulk.in_progress) {
+		SLIM_WARN(dev, "bulk wr in progress:");
+		ret = -EAGAIN;
+		goto retpath;
+	}
+	dev->bulk.in_progress = true;
+	
+	dev->bulk.size = n * 5;
+	for (i = 0; i < n; i++) {
+		dev->bulk.size += msgs[i].num_bytes;
+		dev->bulk.size += (4 - ((msgs[i].num_bytes + 1) & 0x3));
+	}
+
+	if (dev->bulk.size > 0xffff) {
+		SLIM_WARN(dev, "len exceeds limit, split bulk and retry");
+		ret = -EDQUOT;
+		goto retpath;
+	}
+	if (dev->bulk.size > dev->bulk.buf_sz) {
+		void *temp = krealloc(dev->bulk.base, dev->bulk.size,
+				      GFP_KERNEL | GFP_DMA);
+		if (!temp) {
+			ret = -ENOMEM;
+			goto retpath;
+		}
+		dev->bulk.base = temp;
+		dev->bulk.buf_sz = dev->bulk.size;
+	}
+
+	header = dev->bulk.base;
+	for (i = 0; i < n; i++) {
+		u8 *buf = (u8 *)header;
+		int rl = msgs[i].num_bytes + 5;
+		u16 ec;
+
+		*header = SLIM_MSG_ASM_FIRST_WORD(rl, mt, mc, 0, la);
+		buf += 3;
+		ret = ngd_get_ec(msgs[i].start_offset, msgs[i].num_bytes, &ec);
+		if (ret)
+			goto retpath;
+		*(buf++) = (ec & 0xFF);
+		*(buf++) = (ec >> 8) & 0xFF;
+		memcpy(buf, msgs[i].wbuf, msgs[i].num_bytes);
+		buf += msgs[i].num_bytes;
+		header += (rl >> 2);
+		if (rl & 3) {
+			header++;
+			memset(buf, 0, ((u8 *)header - buf));
+		}
+	}
+	header = dev->bulk.base;
+	if (comp_cb) {
+		dev->bulk.cb = comp_cb;
+		dev->bulk.ctx = ctx;
+	} else {
+		dev->bulk.cb = ngd_bulk_cb;
+		dev->bulk.ctx = &done;
+	}
+	dev->bulk.wr_dma = dma_map_single(dev->dev, dev->bulk.base,
+					  dev->bulk.size, DMA_TO_DEVICE);
+	if (dma_mapping_error(dev->dev, dev->bulk.wr_dma)) {
+		ret = -ENOMEM;
+		goto retpath;
+	}
+
+	ret = sps_transfer_one(endpoint->sps, dev->bulk.wr_dma, dev->bulk.size,
+						NULL, SPS_IOVEC_FLAG_EOT);
+	if (ret) {
+		SLIM_WARN(dev, "sps transfer one returned error:%d", ret);
+		goto retpath;
+	}
+	if (dev->bulk.cb == ngd_bulk_cb) {
+		int timeout = wait_for_completion_timeout(&done, HZ);
+
+		if (!timeout) {
+			SLIM_WARN(dev, "timeout for bulk wr");
+			dma_unmap_single(dev->dev, dev->bulk.wr_dma,
+					 dev->bulk.size, DMA_TO_DEVICE);
+			ret = -ETIMEDOUT;
+		}
+	}
+retpath:
+	if (ret) {
+		dev->bulk.in_progress = false;
+		dev->bulk.ctx = NULL;
+		dev->bulk.wr_dma = 0;
+		slim_reinit_tx_msgq(dev);
+	}
+	mutex_unlock(&dev->tx_lock);
+	msm_slim_put_ctrl(dev);
+	return ret;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static int ngd_xferandwait_ack(struct slim_controller *ctrl,
 				struct slim_msg_txn *txn)
 {
@@ -860,8 +1056,14 @@ static void ngd_slim_setup_msg_path(struct msm_slim_ctrl *dev)
 	} else {
 		if (dev->use_rx_msgqs == MSM_MSGQ_DISABLED)
 			goto setup_tx_msg_path;
+<<<<<<< HEAD
 		if (dev->use_rx_msgqs == MSM_MSGQ_ENABLED) {
 			SLIM_WARN(dev, "pipe setup when RX msgq enabled?");
+=======
+		if (cfg & NGD_CFG_RX_MSGQ_EN) {
+			SLIM_WARN(dev, "SLIM NGD CFG HW:0x%x, SW:%d:", cfg,
+				  dev->use_rx_msgqs);
+>>>>>>> 0e91d2a... Nougat
 			goto setup_tx_msg_path;
 		}
 		msm_slim_connect_endp(dev, &dev->rx_msgq,
@@ -1014,16 +1216,34 @@ static int ngd_slim_power_up(struct msm_slim_ctrl *dev, bool mdm_restart)
 		}
 	}
 
+<<<<<<< HEAD
+=======
+hw_init_retry:
+>>>>>>> 0e91d2a... Nougat
 	
 	if (!mdm_restart &&
 		(cur_state == MSM_CTRL_DOWN || cur_state == MSM_CTRL_ASLEEP)) {
 		ret = msm_slim_qmi_power_request(dev, true);
 		if (ret) {
+<<<<<<< HEAD
 			SLIM_ERR(dev, "SLIM QMI power request failed:%d\n",
 					ret);
+=======
+			SLIM_WARN(dev, "SLIM power req failed:%d, retry:%d\n",
+					ret, retries);
+			if (!atomic_read(&dev->ssr_in_progress))
+				msm_slim_qmi_power_request(dev, false);
+			if (retries < INIT_MX_RETRIES &&
+				!atomic_read(&dev->ssr_in_progress)) {
+				retries++;
+				goto hw_init_retry;
+			}
+>>>>>>> 0e91d2a... Nougat
 			return ret;
 		}
 	}
+	retries = 0;
+
 	if (!dev->ver) {
 		dev->ver = readl_relaxed(dev->base);
 		
@@ -1068,11 +1288,25 @@ static int ngd_slim_power_up(struct msm_slim_ctrl *dev, bool mdm_restart)
 
 	timeout = wait_for_completion_timeout(&dev->reconf, HZ);
 	if (!timeout) {
+<<<<<<< HEAD
 		SLIM_ERR(dev, "Failed to receive master capability\n");
 #ifdef CONFIG_HTC_DEBUG_DSP
 		pr_info("%s:trigger ramdump to keep status\n",__func__);
 		BUG();
 #endif
+=======
+		u32 cfg = readl_relaxed(dev->base +
+					 NGD_BASE(dev->ctrl.nr, dev->ver));
+		laddr = readl_relaxed(ngd + NGD_STATUS);
+		SLIM_WARN(dev,
+			  "slim capability time-out:%d, stat:0x%x,cfg:0x%x\n",
+				retries, laddr, cfg);
+		if ((retries < INIT_MX_RETRIES) &&
+				!atomic_read(&dev->ssr_in_progress)) {
+			retries++;
+			goto capability_retry;
+		}
+>>>>>>> 0e91d2a... Nougat
 		return -ETIMEDOUT;
 	}
 	
@@ -1152,6 +1386,35 @@ static int ngd_slim_rx_msgq_thread(void *data)
 				break;
 			}
 
+<<<<<<< HEAD
+=======
+		txn.dt = SLIM_MSG_DEST_LOGICALADDR;
+		txn.ec = 0;
+		txn.rbuf = NULL;
+		txn.mc = SLIM_USR_MC_REPORT_SATELLITE;
+		txn.mt = SLIM_MSG_MT_SRC_REFERRED_USER;
+		txn.la = SLIM_LA_MGR;
+		wbuf[0] = SAT_MAGIC_LSB;
+		wbuf[1] = SAT_MAGIC_MSB;
+		wbuf[2] = SAT_MSG_VER;
+		wbuf[3] = SAT_MSG_PROT;
+		txn.wbuf = wbuf;
+		txn.len = 4;
+		SLIM_INFO(dev, "SLIM SAT: Rcvd master capability\n");
+capability_retry:
+		txn.rl = 8;
+		ret = ngd_xfer_msg(&dev->ctrl, &txn);
+		if (!ret) {
+			enum msm_ctrl_state prev_state = dev->state;
+
+			SLIM_INFO(dev,
+				"SLIM SAT: capability exchange successful\n");
+			if (prev_state < MSM_CTRL_ASLEEP)
+				SLIM_WARN(dev,
+					"capability due to noise, state:%d\n",
+						prev_state);
+			complete(&dev->reconf);
+>>>>>>> 0e91d2a... Nougat
 			
 			if (index++ == 0) {
 				msg_len = *buffer & 0x1F;
@@ -1229,11 +1492,13 @@ static void ngd_adsp_down(struct work_struct *work)
 	struct slim_controller *ctrl = &dev->ctrl;
 	struct slim_device *sbdev;
 
+	mutex_lock(&dev->ssr_lock);
 	ngd_slim_enable(dev, false);
 	
 	list_for_each_entry(sbdev, &ctrl->devs, dev_list)
 		slim_report_absent(sbdev);
 	SLIM_INFO(dev, "SLIM ADSP SSR (DOWN) done\n");
+	mutex_unlock(&dev->ssr_lock);
 }
 
 static void ngd_adsp_up(struct work_struct *work)
@@ -1242,7 +1507,9 @@ static void ngd_adsp_up(struct work_struct *work)
 		container_of(work, struct msm_slim_qmi, ssr_up);
 	struct msm_slim_ctrl *dev =
 		container_of(qmi, struct msm_slim_ctrl, qmi);
+	mutex_lock(&dev->ssr_lock);
 	ngd_slim_enable(dev, true);
+	mutex_unlock(&dev->ssr_lock);
 }
 
 static ssize_t show_mask(struct device *device, struct device_attribute *attr,
@@ -1276,7 +1543,7 @@ static int ngd_slim_probe(struct platform_device *pdev)
 	struct resource		*irq, *bam_irq;
 	bool			rxreg_access = false;
 	bool			slim_mdm = false;
-	const char		*ext_modem_id = NULL;
+	const char		*ext_modem_id = NULL, *subsys_name = NULL;
 
 	slim_mem = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 						"slimbus_physical");
@@ -1312,6 +1579,18 @@ static int ngd_slim_probe(struct platform_device *pdev)
 				GFP_KERNEL);
 	if (!dev->wr_comp)
 		return -ENOMEM;
+<<<<<<< HEAD
+=======
+
+	
+	dev->bulk.buf_sz = SLIM_MAX_TXNS * 8;
+	dev->bulk.base = kzalloc(dev->bulk.buf_sz, GFP_KERNEL | GFP_DMA);
+	if (!dev->bulk.base) {
+		ret = -ENOMEM;
+		goto err_nobulk;
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	dev->dev = &pdev->dev;
 	platform_set_drvdata(pdev, dev);
 	slim_set_ctrldata(&dev->ctrl, dev);
@@ -1391,11 +1670,17 @@ static int ngd_slim_probe(struct platform_device *pdev)
 	init_completion(&dev->reconf);
 	init_completion(&dev->ctrl_up);
 	mutex_init(&dev->tx_lock);
+<<<<<<< HEAD
 	mutex_init(&dev->tx_buf_lock);
+=======
+	mutex_init(&dev->ssr_lock);
+	spin_lock_init(&dev->tx_buf_lock);
+>>>>>>> 0e91d2a... Nougat
 	spin_lock_init(&dev->rx_lock);
 	dev->ee = 1;
 	dev->irq = irq->start;
 	dev->bam.irq = bam_irq->start;
+	atomic_set(&dev->ssr_in_progress, 0);
 
 	if (rxreg_access)
 		dev->use_rx_msgqs = MSM_MSGQ_DISABLED;
@@ -1435,9 +1720,18 @@ static int ngd_slim_probe(struct platform_device *pdev)
 	pm_runtime_set_suspended(dev->dev);
 	pm_runtime_enable(dev->dev);
 
-	dev->dsp.nb.notifier_call = dsp_ssr_notify_cb;
-	dev->dsp.ssr = subsys_notif_register_notifier("adsp",
-						&dev->dsp.nb);
+	dev->dsp.nb.priority = 4;
+	ret = of_property_read_string(pdev->dev.of_node,
+				"qcom,subsys-name", &subsys_name);
+	if (ret) {
+		dev->dsp.nb.notifier_call = dsp_ssr_notify_cb;
+		dev->dsp.ssr = subsys_notif_register_notifier("adsp",
+							&dev->dsp.nb);
+	} else {
+		dev->dsp.nb.notifier_call = dsp_ssr_notify_cb;
+		dev->dsp.ssr = subsys_notif_register_notifier(subsys_name,
+							&dev->dsp.nb);
+	}
 	if (IS_ERR_OR_NULL(dev->dsp.ssr))
 		dev_err(dev->dev,
 			"subsys_notif_register_notifier failed %p",
@@ -1543,6 +1837,7 @@ static int ngd_slim_runtime_resume(struct device *device)
 	struct platform_device *pdev = to_platform_device(device);
 	struct msm_slim_ctrl *dev = platform_get_drvdata(pdev);
 	int ret = 0;
+
 	mutex_lock(&dev->tx_lock);
 	if (dev->state >= MSM_CTRL_ASLEEP)
 		ret = ngd_slim_power_up(dev, false);

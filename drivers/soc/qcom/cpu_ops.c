@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  * Copyright (c) 2013 ARM Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -126,18 +130,46 @@ static int __init msm_cpu_prepare(unsigned int cpu)
 	return 0;
 }
 
+<<<<<<< HEAD
 
 static int __init msm8994_cpu_prepare(unsigned int cpu)
+=======
+static int msm8953_cpu_boot(unsigned int cpu)
+>>>>>>> 0e91d2a... Nougat
 {
 	int ret;
 
+<<<<<<< HEAD
 	if (per_cpu(cold_boot_done, 0) == false) {
 		ret = msm8994_cpu_ldo_config(0);
+=======
+	if (per_cpu(cold_boot_done, cpu) == false) {
+		ret = msm8953_unclamp_secondary_arm_cpu(cpu);
+>>>>>>> 0e91d2a... Nougat
 		if (ret)
 			return ret;
 	}
 
+<<<<<<< HEAD
 	return msm_cpu_prepare(cpu);
+=======
+#ifdef CONFIG_HOTPLUG_CPU
+static void msm8953_wfi_cpu_die(unsigned int cpu)
+{
+	if (unlikely(cpu != smp_processor_id())) {
+		pr_crit("%s: running on %u, should be %u\n",
+			__func__, smp_processor_id(), cpu);
+		BUG();
+	}
+	for (;;) {
+		wfi();
+		if (secondary_holding_pen_release == cpu_logical_map(cpu))
+			break;	/*Proper wake up */
+
+		pr_debug("CPU%u: spurious wakeup call\n", cpu);
+		BUG();
+	}
+>>>>>>> 0e91d2a... Nougat
 }
 
 static int msm_cpu_boot(unsigned int cpu)
@@ -229,7 +261,28 @@ static const struct cpu_operations msm_cortex_a_ops = {
 #endif
 	.cpu_suspend       = msm_pm_collapse,
 };
+<<<<<<< HEAD
 CPU_METHOD_OF_DECLARE(msm_cortex_a_ops, &msm_cortex_a_ops);
+=======
+CPU_METHOD_OF_DECLARE(msm_cortex_a_ops,
+		"qcom,arm-cortex-acc", &msm_cortex_a_ops);
+
+static struct cpu_operations msm8953_cortex_a_ops = {
+	.name		= "qcom,8953-arm-cortex-acc",
+	.cpu_init	= msm_cpu_init,
+	.cpu_prepare	= msm_cpu_prepare,
+	.cpu_boot	= msm8953_cpu_boot,
+	.cpu_postboot	= msm_cpu_postboot,
+#ifdef CONFIG_HOTPLUG_CPU
+	.cpu_die        = msm8953_wfi_cpu_die,
+#endif
+#ifdef CONFIG_ARM64_CPU_SUSPEND
+	.cpu_suspend       = msm_pm_collapse,
+#endif
+};
+CPU_METHOD_OF_DECLARE(msm8953_cortex_a_ops,
+	"qcom,8953-arm-cortex-acc", &msm8953_cortex_a_ops);
+>>>>>>> 0e91d2a... Nougat
 
 static const struct cpu_operations msm8994_cortex_a_ops = {
 	.name		= "qcom,8994-arm-cortex-acc",

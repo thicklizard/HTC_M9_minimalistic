@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -32,6 +36,7 @@ irqreturn_t mhi_msi_handlr(int irq_number, void *dev_id)
 	mhi_log(MHI_MSG_VERBOSE,
 		"Got MSI 0x%x\n", IRQ_TO_MSI(mhi_dev_ctxt, irq_number));
 	trace_mhi_msi(IRQ_TO_MSI(mhi_dev_ctxt, irq_number));
+<<<<<<< HEAD
 	switch (IRQ_TO_MSI(mhi_dev_ctxt, irq_number)) {
 	case 0:
 	case 1:
@@ -56,13 +61,47 @@ irqreturn_t mhi_msi_handlr(int irq_number, void *dev_id)
 						MHI_STATUS_SUCCESS;
 				client_info->mhi_client_cb(&cb_info);
 			}
+=======
+	atomic_inc(&mhi_dev_ctxt->flags.events_pending);
+	wake_up_interruptible(
+		mhi_dev_ctxt->mhi_ev_wq.mhi_event_wq);
+	return IRQ_HANDLED;
+}
+
+irqreturn_t mhi_msi_ipa_handlr(int irq_number, void *dev_id)
+{
+	struct device *mhi_device = dev_id;
+	u32 client_index;
+	struct mhi_device_ctxt *mhi_dev_ctxt = mhi_device->platform_data;
+	struct mhi_client_handle *client_handle;
+	struct mhi_client_info_t *client_info;
+	struct mhi_cb_info cb_info;
+	int msi_num = (IRQ_TO_MSI(mhi_dev_ctxt, irq_number));
+
+	mhi_dev_ctxt->counters.msi_counter[msi_num]++;
+	mhi_log(MHI_MSG_VERBOSE, "Got MSI 0x%x\n", msi_num);
+	trace_mhi_msi(msi_num);
+	client_index = MHI_MAX_CHANNELS -
+			(mhi_dev_ctxt->mmio_info.nr_event_rings - msi_num);
+	client_handle = mhi_dev_ctxt->client_handle_list[client_index];
+	client_info = &client_handle->client_info;
+	if (likely(NULL != client_handle)) {
+		client_handle->result.user_data =
+				client_handle->user_data;
+	if (likely(NULL != &client_info->mhi_client_cb)) {
+			cb_info.result = &client_handle->result;
+			cb_info.cb_reason = MHI_CB_XFER;
+			cb_info.chan = client_handle->chan_info.chan_nr;
+			cb_info.result->transaction_status = 0;
+			client_info->mhi_client_cb(&cb_info);
+>>>>>>> 0e91d2a... Nougat
 		}
 		break;
 	}
 	return IRQ_HANDLED;
 }
 
-static enum MHI_STATUS mhi_process_event_ring(
+static int mhi_process_event_ring(
 		struct mhi_device_ctxt *mhi_dev_ctxt,
 		u32 ev_index,
 		u32 event_quota)
@@ -70,6 +109,10 @@ static enum MHI_STATUS mhi_process_event_ring(
 	union mhi_event_pkt *local_rp = NULL;
 	union mhi_event_pkt *device_rp = NULL;
 	union mhi_event_pkt event_to_process;
+<<<<<<< HEAD
+=======
+	int ret_val = 0;
+>>>>>>> 0e91d2a... Nougat
 	struct mhi_event_ctxt *ev_ctxt = NULL;
 	struct mhi_ring *local_ev_ctxt =
 		&mhi_dev_ctxt->mhi_local_event_ctxt[ev_index];
@@ -92,8 +135,34 @@ static enum MHI_STATUS mhi_process_event_ring(
 	while ((local_rp != device_rp) && (event_quota > 0) &&
 			(device_rp != NULL) && (local_rp != NULL)) {
 		event_to_process = *local_rp;
+<<<<<<< HEAD
 		if (unlikely(MHI_STATUS_SUCCESS !=
 					recycle_trb_and_ring(mhi_dev_ctxt,
+=======
+		ev_ptr = &event_to_process;
+		event_code = get_cmd_pkt(mhi_dev_ctxt,
+					ev_ptr, &cmd_pkt, ev_index);
+		if (((MHI_TRB_READ_INFO(EV_TRB_TYPE, (&event_to_process)) ==
+		    MHI_PKT_TYPE_CMD_COMPLETION_EVENT)) &&
+		    (event_code == MHI_EVENT_CC_SUCCESS)) {
+			mhi_log(MHI_MSG_INFO, "Command Completion event\n");
+			if ((MHI_TRB_READ_INFO(CMD_TRB_TYPE, cmd_pkt) ==
+			     MHI_PKT_TYPE_RESET_CHAN_CMD)) {
+				mhi_log(MHI_MSG_INFO, "First Reset CC event\n");
+				MHI_TRB_SET_INFO(CMD_TRB_TYPE, cmd_pkt,
+					MHI_PKT_TYPE_RESET_CHAN_DEFER_CMD);
+				ret_val = -EINPROGRESS;
+				break;
+			} else if ((MHI_TRB_READ_INFO(CMD_TRB_TYPE, cmd_pkt)
+				    == MHI_PKT_TYPE_RESET_CHAN_DEFER_CMD)) {
+				MHI_TRB_SET_INFO(CMD_TRB_TYPE, cmd_pkt,
+						 MHI_PKT_TYPE_RESET_CHAN_CMD);
+				mhi_log(MHI_MSG_INFO,
+					"Processing Reset CC event\n");
+			}
+		}
+		if (unlikely(0 != recycle_trb_and_ring(mhi_dev_ctxt,
+>>>>>>> 0e91d2a... Nougat
 						local_ev_ctxt,
 						MHI_RING_TYPE_EVENT_RING,
 						ev_index)))
@@ -154,8 +223,16 @@ static enum MHI_STATUS mhi_process_event_ring(
 		}
 		local_rp = (union mhi_event_pkt *)local_ev_ctxt->rp;
 		device_rp = (union mhi_event_pkt *)mhi_p2v_addr(
+<<<<<<< HEAD
 					mhi_dev_ctxt->mhi_ctrl_seg_info,
 					(u64)ev_ctxt->mhi_event_read_ptr);
+=======
+						mhi_dev_ctxt,
+						MHI_RING_TYPE_EVENT_RING,
+						ev_index,
+						ev_ctxt->mhi_event_read_ptr);
+		ret_val = 0;
+>>>>>>> 0e91d2a... Nougat
 		--event_quota;
 	}
 	return MHI_STATUS_SUCCESS;
@@ -197,6 +274,7 @@ int parse_event_thread(void *ctxt)
 		}
 		mhi_dev_ctxt->ev_thread_stopped = 0;
 		atomic_dec(&mhi_dev_ctxt->flags.events_pending);
+<<<<<<< HEAD
 
 		for (i = 0; i < EVENT_RINGS_ALLOCATED; ++i) {
 			MHI_GET_EVENT_RING_INFO(EVENT_RING_POLLING,
@@ -206,6 +284,24 @@ int parse_event_thread(void *ctxt)
 				mhi_process_event_ring(mhi_dev_ctxt,
 				 mhi_dev_ctxt->alloced_ev_rings[i],
 				 EV_EL_PER_RING);
+=======
+		for (i = 0; i < mhi_dev_ctxt->mmio_info.nr_event_rings; ++i) {
+			if (mhi_dev_ctxt->mhi_state == MHI_STATE_SYS_ERR) {
+				mhi_log(MHI_MSG_INFO,
+				   "SYS_ERR detected, not processing events\n");
+				atomic_set(&mhi_dev_ctxt->flags.events_pending,
+					   0);
+				break;
+			}
+			if (GET_EV_PROPS(EV_MANAGED,
+					mhi_dev_ctxt->ev_ring_props[i].flags)){
+				ret_val_process_event =
+				    mhi_process_event_ring(mhi_dev_ctxt, i,
+				     mhi_dev_ctxt->ev_ring_props[i].nr_desc);
+				if (ret_val_process_event ==
+					-EINPROGRESS)
+					atomic_inc(ev_pen_ptr);
+>>>>>>> 0e91d2a... Nougat
 			}
 		}
 	}
@@ -214,13 +310,19 @@ int parse_event_thread(void *ctxt)
 
 struct mhi_result *mhi_poll(struct mhi_client_handle *client_handle)
 {
+<<<<<<< HEAD
 	enum MHI_STATUS ret_val;
 	client_handle->result.payload_buf = 0;
+=======
+	int ret_val;
+
+	client_handle->result.buf_addr = NULL;
+>>>>>>> 0e91d2a... Nougat
 	client_handle->result.bytes_xferd = 0;
 	ret_val = mhi_process_event_ring(client_handle->mhi_dev_ctxt,
 				client_handle->event_ring_index,
 				1);
-	if (MHI_STATUS_SUCCESS != ret_val)
+	if (ret_val)
 		mhi_log(MHI_MSG_INFO, "NAPI failed to process event ring\n");
 	return &(client_handle->result);
 }

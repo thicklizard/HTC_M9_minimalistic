@@ -476,6 +476,7 @@ struct pci_bus *pcibios_scan_root(int busnum)
 {
 	struct pci_bus *bus = NULL;
 
+<<<<<<< HEAD
 	while ((bus = pci_find_next_bus(bus)) != NULL) {
 		if (bus->number == busnum) {
 			/* Already scanned */
@@ -485,6 +486,23 @@ struct pci_bus *pcibios_scan_root(int busnum)
 
 	return pci_scan_bus_on_node(busnum, &pci_root_ops,
 					get_mp_bus_to_node(busnum));
+=======
+	sd = kzalloc(sizeof(*sd), GFP_KERNEL);
+	if (!sd) {
+		printk(KERN_ERR "PCI: OOM, skipping PCI bus %02x\n", busnum);
+		return;
+	}
+	sd->node = x86_pci_root_bus_node(busnum);
+	x86_pci_root_bus_resources(busnum, &resources);
+	printk(KERN_DEBUG "PCI: Probing PCI hardware (bus %02x)\n", busnum);
+	bus = pci_scan_root_bus(NULL, busnum, &pci_root_ops, sd, &resources);
+	if (!bus) {
+		pci_free_resource_list(&resources);
+		kfree(sd);
+		return;
+	}
+	pci_bus_add_devices(bus);
+>>>>>>> 0e91d2a... Nougat
 }
 
 void __init pcibios_set_cache_line_size(void)

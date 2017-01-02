@@ -284,12 +284,39 @@ static int xhci_stop_device(struct xhci_hcd *xhci, int slot_id, int suspend)
 
 	spin_lock_irqsave(&xhci->lock, flags);
 	for (i = LAST_EP_INDEX; i > 0; i--) {
+<<<<<<< HEAD
 		if (virt_dev->eps[i].ring && virt_dev->eps[i].ring->dequeue)
 			xhci_queue_stop_endpoint(xhci, slot_id, i, suspend);
 	}
 	cmd->command_trb = xhci_find_next_enqueue(xhci->cmd_ring);
 	list_add_tail(&cmd->cmd_list, &virt_dev->cmd_list);
 	xhci_queue_stop_endpoint(xhci, slot_id, 0, suspend);
+=======
+		if (virt_dev->eps[i].ring && virt_dev->eps[i].ring->dequeue) {
+			struct xhci_command *command;
+			command = xhci_alloc_command(xhci, false, false,
+						     GFP_NOWAIT);
+			if (!command) {
+				spin_unlock_irqrestore(&xhci->lock, flags);
+				xhci_free_command(xhci, cmd);
+				return -ENOMEM;
+
+			}
+
+			ret = xhci_queue_stop_endpoint(xhci, command, slot_id,
+					i, suspend);
+			if (ret) {
+				spin_unlock_irqrestore(&xhci->lock, flags);
+				goto err_cmd_queue;
+			}
+		}
+	}
+	ret = xhci_queue_stop_endpoint(xhci, cmd, slot_id, 0, suspend);
+	if (ret) {
+		spin_unlock_irqrestore(&xhci->lock, flags);
+		goto err_cmd_queue;
+	}
+>>>>>>> 0e91d2a... Nougat
 	xhci_ring_cmd_db(xhci);
 	spin_unlock_irqrestore(&xhci->lock, flags);
 
@@ -311,7 +338,11 @@ static int xhci_stop_device(struct xhci_hcd *xhci, int slot_id, int suspend)
 		goto command_cleanup;
 	}
 
+<<<<<<< HEAD
 command_cleanup:
+=======
+err_cmd_queue:
+>>>>>>> 0e91d2a... Nougat
 	xhci_free_command(xhci, cmd);
 	return ret;
 }

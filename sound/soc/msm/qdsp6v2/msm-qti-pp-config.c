@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -66,8 +66,21 @@ static int msm_route_hfp_vol_control;
 static const DECLARE_TLV_DB_LINEAR(hfp_rx_vol_gain, 0,
 				INT_RX_VOL_MAX_STEPS);
 
+<<<<<<< HEAD
 static int msm_route_auxpcm_lb_vol_ctrl;
 static const DECLARE_TLV_DB_LINEAR(auxpcm_lb_vol_gain, 0,
+=======
+static int msm_route_icc_vol_control;
+static const DECLARE_TLV_DB_LINEAR(icc_rx_vol_gain, 0,
+				INT_RX_VOL_MAX_STEPS);
+
+static int msm_route_pri_auxpcm_lb_vol_ctrl;
+static const DECLARE_TLV_DB_LINEAR(pri_auxpcm_lb_vol_gain, 0,
+				INT_RX_VOL_MAX_STEPS);
+
+static int msm_route_sec_auxpcm_lb_vol_ctrl;
+static const DECLARE_TLV_DB_LINEAR(sec_auxpcm_lb_vol_gain, 0,
+>>>>>>> 0e91d2a... Nougat
 				INT_RX_VOL_MAX_STEPS);
 
 static void msm_qti_pp_send_eq_values_(int eq_idx)
@@ -373,6 +386,9 @@ static int msm_qti_pp_put_rms_value_control(struct snd_kcontrol *kcontrol,
 /* VOLUME */
 static int msm_route_fm_vol_control;
 static int msm_afe_lb_vol_ctrl;
+static int msm_afe_sec_mi2s_lb_vol_ctrl;
+static int msm_afe_tert_mi2s_lb_vol_ctrl;
+static int msm_afe_quat_mi2s_lb_vol_ctrl;
 static const DECLARE_TLV_DB_LINEAR(fm_rx_vol_gain, 0, INT_RX_VOL_MAX_STEPS);
 static const DECLARE_TLV_DB_LINEAR(afe_lb_vol_gain, 0, INT_RX_VOL_MAX_STEPS);
 
@@ -411,11 +427,35 @@ static int msm_qti_pp_set_pri_mi2s_lb_vol_mixer(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+<<<<<<< HEAD
 // HTC_AUD ++
 static int msm_qti_pp_get_prim_mi2s_fm_vol_mixer(struct snd_kcontrol *kcontrol,
 				       struct snd_ctl_elem_value *ucontrol)
 {
 	ucontrol->value.integer.value[0] = msm_route_fm_vol_control;
+=======
+static int msm_qti_pp_get_sec_mi2s_lb_vol_mixer(struct snd_kcontrol *kcontrol,
+				       struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.integer.value[0] = msm_afe_sec_mi2s_lb_vol_ctrl;
+	return 0;
+}
+
+static int msm_qti_pp_set_sec_mi2s_lb_vol_mixer(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *ucontrol)
+{
+	afe_loopback_gain(AFE_PORT_ID_SECONDARY_MI2S_TX,
+			  ucontrol->value.integer.value[0]);
+	msm_afe_sec_mi2s_lb_vol_ctrl = ucontrol->value.integer.value[0];
+
+	return 0;
+}
+
+static int msm_qti_pp_get_tert_mi2s_lb_vol_mixer(struct snd_kcontrol *kcontrol,
+				       struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.integer.value[0] = msm_afe_tert_mi2s_lb_vol_ctrl;
+>>>>>>> 0e91d2a... Nougat
 	return 0;
 }
 
@@ -424,9 +464,30 @@ static int msm_qti_pp_set_prim_mi2s_fm_vol_mixer(struct snd_kcontrol *kcontrol,
 {
 	afe_loopback_gain(AFE_PORT_ID_PRIMARY_MI2S_TX,
 			  ucontrol->value.integer.value[0]);
+<<<<<<< HEAD
 
 	msm_route_fm_vol_control = ucontrol->value.integer.value[0];
 
+=======
+	msm_afe_tert_mi2s_lb_vol_ctrl = ucontrol->value.integer.value[0];
+	return 0;
+}
+
+static int msm_qti_pp_get_icc_vol_mixer(struct snd_kcontrol *kcontrol,
+				       struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.integer.value[0] = msm_route_icc_vol_control;
+	return 0;
+}
+
+static int msm_qti_pp_set_icc_vol_mixer(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *ucontrol)
+{
+	adm_set_mic_gain(AFE_PORT_ID_QUATERNARY_TDM_TX,
+		adm_get_default_copp_idx(AFE_PORT_ID_QUATERNARY_TDM_TX),
+		ucontrol->value.integer.value[0]);
+	msm_route_icc_vol_control = ucontrol->value.integer.value[0];
+>>>>>>> 0e91d2a... Nougat
 	return 0;
 }
 // HTC_AUD --
@@ -434,7 +495,7 @@ static int msm_qti_pp_set_prim_mi2s_fm_vol_mixer(struct snd_kcontrol *kcontrol,
 static int msm_qti_pp_get_quat_mi2s_fm_vol_mixer(struct snd_kcontrol *kcontrol,
 				       struct snd_ctl_elem_value *ucontrol)
 {
-	ucontrol->value.integer.value[0] = msm_route_fm_vol_control;
+	ucontrol->value.integer.value[0] = msm_afe_quat_mi2s_lb_vol_ctrl;
 	return 0;
 }
 
@@ -444,7 +505,7 @@ static int msm_qti_pp_set_quat_mi2s_fm_vol_mixer(struct snd_kcontrol *kcontrol,
 	afe_loopback_gain(AFE_PORT_ID_QUATERNARY_MI2S_TX,
 			  ucontrol->value.integer.value[0]);
 
-	msm_route_fm_vol_control = ucontrol->value.integer.value[0];
+	msm_afe_quat_mi2s_lb_vol_ctrl = ucontrol->value.integer.value[0];
 
 	return 0;
 }
@@ -531,12 +592,44 @@ static const struct snd_kcontrol_new pri_mi2s_lb_vol_mixer_controls[] = {
 	msm_qti_pp_set_pri_mi2s_lb_vol_mixer, afe_lb_vol_gain),
 };
 
+<<<<<<< HEAD
+=======
+static const struct snd_kcontrol_new sec_mi2s_lb_vol_mixer_controls[] = {
+	SOC_SINGLE_EXT_TLV("SEC MI2S LOOPBACK Volume", SND_SOC_NOPM, 0,
+	INT_RX_VOL_GAIN, 0, msm_qti_pp_get_sec_mi2s_lb_vol_mixer,
+	msm_qti_pp_set_sec_mi2s_lb_vol_mixer, afe_lb_vol_gain),
+};
+
+static const struct snd_kcontrol_new tert_mi2s_lb_vol_mixer_controls[] = {
+	SOC_SINGLE_EXT_TLV("Tert MI2S LOOPBACK Volume", SND_SOC_NOPM, 0,
+	INT_RX_VOL_GAIN, 0, msm_qti_pp_get_tert_mi2s_lb_vol_mixer,
+	msm_qti_pp_set_tert_mi2s_lb_vol_mixer, afe_lb_vol_gain),
+};
+
+>>>>>>> 0e91d2a... Nougat
 static const struct snd_kcontrol_new int_hfp_vol_mixer_controls[] = {
 	SOC_SINGLE_EXT_TLV("Internal HFP RX Volume", SND_SOC_NOPM, 0,
 	INT_RX_VOL_GAIN, 0, msm_qti_pp_get_hfp_vol_mixer,
 	msm_qti_pp_set_hfp_vol_mixer, hfp_rx_vol_gain),
 };
 
+<<<<<<< HEAD
+=======
+static const struct snd_kcontrol_new int_icc_vol_mixer_controls[] = {
+	SOC_SINGLE_EXT_TLV("Internal ICC Volume", SND_SOC_NOPM, 0,
+	INT_RX_VOL_GAIN, 0, msm_qti_pp_get_icc_vol_mixer,
+	msm_qti_pp_set_icc_vol_mixer, icc_rx_vol_gain),
+};
+
+static const struct snd_kcontrol_new pri_auxpcm_lb_vol_mixer_controls[] = {
+	SOC_SINGLE_EXT_TLV("PRI AUXPCM LOOPBACK Volume",
+	AFE_PORT_ID_PRIMARY_PCM_TX, 0, INT_RX_VOL_GAIN, 0,
+	msm_qti_pp_get_pri_auxpcm_lb_vol_mixer,
+	msm_qti_pp_set_pri_auxpcm_lb_vol_mixer,
+	pri_auxpcm_lb_vol_gain),
+};
+
+>>>>>>> 0e91d2a... Nougat
 static const struct snd_kcontrol_new sec_auxpcm_lb_vol_mixer_controls[] = {
 	SOC_SINGLE_EXT_TLV("SEC AUXPCM LOOPBACK Volume",
 	AFE_PORT_ID_SECONDARY_PCM_TX, 0, INT_RX_VOL_GAIN, 0,
@@ -702,8 +795,20 @@ void msm_qti_pp_add_controls(struct snd_soc_platform *platform)
 	snd_soc_add_platform_controls(platform, pri_mi2s_lb_vol_mixer_controls,
 			ARRAY_SIZE(pri_mi2s_lb_vol_mixer_controls));
 
+<<<<<<< HEAD
+=======
+	snd_soc_add_platform_controls(platform, sec_mi2s_lb_vol_mixer_controls,
+			ARRAY_SIZE(sec_mi2s_lb_vol_mixer_controls));
+
+	snd_soc_add_platform_controls(platform, tert_mi2s_lb_vol_mixer_controls,
+			ARRAY_SIZE(tert_mi2s_lb_vol_mixer_controls));
+
+>>>>>>> 0e91d2a... Nougat
 	snd_soc_add_platform_controls(platform, int_hfp_vol_mixer_controls,
 			ARRAY_SIZE(int_hfp_vol_mixer_controls));
+
+	snd_soc_add_platform_controls(platform, int_icc_vol_mixer_controls,
+			ARRAY_SIZE(int_icc_vol_mixer_controls));
 
 	snd_soc_add_platform_controls(platform,
 				sec_auxpcm_lb_vol_mixer_controls,

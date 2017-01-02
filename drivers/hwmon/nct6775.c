@@ -316,6 +316,10 @@ static const u16 NCT6775_REG_TEMP_CRIT[ARRAY_SIZE(nct6775_temp_label) - 1]
 
 /* NCT6776 specific data */
 
+/* STEP_UP_TIME and STEP_DOWN_TIME regs are swapped for all chips but NCT6775 */
+#define NCT6776_REG_FAN_STEP_UP_TIME NCT6775_REG_FAN_STEP_DOWN_TIME
+#define NCT6776_REG_FAN_STEP_DOWN_TIME NCT6775_REG_FAN_STEP_UP_TIME
+
 static const s8 NCT6776_ALARM_BITS[] = {
 	0, 1, 2, 3, 8, 21, 20, 16,	/* in0.. in7 */
 	17, -1, -1, -1, -1, -1, -1,	/* in8..in14 */
@@ -3540,8 +3544,8 @@ static int nct6775_probe(struct platform_device *pdev)
 		data->REG_FAN_MIN = NCT6776_REG_FAN_MIN;
 		data->REG_FAN_PULSES = NCT6776_REG_FAN_PULSES;
 		data->REG_FAN_TIME[0] = NCT6775_REG_FAN_STOP_TIME;
-		data->REG_FAN_TIME[1] = NCT6775_REG_FAN_STEP_UP_TIME;
-		data->REG_FAN_TIME[2] = NCT6775_REG_FAN_STEP_DOWN_TIME;
+		data->REG_FAN_TIME[1] = NCT6776_REG_FAN_STEP_UP_TIME;
+		data->REG_FAN_TIME[2] = NCT6776_REG_FAN_STEP_DOWN_TIME;
 		data->REG_TOLERANCE_H = NCT6776_REG_TOLERANCE_H;
 		data->REG_PWM[0] = NCT6775_REG_PWM;
 		data->REG_PWM[1] = NCT6775_REG_FAN_START_OUTPUT;
@@ -3605,8 +3609,8 @@ static int nct6775_probe(struct platform_device *pdev)
 		data->REG_FAN_MIN = NCT6776_REG_FAN_MIN;
 		data->REG_FAN_PULSES = NCT6779_REG_FAN_PULSES;
 		data->REG_FAN_TIME[0] = NCT6775_REG_FAN_STOP_TIME;
-		data->REG_FAN_TIME[1] = NCT6775_REG_FAN_STEP_UP_TIME;
-		data->REG_FAN_TIME[2] = NCT6775_REG_FAN_STEP_DOWN_TIME;
+		data->REG_FAN_TIME[1] = NCT6776_REG_FAN_STEP_UP_TIME;
+		data->REG_FAN_TIME[2] = NCT6776_REG_FAN_STEP_DOWN_TIME;
 		data->REG_TOLERANCE_H = NCT6776_REG_TOLERANCE_H;
 		data->REG_PWM[0] = NCT6775_REG_PWM;
 		data->REG_PWM[1] = NCT6775_REG_FAN_START_OUTPUT;
@@ -3632,6 +3636,86 @@ static int nct6775_probe(struct platform_device *pdev)
 
 		reg_temp = NCT6779_REG_TEMP;
 		num_reg_temp = ARRAY_SIZE(NCT6779_REG_TEMP);
+<<<<<<< HEAD
+=======
+		num_reg_temp_mon = ARRAY_SIZE(NCT6779_REG_TEMP_MON);
+		reg_temp_over = NCT6779_REG_TEMP_OVER;
+		reg_temp_hyst = NCT6779_REG_TEMP_HYST;
+		reg_temp_config = NCT6779_REG_TEMP_CONFIG;
+		reg_temp_alternate = NCT6779_REG_TEMP_ALTERNATE;
+		reg_temp_crit = NCT6779_REG_TEMP_CRIT;
+
+		break;
+	case nct6791:
+		data->in_num = 15;
+		data->pwm_num = 6;
+		data->auto_pwm_num = 4;
+		data->has_fan_div = false;
+		data->temp_fixed_num = 6;
+		data->num_temp_alarms = 2;
+		data->num_temp_beeps = 2;
+
+		data->ALARM_BITS = NCT6791_ALARM_BITS;
+		data->BEEP_BITS = NCT6779_BEEP_BITS;
+
+		data->fan_from_reg = fan_from_reg13;
+		data->fan_from_reg_min = fan_from_reg13;
+		data->target_temp_mask = 0xff;
+		data->tolerance_mask = 0x07;
+		data->speed_tolerance_limit = 63;
+
+		data->temp_label = nct6779_temp_label;
+		data->temp_label_num = ARRAY_SIZE(nct6779_temp_label);
+
+		data->REG_CONFIG = NCT6775_REG_CONFIG;
+		data->REG_VBAT = NCT6775_REG_VBAT;
+		data->REG_DIODE = NCT6775_REG_DIODE;
+		data->DIODE_MASK = NCT6775_DIODE_MASK;
+		data->REG_VIN = NCT6779_REG_IN;
+		data->REG_IN_MINMAX[0] = NCT6775_REG_IN_MIN;
+		data->REG_IN_MINMAX[1] = NCT6775_REG_IN_MAX;
+		data->REG_TARGET = NCT6775_REG_TARGET;
+		data->REG_FAN = NCT6779_REG_FAN;
+		data->REG_FAN_MODE = NCT6775_REG_FAN_MODE;
+		data->REG_FAN_MIN = NCT6776_REG_FAN_MIN;
+		data->REG_FAN_PULSES = NCT6779_REG_FAN_PULSES;
+		data->FAN_PULSE_SHIFT = NCT6775_FAN_PULSE_SHIFT;
+		data->REG_FAN_TIME[0] = NCT6775_REG_FAN_STOP_TIME;
+		data->REG_FAN_TIME[1] = NCT6776_REG_FAN_STEP_UP_TIME;
+		data->REG_FAN_TIME[2] = NCT6776_REG_FAN_STEP_DOWN_TIME;
+		data->REG_TOLERANCE_H = NCT6776_REG_TOLERANCE_H;
+		data->REG_PWM[0] = NCT6775_REG_PWM;
+		data->REG_PWM[1] = NCT6775_REG_FAN_START_OUTPUT;
+		data->REG_PWM[2] = NCT6775_REG_FAN_STOP_OUTPUT;
+		data->REG_PWM[5] = NCT6791_REG_WEIGHT_DUTY_STEP;
+		data->REG_PWM[6] = NCT6791_REG_WEIGHT_DUTY_BASE;
+		data->REG_PWM_READ = NCT6775_REG_PWM_READ;
+		data->REG_PWM_MODE = NCT6776_REG_PWM_MODE;
+		data->PWM_MODE_MASK = NCT6776_PWM_MODE_MASK;
+		data->REG_AUTO_TEMP = NCT6775_REG_AUTO_TEMP;
+		data->REG_AUTO_PWM = NCT6775_REG_AUTO_PWM;
+		data->REG_CRITICAL_TEMP = NCT6775_REG_CRITICAL_TEMP;
+		data->REG_CRITICAL_TEMP_TOLERANCE
+		  = NCT6775_REG_CRITICAL_TEMP_TOLERANCE;
+		data->REG_CRITICAL_PWM_ENABLE = NCT6779_REG_CRITICAL_PWM_ENABLE;
+		data->CRITICAL_PWM_ENABLE_MASK
+		  = NCT6779_CRITICAL_PWM_ENABLE_MASK;
+		data->REG_CRITICAL_PWM = NCT6779_REG_CRITICAL_PWM;
+		data->REG_TEMP_OFFSET = NCT6779_REG_TEMP_OFFSET;
+		data->REG_TEMP_SOURCE = NCT6775_REG_TEMP_SOURCE;
+		data->REG_TEMP_SEL = NCT6775_REG_TEMP_SEL;
+		data->REG_WEIGHT_TEMP_SEL = NCT6791_REG_WEIGHT_TEMP_SEL;
+		data->REG_WEIGHT_TEMP[0] = NCT6791_REG_WEIGHT_TEMP_STEP;
+		data->REG_WEIGHT_TEMP[1] = NCT6791_REG_WEIGHT_TEMP_STEP_TOL;
+		data->REG_WEIGHT_TEMP[2] = NCT6791_REG_WEIGHT_TEMP_BASE;
+		data->REG_ALARM = NCT6791_REG_ALARM;
+		data->REG_BEEP = NCT6776_REG_BEEP;
+
+		reg_temp = NCT6779_REG_TEMP;
+		reg_temp_mon = NCT6779_REG_TEMP_MON;
+		num_reg_temp = ARRAY_SIZE(NCT6779_REG_TEMP);
+		num_reg_temp_mon = ARRAY_SIZE(NCT6779_REG_TEMP_MON);
+>>>>>>> 0e91d2a... Nougat
 		reg_temp_over = NCT6779_REG_TEMP_OVER;
 		reg_temp_hyst = NCT6779_REG_TEMP_HYST;
 		reg_temp_config = NCT6779_REG_TEMP_CONFIG;

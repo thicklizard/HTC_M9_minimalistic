@@ -432,7 +432,12 @@ void btrfs_stop_workers(struct btrfs_workers *workers)
 		spin_lock_irq(&workers->lock);
 		put_worker(worker);
 	}
+<<<<<<< HEAD
 	spin_unlock_irq(&workers->lock);
+=======
+	trace_btrfs_work_queued(work);
+	queue_work(wq->normal_wq, &work->normal_work);
+>>>>>>> 0e91d2a... Nougat
 }
 
 /*

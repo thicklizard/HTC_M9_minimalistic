@@ -21,6 +21,10 @@
 #include <linux/init.h>
 #include <linux/linkage.h>
 
+<<<<<<< HEAD
+=======
+#include <asm/alternative.h>
+>>>>>>> 0e91d2a... Nougat
 #include <asm/assembler.h>
 #include <asm/asm-offsets.h>
 #include <asm/errno.h>

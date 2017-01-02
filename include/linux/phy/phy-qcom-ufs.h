@@ -1,5 +1,9 @@
 /*
+<<<<<<< HEAD
  * Copyright (c) 2013-2014, Linux Foundation. All rights reserved.
+=======
+ * Copyright (c) 2013-2016, Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -185,6 +189,7 @@ int ufs_qcom_phy_save_configuration(struct phy *generic_phy);
 int ufs_qcom_phy_restore_configuration(struct phy *generic_phy);
 void ufs_qcom_phy_save_controller_version(struct phy *generic_phy,
 			u8 major, u16 minor, u16 step);
+<<<<<<< HEAD
 int ufs_qcom_phy_power_on(struct phy *generic_phy);
 int ufs_qcom_phy_power_off(struct phy *generic_phy);
 int ufs_qcom_phy_exit(struct phy *generic_phy);
@@ -202,4 +207,7 @@ int ufs_qcom_phy_calibrate(struct ufs_qcom_phy *ufs_qcom_phy,
 			struct ufs_qcom_phy_calibration *tbl_A, int tbl_size_A,
 			struct ufs_qcom_phy_calibration *tbl_B, int tbl_size_B,
 			int rate);
+=======
+const char *ufs_qcom_phy_name(struct phy *phy);
+>>>>>>> 0e91d2a... Nougat
 #endif

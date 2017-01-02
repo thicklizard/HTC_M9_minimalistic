@@ -925,6 +925,10 @@ static void print_aggr(char *prefix)
 {
 	struct perf_evsel *counter;
 	int cpu, s, s2, id, nr;
+<<<<<<< HEAD
+=======
+	double uval;
+>>>>>>> 0e91d2a... Nougat
 	u64 ena, run, val;
 
 	if (!(aggr_map || aggr_get_id))
@@ -936,7 +940,11 @@ static void print_aggr(char *prefix)
 			val = ena = run = 0;
 			nr = 0;
 			for (cpu = 0; cpu < perf_evsel__nr_cpus(counter); cpu++) {
+<<<<<<< HEAD
 				s2 = aggr_get_id(evsel_list->cpus, cpu);
+=======
+				s2 = aggr_get_id(perf_evsel__cpus(counter), cpu);
+>>>>>>> 0e91d2a... Nougat
 				if (s2 != id)
 					continue;
 				val += counter->counts->cpu[cpu].val;

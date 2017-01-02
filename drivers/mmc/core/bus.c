@@ -160,6 +160,16 @@ static int mmc_bus_suspend(struct device *dev)
 
 	if (dev->driver && drv->suspend)
 		ret = drv->suspend(card);
+<<<<<<< HEAD
+=======
+		if (ret)
+			return ret;
+	}
+
+	if (mmc_bus_needs_resume(host))
+		return 0;
+	ret = host->bus_ops->suspend(host);
+>>>>>>> 0e91d2a... Nougat
 	return ret;
 }
 
@@ -167,8 +177,24 @@ static int mmc_bus_resume(struct device *dev)
 {
 	struct mmc_driver *drv = to_mmc_driver(dev->driver);
 	struct mmc_card *card = mmc_dev_to_card(dev);
+<<<<<<< HEAD
 	int ret = 0;
+=======
+	struct mmc_host *host = card->host;
+	int ret;
 
+	if (mmc_bus_manual_resume(host)) {
+		host->bus_resume_flags |= MMC_BUSRESUME_NEEDS_RESUME;
+		goto skip_full_resume;
+	}
+
+	ret = host->bus_ops->resume(host);
+	if (ret)
+		pr_warn("%s: error %d during resume (card was removed?)\n",
+			mmc_hostname(host), ret);
+>>>>>>> 0e91d2a... Nougat
+
+skip_full_resume:
 	if (dev->driver && drv->resume)
 		ret = drv->resume(card);
 	return ret;
@@ -181,6 +207,7 @@ static int mmc_runtime_suspend(struct device *dev)
 {
 	struct mmc_card *card = mmc_dev_to_card(dev);
 
+<<<<<<< HEAD
 	if (mmc_use_core_runtime_pm(card->host)) {
 		/*
 		 * If idle time bkops is running on the card, let's not get
@@ -193,12 +220,19 @@ static int mmc_runtime_suspend(struct device *dev)
 	} else {
 		return mmc_power_save_host(card->host);
 	}
+=======
+	if (mmc_bus_needs_resume(host))
+		return 0;
+
+	return host->bus_ops->runtime_suspend(host);
+>>>>>>> 0e91d2a... Nougat
 }
 
 static int mmc_runtime_resume(struct device *dev)
 {
 	struct mmc_card *card = mmc_dev_to_card(dev);
 
+<<<<<<< HEAD
 	if (mmc_use_core_runtime_pm(card->host))
 		return 0;
 	else
@@ -223,13 +257,18 @@ static int mmc_runtime_idle(struct device *dev)
 	}
 
 	return ret;
+=======
+	if (mmc_bus_needs_resume(host))
+		host->bus_resume_flags &= ~MMC_BUSRESUME_NEEDS_RESUME;
+
+	return host->bus_ops->runtime_resume(host);
+>>>>>>> 0e91d2a... Nougat
 }
 
 #endif /* !CONFIG_PM_RUNTIME */
 
 static const struct dev_pm_ops mmc_bus_pm_ops = {
-	SET_RUNTIME_PM_OPS(mmc_runtime_suspend, mmc_runtime_resume,
-			mmc_runtime_idle)
+	SET_RUNTIME_PM_OPS(mmc_runtime_suspend, mmc_runtime_resume, NULL)
 	SET_SYSTEM_SLEEP_PM_OPS(mmc_bus_suspend, mmc_bus_resume)
 };
 

@@ -3175,6 +3175,7 @@ static ssize_t ext4_ext_direct_IO(int rw, struct kiocb *iocb,
 	 * case, we allocate an io_end structure to hook to the iocb.
 	 */
 	iocb->private = NULL;
+<<<<<<< HEAD
 	ext4_inode_aio_set(inode, NULL);
 	if (!is_sync_kiocb(iocb)) {
 		ext4_io_end_t *io_end = ext4_init_io_end(inode, GFP_NOFS);
@@ -3193,9 +3194,27 @@ static ssize_t ext4_ext_direct_IO(int rw, struct kiocb *iocb,
 		ext4_inode_aio_set(inode, io_end);
 	}
 
+=======
+>>>>>>> 0e91d2a... Nougat
 	if (overwrite) {
 		get_block_func = ext4_get_block_write_nolock;
 	} else {
+		ext4_inode_aio_set(inode, NULL);
+		if (!is_sync_kiocb(iocb)) {
+			io_end = ext4_init_io_end(inode, GFP_NOFS);
+			if (!io_end) {
+				ret = -ENOMEM;
+				goto retake_lock;
+			}
+			iocb->private = ext4_get_io_end(io_end);
+			/*
+			 * we save the io structure for current async direct
+			 * IO, so that later ext4_map_blocks() could flag the
+			 * io structure whether there is a unwritten extents
+			 * needs to be converted when IO is completed.
+			 */
+			ext4_inode_aio_set(inode, io_end);
+		}
 		get_block_func = ext4_get_block_write;
 		dio_flags = DIO_LOCKING;
 	}

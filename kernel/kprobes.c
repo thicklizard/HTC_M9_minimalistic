@@ -138,8 +138,25 @@ enum kprobe_slot_state {
 	SLOT_USED = 2,
 };
 
+<<<<<<< HEAD
 static DEFINE_MUTEX(kprobe_insn_mutex);	/* Protects kprobe_insn_slots */
 static struct kprobe_insn_cache kprobe_insn_slots = {
+=======
+static void *alloc_insn_page(void)
+{
+	return module_alloc(PAGE_SIZE);
+}
+
+static void free_insn_page(void *page)
+{
+	module_memfree(page);
+}
+
+struct kprobe_insn_cache kprobe_insn_slots = {
+	.mutex = __MUTEX_INITIALIZER(kprobe_insn_slots.mutex),
+	.alloc = alloc_insn_page,
+	.free = free_insn_page,
+>>>>>>> 0e91d2a... Nougat
 	.pages = LIST_HEAD_INIT(kprobe_insn_slots.pages),
 	.insn_size = MAX_INSN_SIZE,
 	.nr_garbage = 0,

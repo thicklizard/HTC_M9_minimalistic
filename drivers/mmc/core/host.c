@@ -257,7 +257,11 @@ bool mmc_host_may_gate_card(struct mmc_card *card)
 		return true;
 
 	if (mmc_card_sdio(card) && card->cccr.async_intr_sup)
+<<<<<<< HEAD
 		return true;
+=======
+			return true;
+>>>>>>> 0e91d2a... Nougat
 
 	return !(card->quirks & MMC_QUIRK_BROKEN_CLK_GATING);
 }
@@ -338,7 +342,11 @@ static inline void mmc_host_clk_sysfs_init(struct mmc_host *host)
 
 #endif
 
+<<<<<<< HEAD
 void mmc_of_parse(struct mmc_host *host)
+=======
+int mmc_of_parse(struct mmc_host *host)
+>>>>>>> 0e91d2a... Nougat
 {
 	struct device_node *np;
 	u32 bus_width;
@@ -395,6 +403,7 @@ void mmc_of_parse(struct mmc_host *host)
 			ret = mmc_gpio_request_cd(host, gpio);
 			if (ret < 0)
 				dev_err(host->parent,
+<<<<<<< HEAD
 					"Failed to request CD GPIO #%d: %d!\n",
 					gpio, ret);
 			else
@@ -403,23 +412,41 @@ void mmc_of_parse(struct mmc_host *host)
 		}
 
 		if (explicit_inv_cd ^ gpio_inv_cd)
+=======
+					"Failed to request CD GPIO: %d\n",
+					ret);
+			}
+		} else
+			dev_info(host->parent, "Got CD GPIO\n");
+
+		if (cd_cap_invert ^ cd_gpio_invert)
+>>>>>>> 0e91d2a... Nougat
 			host->caps2 |= MMC_CAP2_CD_ACTIVE_HIGH;
 	}
 
 	
+<<<<<<< HEAD
 	explicit_inv_wp = of_property_read_bool(np, "wp-inverted");
+=======
+	ro_cap_invert = of_property_read_bool(np, "wp-inverted");
+>>>>>>> 0e91d2a... Nougat
 
 	gpio = of_get_named_gpio_flags(np, "wp-gpios", 0, &flags);
 	if (gpio_is_valid(gpio)) {
 		if (!(flags & OF_GPIO_ACTIVE_LOW))
 			gpio_inv_wp = true;
 
+<<<<<<< HEAD
 		ret = mmc_gpio_request_ro(host, gpio);
 		if (ret < 0)
 			dev_err(host->parent,
 				"Failed to request WP GPIO: %d!\n", ret);
 	}
 	if (explicit_inv_wp ^ gpio_inv_wp)
+=======
+	
+	if (ro_cap_invert ^ ro_gpio_invert)
+>>>>>>> 0e91d2a... Nougat
 		host->caps2 |= MMC_CAP2_RO_ACTIVE_HIGH;
 
 	if (of_find_property(np, "cap-sd-highspeed", &len))
@@ -482,6 +509,9 @@ struct mmc_host *mmc_alloc_host(int extra, struct device *dev)
 	INIT_DELAYED_WORK(&host->detect, mmc_rescan);
 	INIT_DELAYED_WORK(&host->enable_detect, mmc_enable_detection);
 	INIT_DELAYED_WORK(&host->stats_work, mmc_stats);
+
+	host->perf.cmdq_read_map = 0;
+	host->perf.cmdq_write_map = 0;
 #ifdef CONFIG_PM
 	host->pm_notify.notifier_call = mmc_pm_notify;
 #endif
@@ -520,18 +550,36 @@ static ssize_t store_enable(struct device *dev,
 	unsigned long value, freq;
 	int retval = -EINVAL;
 
+<<<<<<< HEAD
 	if (!host)
 		goto out;
+=======
+	if (!host || !host->card || kstrtoul(buf, 0, &value))
+		return -EINVAL;
+>>>>>>> 0e91d2a... Nougat
 
 	
 	if (host->card)
 		mmc_rpm_hold(host, &host->card->dev);
 
+<<<<<<< HEAD
 	mmc_claim_host(host);
 	if (!host->card || kstrtoul(buf, 0, &value))
 		goto err;
 
 	if (value && !mmc_can_scale_clk(host)) {
+=======
+	if (!value) {
+		
+		mmc_exit_clk_scaling(host);
+		host->caps2 &= ~MMC_CAP2_CLK_SCALE;
+		host->clk_scaling.state = MMC_LOAD_HIGH;
+		
+		mmc_clk_update_freq(host, host->card->clk_scaling_highest,
+					host->clk_scaling.state);
+	} else if (value) {
+		
+>>>>>>> 0e91d2a... Nougat
 		host->caps2 |= MMC_CAP2_CLK_SCALE;
 		mmc_init_clk_scaling(host);
 

@@ -1,16 +1,18 @@
 #ifndef __LINUX_MSM_CAM_SENSOR_H
 #define __LINUX_MSM_CAM_SENSOR_H
 
+<<<<<<< HEAD
 #ifdef MSM_CAMERA_BIONIC
 #include <sys/types.h>
 #endif
 
 #include <media/msm_camsensor_sdk.h>
+=======
+#include <uapi/media/msm_cam_sensor.h>
+>>>>>>> 0e91d2a... Nougat
 
-#include <linux/types.h>
-#include <linux/i2c.h>
-#ifdef CONFIG_COMPAT
 #include <linux/compat.h>
+<<<<<<< HEAD
 #endif
 
 #define I2C_SEQ_REG_SETTING_MAX   5
@@ -227,6 +229,15 @@ struct camera_vreg_t {
 };
 
 struct fuse_id{
+=======
+
+#define MAX_ACT_NAME_SIZE_32 32
+#define LC898214_HEX_MAX_32 0x7FFF 
+#define LC898214_HEX_MIN_32 0x8001 
+#define LC898214_DEC_MAX_32 1023
+
+struct fuse_id32{
+>>>>>>> 0e91d2a... Nougat
 	uint32_t fuse_id_word1;
 	uint32_t fuse_id_word2;
 	uint32_t fuse_id_word3;
@@ -234,7 +245,7 @@ struct fuse_id{
 };
 
 typedef struct{
-	char    ACT_NAME[MAX_ACT_NAME_SIZE]; 
+	char    ACT_NAME[MAX_ACT_NAME_SIZE_32]; 
 	uint8_t VCM_START_MSB;
 	uint8_t VCM_START_LSB;
 	uint8_t AF_INF_MSB;
@@ -251,8 +262,9 @@ typedef struct{
 	uint8_t VCM_VENDOR;
 	uint8_t ACT_ID;
 	uint32_t MODULE_ID_AB;
-}af_value_t;
+}af_value_t32;
 
+<<<<<<< HEAD
 struct sensorb_cfg_data {
 	int cfgtype;
 	
@@ -295,12 +307,43 @@ enum eeprom_cfg_type_t {
 	CFG_EEPROM_READ_CAL_DATA,
 	CFG_EEPROM_WRITE_DATA,
 	CFG_EEPROM_GET_MM_INFO,
+=======
+struct pixel_tt32 {
+	int   x;
+	int   y;
 };
 
-struct eeprom_get_t {
-	uint32_t num_bytes;
+struct pixels_array_tt32 {
+	struct pixel_tt32 pix[40];
+	int	count;
 };
 
+enum actuator_I2C_func_select32 {
+        WRITE_SEQ_TABLE_32,
+        WRITE_TABLE_W_MICRODELAY_32,
+        WRITE_MULTI_TABLE_32
+>>>>>>> 0e91d2a... Nougat
+};
+
+struct msm_actuator_af_OTP_info_t32 {
+        uint8_t VCM_OTP_Read;
+        uint16_t VCM_Start;
+        uint16_t VCM_Infinity;
+        uint16_t VCM_Macro;
+        
+        uint8_t VCM_Bias;
+        uint8_t VCM_Offset;
+        uint16_t VCM_Bottom_Mech;
+        uint16_t VCM_Top_Mech;
+        uint8_t VCM_Vendor_Id_Version;
+        
+        uint8_t VCM_Vendor;
+        uint8_t act_id;
+        char act_name[MAX_SENSOR_NAME];
+        uint32_t MODULE_ID_AB;
+};
+
+<<<<<<< HEAD
 struct eeprom_read_t {
 	uint8_t *dbuffer;
 	uint32_t num_bytes;
@@ -328,8 +371,11 @@ struct msm_eeprom_cfg_data {
 		struct eeprom_get_cmm_t get_cmm_data;
 	} cfg;
 };
+=======
+>>>>>>> 0e91d2a... Nougat
 
 #ifdef CONFIG_COMPAT
+
 struct msm_sensor_power_setting32 {
 	enum msm_sensor_power_seq_type_t seq_type;
 	uint16_t seq_val;
@@ -420,8 +466,8 @@ struct msm_camera_i2c_seq_reg_setting32 {
 	enum msm_camera_i2c_reg_addr_type addr_type;
 	uint16_t delay;
 };
-#endif
 
+<<<<<<< HEAD
 enum msm_sensor_cfg_type_t {
 	CFG_SET_SLAVE_INFO,
 	CFG_SLAVE_READ_I2C,
@@ -707,12 +753,19 @@ struct sensor_init_cfg_data {
 	_IOWR('V', BASE_VIDIOC_PRIVATE + 13, struct msm_flash_cfg_data_t)
 
 #ifdef CONFIG_COMPAT
+=======
+>>>>>>> 0e91d2a... Nougat
 struct msm_camera_i2c_reg_setting32 {
 	compat_uptr_t reg_setting;
 	uint16_t size;
 	enum msm_camera_i2c_reg_addr_type addr_type;
 	enum msm_camera_i2c_data_type data_type;
 	uint16_t delay;
+};
+
+struct msm_camera_i2c_array_write_config32 {
+	struct msm_camera_i2c_reg_setting32 conf_array;
+	uint16_t slave_addr;
 };
 
 struct msm_actuator_tuning_params_t32 {
@@ -729,19 +782,36 @@ struct msm_actuator_params_t32 {
 	uint16_t data_size;
 	uint16_t init_setting_size;
 	uint32_t i2c_addr;
+<<<<<<< HEAD
 	enum msm_actuator_addr_type i2c_addr_type;
 	enum msm_actuator_data_type i2c_data_type;
 	compat_uptr_t reg_tbl_params;
 	compat_uptr_t init_settings;
 	struct park_lens_data_t park_lens;
+=======
+	enum i2c_freq_mode_t i2c_freq_mode;
+	enum msm_camera_i2c_reg_addr_type i2c_addr_type;
+	enum msm_camera_i2c_data_type i2c_data_type;
+	compat_uptr_t reg_tbl_params;
+	compat_uptr_t init_settings;
+	struct park_lens_data_t park_lens;
+	
+	char ACT_NAME[MAX_ACT_NAME_SIZE_32];
+	
+>>>>>>> 0e91d2a... Nougat
 };
 
 struct msm_actuator_set_info_t32 {
 	struct msm_actuator_params_t32 actuator_params;
 	struct msm_actuator_tuning_params_t32 af_tuning_params;
 	uint8_t enable_focus_step_log;
+<<<<<<< HEAD
 	uint16_t *step_position_table;                
 	enum actuator_I2C_func_select act_i2c_select; 
+=======
+	compat_uptr_t step_position_table;                
+	enum actuator_I2C_func_select32 act_i2c_select; 
+>>>>>>> 0e91d2a... Nougat
 };
 
 struct sensor_init_cfg_data32 {
@@ -772,7 +842,7 @@ struct msm_actuator_cfg_data32 {
 		struct msm_actuator_set_position_t setpos;
 		enum af_camera_name cam_name;
 		
-		af_value_t af_value;
+		af_value_t32 af_value;
 		
 	} cfg;
 };
@@ -790,18 +860,25 @@ struct sensorb_cfg_data32 {
 	
 	int8_t sensor_ver;
 	int8_t lens_id;
-	af_value_t af_value;
+	af_value_t32 af_value;
 	
 	union {
 		struct msm_sensor_info_t      sensor_info;
 		struct msm_sensor_init_params sensor_init_params;
 		compat_uptr_t                 setting;
 		
-		struct fuse_id fuse;
+		struct fuse_id32 fuse;
 		
 	} cfg;
 	
+<<<<<<< HEAD
 	int module_type;    
+=======
+	int cam_id;
+	
+	
+	struct pixels_array_tt32 pixels_array;
+>>>>>>> 0e91d2a... Nougat
 	
 };
 
@@ -867,4 +944,5 @@ struct msm_flash_cfg_data_t32 {
 	_IOWR('V', BASE_VIDIOC_PRIVATE + 13, struct msm_flash_cfg_data_t32)
 #endif
 
-#endif 
+#endif
+

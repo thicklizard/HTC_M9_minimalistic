@@ -133,10 +133,17 @@ struct snd_compr_ops {
 			struct snd_compr_caps *caps);
 	int (*get_codec_caps) (struct snd_compr_stream *stream,
 			struct snd_compr_codec_caps *codec);
+<<<<<<< HEAD
 // htc audio ++
 	int (*config_effect)(struct snd_compr_stream *stream, void *data,
 			void *payload);
 // htc audio --
+=======
+//HTC_AUD_START
+	int (*config_effect)(struct snd_compr_stream *stream, void *data,
+			void *payload);
+//HTC_AUD_END
+>>>>>>> 0e91d2a... Nougat
 };
 
 /**

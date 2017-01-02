@@ -708,8 +708,8 @@ static void get_memory_layout(const struct mem_ctl_info *mci)
 		edac_dbg(0, "TAD#%d: up to %u.%03u GB (0x%016Lx), socket interleave %d, memory interleave %d, TGT: %d, %d, %d, %d, reg=0x%08x\n",
 			 n_tads, gb, (mb*1000)/1024,
 			 ((u64)tmp_mb) << 20L,
-			 (u32)TAD_SOCK(reg),
-			 (u32)TAD_CH(reg),
+			 (u32)(1 << TAD_SOCK(reg)),
+			 (u32)TAD_CH(reg) + 1,
 			 (u32)TAD_TGT0(reg),
 			 (u32)TAD_TGT1(reg),
 			 (u32)TAD_TGT2(reg),
@@ -925,6 +925,7 @@ static int get_memory_error_data(struct mem_ctl_info *mci,
 		prv = limit;
 	}
 	ch_way = TAD_CH(reg) + 1;
+<<<<<<< HEAD
 	sck_way = TAD_SOCK(reg) + 1;
 	/*
 	 * FIXME: Is it right to always use channel 0 for offsets?
@@ -932,6 +933,9 @@ static int get_memory_error_data(struct mem_ctl_info *mci,
 	pci_read_config_dword(pvt->pci_tad[0],
 				tad_ch_nilv_offset[n_tads],
 				&tad_offset);
+=======
+	sck_way = 1 << TAD_SOCK(reg);
+>>>>>>> 0e91d2a... Nougat
 
 	if (ch_way == 3)
 		idx = addr >> 6;
@@ -984,7 +988,7 @@ static int get_memory_error_data(struct mem_ctl_info *mci,
 		 n_tads,
 		 addr,
 		 limit,
-		 (u32)TAD_SOCK(reg),
+		 sck_way,
 		 ch_way,
 		 offset,
 		 idx,
@@ -999,18 +1003,12 @@ static int get_memory_error_data(struct mem_ctl_info *mci,
 			offset, addr);
 		return -EINVAL;
 	}
-	addr -= offset;
-	/* Store the low bits [0:6] of the addr */
-	ch_addr = addr & 0x7f;
-	/* Remove socket wayness and remove 6 bits */
-	addr >>= 6;
-	addr = div_u64(addr, sck_xch);
-#if 0
-	/* Divide by channel way */
-	addr = addr / ch_way;
-#endif
-	/* Recover the last 6 bits */
-	ch_addr |= addr << 6;
+
+	ch_addr = addr - offset;
+	ch_addr >>= (6 + shiftup);
+	ch_addr /= ch_way * sck_way;
+	ch_addr <<= (6 + shiftup);
+	ch_addr |= addr & ((1 << (6 + shiftup)) - 1);
 
 	/*
 	 * Step 3) Decode rank

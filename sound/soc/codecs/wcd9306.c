@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -52,10 +56,13 @@
 /* RX_HPH_CNP_WG_TIME increases by 0.24ms */
 #define TAPAN_WG_TIME_FACTOR_US  240
 
+<<<<<<< HEAD
 #define TAPAN_SB_PGD_PORT_RX_BASE   0x40
 #define TAPAN_SB_PGD_PORT_TX_BASE   0x50
 #define TAPAN_REGISTER_START_OFFSET 0x800
 
+=======
+>>>>>>> 0e91d2a... Nougat
 #define CODEC_REG_CFG_MINOR_VER 1
 
 #define BUS_DOWN 1
@@ -157,12 +164,16 @@ static struct afe_param_id_cdc_aanc_version tapan_cdc_aanc_version = {
 	.aanc_hw_version        = AANC_HW_BLOCK_VERSION_2,
 };
 
+<<<<<<< HEAD
 enum tapan_codec_type {
 	WCD9306,
 	WCD9302,
 };
 
 static enum tapan_codec_type codec_ver;
+=======
+static enum codec_variant codec_ver;
+>>>>>>> 0e91d2a... Nougat
 
 enum {
 	AIF1_PB = 0,
@@ -341,6 +352,13 @@ struct tapan_priv {
 	int (*machine_codec_event_cb)(struct snd_soc_codec *codec,
 					enum wcd9xxx_codec_event);
 	unsigned long status_mask;
+<<<<<<< HEAD
+=======
+
+	/* Port values for Rx and Tx codec_dai */
+	unsigned int rx_port_value;
+	unsigned int tx_port_value;
+>>>>>>> 0e91d2a... Nougat
 };
 
 static const u32 comp_shift[] = {
@@ -457,8 +475,14 @@ static int spkr_drv_wrnd_param_set(const char *val,
 static int tapan_get_anc_slot(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
+<<<<<<< HEAD
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
 	struct tapan_priv *tapan = snd_soc_codec_get_drvdata(codec);
+=======
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tapan_priv *tapan = snd_soc_codec_get_drvdata(codec);
+
+>>>>>>> 0e91d2a... Nougat
 	ucontrol->value.integer.value[0] = tapan->anc_slot;
 	return 0;
 }
@@ -466,8 +490,14 @@ static int tapan_get_anc_slot(struct snd_kcontrol *kcontrol,
 static int tapan_put_anc_slot(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
+<<<<<<< HEAD
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
 	struct tapan_priv *tapan = snd_soc_codec_get_drvdata(codec);
+=======
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tapan_priv *tapan = snd_soc_codec_get_drvdata(codec);
+
+>>>>>>> 0e91d2a... Nougat
 	tapan->anc_slot = ucontrol->value.integer.value[0];
 	return 0;
 }
@@ -475,7 +505,11 @@ static int tapan_put_anc_slot(struct snd_kcontrol *kcontrol,
 static int tapan_get_anc_func(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
+<<<<<<< HEAD
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+=======
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+>>>>>>> 0e91d2a... Nougat
 	struct tapan_priv *tapan = snd_soc_codec_get_drvdata(codec);
 
 	ucontrol->value.integer.value[0] = (tapan->anc_func == true ? 1 : 0);
@@ -485,11 +519,19 @@ static int tapan_get_anc_func(struct snd_kcontrol *kcontrol,
 static int tapan_put_anc_func(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
+<<<<<<< HEAD
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
 	struct tapan_priv *tapan = snd_soc_codec_get_drvdata(codec);
 	struct snd_soc_dapm_context *dapm = &codec->dapm;
 
 	mutex_lock(&dapm->codec->mutex);
+=======
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tapan_priv *tapan = snd_soc_codec_get_drvdata(codec);
+	struct snd_soc_dapm_context *dapm = &codec->dapm;
+
+	mutex_lock(&codec->mutex);
+>>>>>>> 0e91d2a... Nougat
 	tapan->anc_func = (!ucontrol->value.integer.value[0] ? false : true);
 
 	dev_err(codec->dev, "%s: anc_func %x", __func__, tapan->anc_func);
@@ -519,7 +561,11 @@ static int tapan_put_anc_func(struct snd_kcontrol *kcontrol,
 		snd_soc_dapm_enable_pin(dapm, "EAR PA");
 		snd_soc_dapm_enable_pin(dapm, "EAR");
 	}
+<<<<<<< HEAD
 	mutex_unlock(&dapm->codec->mutex);
+=======
+	mutex_unlock(&codec->mutex);
+>>>>>>> 0e91d2a... Nougat
 	snd_soc_dapm_sync(dapm);
 	return 0;
 }
@@ -527,7 +573,11 @@ static int tapan_put_anc_func(struct snd_kcontrol *kcontrol,
 static int tapan_loopback_mode_get(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
+<<<<<<< HEAD
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+=======
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+>>>>>>> 0e91d2a... Nougat
 	struct tapan_priv *tapan = snd_soc_codec_get_drvdata(codec);
 
 	ucontrol->value.integer.value[0] = tapan->lb_mode;
@@ -540,7 +590,11 @@ static int tapan_loopback_mode_get(struct snd_kcontrol *kcontrol,
 static int tapan_loopback_mode_put(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
+<<<<<<< HEAD
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+=======
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+>>>>>>> 0e91d2a... Nougat
 	struct tapan_priv *tapan = snd_soc_codec_get_drvdata(codec);
 
 	dev_dbg(codec->dev, "%s: ucontrol->value.integer.value[0] = %ld\n",
@@ -566,7 +620,11 @@ static int tapan_pa_gain_get(struct snd_kcontrol *kcontrol,
 {
 	u8 ear_pa_gain;
 	int rc = 0;
+<<<<<<< HEAD
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+=======
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+>>>>>>> 0e91d2a... Nougat
 
 	ear_pa_gain = snd_soc_read(codec, TAPAN_A_RX_EAR_GAIN);
 	ear_pa_gain = ear_pa_gain >> 5;
@@ -600,7 +658,11 @@ static int tapan_pa_gain_put(struct snd_kcontrol *kcontrol,
 {
 	u8 ear_pa_gain;
 	int rc = 0;
+<<<<<<< HEAD
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+=======
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+>>>>>>> 0e91d2a... Nougat
 
 	dev_dbg(codec->dev, "%s: ucontrol->value.integer.value[0]  = %ld\n",
 			 __func__, ucontrol->value.integer.value[0]);
@@ -631,7 +693,11 @@ static int tapan_get_iir_enable_audio_mixer(
 					struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
+<<<<<<< HEAD
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+=======
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+>>>>>>> 0e91d2a... Nougat
 	int iir_idx = ((struct soc_multi_mixer_control *)
 					kcontrol->private_value)->reg;
 	int band_idx = ((struct soc_multi_mixer_control *)
@@ -651,7 +717,11 @@ static int tapan_put_iir_enable_audio_mixer(
 					struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
+<<<<<<< HEAD
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+=======
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+>>>>>>> 0e91d2a... Nougat
 	int iir_idx = ((struct soc_multi_mixer_control *)
 					kcontrol->private_value)->reg;
 	int band_idx = ((struct soc_multi_mixer_control *)
@@ -716,7 +786,11 @@ static int tapan_get_iir_band_audio_mixer(
 					struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
+<<<<<<< HEAD
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+=======
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+>>>>>>> 0e91d2a... Nougat
 	int iir_idx = ((struct soc_multi_mixer_control *)
 					kcontrol->private_value)->reg;
 	int band_idx = ((struct soc_multi_mixer_control *)
@@ -778,7 +852,11 @@ static int tapan_put_iir_band_audio_mixer(
 					struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
+<<<<<<< HEAD
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+=======
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+>>>>>>> 0e91d2a... Nougat
 	int iir_idx = ((struct soc_multi_mixer_control *)
 					kcontrol->private_value)->reg;
 	int band_idx = ((struct soc_multi_mixer_control *)
@@ -823,7 +901,11 @@ static int tapan_get_compander(struct snd_kcontrol *kcontrol,
 			       struct snd_ctl_elem_value *ucontrol)
 {
 
+<<<<<<< HEAD
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+=======
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+>>>>>>> 0e91d2a... Nougat
 	int comp = ((struct soc_multi_mixer_control *)
 		    kcontrol->private_value)->shift;
 	struct tapan_priv *tapan = snd_soc_codec_get_drvdata(codec);
@@ -835,7 +917,11 @@ static int tapan_get_compander(struct snd_kcontrol *kcontrol,
 static int tapan_set_compander(struct snd_kcontrol *kcontrol,
 			       struct snd_ctl_elem_value *ucontrol)
 {
+<<<<<<< HEAD
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+=======
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+>>>>>>> 0e91d2a... Nougat
 	struct tapan_priv *tapan = snd_soc_codec_get_drvdata(codec);
 	int comp = ((struct soc_multi_mixer_control *)
 		    kcontrol->private_value)->shift;
@@ -917,7 +1003,11 @@ static void tapan_discharge_comp(struct snd_soc_codec *codec, int comp)
 	snd_soc_write(codec, TAPAN_A_CDC_COMP0_B3_CTL + (comp * 8), 0x01);
 
 	/* Worst case timeout for compander CnP sleep timeout */
+<<<<<<< HEAD
 	usleep_range(3000, 3000);
+=======
+	usleep_range(3000, 3000 + WCD9XXX_USLEEP_RANGE_MARGIN_US);
+>>>>>>> 0e91d2a... Nougat
 }
 
 static enum wcd9xxx_buck_volt tapan_codec_get_buck_mv(
@@ -933,9 +1023,14 @@ static enum wcd9xxx_buck_volt tapan_codec_get_buck_mv(
 		if (pdata->regulator[i].name == NULL)
 			continue;
 
+<<<<<<< HEAD
 		if (!strncmp(pdata->regulator[i].name,
 			     WCD9XXX_SUPPLY_BUCK_NAME,
 			     sizeof(WCD9XXX_SUPPLY_BUCK_NAME))) {
+=======
+		if (!strcmp(pdata->regulator[i].name,
+			     WCD9XXX_SUPPLY_BUCK_NAME)) {
+>>>>>>> 0e91d2a... Nougat
 			found_regulator = true;
 			if ((pdata->regulator[i].min_uV ==
 			     WCD9XXX_CDC_BUCK_MV_1P8) ||
@@ -1051,7 +1146,11 @@ static int tapan_config_compander(struct snd_soc_dapm_widget *w,
 
 		tapan_discharge_comp(codec, comp);
 
+<<<<<<< HEAD
 		/* Set sample rate dependent paramater */
+=======
+		/* Set sample rate dependent parameter */
+>>>>>>> 0e91d2a... Nougat
 		snd_soc_write(codec, TAPAN_A_CDC_COMP0_B3_CTL + (comp * 8),
 			      comp_params->rms_meter_resamp_fact);
 		snd_soc_update_bits(codec,
@@ -1152,7 +1251,11 @@ static const struct soc_enum rx1_interpolator_enum =
 	SOC_ENUM_SINGLE(0, 0, 2, rx1_interpolator_text);
 
 static const struct snd_kcontrol_new rx1_interpolator =
+<<<<<<< HEAD
 	SOC_DAPM_ENUM_VIRT("RX1 INTERPOLATOR Mux", rx1_interpolator_enum);
+=======
+	SOC_DAPM_ENUM("RX1 INTERPOLATOR Mux", rx1_interpolator_enum);
+>>>>>>> 0e91d2a... Nougat
 
 static const char * const rx2_interpolator_text[] = {
 	"ZERO", "RX2 MIX2"
@@ -1162,7 +1265,11 @@ static const struct soc_enum rx2_interpolator_enum =
 	SOC_ENUM_SINGLE(0, 1, 2, rx2_interpolator_text);
 
 static const struct snd_kcontrol_new rx2_interpolator =
+<<<<<<< HEAD
 	SOC_DAPM_ENUM_VIRT("RX2 INTERPOLATOR Mux", rx2_interpolator_enum);
+=======
+	SOC_DAPM_ENUM("RX2 INTERPOLATOR Mux", rx2_interpolator_enum);
+>>>>>>> 0e91d2a... Nougat
 
 static int tapan_hph_impedance_get(struct snd_kcontrol *kcontrol,
 				   struct snd_ctl_elem_value *ucontrol)
@@ -1170,7 +1277,11 @@ static int tapan_hph_impedance_get(struct snd_kcontrol *kcontrol,
 	uint32_t zl, zr;
 	bool hphr;
 	struct soc_multi_mixer_control *mc;
+<<<<<<< HEAD
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+=======
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+>>>>>>> 0e91d2a... Nougat
 	struct tapan_priv *priv = snd_soc_codec_get_drvdata(codec);
 
 	mc = (struct soc_multi_mixer_control *)(kcontrol->private_value);
@@ -1611,7 +1722,12 @@ static const struct snd_kcontrol_new sb_tx5_mux =
 static int wcd9306_put_dec_enum(struct snd_kcontrol *kcontrol,
 			      struct snd_ctl_elem_value *ucontrol)
 {
+<<<<<<< HEAD
 	struct snd_soc_dapm_widget_list *wlist = snd_kcontrol_chip(kcontrol);
+=======
+	struct snd_soc_dapm_widget_list *wlist =
+			dapm_kcontrol_get_wlist(kcontrol);
+>>>>>>> 0e91d2a... Nougat
 	struct snd_soc_dapm_widget *w = wlist->widgets[0];
 	struct snd_soc_codec *codec = w->codec;
 	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
@@ -1624,7 +1740,11 @@ static int wcd9306_put_dec_enum(struct snd_kcontrol *kcontrol,
 	int ret = 0;
 	char *srch = NULL;
 
+<<<<<<< HEAD
 	if (ucontrol->value.enumerated.item[0] > e->max - 1)
+=======
+	if (ucontrol->value.enumerated.item[0] > e->items - 1)
+>>>>>>> 0e91d2a... Nougat
 		return -EINVAL;
 
 	dec_mux = ucontrol->value.enumerated.item[0];
@@ -1780,17 +1900,32 @@ static const struct snd_kcontrol_new lineout2_pa_mix[] = {
 static int slim_tx_mixer_get(struct snd_kcontrol *kcontrol,
 			     struct snd_ctl_elem_value *ucontrol)
 {
+<<<<<<< HEAD
 	struct snd_soc_dapm_widget_list *wlist = snd_kcontrol_chip(kcontrol);
 	struct snd_soc_dapm_widget *widget = wlist->widgets[0];
 
 	ucontrol->value.integer.value[0] = widget->value;
+=======
+	struct snd_soc_dapm_widget_list *wlist =
+			dapm_kcontrol_get_wlist(kcontrol);
+	struct snd_soc_dapm_widget *widget = wlist->widgets[0];
+	struct snd_soc_codec *codec = widget->codec;
+	struct tapan_priv *tapan_p = snd_soc_codec_get_drvdata(codec);
+
+	ucontrol->value.enumerated.item[0] = tapan_p->tx_port_value;
+>>>>>>> 0e91d2a... Nougat
 	return 0;
 }
 
 static int slim_tx_mixer_put(struct snd_kcontrol *kcontrol,
 			     struct snd_ctl_elem_value *ucontrol)
 {
+<<<<<<< HEAD
 	struct snd_soc_dapm_widget_list *wlist = snd_kcontrol_chip(kcontrol);
+=======
+	struct snd_soc_dapm_widget_list *wlist =
+			dapm_kcontrol_get_wlist(kcontrol);
+>>>>>>> 0e91d2a... Nougat
 	struct snd_soc_dapm_widget *widget = wlist->widgets[0];
 	struct snd_soc_codec *codec = widget->codec;
 	struct tapan_priv *tapan_p = snd_soc_codec_get_drvdata(codec);
@@ -1805,7 +1940,11 @@ static int slim_tx_mixer_put(struct snd_kcontrol *kcontrol,
 	dev_dbg(codec->dev, "%s: wname %s cname %s\n",
 		__func__, widget->name,	ucontrol->id.name);
 	dev_dbg(codec->dev, "%s: value %u shift %d item %ld\n",
+<<<<<<< HEAD
 		__func__, widget->value, widget->shift,
+=======
+		__func__, tapan_p->tx_port_value, widget->shift,
+>>>>>>> 0e91d2a... Nougat
 		ucontrol->value.integer.value[0]);
 
 	mutex_lock(&codec->mutex);
@@ -1824,7 +1963,11 @@ static int slim_tx_mixer_put(struct snd_kcontrol *kcontrol,
 	case AIF3_CAP:
 		/* only add to the list if value not set
 		 */
+<<<<<<< HEAD
 		if (enable && !(widget->value & 1 << port_id)) {
+=======
+		if (enable && !(tapan_p->tx_port_value & 1 << port_id)) {
+>>>>>>> 0e91d2a... Nougat
 			if (tapan_p->intf_type ==
 					WCD9XXX_INTERFACE_TYPE_SLIMBUS)
 				vtable = vport_check_table[dai_id];
@@ -1841,12 +1984,21 @@ static int slim_tx_mixer_put(struct snd_kcontrol *kcontrol,
 				mutex_unlock(&codec->mutex);
 				return 0;
 			}
+<<<<<<< HEAD
 			widget->value |= 1 << port_id;
 			list_add_tail(&core->tx_chs[port_id].list,
 				      &tapan_p->dai[dai_id].wcd9xxx_ch_list
 					      );
 		} else if (!enable && (widget->value & 1 << port_id)) {
 			widget->value &= ~(1 << port_id);
+=======
+			tapan_p->tx_port_value |= 1 << port_id;
+			list_add_tail(&core->tx_chs[port_id].list,
+				      &tapan_p->dai[dai_id].wcd9xxx_ch_list
+					      );
+		} else if (!enable && (tapan_p->tx_port_value & 1 << port_id)) {
+			tapan_p->tx_port_value &= ~(1 << port_id);
+>>>>>>> 0e91d2a... Nougat
 			list_del_init(&core->tx_chs[port_id].list);
 		} else {
 			if (enable)
@@ -1869,9 +2021,15 @@ static int slim_tx_mixer_put(struct snd_kcontrol *kcontrol,
 	}
 	dev_dbg(codec->dev, "%s: name %s sname %s updated value %u shift %d\n",
 		 __func__, widget->name, widget->sname,
+<<<<<<< HEAD
 		 widget->value, widget->shift);
 
 	snd_soc_dapm_mixer_update_power(widget, kcontrol, enable);
+=======
+		 tapan_p->tx_port_value, widget->shift);
+
+	snd_soc_dapm_mixer_update_power(widget->dapm, kcontrol, enable, NULL);
+>>>>>>> 0e91d2a... Nougat
 
 	mutex_unlock(&codec->mutex);
 	return 0;
@@ -1880,10 +2038,20 @@ static int slim_tx_mixer_put(struct snd_kcontrol *kcontrol,
 static int slim_rx_mux_get(struct snd_kcontrol *kcontrol,
 			   struct snd_ctl_elem_value *ucontrol)
 {
+<<<<<<< HEAD
 	struct snd_soc_dapm_widget_list *wlist = snd_kcontrol_chip(kcontrol);
 	struct snd_soc_dapm_widget *widget = wlist->widgets[0];
 
 	ucontrol->value.enumerated.item[0] = widget->value;
+=======
+	struct snd_soc_dapm_widget_list *wlist =
+			dapm_kcontrol_get_wlist(kcontrol);
+	struct snd_soc_dapm_widget *widget = wlist->widgets[0];
+	struct snd_soc_codec *codec = widget->codec;
+	struct tapan_priv *tapan_p = snd_soc_codec_get_drvdata(codec);
+
+	ucontrol->value.enumerated.item[0] = tapan_p->rx_port_value;
+>>>>>>> 0e91d2a... Nougat
 	return 0;
 }
 
@@ -1894,7 +2062,12 @@ static const char *const slim_rx_mux_text[] = {
 static int slim_rx_mux_put(struct snd_kcontrol *kcontrol,
 			   struct snd_ctl_elem_value *ucontrol)
 {
+<<<<<<< HEAD
 	struct snd_soc_dapm_widget_list *wlist = snd_kcontrol_chip(kcontrol);
+=======
+	struct snd_soc_dapm_widget_list *wlist =
+			dapm_kcontrol_get_wlist(kcontrol);
+>>>>>>> 0e91d2a... Nougat
 	struct snd_soc_dapm_widget *widget = wlist->widgets[0];
 	struct snd_soc_codec *codec = widget->codec;
 	struct tapan_priv *tapan_p = snd_soc_codec_get_drvdata(codec);
@@ -1903,15 +2076,27 @@ static int slim_rx_mux_put(struct snd_kcontrol *kcontrol,
 	u32 port_id = widget->shift;
 
 	dev_dbg(codec->dev, "%s: wname %s cname %s value %u shift %d item %ld\n",
+<<<<<<< HEAD
 		 __func__, widget->name, ucontrol->id.name, widget->value,
 		 widget->shift, ucontrol->value.integer.value[0]);
 
 	widget->value = ucontrol->value.enumerated.item[0];
+=======
+		 __func__, widget->name, ucontrol->id.name,
+			tapan_p->rx_port_value, widget->shift,
+			ucontrol->value.integer.value[0]);
+
+	tapan_p->rx_port_value = ucontrol->value.enumerated.item[0];
+>>>>>>> 0e91d2a... Nougat
 
 	mutex_lock(&codec->mutex);
 
 	if (tapan_p->intf_type != WCD9XXX_INTERFACE_TYPE_SLIMBUS) {
+<<<<<<< HEAD
 		if (widget->value > 1) {
+=======
+		if (tapan_p->rx_port_value > 1) {
+>>>>>>> 0e91d2a... Nougat
 			dev_err(codec->dev, "%s: invalid AIF for I2C mode\n",
 				__func__);
 			goto err;
@@ -1919,7 +2104,11 @@ static int slim_rx_mux_put(struct snd_kcontrol *kcontrol,
 	}
 	/* value need to match the Virtual port and AIF number
 	 */
+<<<<<<< HEAD
 	switch (widget->value) {
+=======
+	switch (tapan_p->rx_port_value) {
+>>>>>>> 0e91d2a... Nougat
 	case 0:
 		list_del_init(&core->rx_chs[port_id].list);
 	break;
@@ -1957,12 +2146,21 @@ static int slim_rx_mux_put(struct snd_kcontrol *kcontrol,
 			      &tapan_p->dai[AIF3_PB].wcd9xxx_ch_list);
 	break;
 	default:
+<<<<<<< HEAD
 		pr_err("Unknown AIF %d\n", widget->value);
+=======
+		pr_err("Unknown AIF %d\n", tapan_p->rx_port_value);
+>>>>>>> 0e91d2a... Nougat
 		goto err;
 	}
 
 rtn:
+<<<<<<< HEAD
 	snd_soc_dapm_mux_update_power(widget, kcontrol, widget->value, e);
+=======
+	snd_soc_dapm_mux_update_power(widget->dapm, kcontrol,
+				tapan_p->rx_port_value, e, NULL);
+>>>>>>> 0e91d2a... Nougat
 	mutex_unlock(&codec->mutex);
 	return 0;
 err:
@@ -2060,7 +2258,11 @@ static int tapan_codec_enable_adc(struct snd_soc_dapm_widget *w,
 		if (w->reg == TAPAN_A_TX_3_EN ||
 		    w->reg == TAPAN_A_TX_1_EN)
 			wcd9xxx_resmgr_notifier_call(&tapan->resmgr,
+<<<<<<< HEAD
 						WCD9XXX_EVENT_PRE_TX_1_3_ON);
+=======
+						WCD9XXX_EVENT_PRE_TX_3_ON);
+>>>>>>> 0e91d2a... Nougat
 		snd_soc_update_bits(codec, adc_reg, 1 << init_bit_shift,
 				1 << init_bit_shift);
 		break;
@@ -2073,7 +2275,11 @@ static int tapan_codec_enable_adc(struct snd_soc_dapm_widget *w,
 		if (w->reg == TAPAN_A_TX_3_EN ||
 		    w->reg == TAPAN_A_TX_1_EN)
 			wcd9xxx_resmgr_notifier_call(&tapan->resmgr,
+<<<<<<< HEAD
 						WCD9XXX_EVENT_POST_TX_1_3_OFF);
+=======
+						WCD9XXX_EVENT_POST_TX_3_OFF);
+>>>>>>> 0e91d2a... Nougat
 		break;
 	}
 	return 0;
@@ -2140,15 +2346,29 @@ static int tapan_codec_enable_lineout(struct snd_soc_dapm_widget *w,
 						 WCD9XXX_CLSH_STATE_LO,
 						 WCD9XXX_CLSH_REQ_ENABLE,
 						 WCD9XXX_CLSH_EVENT_POST_PA);
+<<<<<<< HEAD
 		dev_dbg(codec->dev, "%s: sleeping 3 ms after %s PA turn on\n",
 				__func__, w->name);
 		usleep_range(3000, 3010);
+=======
+		dev_dbg(codec->dev, "%s: sleeping 5 ms after %s PA turn on\n",
+				__func__, w->name);
+		/* Wait for CnP time after PA enable */
+		usleep_range(5000, 5100);
+>>>>>>> 0e91d2a... Nougat
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		wcd9xxx_clsh_fsm(codec, &tapan->clsh_d,
 						 WCD9XXX_CLSH_STATE_LO,
 						 WCD9XXX_CLSH_REQ_DISABLE,
 						 WCD9XXX_CLSH_EVENT_POST_PA);
+<<<<<<< HEAD
+=======
+		dev_dbg(codec->dev, "%s: sleeping 5 ms after %s PA turn on\n",
+				__func__, w->name);
+		/* Wait for CnP time after PA disable */
+		usleep_range(5000, 5100);
+>>>>>>> 0e91d2a... Nougat
 		break;
 	}
 	return 0;
@@ -2443,7 +2663,11 @@ static int tapan_codec_enable_micbias(struct snd_soc_dapm_widget *w,
 
 		break;
 	case SND_SOC_DAPM_POST_PMU:
+<<<<<<< HEAD
 		usleep_range(20000, 20000);
+=======
+		usleep_range(20000, 20000 + WCD9XXX_USLEEP_RANGE_MARGIN_US);
+>>>>>>> 0e91d2a... Nougat
 		/* Let MBHC module know so micbias is on */
 		wcd9xxx_resmgr_notifier_call(&tapan->resmgr, e_post_on);
 		break;
@@ -2616,7 +2840,11 @@ static int tapan_codec_enable_dec(struct snd_soc_dapm_widget *w,
 		tx_hpf_work[decimator - 1].tx_hpf_cut_of_freq =
 			dec_hpf_cut_of_freq;
 
+<<<<<<< HEAD
 		if ((dec_hpf_cut_of_freq != CF_MIN_3DB_150HZ)) {
+=======
+		if (dec_hpf_cut_of_freq != CF_MIN_3DB_150HZ) {
+>>>>>>> 0e91d2a... Nougat
 
 			/* set cut of freq to CF_MIN_3DB_150HZ (0x1); */
 			snd_soc_update_bits(codec, tx_mux_ctl_reg, 0x30,
@@ -2836,6 +3064,10 @@ static int tapan_codec_enable_ldo_h(struct snd_soc_dapm_widget *w,
 	struct snd_kcontrol *kcontrol, int event)
 {
 	int rc;
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0e91d2a... Nougat
 	rc = __tapan_codec_enable_ldo_h(w, kcontrol, event);
 	return rc;
 }
@@ -3521,6 +3753,7 @@ static const struct snd_soc_dapm_route wcd9302_map[] = {
 	{"RDAC5 MUX", "DEM3_INV", "RDAC4 MUX"},
 };
 
+<<<<<<< HEAD
 static int tapan_readable(struct snd_soc_codec *ssc, unsigned int reg)
 {
 	return tapan_reg_readable[reg];
@@ -3653,6 +3886,11 @@ static unsigned int tapan_read(struct snd_soc_codec *codec,
 		return val;
 	}
 }
+=======
+#define TAPAN_FORMATS (SNDRV_PCM_FMTBIT_S16_LE)
+#define TAPAN_FORMATS_S16_S24_LE (SNDRV_PCM_FMTBIT_S16_LE | \
+				  SNDRV_PCM_FORMAT_S24_LE)
+>>>>>>> 0e91d2a... Nougat
 
 static int tapan_startup(struct snd_pcm_substream *substream,
 		struct snd_soc_dai *dai)
@@ -3771,6 +4009,10 @@ static int tapan_set_channel_map(struct snd_soc_dai *dai,
 {
 	struct tapan_priv *tapan = snd_soc_codec_get_drvdata(dai->codec);
 	struct wcd9xxx *core = dev_get_drvdata(dai->codec->dev->parent);
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0e91d2a... Nougat
 	if (!tx_slot || !rx_slot) {
 		pr_err("%s: Invalid\n", __func__);
 		return -EINVAL;
@@ -3800,7 +4042,11 @@ static int tapan_get_channel_map(struct snd_soc_dai *dai,
 	case AIF2_PB:
 	case AIF3_PB:
 		if (!rx_slot || !rx_num) {
+<<<<<<< HEAD
 			pr_err("%s: Invalid rx_slot %p or rx_num %p\n",
+=======
+			pr_err("%s: Invalid rx_slot %pK or rx_num %pK\n",
+>>>>>>> 0e91d2a... Nougat
 				 __func__, rx_slot, rx_num);
 			return -EINVAL;
 		}
@@ -3817,7 +4063,11 @@ static int tapan_get_channel_map(struct snd_soc_dai *dai,
 	case AIF2_CAP:
 	case AIF3_CAP:
 		if (!tx_slot || !tx_num) {
+<<<<<<< HEAD
 			pr_err("%s: Invalid tx_slot %p or tx_num %p\n",
+=======
+			pr_err("%s: Invalid tx_slot %pK or tx_num %pK\n",
+>>>>>>> 0e91d2a... Nougat
 				 __func__, tx_slot, tx_num);
 			return -EINVAL;
 		}
@@ -4490,9 +4740,15 @@ static int tapan_codec_enable_slimrx(struct snd_soc_dapm_widget *w,
 	}
 
 	dev_dbg(codec->dev, "%s: event called! codec name %s\n",
+<<<<<<< HEAD
 		__func__, w->codec->name);
 	dev_dbg(codec->dev, "%s: num_dai %d stream name %s event %d\n",
 		__func__, w->codec->num_dai, w->sname, event);
+=======
+		__func__, w->codec->component.name);
+	dev_dbg(codec->dev, "%s: num_dai %d stream name %s event %d\n",
+		__func__, w->codec->component.num_dai, w->sname, event);
+>>>>>>> 0e91d2a... Nougat
 
 	/* Execute the callback only if interface type is slimbus */
 	if (tapan_p->intf_type != WCD9XXX_INTERFACE_TYPE_SLIMBUS)
@@ -4541,9 +4797,15 @@ static int tapan_codec_enable_slimtx(struct snd_soc_dapm_widget *w,
 	core = dev_get_drvdata(codec->dev->parent);
 
 	dev_dbg(codec->dev, "%s: event called! codec name %s\n",
+<<<<<<< HEAD
 		__func__, w->codec->name);
 	dev_dbg(codec->dev, "%s: num_dai %d stream name %s\n",
 		__func__, w->codec->num_dai, w->sname);
+=======
+		__func__, w->codec->component.name);
+	dev_dbg(codec->dev, "%s: num_dai %d stream name %s\n",
+		__func__, w->codec->component.num_dai, w->sname);
+>>>>>>> 0e91d2a... Nougat
 	/* Execute the callback only if interface type is slimbus */
 	if (tapan_p->intf_type != WCD9XXX_INTERFACE_TYPE_SLIMBUS)
 		return 0;
@@ -4631,6 +4893,10 @@ static int tapan_codec_iir_mux_event(struct snd_soc_dapm_widget *w,
 	struct snd_kcontrol *kcontrol, int event)
 {
 	struct snd_soc_codec *codec = w->codec;
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0e91d2a... Nougat
 	pr_debug("%s: event = %d\n", __func__, event);
 
 	switch (event) {
@@ -4746,10 +5012,15 @@ static int tapan_codec_chargepump_vdd_event(struct snd_soc_dapm_widget *w,
 				pr_err("%s: CP Regulator disable failed, index = %d\n",
 						__func__, i);
 				return ret;
+<<<<<<< HEAD
 			} else {
 				pr_debug("%s: Disabled CP regulator %d\n",
 						__func__, i);
 			}
+=======
+			}
+			pr_debug("%s: Disabled CP regulator %d\n", __func__, i);
+>>>>>>> 0e91d2a... Nougat
 		}
 		break;
 	}
@@ -4856,7 +5127,11 @@ static const struct snd_soc_dapm_widget tapan_9306_dapm_widgets[] = {
 		SND_SOC_DAPM_POST_PMD),
 };
 
+<<<<<<< HEAD
 /* Todo: Have seperate dapm widgets for I2S and Slimbus.
+=======
+/* Todo: Have separate dapm widgets for I2S and Slimbus.
+>>>>>>> 0e91d2a... Nougat
  * Might Need to have callbacks registered only for slimbus
  */
 static const struct snd_soc_dapm_widget tapan_common_dapm_widgets[] = {
@@ -4935,11 +5210,19 @@ static const struct snd_soc_dapm_widget tapan_common_dapm_widgets[] = {
 		0, tapan_codec_enable_interpolator, SND_SOC_DAPM_PRE_PMU |
 		SND_SOC_DAPM_POST_PMU),
 
+<<<<<<< HEAD
 	SND_SOC_DAPM_VIRT_MUX_E("RX1 INTERPOLATOR",
 		TAPAN_A_CDC_CLK_RX_B1_CTL, 0, 0,
 		&rx1_interpolator, tapan_codec_enable_interpolator,
 		SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU),
 	SND_SOC_DAPM_VIRT_MUX_E("RX2 INTERPOLATOR",
+=======
+	SND_SOC_DAPM_MUX_E("RX1 INTERPOLATOR",
+		TAPAN_A_CDC_CLK_RX_B1_CTL, 0, 0,
+		&rx1_interpolator, tapan_codec_enable_interpolator,
+		SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU),
+	SND_SOC_DAPM_MUX_E("RX2 INTERPOLATOR",
+>>>>>>> 0e91d2a... Nougat
 		TAPAN_A_CDC_CLK_RX_B1_CTL, 1, 0,
 		&rx2_interpolator, tapan_codec_enable_interpolator,
 		SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU),
@@ -5762,6 +6045,10 @@ static void tapan_cleanup_irqs(struct tapan_priv *tapan)
 	struct snd_soc_codec *codec = tapan->codec;
 	struct wcd9xxx *wcd9xxx = codec->control_data;
 	struct wcd9xxx_core_resource *core_res = &wcd9xxx->core_res;
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0e91d2a... Nougat
 	wcd9xxx_free_irq(core_res, WCD9XXX_IRQ_SLIMBUS, tapan);
 }
 
@@ -5894,7 +6181,10 @@ static void wcd9xxx_prepare_hph_pa(struct wcd9xxx_mbhc *mbhc,
 					     reg_set_paon[i].val, delay);
 	}
 	pr_debug("%s: PAs are prepared\n", __func__);
+<<<<<<< HEAD
 	return;
+=======
+>>>>>>> 0e91d2a... Nougat
 }
 
 static int wcd9xxx_enable_static_pa(struct wcd9xxx_mbhc *mbhc, bool enable)
@@ -5919,10 +6209,24 @@ static int wcd9xxx_enable_static_pa(struct wcd9xxx_mbhc *mbhc, bool enable)
 	return 0;
 }
 
+<<<<<<< HEAD
 static int tapan_setup_zdet(struct wcd9xxx_mbhc *mbhc,
 			    enum mbhc_impedance_detect_stages stage)
 {
 
+=======
+static inline int tapan_zdet_wr(struct snd_soc_codec *codec,
+				struct list_head *list, uint16_t reg,
+				uint8_t mask, uint8_t value)
+{
+	return wcd9xxx_soc_update_bits_push(codec, list,
+					reg, mask, value, 0);
+}
+
+static int tapan_setup_zdet(struct wcd9xxx_mbhc *mbhc,
+			    enum mbhc_impedance_detect_stages stage)
+{
+>>>>>>> 0e91d2a... Nougat
 	int ret = 0;
 	struct snd_soc_codec *codec = mbhc->codec;
 	struct tapan_priv *tapan = snd_soc_codec_get_drvdata(codec);
@@ -5935,6 +6239,7 @@ static int tapan_setup_zdet(struct wcd9xxx_mbhc *mbhc,
 		/* Configure PA */
 		wcd9xxx_prepare_hph_pa(mbhc, &tapan->reg_save_restore);
 
+<<<<<<< HEAD
 #define __wr(reg, mask, value)						  \
 	do {								  \
 		ret = wcd9xxx_soc_update_bits_push(codec,		  \
@@ -5958,13 +6263,45 @@ static int tapan_setup_zdet(struct wcd9xxx_mbhc *mbhc,
 
 		/* Enable Impedance Detection */
 		__wr(WCD9XXX_A_MBHC_HPH, 0xFF, 0xC8);
+=======
+		/* Setup MBHC */
+		ret |= tapan_zdet_wr(codec, &tapan->reg_save_restore,
+				WCD9XXX_A_MBHC_SCALING_MUX_1, 0x7F, 0x40);
+		ret |= tapan_zdet_wr(codec, &tapan->reg_save_restore,
+				WCD9XXX_A_MBHC_SCALING_MUX_2, 0xFF, 0xF0);
+		ret |= tapan_zdet_wr(codec, &tapan->reg_save_restore,
+				WCD9XXX_A_TX_7_MBHC_TEST_CTL, 0xFF, 0x78);
+		ret |= tapan_zdet_wr(codec, &tapan->reg_save_restore,
+				WCD9XXX_A_TX_7_MBHC_EN, 0xFF, 0xEC);
+		ret |= tapan_zdet_wr(codec, &tapan->reg_save_restore,
+				WCD9XXX_A_CDC_MBHC_TIMER_B4_CTL, 0xFF, 0x45);
+		ret |= tapan_zdet_wr(codec, &tapan->reg_save_restore,
+				WCD9XXX_A_CDC_MBHC_TIMER_B5_CTL, 0xFF, 0x80);
+		ret |= tapan_zdet_wr(codec, &tapan->reg_save_restore,
+				WCD9XXX_A_CDC_MBHC_CLK_CTL, 0xFF, 0x0A);
+
+		snd_soc_write(codec, WCD9XXX_A_CDC_MBHC_EN_CTL, 0x2);
+		ret |= tapan_zdet_wr(codec, &tapan->reg_save_restore,
+				WCD9XXX_A_CDC_MBHC_CLK_CTL, 0xFF, 0x02);
+
+		/* Enable Impedance Detection */
+		ret |= tapan_zdet_wr(codec, &tapan->reg_save_restore,
+					WCD9XXX_A_MBHC_HPH, 0xFF, 0xC8);
+>>>>>>> 0e91d2a... Nougat
 
 		/*
 		 * CnP setup for 0mV
 		 * Route static data as input to noise shaper
 		 */
+<<<<<<< HEAD
 		__wr(TAPAN_A_CDC_RX1_B3_CTL, 0xFF, 0x02);
 		__wr(TAPAN_A_CDC_RX2_B3_CTL, 0xFF, 0x02);
+=======
+		ret |= tapan_zdet_wr(codec, &tapan->reg_save_restore,
+				TAPAN_A_CDC_RX1_B3_CTL, 0xFF, 0x02);
+		ret |= tapan_zdet_wr(codec, &tapan->reg_save_restore,
+				TAPAN_A_CDC_RX2_B3_CTL, 0xFF, 0x02);
+>>>>>>> 0e91d2a... Nougat
 
 		snd_soc_update_bits(codec, WCD9XXX_A_RX_HPH_L_TEST,
 				    0x02, 0x00);
@@ -5972,7 +6309,12 @@ static int tapan_setup_zdet(struct wcd9xxx_mbhc *mbhc,
 				    0x02, 0x00);
 
 		/* Reset the HPHL static data pointer */
+<<<<<<< HEAD
 		__wr(TAPAN_A_CDC_RX1_B2_CTL, 0xFF, 0x00);
+=======
+		ret |= tapan_zdet_wr(codec, &tapan->reg_save_restore,
+				TAPAN_A_CDC_RX1_B2_CTL, 0xFF, 0x00);
+>>>>>>> 0e91d2a... Nougat
 		/* Four consecutive writes to set 0V as static data input */
 		snd_soc_write(codec, TAPAN_A_CDC_RX1_B1_CTL, 0x00);
 		snd_soc_write(codec, TAPAN_A_CDC_RX1_B1_CTL, 0x00);
@@ -5980,7 +6322,12 @@ static int tapan_setup_zdet(struct wcd9xxx_mbhc *mbhc,
 		snd_soc_write(codec, TAPAN_A_CDC_RX1_B1_CTL, 0x00);
 
 		/* Reset the HPHR static data pointer */
+<<<<<<< HEAD
 		__wr(TAPAN_A_CDC_RX2_B2_CTL, 0xFF, 0x00);
+=======
+		ret |= tapan_zdet_wr(codec, &tapan->reg_save_restore,
+					TAPAN_A_CDC_RX2_B2_CTL, 0xFF, 0x00);
+>>>>>>> 0e91d2a... Nougat
 		/* Four consecutive writes to set 0V as static data input */
 		snd_soc_write(codec, TAPAN_A_CDC_RX2_B1_CTL, 0x00);
 		snd_soc_write(codec, TAPAN_A_CDC_RX2_B1_CTL, 0x00);
@@ -6048,7 +6395,10 @@ static int tapan_setup_zdet(struct wcd9xxx_mbhc *mbhc,
 			__func__, stage);
 		break;
 	}
+<<<<<<< HEAD
 #undef __wr
+=======
+>>>>>>> 0e91d2a... Nougat
 
 	return ret;
 }
@@ -6084,6 +6434,10 @@ static struct firmware_cal *tapan_get_hwdep_fw_cal(struct snd_soc_codec *codec,
 {
 	struct tapan_priv *tapan;
 	struct firmware_cal *hwdep_cal;
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0e91d2a... Nougat
 	if (!codec) {
 		pr_err("%s: NULL codec pointer\n", __func__);
 		return NULL;
@@ -6115,6 +6469,10 @@ int tapan_hs_detect(struct snd_soc_codec *codec,
 		    struct wcd9xxx_mbhc_config *mbhc_cfg)
 {
 	struct tapan_priv *tapan = snd_soc_codec_get_drvdata(codec);
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0e91d2a... Nougat
 	return wcd9xxx_mbhc_start(&tapan->mbhc, mbhc_cfg);
 }
 EXPORT_SYMBOL(tapan_hs_detect);
@@ -6122,6 +6480,10 @@ EXPORT_SYMBOL(tapan_hs_detect);
 void tapan_hs_detect_exit(struct snd_soc_codec *codec)
 {
 	struct tapan_priv *tapan = snd_soc_codec_get_drvdata(codec);
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0e91d2a... Nougat
 	wcd9xxx_mbhc_stop(&tapan->mbhc);
 }
 EXPORT_SYMBOL(tapan_hs_detect_exit);
@@ -6132,6 +6494,10 @@ void tapan_event_register(
 	struct snd_soc_codec *codec)
 {
 	struct tapan_priv *tapan = snd_soc_codec_get_drvdata(codec);
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0e91d2a... Nougat
 	tapan->machine_codec_event_cb = machine_event_cb;
 }
 EXPORT_SYMBOL(tapan_event_register);
@@ -6144,7 +6510,11 @@ static int tapan_device_down(struct wcd9xxx *wcd9xxx)
 	codec = (struct snd_soc_codec *)(wcd9xxx->ssr_priv);
 	tapan = snd_soc_codec_get_drvdata(codec);
 
+<<<<<<< HEAD
 	snd_soc_card_change_online_state(codec->card, 0);
+=======
+	snd_soc_card_change_online_state(codec->component.card, 0);
+>>>>>>> 0e91d2a... Nougat
 	set_bit(BUS_DOWN, &tapan->status_mask);
 
 	return 0;
@@ -6177,6 +6547,7 @@ static int tapan_post_reset_cb(struct wcd9xxx *wcd9xxx)
 
 	clear_bit(BUS_DOWN, &tapan->status_mask);
 
+<<<<<<< HEAD
 	if (codec->reg_def_copy) {
 		pr_debug("%s: Update ASOC cache", __func__);
 		kfree(codec->reg_cache);
@@ -6192,6 +6563,11 @@ static int tapan_post_reset_cb(struct wcd9xxx *wcd9xxx)
 	tapan->machine_codec_event_cb(codec, WCD9XXX_CODEC_EVENT_CODEC_UP);
 
 	snd_soc_card_change_online_state(codec->card, 1);
+=======
+	tapan->machine_codec_event_cb(codec, WCD9XXX_CODEC_EVENT_CODEC_UP);
+
+	snd_soc_card_change_online_state(codec->component.card, 1);
+>>>>>>> 0e91d2a... Nougat
 
 	if (spkr_drv_wrnd == 1)
 		snd_soc_update_bits(codec, TAPAN_A_SPKR_DRV_EN, 0x80, 0x80);
@@ -6199,6 +6575,14 @@ static int tapan_post_reset_cb(struct wcd9xxx *wcd9xxx)
 	tapan_update_reg_defaults(codec);
 	tapan_update_reg_mclk_rate(wcd9xxx);
 	tapan_codec_init_reg(codec);
+<<<<<<< HEAD
+=======
+
+	codec->cache_sync = true;
+	snd_soc_cache_sync(codec);
+	codec->cache_sync = false;
+
+>>>>>>> 0e91d2a... Nougat
 	ret = tapan_handle_pdata(tapan);
 	if (IS_ERR_VALUE(ret))
 		pr_err("%s: bad pdata\n", __func__);
@@ -6306,6 +6690,7 @@ static void tapan_enable_config_rco(struct wcd9xxx *core, bool enable)
 		 */
 		wcd9xxx_reg_update(core, WCD9XXX_A_RC_OSC_FREQ, 0x10, 0x00);
 		wcd9xxx_reg_write(core_res, WCD9XXX_A_BIAS_OSC_BG_CTL, 0x17);
+<<<<<<< HEAD
 		usleep_range(5, 5);
 		wcd9xxx_reg_update(core, WCD9XXX_A_RC_OSC_FREQ, 0x80, 0x80);
 		wcd9xxx_reg_update(core, WCD9XXX_A_RC_OSC_TEST, 0x80, 0x80);
@@ -6316,6 +6701,18 @@ static void tapan_enable_config_rco(struct wcd9xxx *core, bool enable)
 		/* Enable MCLK and wait 1ms till it gets enabled */
 		wcd9xxx_reg_write(core_res, WCD9XXX_A_CLK_BUFF_EN2, 0x02);
 		usleep_range(1000, 1000);
+=======
+		usleep_range(5, 5 + WCD9XXX_USLEEP_RANGE_MARGIN_US);
+		wcd9xxx_reg_update(core, WCD9XXX_A_RC_OSC_FREQ, 0x80, 0x80);
+		wcd9xxx_reg_update(core, WCD9XXX_A_RC_OSC_TEST, 0x80, 0x80);
+		usleep_range(10, 10 + WCD9XXX_USLEEP_RANGE_MARGIN_US);
+		wcd9xxx_reg_update(core, WCD9XXX_A_RC_OSC_TEST, 0x80, 0x00);
+		usleep_range(20, 20 + WCD9XXX_USLEEP_RANGE_MARGIN_US);
+		wcd9xxx_reg_update(core, WCD9XXX_A_CLK_BUFF_EN1, 0x08, 0x08);
+		/* Enable MCLK and wait 1ms till it gets enabled */
+		wcd9xxx_reg_write(core_res, WCD9XXX_A_CLK_BUFF_EN2, 0x02);
+		usleep_range(1000, 1000 + WCD9XXX_USLEEP_RANGE_MARGIN_US);
+>>>>>>> 0e91d2a... Nougat
 		/* Enable CLK BUFF and wait for 1.2ms */
 		wcd9xxx_reg_update(core, WCD9XXX_A_CLK_BUFF_EN1, 0x01, 0x01);
 		usleep_range(1000, 1200);
@@ -6324,7 +6721,11 @@ static void tapan_enable_config_rco(struct wcd9xxx *core, bool enable)
 		wcd9xxx_reg_update(core, WCD9XXX_A_CLK_BUFF_EN2, 0x04, 0x04);
 		wcd9xxx_reg_update(core, WCD9XXX_A_CDC_CLK_MCLK_CTL,
 				   0x01, 0x01);
+<<<<<<< HEAD
 		usleep_range(50, 50);
+=======
+		usleep_range(50, 50 + WCD9XXX_USLEEP_RANGE_MARGIN_US);
+>>>>>>> 0e91d2a... Nougat
 	} else {
 		/*
 		 * Disable RC oscillator, reset the registers to their
@@ -6349,12 +6750,20 @@ static void tapan_enable_config_rco(struct wcd9xxx *core, bool enable)
 
 }
 
+<<<<<<< HEAD
 static enum tapan_codec_type tapan_get_codec_ver(struct device *cdc_dev,
+=======
+static enum codec_variant tapan_get_codec_ver(struct device *cdc_dev,
+>>>>>>> 0e91d2a... Nougat
 						 bool sensed)
 {
 	struct wcd9xxx *core = dev_get_drvdata(cdc_dev->parent);
 	u8 reg_val;
+<<<<<<< HEAD
 	enum tapan_codec_type cdc_type = WCD9306;
+=======
+	enum codec_variant cdc_type = WCD9306;
+>>>>>>> 0e91d2a... Nougat
 	unsigned long timeout;
 	bool timedout;
 	struct wcd9xxx_core_resource *core_res = &core->core_res;
@@ -6376,6 +6785,10 @@ static enum tapan_codec_type tapan_get_codec_ver(struct device *cdc_dev,
 	do {
 		if ((wcd9xxx_reg_read(core_res, TAPAN_A_QFUSE_STATUS)))
 			break;
+<<<<<<< HEAD
+=======
+		cond_resched();
+>>>>>>> 0e91d2a... Nougat
 	} while (!(timedout = time_after(jiffies, timeout)));
 
 	if (wcd9xxx_reg_read(core_res, TAPAN_A_QFUSE_DATA_OUT1) ||
@@ -6411,10 +6824,16 @@ static int tapan_codec_probe(struct snd_soc_codec *codec)
 	dev_info(codec->dev, "%s()\n", __func__);
 
 	tapan = kzalloc(sizeof(struct tapan_priv), GFP_KERNEL);
+<<<<<<< HEAD
 	if (!tapan) {
 		dev_err(codec->dev, "Failed to allocate private data\n");
 		return -ENOMEM;
 	}
+=======
+	if (!tapan)
+		return -ENOMEM;
+
+>>>>>>> 0e91d2a... Nougat
 	for (i = 0 ; i < NUM_DECIMATORS; i++) {
 		tx_hpf_work[i].tapan = tapan;
 		tx_hpf_work[i].decimator = i + 1;
@@ -6433,7 +6852,11 @@ static int tapan_codec_probe(struct snd_soc_codec *codec)
 				  NULL, WCD9XXX_CDC_TYPE_TAPAN);
 	if (ret) {
 		pr_err("%s: wcd9xxx init failed %d\n", __func__, ret);
+<<<<<<< HEAD
 		return ret;
+=======
+		goto err_nomem_slimch;
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	tapan->cp_regulators[CP_REG_BUCK] = tapan_codec_find_regulator(codec,
@@ -6458,10 +6881,16 @@ static int tapan_codec_probe(struct snd_soc_codec *codec)
 
 
 	tapan->fw_data = kzalloc(sizeof(*(tapan->fw_data)), GFP_KERNEL);
+<<<<<<< HEAD
 	if (!tapan->fw_data) {
 		dev_err(codec->dev, "Failed to allocate fw_data\n");
 		goto err_nomem_slimch;
 	}
+=======
+	if (!tapan->fw_data)
+		goto err_nomem_slimch;
+
+>>>>>>> 0e91d2a... Nougat
 	set_bit(WCD9XXX_ANC_CAL, tapan->fw_data->cal_bit);
 	set_bit(WCD9XXX_MAD_CAL, tapan->fw_data->cal_bit);
 	set_bit(WCD9XXX_MBHC_CAL, tapan->fw_data->cal_bit);
@@ -6478,7 +6907,11 @@ static int tapan_codec_probe(struct snd_soc_codec *codec)
 
 	if (ret) {
 		pr_err("%s: mbhc init failed %d\n", __func__, ret);
+<<<<<<< HEAD
 		return ret;
+=======
+		goto err_hwdep;
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	tapan->codec = codec;
@@ -6499,7 +6932,11 @@ static int tapan_codec_probe(struct snd_soc_codec *codec)
 	ret = tapan_handle_pdata(tapan);
 	if (IS_ERR_VALUE(ret)) {
 		dev_err(codec->dev, "%s: bad pdata\n", __func__);
+<<<<<<< HEAD
 		goto err_pdata;
+=======
+		goto err_hwdep;
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	tapan->spkdrv_reg =
@@ -6514,7 +6951,10 @@ static int tapan_codec_probe(struct snd_soc_codec *codec)
 	ptr = kmalloc((sizeof(tapan_rx_chs) +
 		       sizeof(tapan_tx_chs)), GFP_KERNEL);
 	if (!ptr) {
+<<<<<<< HEAD
 		pr_err("%s: no mem for slim chan ctl data\n", __func__);
+=======
+>>>>>>> 0e91d2a... Nougat
 		ret = -ENOMEM;
 		goto err_hwdep;
 	}
@@ -6555,10 +6995,21 @@ static int tapan_codec_probe(struct snd_soc_codec *codec)
 
 	snd_soc_dapm_sync(dapm);
 
+<<<<<<< HEAD
 	(void) tapan_setup_irqs(tapan);
 
 	atomic_set(&kp_tapan_priv, (unsigned long)tapan);
 	mutex_lock(&dapm->codec->mutex);
+=======
+	ret = tapan_setup_irqs(tapan);
+	if (ret) {
+		pr_err("%s: tapan irq setup failed %d\n", __func__, ret);
+		goto err_pdata;
+	}
+
+	atomic_set(&kp_tapan_priv, (unsigned long)tapan);
+	mutex_lock(&codec->mutex);
+>>>>>>> 0e91d2a... Nougat
 	if (codec_ver == WCD9306) {
 		snd_soc_dapm_disable_pin(dapm, "ANC HPHL");
 		snd_soc_dapm_disable_pin(dapm, "ANC HPHR");
@@ -6566,6 +7017,7 @@ static int tapan_codec_probe(struct snd_soc_codec *codec)
 		snd_soc_dapm_disable_pin(dapm, "ANC EAR PA");
 		snd_soc_dapm_disable_pin(dapm, "ANC EAR");
 	}
+<<<<<<< HEAD
 	mutex_unlock(&dapm->codec->mutex);
 	snd_soc_dapm_sync(dapm);
 
@@ -6573,6 +7025,12 @@ static int tapan_codec_probe(struct snd_soc_codec *codec)
 
 	if (ret)
 		tapan_cleanup_irqs(tapan);
+=======
+	mutex_unlock(&codec->mutex);
+	snd_soc_dapm_sync(dapm);
+
+	codec->component.ignore_pmdown_time = 1;
+>>>>>>> 0e91d2a... Nougat
 
 	return ret;
 
@@ -6609,15 +7067,30 @@ static int tapan_codec_remove(struct snd_soc_codec *codec)
 		tapan->cp_regulators[index] = NULL;
 
 	tapan->spkdrv_reg = NULL;
+<<<<<<< HEAD
 
+=======
+	kfree(tapan->fw_data);
+>>>>>>> 0e91d2a... Nougat
 	kfree(tapan);
 	return 0;
 }
 
+<<<<<<< HEAD
+=======
+static struct regmap *tapan_get_regmap(struct device *dev)
+{
+	struct wcd9xxx *control = dev_get_drvdata(dev->parent);
+
+	return control->regmap;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static struct snd_soc_codec_driver soc_codec_dev_tapan = {
 	.probe	= tapan_codec_probe,
 	.remove	= tapan_codec_remove,
 
+<<<<<<< HEAD
 	.read = tapan_read,
 	.write = tapan_write,
 
@@ -6628,12 +7101,18 @@ static struct snd_soc_codec_driver soc_codec_dev_tapan = {
 	.reg_cache_default = tapan_reset_reg_defaults,
 	.reg_word_size = 1,
 
+=======
+>>>>>>> 0e91d2a... Nougat
 	.controls = tapan_common_snd_controls,
 	.num_controls = ARRAY_SIZE(tapan_common_snd_controls),
 	.dapm_widgets = tapan_common_dapm_widgets,
 	.num_dapm_widgets = ARRAY_SIZE(tapan_common_dapm_widgets),
 	.dapm_routes = audio_map,
 	.num_dapm_routes = ARRAY_SIZE(audio_map),
+<<<<<<< HEAD
+=======
+	.get_regmap = tapan_get_regmap,
+>>>>>>> 0e91d2a... Nougat
 };
 
 #ifdef CONFIG_PM
@@ -6647,6 +7126,10 @@ static int tapan_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct tapan_priv *tapan = platform_get_drvdata(pdev);
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0e91d2a... Nougat
 	dev_dbg(dev, "%s: system resume\n", __func__);
 	/* Notify */
 	wcd9xxx_resmgr_notifier_call(&tapan->resmgr, WCD9XXX_EVENT_POST_RESUME);

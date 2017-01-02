@@ -1666,6 +1666,10 @@ void usb_hcd_giveback_urb(struct usb_hcd *hcd, struct urb *urb, int status)
 	usbmon_urb_complete(&hcd->self, urb, status);
 	if (hcd->driver->log_urb)
 		hcd->driver->log_urb(urb, "C", status);
+<<<<<<< HEAD
+=======
+	usb_anchor_suspend_wakeups(anchor);
+>>>>>>> 0e91d2a... Nougat
 	usb_unanchor_urb(urb);
 
 	/* pass ownership to the completion handler */
@@ -2292,7 +2296,12 @@ void usb_hc_died (struct usb_hcd *hcd)
 		}
 	}
 	spin_unlock_irqrestore (&hcd_root_hub_lock, flags);
+<<<<<<< HEAD
 	/* Make sure that the other roothub is also deallocated. */
+=======
+	
+	usb_atomic_notify_dead_bus(&hcd->self);
+>>>>>>> 0e91d2a... Nougat
 }
 EXPORT_SYMBOL_GPL (usb_hc_died);
 

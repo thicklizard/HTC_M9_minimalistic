@@ -796,6 +796,7 @@ int cifs_readdir(struct file *file, void *direntry, filldir_t filldir)
 			rc = -ENOMEM;
 			break;
 		}
+<<<<<<< HEAD
 		file->f_pos++;
 	default:
 		/* 1) If search is active,
@@ -812,6 +813,17 @@ int cifs_readdir(struct file *file, void *direntry, filldir_t filldir)
 		if (cifsFile->srch_inf.endOfSearch) {
 			if (cifsFile->srch_inf.emptyDir) {
 				cifs_dbg(FYI, "End of search, empty dir\n");
+=======
+		/*
+		 * if buggy server returns . and .. late do we want to
+		 * check for that here?
+		 */
+		*tmp_buf = 0;
+		rc = cifs_filldir(current_entry, file, ctx,
+				  tmp_buf, max_len);
+		if (rc) {
+			if (rc > 0)
+>>>>>>> 0e91d2a... Nougat
 				rc = 0;
 				break;
 			}

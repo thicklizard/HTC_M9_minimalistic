@@ -852,6 +852,10 @@ static void sdhci_prepare_data(struct sdhci_host *host, struct mmc_command *cmd)
 	if (host->flags & (SDHCI_USE_SDMA | SDHCI_USE_ADMA))
 		host->flags |= SDHCI_REQ_USE_DMA;
 
+	if ((host->quirks2 & SDHCI_QUIRK2_USE_PIO_FOR_EMMC_TUNING) &&
+		cmd->opcode == MMC_SEND_TUNING_BLOCK_HS200)
+		host->flags &= ~SDHCI_REQ_USE_DMA;
+
 	if (host->flags & SDHCI_REQ_USE_DMA) {
 		int broken, i;
 		struct scatterlist *sg;
@@ -2620,8 +2624,15 @@ static void sdhci_cmd_irq(struct sdhci_host *host, u32 intmask)
 
 	if (intmask & SDHCI_INT_TIMEOUT) {
 		if (mmc_is_sd_host(host->mmc)) {
+<<<<<<< HEAD
 			if (host->cmd->opcode != MMC_SLEEP_AWAKE && host->cmd->opcode != 8 &&
 				host->cmd->opcode != 52 && host->cmd->opcode != 1) {
+=======
+			if (host->cmd->opcode != MMC_SLEEP_AWAKE &&
+				host->cmd->opcode != MMC_SEND_EXT_CSD &&
+				host->cmd->opcode != 52 &&
+				host->cmd->opcode != MMC_SEND_OP_COND && host->cmd->opcode != 55) {
+>>>>>>> 0e91d2a... Nougat
 				pr_err("%s: CMD%d: Command timeout\n",
 					mmc_hostname(host->mmc), host->cmd->opcode);
 			}
@@ -2662,6 +2673,13 @@ static void sdhci_cmd_irq(struct sdhci_host *host, u32 intmask)
 		    (command != MMC_SEND_TUNING_BLOCK_HS200) &&
 		    (command != MMC_SEND_TUNING_BLOCK))
 				host->flags |= SDHCI_NEEDS_RETUNING;
+
+		if (host->cmd->data &&
+		    (((intmask & (SDHCI_INT_CRC | SDHCI_INT_TIMEOUT)) ==
+		     SDHCI_INT_CRC) || (host->cmd->error == -EILSEQ))) {
+			host->cmd = NULL;
+			return;
+		}
 		tasklet_schedule(&host->finish_tasklet);
 		return;
 	}
@@ -2722,9 +2740,15 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 
 	
 	if (intmask & SDHCI_INT_DATA_AVAIL) {
+<<<<<<< HEAD
 		if (command == MMC_SEND_TUNING_BLOCK ||
 		    command == MMC_SEND_TUNING_BLOCK_HS200 ||
 		    command == MMC_SEND_TUNING_BLOCK_HS400) {
+=======
+		if (!(host->quirks2 & SDHCI_QUIRK2_NON_STANDARD_TUNING) &&
+			(command == MMC_SEND_TUNING_BLOCK ||
+			command == MMC_SEND_TUNING_BLOCK_HS200)) {
+>>>>>>> 0e91d2a... Nougat
 			host->tuning_done = 1;
 			wake_up(&host->buf_ready_int);
 			return;
@@ -2781,9 +2805,17 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 			host->ops->adma_workaround(host, intmask);
 	}
 	if (host->data->error) {
+<<<<<<< HEAD
 		if (intmask & (SDHCI_INT_DATA_CRC | SDHCI_INT_DATA_TIMEOUT)) {
 			if ((command != MMC_SEND_TUNING_BLOCK_HS400) &&
 			    (command != MMC_SEND_TUNING_BLOCK_HS200) &&
+=======
+		if (intmask & (SDHCI_INT_DATA_CRC | SDHCI_INT_DATA_TIMEOUT
+					| SDHCI_INT_DATA_END_BIT)) {
+			command = SDHCI_GET_CMD(sdhci_readw(host,
+							    SDHCI_COMMAND));
+			if ((command != MMC_SEND_TUNING_BLOCK_HS200) &&
+>>>>>>> 0e91d2a... Nougat
 			    (command != MMC_SEND_TUNING_BLOCK)) {
 				pr_msg = true;
 				if (intmask & SDHCI_INT_DATA_CRC)
@@ -2846,6 +2878,7 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 	}
 
 	if (!host->clock && host->mmc->card &&
+<<<<<<< HEAD
 	    mmc_card_sdio(host->mmc->card)) {
 		
 		sdhci_cfg_irq(host, false);
@@ -2864,6 +2897,20 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 	} else if (!host->clock) {
 		pr_err_ratelimited("%s: %s: clocks are disabled !!!\n",
 				   mmc_hostname(host->mmc), __func__);
+=======
+			mmc_card_sdio(host->mmc->card)) {
+		if (!mmc_card_and_host_support_async_int(host->mmc)) {
+			spin_unlock(&host->lock);
+			return IRQ_NONE;
+		}
+
+		pr_debug("%s: %s: sdio_async intr. received\n",
+				mmc_hostname(host->mmc), __func__);
+		sdhci_cfg_irq(host, false, false);
+		host->sdio_irq_async_status = true;
+		host->thread_isr |= SDHCI_INT_CARD_INT;
+		result = IRQ_WAKE_THREAD;
+>>>>>>> 0e91d2a... Nougat
 		spin_unlock(&host->lock);
 		return IRQ_HANDLED;
 	}
@@ -2874,9 +2921,22 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 		goto out;
 	}
 
+<<<<<<< HEAD
 again:
 	DBG("*** %s got interrupt: 0x%08x\n",
 		mmc_hostname(host->mmc), intmask);
+=======
+	do {
+		if (host->mmc->card && mmc_card_cmdq(host->mmc->card) &&
+		!mmc_host_halt(host->mmc) && !mmc_host_cq_disable(host->mmc)) {
+			pr_debug("*** %s: cmdq intr: 0x%08x\n",
+					mmc_hostname(host->mmc),
+					intmask);
+			result = sdhci_cmdq_irq(host, intmask);
+			if (result == IRQ_HANDLED)
+				goto out;
+		}
+>>>>>>> 0e91d2a... Nougat
 
 	if (intmask & (SDHCI_INT_CARD_INSERT | SDHCI_INT_CARD_REMOVE)) {
 		u32 present = sdhci_readl(host, SDHCI_PRESENT_STATE) &
@@ -3213,6 +3273,191 @@ static int sdhci_is_adma2_64bit(struct sdhci_host *host)
 }
 #endif
 
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_MMC_CQ_HCI
+static void sdhci_cmdq_set_transfer_params(struct mmc_host *mmc)
+{
+	struct sdhci_host *host = mmc_priv(mmc);
+	u8 ctrl;
+
+	if (host->version >= SDHCI_SPEC_200) {
+		ctrl = sdhci_readb(host, SDHCI_HOST_CONTROL);
+		ctrl &= ~SDHCI_CTRL_DMA_MASK;
+		if (host->flags & SDHCI_USE_ADMA_64BIT)
+			ctrl |= SDHCI_CTRL_ADMA64;
+		else
+			ctrl |= SDHCI_CTRL_ADMA32;
+		sdhci_writeb(host, ctrl, SDHCI_HOST_CONTROL);
+	}
+	if (host->ops->toggle_cdr)
+		host->ops->toggle_cdr(host, false);
+}
+
+static void sdhci_cmdq_clear_set_irqs(struct mmc_host *mmc, bool clear)
+{
+	struct sdhci_host *host = mmc_priv(mmc);
+	u32 ier = 0;
+
+	ier &= ~SDHCI_INT_ALL_MASK;
+
+	if (clear) {
+		ier = SDHCI_INT_CMDQ_EN | SDHCI_INT_ERROR_MASK;
+		sdhci_writel(host, ier, SDHCI_INT_ENABLE);
+		sdhci_writel(host, ier, SDHCI_SIGNAL_ENABLE);
+	} else {
+		ier = SDHCI_INT_BUS_POWER | SDHCI_INT_DATA_END_BIT |
+			     SDHCI_INT_DATA_CRC | SDHCI_INT_DATA_TIMEOUT |
+			     SDHCI_INT_INDEX | SDHCI_INT_END_BIT |
+			     SDHCI_INT_CRC | SDHCI_INT_TIMEOUT |
+			     SDHCI_INT_DATA_END | SDHCI_INT_RESPONSE |
+			     SDHCI_INT_AUTO_CMD_ERR;
+		sdhci_writel(host, ier, SDHCI_INT_ENABLE);
+		sdhci_writel(host, ier, SDHCI_SIGNAL_ENABLE);
+	}
+}
+
+static void sdhci_cmdq_set_data_timeout(struct mmc_host *mmc, u32 val)
+{
+	struct sdhci_host *host = mmc_priv(mmc);
+
+	sdhci_writeb(host, val, SDHCI_TIMEOUT_CONTROL);
+}
+
+static void sdhci_cmdq_dump_vendor_regs(struct mmc_host *mmc)
+{
+	struct sdhci_host *host = mmc_priv(mmc);
+
+	sdhci_dumpregs(host);
+}
+
+static int sdhci_cmdq_init(struct sdhci_host *host, struct mmc_host *mmc,
+			   bool dma64)
+{
+	return cmdq_init(host->cq_host, mmc, dma64);
+}
+
+static void sdhci_cmdq_set_block_size(struct mmc_host *mmc)
+{
+	struct sdhci_host *host = mmc_priv(mmc);
+
+	sdhci_set_blk_size_reg(host, 512, 0);
+}
+
+static void sdhci_enhanced_strobe_mask(struct mmc_host *mmc, bool set)
+{
+	struct sdhci_host *host = mmc_priv(mmc);
+
+	if (host->ops->enhanced_strobe_mask)
+		host->ops->enhanced_strobe_mask(host, set);
+}
+
+static void sdhci_cmdq_clear_set_dumpregs(struct mmc_host *mmc, bool set)
+{
+	struct sdhci_host *host = mmc_priv(mmc);
+
+	if (host->ops->clear_set_dumpregs)
+		host->ops->clear_set_dumpregs(host, set);
+}
+static int sdhci_cmdq_crypto_cfg(struct mmc_host *mmc,
+		struct mmc_request *mrq, u32 slot)
+{
+	struct sdhci_host *host = mmc_priv(mmc);
+
+	if (!host->is_crypto_en)
+		return 0;
+
+	return sdhci_crypto_cfg(host, mrq, slot);
+}
+
+static void sdhci_cmdq_crypto_cfg_reset(struct mmc_host *mmc, unsigned int slot)
+{
+	struct sdhci_host *host = mmc_priv(mmc);
+
+	if (!host->is_crypto_en)
+		return;
+
+	if (host->ops->crypto_cfg_reset)
+		host->ops->crypto_cfg_reset(host, slot);
+}
+
+static void sdhci_cmdq_post_cqe_halt(struct mmc_host *mmc)
+{
+	struct sdhci_host *host = mmc_priv(mmc);
+
+	sdhci_writel(host, sdhci_readl(host, SDHCI_INT_ENABLE) |
+			SDHCI_INT_RESPONSE, SDHCI_INT_ENABLE);
+	sdhci_writel(host, SDHCI_INT_RESPONSE, SDHCI_INT_STATUS);
+}
+#else
+static void sdhci_cmdq_set_transfer_params(struct mmc_host *mmc)
+{
+
+}
+static void sdhci_cmdq_clear_set_irqs(struct mmc_host *mmc, bool clear)
+{
+
+}
+
+static void sdhci_cmdq_set_data_timeout(struct mmc_host *mmc, u32 val)
+{
+
+}
+
+static void sdhci_cmdq_dump_vendor_regs(struct mmc_host *mmc)
+{
+
+}
+
+static int sdhci_cmdq_init(struct sdhci_host *host, struct mmc_host *mmc,
+			   bool dma64)
+{
+	return -ENOSYS;
+}
+
+static void sdhci_cmdq_set_block_size(struct mmc_host *mmc)
+{
+
+}
+
+static void sdhci_enhanced_strobe_mask(struct mmc_host *mmc, bool set)
+{
+
+}
+
+static void sdhci_cmdq_clear_set_dumpregs(struct mmc_host *mmc, bool set)
+{
+
+}
+static int sdhci_cmdq_crypto_cfg(struct mmc_host *mmc,
+		struct mmc_request *mrq, u32 slot)
+{
+	return 0;
+}
+
+static void sdhci_cmdq_crypto_cfg_reset(struct mmc_host *mmc, unsigned int slot)
+{
+
+}
+static void sdhci_cmdq_post_cqe_halt(struct mmc_host *mmc)
+{
+}
+#endif
+
+static const struct cmdq_host_ops sdhci_cmdq_ops = {
+	.clear_set_irqs = sdhci_cmdq_clear_set_irqs,
+	.set_data_timeout = sdhci_cmdq_set_data_timeout,
+	.dump_vendor_regs = sdhci_cmdq_dump_vendor_regs,
+	.set_block_size = sdhci_cmdq_set_block_size,
+	.clear_set_dumpregs = sdhci_cmdq_clear_set_dumpregs,
+	.enhanced_strobe_mask = sdhci_enhanced_strobe_mask,
+	.crypto_cfg	= sdhci_cmdq_crypto_cfg,
+	.crypto_cfg_reset	= sdhci_cmdq_crypto_cfg_reset,
+	.post_cqe_halt = sdhci_cmdq_post_cqe_halt,
+	.set_transfer_params = sdhci_cmdq_set_transfer_params,
+};
+
+>>>>>>> 0e91d2a... Nougat
 int sdhci_add_host(struct sdhci_host *host)
 {
 	struct mmc_host *mmc;
@@ -3548,10 +3793,21 @@ int sdhci_add_host(struct sdhci_host *host)
 #endif 
 
 	max_current_caps = sdhci_readl(host, SDHCI_MAX_CURRENT);
+<<<<<<< HEAD
 	if (!max_current_caps && host->vmmc) {
 		u32 curr = regulator_get_current_limit(host->vmmc);
 		if (curr > 0) {
+=======
+	if (!max_current_caps) {
+		u32 curr = 0;
 
+		if (!IS_ERR(mmc->supply.vmmc))
+			curr = regulator_get_current_limit(mmc->supply.vmmc);
+		else if (host->ops->get_current_limit)
+			curr = host->ops->get_current_limit(host);
+>>>>>>> 0e91d2a... Nougat
+
+		if (curr > 0) {
 			
 			curr = curr/1000;  
 			curr = curr/SDHCI_MAX_CURRENT_MULTIPLIER;

@@ -28,6 +28,110 @@
 #include "cifs_debug.h"
 #include "cifsfs.h"
 
+<<<<<<< HEAD
+=======
+#define CIFS_IOCTL_MAGIC	0xCF
+#define CIFS_IOC_COPYCHUNK_FILE	_IOW(CIFS_IOCTL_MAGIC, 3, int)
+
+static long cifs_ioctl_clone(unsigned int xid, struct file *dst_file,
+			unsigned long srcfd, u64 off, u64 len, u64 destoff)
+{
+	int rc;
+	struct cifsFileInfo *smb_file_target = dst_file->private_data;
+	struct inode *target_inode = file_inode(dst_file);
+	struct cifs_tcon *target_tcon;
+	struct fd src_file;
+	struct cifsFileInfo *smb_file_src;
+	struct inode *src_inode;
+	struct cifs_tcon *src_tcon;
+
+	cifs_dbg(FYI, "ioctl clone range\n");
+	/* the destination must be opened for writing */
+	if (!(dst_file->f_mode & FMODE_WRITE)) {
+		cifs_dbg(FYI, "file target not open for write\n");
+		return -EINVAL;
+	}
+
+	/* check if target volume is readonly and take reference */
+	rc = mnt_want_write_file(dst_file);
+	if (rc) {
+		cifs_dbg(FYI, "mnt_want_write failed with rc %d\n", rc);
+		return rc;
+	}
+
+	src_file = fdget(srcfd);
+	if (!src_file.file) {
+		rc = -EBADF;
+		goto out_drop_write;
+	}
+
+	if (src_file.file->f_op->unlocked_ioctl != cifs_ioctl) {
+		rc = -EBADF;
+		cifs_dbg(VFS, "src file seems to be from a different filesystem type\n");
+		goto out_fput;
+	}
+
+	if ((!src_file.file->private_data) || (!dst_file->private_data)) {
+		rc = -EBADF;
+		cifs_dbg(VFS, "missing cifsFileInfo on copy range src file\n");
+		goto out_fput;
+	}
+
+	rc = -EXDEV;
+	smb_file_target = dst_file->private_data;
+	smb_file_src = src_file.file->private_data;
+	src_tcon = tlink_tcon(smb_file_src->tlink);
+	target_tcon = tlink_tcon(smb_file_target->tlink);
+
+	/* check if source and target are on same tree connection */
+	if (src_tcon != target_tcon) {
+		cifs_dbg(VFS, "file copy src and target on different volume\n");
+		goto out_fput;
+	}
+
+	src_inode = file_inode(src_file.file);
+	rc = -EINVAL;
+	if (S_ISDIR(src_inode->i_mode))
+		goto out_fput;
+
+	/*
+	 * Note: cifs case is easier than btrfs since server responsible for
+	 * checks for proper open modes and file type and if it wants
+	 * server could even support copy of range where source = target
+	 */
+	lock_two_nondirectories(target_inode, src_inode);
+
+	/* determine range to clone */
+	rc = -EINVAL;
+	if (off + len > src_inode->i_size || off + len < off)
+		goto out_unlock;
+	if (len == 0)
+		len = src_inode->i_size - off;
+
+	cifs_dbg(FYI, "about to flush pages\n");
+	/* should we flush first and last page first */
+	truncate_inode_pages_range(&target_inode->i_data, destoff,
+				   PAGE_CACHE_ALIGN(destoff + len)-1);
+
+	if (target_tcon->ses->server->ops->clone_range)
+		rc = target_tcon->ses->server->ops->clone_range(xid,
+			smb_file_src, smb_file_target, off, len, destoff);
+
+	/* force revalidate of size and timestamps of target file now
+	   that target is updated on the server */
+	CIFS_I(target_inode)->time = 0;
+out_unlock:
+	/* although unlocking in the reverse order from locking is not
+	   strictly necessary here it is a little cleaner to be consistent */
+	unlock_two_nondirectories(src_inode, target_inode);
+out_fput:
+	fdput(src_file);
+out_drop_write:
+	mnt_drop_write_file(dst_file);
+	return rc;
+}
+
+>>>>>>> 0e91d2a... Nougat
 long cifs_ioctl(struct file *filep, unsigned int command, unsigned long arg)
 {
 	struct inode *inode = file_inode(filep);

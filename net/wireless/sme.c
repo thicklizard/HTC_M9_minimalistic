@@ -172,6 +172,8 @@ static int cfg80211_conn_scan(struct wireless_dev *wdev)
 		wdev->conn->params.ssid_len);
 	request->ssids[0].ssid_len = wdev->conn->params.ssid_len;
 
+	eth_broadcast_addr(request->bssid);
+
 	request->wdev = wdev;
 	request->wiphy = &rdev->wiphy;
 	request->scan_start = jiffies;
@@ -300,19 +302,15 @@ static struct cfg80211_bss *cfg80211_get_conn_bss(struct wireless_dev *wdev)
 {
 	struct cfg80211_registered_device *rdev = wiphy_to_dev(wdev->wiphy);
 	struct cfg80211_bss *bss;
-	u16 capa = WLAN_CAPABILITY_ESS;
 
 	ASSERT_WDEV_LOCK(wdev);
-
-	if (wdev->conn->params.privacy)
-		capa |= WLAN_CAPABILITY_PRIVACY;
 
 	bss = cfg80211_get_bss(wdev->wiphy, wdev->conn->params.channel,
 			       wdev->conn->params.bssid,
 			       wdev->conn->params.ssid,
 			       wdev->conn->params.ssid_len,
-			       WLAN_CAPABILITY_ESS | WLAN_CAPABILITY_PRIVACY,
-			       capa);
+			       wdev->conn_bss_type,
+			       IEEE80211_PRIVACY(wdev->conn->params.privacy));
 	if (!bss)
 		return NULL;
 
@@ -504,6 +502,19 @@ void __cfg80211_connect_result(struct net_device *dev, const u8 *bssid,
 	}
 #endif
 
+<<<<<<< HEAD
+=======
+	if (!bss && (status == WLAN_STATUS_SUCCESS)) {
+		WARN_ON_ONCE(!wiphy_to_rdev(wdev->wiphy)->ops->connect);
+		bss = cfg80211_get_bss(wdev->wiphy, NULL, bssid,
+				       wdev->ssid, wdev->ssid_len,
+				       wdev->conn_bss_type,
+				       IEEE80211_PRIVACY_ANY);
+		if (bss)
+			cfg80211_hold_bss(bss_from_pub(bss));
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	if (wdev->current_bss) {
 		cfg80211_unhold_bss(wdev->current_bss);
 		cfg80211_put_bss(wdev->wiphy, &wdev->current_bss->pub);
@@ -567,21 +578,36 @@ void __cfg80211_connect_result(struct net_device *dev, const u8 *bssid,
 	kfree(country_ie);
 }
 
-void cfg80211_connect_result(struct net_device *dev, const u8 *bssid,
-			     const u8 *req_ie, size_t req_ie_len,
-			     const u8 *resp_ie, size_t resp_ie_len,
-			     u16 status, gfp_t gfp)
+/* Consumes bss object one way or another */
+void cfg80211_connect_bss(struct net_device *dev, const u8 *bssid,
+			  struct cfg80211_bss *bss, const u8 *req_ie,
+			  size_t req_ie_len, const u8 *resp_ie,
+			  size_t resp_ie_len, u16 status, gfp_t gfp)
 {
 	struct wireless_dev *wdev = dev->ieee80211_ptr;
 	struct cfg80211_registered_device *rdev = wiphy_to_dev(wdev->wiphy);
 	struct cfg80211_event *ev;
 	unsigned long flags;
 
+<<<<<<< HEAD
 	CFG80211_DEV_WARN_ON(wdev->sme_state != CFG80211_SME_CONNECTING);
+=======
+	if (bss) {
+		/* Make sure the bss entry provided by the driver is valid. */
+		struct cfg80211_internal_bss *ibss = bss_from_pub(bss);
+
+		if (WARN_ON(list_empty(&ibss->list))) {
+			cfg80211_put_bss(wdev->wiphy, bss);
+			return;
+		}
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	ev = kzalloc(sizeof(*ev) + req_ie_len + resp_ie_len, gfp);
-	if (!ev)
+	if (!ev) {
+		cfg80211_put_bss(wdev->wiphy, bss);
 		return;
+	}
 
 	ev->type = EVENT_CONNECT_RESULT;
 	if (bssid)
@@ -596,6 +622,9 @@ void cfg80211_connect_result(struct net_device *dev, const u8 *bssid,
 		ev->cr.resp_ie_len = resp_ie_len;
 		memcpy((void *)ev->cr.resp_ie, resp_ie, resp_ie_len);
 	}
+	if (bss)
+		cfg80211_hold_bss(bss_from_pub(bss));
+	ev->cr.bss = bss;
 	ev->cr.status = status;
 
 	spin_lock_irqsave(&wdev->event_lock, flags);
@@ -603,7 +632,7 @@ void cfg80211_connect_result(struct net_device *dev, const u8 *bssid,
 	spin_unlock_irqrestore(&wdev->event_lock, flags);
 	queue_work(cfg80211_wq, &rdev->event_work);
 }
-EXPORT_SYMBOL(cfg80211_connect_result);
+EXPORT_SYMBOL(cfg80211_connect_bss);
 
 void __cfg80211_roamed(struct wireless_dev *wdev,
 		       struct cfg80211_bss *bss,
@@ -678,8 +707,8 @@ void cfg80211_roamed(struct net_device *dev,
 	CFG80211_DEV_WARN_ON(wdev->sme_state != CFG80211_SME_CONNECTED);
 
 	bss = cfg80211_get_bss(wdev->wiphy, channel, bssid, wdev->ssid,
-			       wdev->ssid_len, WLAN_CAPABILITY_ESS,
-			       WLAN_CAPABILITY_ESS);
+			       wdev->ssid_len,
+			       wdev->conn_bss_type, IEEE80211_PRIVACY_ANY);
 	if (WARN_ON(!bss))
 		return;
 
@@ -785,7 +814,12 @@ void __cfg80211_disconnected(struct net_device *dev, const u8 *ie,
 }
 
 void cfg80211_disconnected(struct net_device *dev, u16 reason,
+<<<<<<< HEAD
 			   u8 *ie, size_t ie_len, gfp_t gfp)
+=======
+			   const u8 *ie, size_t ie_len,
+			   bool locally_generated, gfp_t gfp)
+>>>>>>> 0e91d2a... Nougat
 {
 	struct wireless_dev *wdev = dev->ieee80211_ptr;
 	struct cfg80211_registered_device *rdev = wiphy_to_dev(wdev->wiphy);
@@ -803,6 +837,7 @@ void cfg80211_disconnected(struct net_device *dev, u16 reason,
 	ev->dc.ie_len = ie_len;
 	memcpy((void *)ev->dc.ie, ie, ie_len);
 	ev->dc.reason = reason;
+	ev->dc.locally_generated = locally_generated;
 
 	spin_lock_irqsave(&wdev->event_lock, flags);
 	list_add_tail(&ev->list, &wdev->event_list);
@@ -869,6 +904,7 @@ int __cfg80211_connect(struct cfg80211_registered_device *rdev,
 		if (!rdev->ops->auth || !rdev->ops->assoc)
 			return -EOPNOTSUPP;
 
+<<<<<<< HEAD
 		if (WARN_ON(wdev->conn))
 			return -EINPROGRESS;
 
@@ -947,6 +983,15 @@ int __cfg80211_connect(struct cfg80211_registered_device *rdev,
 			wdev->connect_keys = NULL;
 			wdev->ssid_len = 0;
 		}
+=======
+	wdev->conn_bss_type = connect->pbss ? IEEE80211_BSS_TYPE_PBSS :
+					      IEEE80211_BSS_TYPE_ESS;
+
+	if (!rdev->ops->connect)
+		err = cfg80211_sme_connect(wdev, connect, prev_bssid);
+	else
+		err = rdev_connect(rdev, dev, connect);
+>>>>>>> 0e91d2a... Nougat
 
 		return err;
 	} else {

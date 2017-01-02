@@ -1037,6 +1037,13 @@ static int mmc_sdio_resume(struct mmc_host *host)
 		}
 	}
 
+<<<<<<< HEAD
+=======
+	mmc_release_host(host);
+
+	host->pm_flags &= ~MMC_PM_KEEP_POWER;
+	host->pm_flags &= ~MMC_PM_WAKE_SDIO_IRQ;
+>>>>>>> 0e91d2a... Nougat
 	return err;
 }
 

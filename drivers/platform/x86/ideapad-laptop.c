@@ -779,7 +779,121 @@ static void ideapad_sync_touchpad_state(struct acpi_device *adevice)
 	}
 }
 
+<<<<<<< HEAD
 static int ideapad_acpi_add(struct acpi_device *adevice)
+=======
+static void ideapad_acpi_notify(acpi_handle handle, u32 event, void *data)
+{
+	struct ideapad_private *priv = data;
+	unsigned long vpc1, vpc2, vpc_bit;
+
+	if (read_ec_data(handle, VPCCMD_R_VPC1, &vpc1))
+		return;
+	if (read_ec_data(handle, VPCCMD_R_VPC2, &vpc2))
+		return;
+
+	vpc1 = (vpc2 << 8) | vpc1;
+	for (vpc_bit = 0; vpc_bit < 16; vpc_bit++) {
+		if (test_bit(vpc_bit, &vpc1)) {
+			switch (vpc_bit) {
+			case 9:
+				ideapad_sync_rfk_state(priv);
+				break;
+			case 13:
+			case 11:
+			case 7:
+			case 6:
+				ideapad_input_report(priv, vpc_bit);
+				break;
+			case 5:
+				ideapad_sync_touchpad_state(priv);
+				break;
+			case 4:
+				ideapad_backlight_notify_brightness(priv);
+				break;
+			case 3:
+				ideapad_input_novokey(priv);
+				break;
+			case 2:
+				ideapad_backlight_notify_power(priv);
+				break;
+			case 0:
+				ideapad_check_special_buttons(priv);
+				break;
+			default:
+				pr_info("Unknown event: %lu\n", vpc_bit);
+			}
+		}
+	}
+}
+
+/*
+ * Some ideapads don't have a hardware rfkill switch, reading VPCCMD_R_RF
+ * always results in 0 on these models, causing ideapad_laptop to wrongly
+ * report all radios as hardware-blocked.
+ */
+static const struct dmi_system_id no_hw_rfkill_list[] = {
+	{
+		.ident = "Lenovo G50-30",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "LENOVO"),
+			DMI_MATCH(DMI_PRODUCT_VERSION, "Lenovo G50-30"),
+		},
+	},
+	{
+		.ident = "Lenovo ideapad Y700-15ISK",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "LENOVO"),
+			DMI_MATCH(DMI_PRODUCT_VERSION, "Lenovo ideapad Y700-15ISK"),
+		},
+	},
+	{
+		.ident = "Lenovo ideapad Y700 Touch-15ISK",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "LENOVO"),
+			DMI_MATCH(DMI_PRODUCT_VERSION, "Lenovo ideapad Y700 Touch-15ISK"),
+		},
+	},
+	{
+		.ident = "Lenovo ideapad Y700-17ISK",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "LENOVO"),
+			DMI_MATCH(DMI_PRODUCT_VERSION, "Lenovo ideapad Y700-17ISK"),
+		},
+	},
+	{
+		.ident = "Lenovo Yoga 2 11 / 13 / Pro",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "LENOVO"),
+			DMI_MATCH(DMI_PRODUCT_VERSION, "Lenovo Yoga 2"),
+		},
+	},
+	{
+		.ident = "Lenovo Yoga 3 Pro 1370",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "LENOVO"),
+			DMI_MATCH(DMI_PRODUCT_VERSION, "Lenovo YOGA 3 Pro-1370"),
+		},
+	},
+	{
+		.ident = "Lenovo Yoga 700",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "LENOVO"),
+			DMI_MATCH(DMI_PRODUCT_VERSION, "Lenovo YOGA 700"),
+		},
+	},
+	{
+		.ident = "Lenovo Yoga 900",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "LENOVO"),
+			DMI_MATCH(DMI_PRODUCT_VERSION, "Lenovo YOGA 900"),
+		},
+	},
+	{}
+};
+
+static int ideapad_acpi_add(struct platform_device *pdev)
+>>>>>>> 0e91d2a... Nougat
 {
 	int ret, i;
 	int cfg;

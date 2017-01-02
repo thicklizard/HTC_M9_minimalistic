@@ -576,6 +576,63 @@ bnad_cq_process(struct bnad *bnad, struct bna_ccb *ccb, int budget)
 		unmap_q = rcb->unmap_q;
 		unmap = &unmap_q->unmap[rcb->consumer_index];
 
+<<<<<<< HEAD
+=======
+		/* start of packet ci */
+		sop_ci = rcb->consumer_index;
+
+		if (BNAD_RXBUF_IS_SK_BUFF(unmap_q->type)) {
+			unmap = &unmap_q->unmap[sop_ci];
+			skb = unmap->skb;
+		} else {
+			skb = napi_get_frags(&rx_ctrl->napi);
+			if (unlikely(!skb))
+				break;
+		}
+		prefetch(skb);
+
+		flags = ntohl(cmpl->flags);
+		len = ntohs(cmpl->length);
+		totlen = len;
+		nvecs = 1;
+
+		/* Check all the completions for this frame.
+		 * busy-wait doesn't help much, break here.
+		 */
+		if (BNAD_RXBUF_IS_MULTI_BUFF(unmap_q->type) &&
+		    (flags & BNA_CQ_EF_EOP) == 0) {
+			pi = ccb->producer_index;
+			do {
+				BNA_QE_INDX_INC(pi, ccb->q_depth);
+				next_cmpl = &cq[pi];
+
+				if (!next_cmpl->valid)
+					break;
+				/* The 'valid' field is set by the adapter, only
+				 * after writing the other fields of completion
+				 * entry. Hence, do not load other fields of
+				 * completion entry *before* the 'valid' is
+				 * loaded. Adding the rmb() here prevents the
+				 * compiler and/or CPU from reordering the reads
+				 * which would potentially result in reading
+				 * stale values in completion entry.
+				 */
+				rmb();
+
+				len = ntohs(next_cmpl->length);
+				flags = ntohl(next_cmpl->flags);
+
+				nvecs++;
+				totlen += len;
+			} while ((flags & BNA_CQ_EF_EOP) == 0);
+
+			if (!next_cmpl->valid)
+				break;
+		}
+		packets++;
+
+		/* TODO: BNA_CQ_EF_LOCAL ? */
+>>>>>>> 0e91d2a... Nougat
 		if (unlikely(flags & (BNA_CQ_EF_MAC_ERROR |
 					BNA_CQ_EF_FCS_ERROR |
 					BNA_CQ_EF_TOO_LONG))) {
@@ -591,8 +648,14 @@ bnad_cq_process(struct bnad *bnad, struct bna_ccb *ccb, int budget)
 		skb = bnad_cq_prepare_skb(ccb->ctrl, unmap_q, unmap,
 				length, flags);
 
+<<<<<<< HEAD
 		if (unlikely(!skb))
 			break;
+=======
+		rcb->rxq->rx_packets++;
+		rcb->rxq->rx_bytes += totlen;
+		ccb->bytes_per_intr += totlen;
+>>>>>>> 0e91d2a... Nougat
 
 		masked_flags = flags & flags_cksum_prot_mask;
 

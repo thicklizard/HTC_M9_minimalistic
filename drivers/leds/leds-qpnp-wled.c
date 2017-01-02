@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -30,6 +30,11 @@
 #define QPNP_WLED_CTRL_BASE		"qpnp-wled-ctrl-base"
 #define QPNP_WLED_SINK_BASE		"qpnp-wled-sink-base"
 
+<<<<<<< HEAD
+=======
+#define QPNP_WLED_INT_EN_SET(b)		(b + 0x15)
+#define QPNP_WLED_INT_EN_CLR(b)		(b + 0x16)
+>>>>>>> 0e91d2a... Nougat
 #define QPNP_WLED_EN_REG(b)		(b + 0x46)
 #define QPNP_WLED_FDBK_OP_REG(b)	(b + 0x48)
 #define QPNP_WLED_VREF_REG(b)		(b + 0x49)
@@ -38,10 +43,18 @@
 #define QPNP_WLED_OVP_REG(b)		(b + 0x4D)
 #define QPNP_WLED_ILIM_REG(b)		(b + 0x4E)
 #define QPNP_WLED_SC_PRO_REG(b)		(b + 0x5E)
+<<<<<<< HEAD
 #define QPNP_WLED_TEST_REG(b)		(b + 0xE2)
 
 #define QPNP_WLED_SOFT_START(b)		(b + 0xE5)
+=======
+#define QPNP_WLED_CTRL_SPARE_REG(b)	(b + 0xDF)
+#define QPNP_WLED_TEST1_REG(b)		(b + 0xE2)
+#define QPNP_WLED_TEST4_REG(b)		(b + 0xE5)
+#define QPNP_WLED_REF_7P7_TRIM_REG(b)	(b + 0xF2)
+>>>>>>> 0e91d2a... Nougat
 
+#define QPNP_WLED_7P7_TRIM_MASK		0xF
 #define QPNP_WLED_EN_MASK		0x7F
 #define QPNP_WLED_EN_SHIFT		7
 #define QPNP_WLED_FDBK_OP_MASK		0xF8
@@ -50,6 +63,28 @@
 #define QPNP_WLED_VREF_MIN_MV		300
 #define QPNP_WLED_VREF_MAX_MV		675
 #define QPNP_WLED_DFLT_VREF_MV		350
+<<<<<<< HEAD
+=======
+
+#define QPNP_WLED_VLOOP_COMP_RES_MASK			0xF0
+#define QPNP_WLED_VLOOP_COMP_RES_OVERWRITE		0x80
+#define QPNP_WLED_LOOP_COMP_RES_DFLT_AMOLED_KOHM	320
+#define QPNP_WLED_LOOP_COMP_RES_STEP_KOHM		20
+#define QPNP_WLED_LOOP_COMP_RES_MIN_KOHM		20
+#define QPNP_WLED_LOOP_COMP_RES_MAX_KOHM		320
+#define QPNP_WLED_VLOOP_COMP_GM_MASK			0xF0
+#define QPNP_WLED_VLOOP_COMP_GM_OVERWRITE		0x80
+#define QPNP_WLED_LOOP_EA_GM_DFLT_AMOLED		0x03
+#define QPNP_WLED_LOOP_EA_GM_MIN			0x0
+#define QPNP_WLED_LOOP_EA_GM_MAX			0xF
+#define QPNP_WLED_VREF_PSM_MASK				0xF8
+#define QPNP_WLED_VREF_PSM_STEP_MV			50
+#define QPNP_WLED_VREF_PSM_MIN_MV			400
+#define QPNP_WLED_VREF_PSM_MAX_MV			750
+#define QPNP_WLED_VREF_PSM_DFLT_AMOLED_MV		450
+#define QPNP_WLED_PSM_CTRL_OVERWRITE			0x80
+
+>>>>>>> 0e91d2a... Nougat
 #define QPNP_WLED_ILIM_MASK		0xF8
 #define QPNP_WLED_ILIM_MIN_MA		105
 #define QPNP_WLED_ILIM_MAX_MA		1980
@@ -61,14 +96,22 @@
 #define QPNP_WLED_BOOST_DUTY_MIN_NS	26
 #define QPNP_WLED_BOOST_DUTY_MAX_NS	156
 #define QPNP_WLED_DEF_BOOST_DUTY_NS	104
-#define QPNP_WLED_SWITCH_FREQ_MASK	0xF0
+#define QPNP_WLED_SWITCH_FREQ_MASK	0x70
 #define QPNP_WLED_SWITCH_FREQ_800_KHZ	800
 #define QPNP_WLED_SWITCH_FREQ_1600_KHZ	1600
+#define QPNP_WLED_SWITCH_FREQ_OVERWRITE 0x80
 #define QPNP_WLED_OVP_MASK		0xFC
 #define QPNP_WLED_OVP_17800_MV		17800
 #define QPNP_WLED_OVP_19400_MV		19400
 #define QPNP_WLED_OVP_29500_MV		29500
 #define QPNP_WLED_OVP_31000_MV		31000
+<<<<<<< HEAD
+=======
+#define QPNP_WLED_TEST4_EN_VREF_UP	0x32
+#define QPNP_WLED_INT_EN_SET_OVP_EN	0x02
+#define QPNP_WLED_OVP_FLT_SLEEP_US	10
+#define QPNP_WLED_TEST4_EN_IIND_UP	0x1
+>>>>>>> 0e91d2a... Nougat
 
 #define QPNP_WLED_CURR_SINK_REG(b)	(b + 0x46)
 #define QPNP_WLED_SYNC_REG(b)		(b + 0x47)
@@ -138,8 +181,17 @@
 #define QPNP_WLED_MODULE_EN_SHIFT	7
 #define QPNP_WLED_DISP_SEL_MASK		0x7F
 #define QPNP_WLED_DISP_SEL_SHIFT	7
-#define QPNP_WLED_EN_SC_MASK		0x7F
+#define QPNP_WLED_EN_SC_DEB_CYCLES_MASK	0x79
+#define QPNP_WLED_EN_DEB_CYCLES_MASK	0xF9
 #define QPNP_WLED_EN_SC_SHIFT		7
+<<<<<<< HEAD
+=======
+#define QPNP_WLED_SC_PRO_EN_DSCHGR	0x8
+#define QPNP_WLED_SC_DEB_CYCLES_MIN     2
+#define QPNP_WLED_SC_DEB_CYCLES_MAX     16
+#define QPNP_WLED_SC_DEB_CYCLES_SUB     2
+#define QPNP_WLED_SC_DEB_CYCLES_DFLT    4
+>>>>>>> 0e91d2a... Nougat
 #define QPNP_WLED_EXT_FET_DTEST2	0x09
 
 #define QPNP_WLED_SEC_ACCESS_REG(b)    (b + 0xD0)
@@ -152,6 +204,12 @@
 #define QPNP_WLED_STR_SIZE		20
 #define QPNP_WLED_MIN_MSLEEP		20
 #define QPNP_WLED_SC_DLY_MS		20
+
+#define NUM_SUPPORTED_AVDD_VOLTAGES		6
+#define QPNP_WLED_AVDD_DEFAULT_VOLTAGE_MV	7600
+#define QPNP_WLED_AVDD_MIN_TRIM_VALUE		0x0
+#define QPNP_WLED_AVDD_MAX_TRIM_VALUE		0xF
+#define QPNP_WLED_AVDD_SET_BIT			BIT(4)
 
 enum qpnp_wled_fdbk_op {
 	QPNP_WLED_FDBK_AUTO,
@@ -181,16 +239,31 @@ static u8 qpnp_wled_sink_dbg_regs[] = {
 	0xe6,
 };
 
+static int qpnp_wled_avdd_target_voltages[NUM_SUPPORTED_AVDD_VOLTAGES] = {
+	7900, 7600, 7300, 6400, 6100, 5800,
+};
+
+static u8 qpnp_wled_ovp_reg_settings[NUM_SUPPORTED_AVDD_VOLTAGES] = {
+	0x0, 0x0, 0x1, 0x2, 0x2, 0x3,
+};
+
+static int qpnp_wled_avdd_trim_adjustments[NUM_SUPPORTED_AVDD_VOLTAGES] = {
+	3, 0, -2, 7, 3, 3,
+};
+
 struct qpnp_wled {
 	struct led_classdev	cdev;
 	struct spmi_device *spmi;
 	struct work_struct work;
-	struct mutex lock;
 	enum qpnp_wled_fdbk_op fdbk_op;
 	enum qpnp_wled_dim_mode dim_mode;
 	int ovp_irq;
 	int sc_irq;
 	u32 sc_cnt;
+<<<<<<< HEAD
+=======
+	u32 avdd_target_voltage_mv;
+>>>>>>> 0e91d2a... Nougat
 	u16 ctrl_base;
 	u16 sink_base;
 	u16 mod_freq_khz;
@@ -241,6 +314,24 @@ static int qpnp_wled_write_reg(struct qpnp_wled *wled, u8 *data, u16 addr)
 	return rc;
 }
 
+static int qpnp_wled_masked_write_reg(struct qpnp_wled *wled, u8 mask, u8 *data,
+					u16 addr)
+{
+	u8 reg;
+	int rc;
+
+	rc = qpnp_wled_read_reg(wled, &reg, addr);
+	if (rc < 0)
+		return rc;
+
+	reg &= ~mask;
+	reg |= *data & mask;
+
+	rc = qpnp_wled_write_reg(wled, &reg, addr);
+
+	return rc;
+}
+
 static int qpnp_wled_sec_access(struct qpnp_wled *wled, u16 base_addr)
 {
 	int rc;
@@ -249,6 +340,31 @@ static int qpnp_wled_sec_access(struct qpnp_wled *wled, u16 base_addr)
 	rc = qpnp_wled_write_reg(wled, &reg,
 		QPNP_WLED_SEC_ACCESS_REG(base_addr));
 	if (rc)
+		return rc;
+
+	return 0;
+}
+
+static int qpnp_wled_sync_reg_toggle(struct qpnp_wled *wled)
+{
+	int rc;
+	u8 reg;
+
+	
+	reg = QPNP_WLED_SYNC;
+	rc = qpnp_wled_write_reg(wled, &reg,
+		QPNP_WLED_SYNC_REG(wled->sink_base));
+	if (rc < 0)
+		return rc;
+
+	if (wled->cons_sync_write_delay_us)
+		usleep_range(wled->cons_sync_write_delay_us,
+				wled->cons_sync_write_delay_us + 1);
+
+	reg = QPNP_WLED_SYNC_RESET;
+	rc = qpnp_wled_write_reg(wled, &reg,
+		QPNP_WLED_SYNC_REG(wled->sink_base));
+	if (rc < 0)
 		return rc;
 
 	return 0;
@@ -277,6 +393,7 @@ static int qpnp_wled_set_level(struct qpnp_wled *wled, int level)
 			return rc;
 	}
 
+<<<<<<< HEAD
 	
 	reg = QPNP_WLED_SYNC;
 	rc = qpnp_wled_write_reg(wled, &reg,
@@ -288,7 +405,13 @@ static int qpnp_wled_set_level(struct qpnp_wled *wled, int level)
 	rc = qpnp_wled_write_reg(wled, &reg,
 		QPNP_WLED_SYNC_REG(wled->sink_base));
 	if (rc < 0)
+=======
+	rc = qpnp_wled_sync_reg_toggle(wled);
+	if (rc < 0) {
+		dev_err(&wled->spmi->dev, "Failed to toggle sync reg %d\n", rc);
+>>>>>>> 0e91d2a... Nougat
 		return rc;
+	}
 
 	return 0;
 }
@@ -299,6 +422,18 @@ static int qpnp_wled_module_en(struct qpnp_wled *wled,
 	int rc;
 	u8 reg;
 
+<<<<<<< HEAD
+=======
+	
+	if (state) {
+		reg = QPNP_WLED_INT_EN_SET_OVP_EN;
+		rc = qpnp_wled_write_reg(wled, &reg,
+				QPNP_WLED_INT_EN_CLR(base_addr));
+		if (rc)
+			return rc;
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	rc = qpnp_wled_read_reg(wled, &reg,
 			QPNP_WLED_MODULE_EN_REG(base_addr));
 	if (rc < 0)
@@ -310,16 +445,157 @@ static int qpnp_wled_module_en(struct qpnp_wled *wled,
 	if (rc)
 		return rc;
 
+<<<<<<< HEAD
 	return 0;
 }
 
+=======
+	
+	if (state && (wled->ovp_irq > 0)) {
+		udelay(QPNP_WLED_OVP_FLT_SLEEP_US);
+		reg = QPNP_WLED_INT_EN_SET_OVP_EN;
+		rc = qpnp_wled_write_reg(wled, &reg,
+				QPNP_WLED_INT_EN_SET(base_addr));
+		if (rc)
+			return rc;
+	}
+
+	return 0;
+}
+
+static int qpnp_wled_flash_en_locked(struct qpnp_wled *wled, int en, int duration)
+{
+	int i, rc = 0;
+	u8 reg;
+	int fs, level, cabc;
+
+	if (en) {
+		if (wled->flash_enabled) {
+			pr_info("%s: already enabled\n", __func__);
+			rc = -EBUSY;
+			goto exit;
+		}
+
+		if (wled->fs_curr_ua_flash > 0 && wled->fs_curr_ua_flash <= QPNP_WLED_FS_CURR_MAX_UA)
+			fs = wled->fs_curr_ua_flash;
+		else
+			fs = QPNP_WLED_FS_CURR_MAX_UA;
+		level = WLED_MAX_LEVEL_4095;
+		cabc = false;
+
+		if (duration < 10)
+			duration = 10;
+		schedule_delayed_work(&wled->flash_work, msecs_to_jiffies(duration));
+	} else {
+		fs = wled->fs_curr_ua;
+		level = wled->cdev.brightness;
+		cabc = wled->en_cabc;
+	}
+	pr_info("%s: (%d, %d) [fs=%d, level=%d], %d strings\n",
+		__func__, en, duration, fs, level, wled->num_strings);
+
+	
+	for (i = 0; i < wled->num_strings; i++) {
+#if 0
+		reg = (cabc << QPNP_WLED_CABC_SHIFT);
+		rc = qpnp_wled_write_reg(wled, &reg,
+				QPNP_WLED_CABC_REG(wled->sink_base, i));
+		if (rc)
+			goto exit;
+#endif
+		reg = (fs / QPNP_WLED_FS_CURR_STEP_UA) & 0x0f;
+		rc = qpnp_wled_write_reg(wled, &reg,
+				QPNP_WLED_FS_CURR_REG(wled->sink_base, i));
+		if (rc)
+			goto exit;
+
+		reg = level & QPNP_WLED_BRIGHT_LSB_MASK;
+		rc = qpnp_wled_write_reg(wled, &reg,
+			QPNP_WLED_BRIGHT_LSB_REG(wled->sink_base, i));
+		if (rc < 0)
+			goto exit;
+
+		reg = level >> QPNP_WLED_BRIGHT_MSB_SHIFT;
+		reg = reg & QPNP_WLED_BRIGHT_MSB_MASK;
+		rc = qpnp_wled_write_reg(wled, &reg,
+			QPNP_WLED_BRIGHT_MSB_REG(wled->sink_base, i));
+		if (rc < 0)
+			goto exit;
+	}
+
+	
+	reg = QPNP_WLED_SYNC;
+	rc = qpnp_wled_write_reg(wled, &reg, QPNP_WLED_SYNC_REG(wled->sink_base));
+	if (rc < 0)
+		goto exit;
+
+	if (wled->cons_sync_write_delay_us)
+		usleep_range(wled->cons_sync_write_delay_us,
+				wled->cons_sync_write_delay_us + 1);
+
+	reg = QPNP_WLED_SYNC_RESET;
+	rc = qpnp_wled_write_reg(wled, &reg, QPNP_WLED_SYNC_REG(wled->sink_base));
+	if (rc < 0)
+		goto exit;
+
+	wled->flash_enabled = en;
+exit:
+	pr_info("%s: (%d, %d) done, rc=%d\n", __func__, en, duration, rc);
+
+	return rc;
+}
+
+static int qpnp_wled_flash_en(struct qpnp_wled *wled, int en, int duration)
+{
+	int rc = 0;
+
+	if (!en) {
+		cancel_delayed_work_sync(&wled->flash_work);
+	}
+
+	mutex_lock(&wled->cdev.led_access);
+	rc = qpnp_wled_flash_en_locked(wled, en, duration);
+	mutex_unlock(&wled->cdev.led_access);
+
+	return rc;
+}
+
+static void qpnp_wled_flash_off_work(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct qpnp_wled *wled = container_of(dwork, struct qpnp_wled, flash_work);
+
+	mutex_lock(&wled->cdev.led_access);
+	qpnp_wled_flash_en_locked(wled, 0, 0);
+	mutex_unlock(&wled->cdev.led_access);
+}
+
+static int qpnp_wled_flash_mode(struct htc_flashlight_dev *fl_dev, int mode1, int mode2)
+{
+	const int max_flash_ms = 500;
+	struct qpnp_wled *wled = container_of(fl_dev, struct qpnp_wled, flash_dev);
+
+	wled->fs_curr_ua_flash = QPNP_WLED_FS_CURR_MAX_UA;
+	return qpnp_wled_flash_en(wled, mode1, max_flash_ms);
+}
+
+static int qpnp_wled_torch_mode(struct htc_flashlight_dev *fl_dev, int mode1, int mode2)
+{
+	const int max_torch_ms = 10000;
+	struct qpnp_wled *wled = container_of(fl_dev, struct qpnp_wled, flash_dev);
+
+	wled->fs_curr_ua_flash = wled->fs_curr_ua;
+	return qpnp_wled_flash_en(wled, mode1, max_torch_ms);
+}
+
+>>>>>>> 0e91d2a... Nougat
 static ssize_t qpnp_wled_ramp_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct qpnp_wled *wled = dev_get_drvdata(dev);
 	int i, rc;
 
-	mutex_lock(&wled->lock);
+	mutex_lock(&wled->cdev.led_access);
 
 	if (!wled->cdev.brightness) {
 		rc = qpnp_wled_module_en(wled, wled->ctrl_base, true);
@@ -384,7 +660,7 @@ restore_brightness:
 			dev_err(&wled->spmi->dev, "wled enable failed\n");
 	}
 unlock_mutex:
-	mutex_unlock(&wled->lock);
+	mutex_unlock(&wled->cdev.led_access);
 
 	return count;
 }
@@ -583,6 +859,40 @@ static ssize_t qpnp_wled_fs_curr_ua_store(struct device *dev,
 
 	wled->fs_curr_ua = data;
 
+<<<<<<< HEAD
+=======
+	rc = qpnp_wled_sync_reg_toggle(wled);
+	if (rc < 0) {
+		dev_err(&wled->spmi->dev, "Failed to toggle sync reg %d\n", rc);
+		return rc;
+	}
+
+	return count;
+}
+
+static ssize_t qpnp_wled_flash_en_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct qpnp_wled *wled = dev_get_drvdata(dev);
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", wled->flash_enabled);
+}
+
+static ssize_t qpnp_wled_flash_en_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct qpnp_wled *wled = dev_get_drvdata(dev);
+	int data = 0, curr = 0, rc = 0;
+
+	if (sscanf(buf, "%d %d", &data, &curr) < 1)
+		return -EINVAL;
+	wled->fs_curr_ua_flash = curr;
+
+	rc = qpnp_wled_flash_en(wled, !!data, data);
+	if (rc)
+		return rc;
+
+>>>>>>> 0e91d2a... Nougat
 	return count;
 }
 
@@ -613,10 +923,9 @@ static void qpnp_wled_work(struct work_struct *work)
 	int level, rc;
 
 	wled = container_of(work, struct qpnp_wled, work);
+	mutex_lock(&wled->cdev.led_access);
 
 	level = wled->cdev.brightness;
-
-	mutex_lock(&wled->lock);
 
 	if (level) {
 		rc = qpnp_wled_set_level(wled, level);
@@ -634,7 +943,7 @@ static void qpnp_wled_work(struct work_struct *work)
 		goto unlock_mutex;
 	}
 unlock_mutex:
-	mutex_unlock(&wled->lock);
+	mutex_unlock(&wled->cdev.led_access);
 }
 
 static enum led_brightness qpnp_wled_get(struct led_classdev *led_cdev)
@@ -680,6 +989,99 @@ static int qpnp_wled_set_disp(struct qpnp_wled *wled, u16 base_addr)
 	if (rc)
 		return rc;
 
+<<<<<<< HEAD
+=======
+	if (wled->disp_type_amoled) {
+		
+		if (wled->vref_psm_mv < QPNP_WLED_VREF_PSM_MIN_MV)
+			wled->vref_psm_mv = QPNP_WLED_VREF_PSM_MIN_MV;
+		else if (wled->vref_psm_mv > QPNP_WLED_VREF_PSM_MAX_MV)
+			wled->vref_psm_mv = QPNP_WLED_VREF_PSM_MAX_MV;
+
+		rc = qpnp_wled_read_reg(wled, &reg,
+				QPNP_WLED_PSM_CTRL_REG(wled->ctrl_base));
+		if (rc < 0)
+			return rc;
+
+		reg &= QPNP_WLED_VREF_PSM_MASK;
+		reg |= ((wled->vref_psm_mv - QPNP_WLED_VREF_PSM_MIN_MV)/
+			QPNP_WLED_VREF_PSM_STEP_MV);
+		reg |= QPNP_WLED_PSM_CTRL_OVERWRITE;
+		rc = qpnp_wled_write_reg(wled, &reg,
+				QPNP_WLED_PSM_CTRL_REG(wled->ctrl_base));
+		if (rc)
+			return rc;
+
+		
+		if (wled->loop_comp_res_kohm < QPNP_WLED_LOOP_COMP_RES_MIN_KOHM)
+			wled->loop_comp_res_kohm =
+					QPNP_WLED_LOOP_COMP_RES_MIN_KOHM;
+		else if (wled->loop_comp_res_kohm >
+					QPNP_WLED_LOOP_COMP_RES_MAX_KOHM)
+			wled->loop_comp_res_kohm =
+					QPNP_WLED_LOOP_COMP_RES_MAX_KOHM;
+
+		rc = qpnp_wled_read_reg(wled, &reg,
+				QPNP_WLED_VLOOP_COMP_RES_REG(wled->ctrl_base));
+		if (rc < 0)
+			return rc;
+
+		reg &= QPNP_WLED_VLOOP_COMP_RES_MASK;
+		reg |= ((wled->loop_comp_res_kohm -
+				 QPNP_WLED_LOOP_COMP_RES_MIN_KOHM)/
+				 QPNP_WLED_LOOP_COMP_RES_STEP_KOHM);
+		reg |= QPNP_WLED_VLOOP_COMP_RES_OVERWRITE;
+		rc = qpnp_wled_write_reg(wled, &reg,
+				QPNP_WLED_VLOOP_COMP_RES_REG(wled->ctrl_base));
+		if (rc)
+			return rc;
+
+		
+		if (wled->loop_ea_gm < QPNP_WLED_LOOP_EA_GM_MIN)
+			wled->loop_ea_gm = QPNP_WLED_LOOP_EA_GM_MIN;
+		else if (wled->loop_ea_gm > QPNP_WLED_LOOP_EA_GM_MAX)
+			wled->loop_ea_gm = QPNP_WLED_LOOP_EA_GM_MAX;
+
+		rc = qpnp_wled_read_reg(wled, &reg,
+				QPNP_WLED_VLOOP_COMP_GM_REG(wled->ctrl_base));
+		if (rc < 0)
+			return rc;
+
+		reg &= QPNP_WLED_VLOOP_COMP_GM_MASK;
+		reg |= (wled->loop_ea_gm | QPNP_WLED_VLOOP_COMP_GM_OVERWRITE);
+		rc = qpnp_wled_write_reg(wled, &reg,
+				QPNP_WLED_VLOOP_COMP_GM_REG(wled->ctrl_base));
+		if (rc)
+			return rc;
+
+		
+		rc = qpnp_wled_read_reg(wled, &reg,
+				QPNP_WLED_TEST4_REG(wled->ctrl_base));
+		if (rc < 0)
+			return rc;
+
+		rc = qpnp_wled_sec_access(wled, base_addr);
+		if (rc)
+			return rc;
+
+		reg |= QPNP_WLED_TEST4_EN_IIND_UP;
+		rc = qpnp_wled_write_reg(wled, &reg,
+				QPNP_WLED_TEST4_REG(base_addr));
+		if (rc)
+			return rc;
+	} else {
+		rc = qpnp_wled_sec_access(wled, base_addr);
+		if (rc)
+			return rc;
+
+		reg = QPNP_WLED_TEST4_EN_VREF_UP;
+		rc = qpnp_wled_write_reg(wled, &reg,
+				QPNP_WLED_TEST4_REG(base_addr));
+		if (rc)
+			return rc;
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	return 0;
 }
 
@@ -769,6 +1171,13 @@ static int qpnp_wled_config(struct qpnp_wled *wled)
 	}
 
 	
+	reg = (wled->disp_type_amoled) ? 0 : 2;
+	rc = qpnp_wled_write_reg(wled, &reg,
+			QPNP_WLED_SOFTSTART_RAMP_DLY(wled->ctrl_base));
+	if (rc)
+		return rc;
+
+	
 	if (wled->boost_duty_ns < QPNP_WLED_BOOST_DUTY_MIN_NS)
 		wled->boost_duty_ns = QPNP_WLED_BOOST_DUTY_MIN_NS;
 	else if (wled->boost_duty_ns > QPNP_WLED_BOOST_DUTY_MAX_NS)
@@ -796,7 +1205,7 @@ static int qpnp_wled_config(struct qpnp_wled *wled)
 	if (rc < 0)
 		return rc;
 	reg &= QPNP_WLED_SWITCH_FREQ_MASK;
-	reg |= temp;
+	reg |= (temp | QPNP_WLED_SWITCH_FREQ_OVERWRITE);
 	rc = qpnp_wled_write_reg(wled, &reg,
 			QPNP_WLED_SWITCH_FREQ_REG(wled->ctrl_base));
 	if (rc)
@@ -828,6 +1237,59 @@ static int qpnp_wled_config(struct qpnp_wled *wled)
 	if (rc)
 		return rc;
 
+<<<<<<< HEAD
+=======
+	rc = qpnp_wled_read_reg(wled, &reg,
+			QPNP_WLED_CTRL_SPARE_REG(wled->ctrl_base));
+	if (rc < 0)
+		return rc;
+
+	if (wled->disp_type_amoled && !(reg & QPNP_WLED_AVDD_SET_BIT)) {
+		for (i = 0; i < NUM_SUPPORTED_AVDD_VOLTAGES; i++) {
+			if (wled->avdd_target_voltage_mv ==
+					qpnp_wled_avdd_target_voltages[i])
+				break;
+		}
+
+		if (i == NUM_SUPPORTED_AVDD_VOLTAGES) {
+			dev_err(&wled->spmi->dev,
+				"Invalid avdd target voltage specified in device tree\n");
+			return -EINVAL;
+		}
+
+		
+		reg = qpnp_wled_ovp_reg_settings[i];
+		rc = qpnp_wled_write_reg(wled, &reg,
+			QPNP_WLED_OVP_REG(wled->ctrl_base));
+		if (rc)
+			return rc;
+
+		
+		rc = qpnp_wled_read_reg(wled, &reg,
+			QPNP_WLED_REF_7P7_TRIM_REG(wled->ctrl_base));
+		if (rc)
+			return rc;
+		reg += qpnp_wled_avdd_trim_adjustments[i];
+		if ((s8)reg < QPNP_WLED_AVDD_MIN_TRIM_VALUE ||
+				(s8)reg > QPNP_WLED_AVDD_MAX_TRIM_VALUE) {
+			dev_info(&wled->spmi->dev,
+				 "adjusted trim %d is not within range, capping it\n",
+				 (s8)reg);
+			if ((s8)reg < QPNP_WLED_AVDD_MIN_TRIM_VALUE)
+				reg = QPNP_WLED_AVDD_MIN_TRIM_VALUE;
+			else
+				reg = QPNP_WLED_AVDD_MAX_TRIM_VALUE;
+		}
+		rc = qpnp_wled_sec_access(wled, wled->ctrl_base);
+		if (rc)
+			return rc;
+		rc = qpnp_wled_masked_write_reg(wled, QPNP_WLED_7P7_TRIM_MASK,
+			&reg, QPNP_WLED_REF_7P7_TRIM_REG(wled->ctrl_base));
+		if (rc)
+			return rc;
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	
 	if (wled->mod_freq_khz <= QPNP_WLED_MOD_FREQ_1200_KHZ) {
 		wled->mod_freq_khz = QPNP_WLED_MOD_FREQ_1200_KHZ;
@@ -1007,6 +1469,12 @@ static int qpnp_wled_config(struct qpnp_wled *wled)
 			return rc;
 	}
 
+	rc = qpnp_wled_sync_reg_toggle(wled);
+	if (rc < 0) {
+		dev_err(&wled->spmi->dev, "Failed to toggle sync reg %d\n", rc);
+		return rc;
+	}
+
 	
 	if (wled->ovp_irq >= 0) {
 		rc = devm_request_threaded_irq(&wled->spmi->dev, wled->ovp_irq,
@@ -1038,8 +1506,22 @@ static int qpnp_wled_config(struct qpnp_wled *wled)
 				QPNP_WLED_SC_PRO_REG(wled->ctrl_base));
 		if (rc < 0)
 			return rc;
-		reg &= QPNP_WLED_EN_SC_MASK;
+		reg &= QPNP_WLED_EN_SC_DEB_CYCLES_MASK;
 		reg |= 1 << QPNP_WLED_EN_SC_SHIFT;
+<<<<<<< HEAD
+=======
+
+		if (wled->sc_deb_cycles < QPNP_WLED_SC_DEB_CYCLES_MIN)
+			wled->sc_deb_cycles = QPNP_WLED_SC_DEB_CYCLES_MIN;
+		else if (wled->sc_deb_cycles > QPNP_WLED_SC_DEB_CYCLES_MAX)
+			wled->sc_deb_cycles = QPNP_WLED_SC_DEB_CYCLES_MAX;
+		temp = fls(wled->sc_deb_cycles) - QPNP_WLED_SC_DEB_CYCLES_SUB;
+		reg |= (temp << 1);
+
+		if (wled->disp_type_amoled)
+			reg |= QPNP_WLED_SC_PRO_EN_DSCHGR;
+
+>>>>>>> 0e91d2a... Nougat
 		rc = qpnp_wled_write_reg(wled, &reg,
 				QPNP_WLED_SC_PRO_REG(wled->ctrl_base));
 		if (rc)
@@ -1056,6 +1538,24 @@ static int qpnp_wled_config(struct qpnp_wled *wled)
 			if (rc)
 				return rc;
 		}
+	} else {
+		rc = qpnp_wled_read_reg(wled, &reg,
+				QPNP_WLED_SC_PRO_REG(wled->ctrl_base));
+		if (rc < 0)
+			return rc;
+		reg &= QPNP_WLED_EN_DEB_CYCLES_MASK;
+
+		if (wled->sc_deb_cycles < QPNP_WLED_SC_DEB_CYCLES_MIN)
+			wled->sc_deb_cycles = QPNP_WLED_SC_DEB_CYCLES_MIN;
+		else if (wled->sc_deb_cycles > QPNP_WLED_SC_DEB_CYCLES_MAX)
+			wled->sc_deb_cycles = QPNP_WLED_SC_DEB_CYCLES_MAX;
+		temp = fls(wled->sc_deb_cycles) - QPNP_WLED_SC_DEB_CYCLES_SUB;
+		reg |= (temp << 1);
+
+		rc = qpnp_wled_write_reg(wled, &reg,
+				QPNP_WLED_SC_PRO_REG(wled->ctrl_base));
+		if (rc)
+			return rc;
 	}
 
 	
@@ -1097,6 +1597,65 @@ static int qpnp_wled_parse_dt(struct qpnp_wled *wled)
 
 	wled->disp_type_amoled = of_property_read_bool(spmi->dev.of_node,
 				"qcom,disp-type-amoled");
+<<<<<<< HEAD
+=======
+	if (wled->disp_type_amoled) {
+		wled->vref_psm_mv = QPNP_WLED_VREF_PSM_DFLT_AMOLED_MV;
+		rc = of_property_read_u32(spmi->dev.of_node,
+				"qcom,vref-psm-mv", &temp_val);
+		if (!rc) {
+			wled->vref_psm_mv = temp_val;
+		} else if (rc != -EINVAL) {
+			dev_err(&spmi->dev, "Unable to read vref-psm\n");
+			return rc;
+		}
+
+		wled->loop_comp_res_kohm =
+			QPNP_WLED_LOOP_COMP_RES_DFLT_AMOLED_KOHM;
+		rc = of_property_read_u32(spmi->dev.of_node,
+				"qcom,loop-comp-res-kohm", &temp_val);
+		if (!rc) {
+			wled->loop_comp_res_kohm = temp_val;
+		} else if (rc != -EINVAL) {
+			dev_err(&spmi->dev, "Unable to read loop-comp-res-kohm\n");
+			return rc;
+		}
+
+		wled->loop_ea_gm = QPNP_WLED_LOOP_EA_GM_DFLT_AMOLED;
+		rc = of_property_read_u32(spmi->dev.of_node,
+				"qcom,loop-ea-gm", &temp_val);
+		if (!rc) {
+			wled->loop_ea_gm = temp_val;
+		} else if (rc != -EINVAL) {
+			dev_err(&spmi->dev, "Unable to read loop-ea-gm\n");
+			return rc;
+		}
+
+		rc = of_property_read_u32(spmi->dev.of_node,
+				"qcom,avdd-target-voltage-mv", &temp_val);
+		if (!rc) {
+			wled->avdd_target_voltage_mv = temp_val;
+		} else {
+			if (rc != -EINVAL)
+				return rc;
+			dev_info(&spmi->dev,
+				 "qcom,avdd-target-voltage-mv not specified. Using default value of %d\n",
+				 QPNP_WLED_AVDD_DEFAULT_VOLTAGE_MV);
+			wled->avdd_target_voltage_mv =
+				QPNP_WLED_AVDD_DEFAULT_VOLTAGE_MV;
+		}
+	}
+
+	wled->sc_deb_cycles = QPNP_WLED_SC_DEB_CYCLES_DFLT;
+	rc = of_property_read_u32(spmi->dev.of_node,
+			"qcom,sc-deb-cycles", &temp_val);
+	if (!rc) {
+		wled->sc_deb_cycles = temp_val;
+	} else if (rc != -EINVAL) {
+		dev_err(&spmi->dev, "Unable to read sc debounce cycles\n");
+		return rc;
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	wled->fdbk_op = QPNP_WLED_FDBK_AUTO;
 	rc = of_property_read_string(spmi->dev.of_node,
@@ -1301,7 +1860,6 @@ static int qpnp_wled_probe(struct spmi_device *spmi)
 		return rc;
 	}
 
-	mutex_init(&wled->lock);
 	INIT_WORK(&wled->work, qpnp_wled_work);
 	wled->ramp_ms = QPNP_WLED_RAMP_DLY_MS;
 	wled->ramp_step = 1;
@@ -1335,7 +1893,6 @@ sysfs_fail:
 	led_classdev_unregister(&wled->cdev);
 wled_register_fail:
 	cancel_work_sync(&wled->work);
-	mutex_destroy(&wled->lock);
 	return rc;
 }
 
@@ -1350,7 +1907,6 @@ static int qpnp_wled_remove(struct spmi_device *spmi)
 
 	led_classdev_unregister(&wled->cdev);
 	cancel_work_sync(&wled->work);
-	mutex_destroy(&wled->lock);
 
 	return 0;
 }

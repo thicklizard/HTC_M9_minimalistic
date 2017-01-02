@@ -58,7 +58,30 @@ static const char Unused_file[] = "Unused swap file entry ";
 static const char Bad_offset[] = "Bad swap offset entry ";
 static const char Unused_offset[] = "Unused swap offset entry ";
 
+<<<<<<< HEAD
 struct swap_list_t swap_list = {-1, -1};
+=======
+/*
+ * all active swap_info_structs
+ * protected with swap_lock, and ordered by priority.
+ */
+PLIST_HEAD(swap_active_head);
+
+/*
+ * all available (active, not full) swap_info_structs
+ * protected with swap_avail_lock, ordered by priority.
+ * This is used by get_swap_page() instead of swap_active_head
+ * because swap_active_head includes all swap_info_structs,
+ * but get_swap_page() doesn't need to look at full ones.
+ * This uses its own lock instead of swap_lock because when a
+ * swap_info_struct changes between not-full/full, it needs to
+ * add/remove itself to/from this list, but the swap_info_struct->lock
+ * is held and the locking order requires swap_lock to be taken
+ * before any swap_info_struct->lock.
+ */
+PLIST_HEAD(swap_avail_head);
+DEFINE_SPINLOCK(swap_avail_lock);
+>>>>>>> 0e91d2a... Nougat
 
 struct swap_info_struct *swap_info[MAX_SWAPFILES];
 
@@ -195,7 +218,65 @@ static void discard_swap_cluster(struct swap_info_struct *si,
 	}
 }
 
+<<<<<<< HEAD
 static int wait_for_discard(void *word)
+=======
+#define LATENCY_LIMIT		256
+
+static inline void cluster_set_flag(struct swap_cluster_info *info,
+	unsigned int flag)
+{
+	info->flags = flag;
+}
+
+static inline unsigned int cluster_count(struct swap_cluster_info *info)
+{
+	return info->data;
+}
+
+static inline void cluster_set_count(struct swap_cluster_info *info,
+				     unsigned int c)
+{
+	info->data = c;
+}
+
+static inline void cluster_set_count_flag(struct swap_cluster_info *info,
+					 unsigned int c, unsigned int f)
+{
+	info->flags = f;
+	info->data = c;
+}
+
+static inline unsigned int cluster_next(struct swap_cluster_info *info)
+{
+	return info->data;
+}
+
+static inline void cluster_set_next(struct swap_cluster_info *info,
+				    unsigned int n)
+{
+	info->data = n;
+}
+
+static inline void cluster_set_next_flag(struct swap_cluster_info *info,
+					 unsigned int n, unsigned int f)
+{
+	info->flags = f;
+	info->data = n;
+}
+
+static inline bool cluster_is_free(struct swap_cluster_info *info)
+{
+	return info->flags & CLUSTER_FLAG_FREE;
+}
+
+static inline bool cluster_is_null(struct swap_cluster_info *info)
+{
+	return info->flags & CLUSTER_FLAG_NEXT_NULL;
+}
+
+static inline void cluster_set_null(struct swap_cluster_info *info)
+>>>>>>> 0e91d2a... Nougat
 {
 	schedule();
 	return 0;
@@ -439,15 +520,20 @@ swp_entry_t get_swap_page(void)
 {
 	struct swap_info_struct *si;
 	pgoff_t offset;
+<<<<<<< HEAD
 	int type, next;
 	int wrapped = 0;
 	int hp_index;
+=======
+	int swap_ratio_off = 0;
+>>>>>>> 0e91d2a... Nougat
 
 	spin_lock(&swap_lock);
 	if (atomic_long_read(&nr_swap_pages) <= 0)
 		goto noswap;
 	atomic_long_dec(&nr_swap_pages);
 
+<<<<<<< HEAD
 	for (type = swap_list.next; type >= 0 && wrapped < 2; type = next) {
 		hp_index = atomic_xchg(&highest_priority_index, -1);
 		/*
@@ -477,6 +563,35 @@ swp_entry_t get_swap_page(void)
 			wrapped++;
 		}
 
+=======
+lock_and_start:
+	spin_lock(&swap_avail_lock);
+
+start_over:
+	plist_for_each_entry_safe(si, next, &swap_avail_head, avail_list) {
+
+		if (sysctl_swap_ratio && !swap_ratio_off) {
+			int ret;
+
+			spin_unlock(&swap_avail_lock);
+			ret = swap_ratio(&si);
+			if (0 > ret) {
+				/*
+				 * Error. Start again with swap
+				 * ratio disabled.
+				 */
+				swap_ratio_off = 1;
+				goto lock_and_start;
+			} else {
+				goto start;
+			}
+		}
+
+		/* requeue si to after same-priority siblings */
+		plist_requeue(&si->avail_list, &swap_avail_head);
+		spin_unlock(&swap_avail_lock);
+start:
+>>>>>>> 0e91d2a... Nougat
 		spin_lock(&si->lock);
 		if (!si->highest_bit) {
 			spin_unlock(&si->lock);
@@ -690,6 +805,48 @@ int page_swapcount(struct page *page)
 		count = swap_count(p->swap_map[swp_offset(entry)]);
 		spin_unlock(&p->lock);
 	}
+	return count;
+}
+
+/*
+ * How many references to @entry are currently swapped out?
+ * This considers COUNT_CONTINUED so it returns exact answer.
+ */
+int swp_swapcount(swp_entry_t entry)
+{
+	int count, tmp_count, n;
+	struct swap_info_struct *p;
+	struct page *page;
+	pgoff_t offset;
+	unsigned char *map;
+
+	p = swap_info_get(entry);
+	if (!p)
+		return 0;
+
+	count = swap_count(p->swap_map[swp_offset(entry)]);
+	if (!(count & COUNT_CONTINUED))
+		goto out;
+
+	count &= ~COUNT_CONTINUED;
+	n = SWAP_MAP_MAX + 1;
+
+	offset = swp_offset(entry);
+	page = vmalloc_to_page(p->swap_map + offset);
+	offset &= ~PAGE_MASK;
+	VM_BUG_ON(page_private(page) != SWP_CONTINUED);
+
+	do {
+		page = list_entry(page->lru.next, struct page, lru);
+		map = kmap_atomic(page);
+		tmp_count = map[offset];
+		kunmap_atomic(map);
+
+		count += (tmp_count & ~COUNT_CONTINUED) * n;
+		n *= (SWAP_CONT_MAX + 1);
+	} while (tmp_count & COUNT_CONTINUED);
+out:
+	spin_unlock(&p->lock);
 	return count;
 }
 
@@ -2154,10 +2311,16 @@ SYSCALL_DEFINE2(swapon, const char __user *, specialfile, int, swap_flags)
 
 	mutex_lock(&swapon_mutex);
 	prio = -1;
-	if (swap_flags & SWAP_FLAG_PREFER)
+	if (swap_flags & SWAP_FLAG_PREFER) {
 		prio =
 		  (swap_flags & SWAP_FLAG_PRIO_MASK) >> SWAP_FLAG_PRIO_SHIFT;
+<<<<<<< HEAD
 	enable_swap_info(p, prio, swap_map, frontswap_map);
+=======
+		setup_swap_ratio(p, prio);
+	}
+	enable_swap_info(p, prio, swap_map, cluster_info, frontswap_map);
+>>>>>>> 0e91d2a... Nougat
 
 	printk(KERN_INFO "Adding %uk swap on %s.  "
 			"Priority:%d extents:%d across:%lluk %s%s%s\n",

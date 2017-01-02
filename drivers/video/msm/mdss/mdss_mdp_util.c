@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -31,6 +31,7 @@
 #include "mdss_debug.h"
 #include "mdss_panel.h"
 
+<<<<<<< HEAD
 enum {
 	MDP_INTR_VSYNC_INTF_0,
 	MDP_INTR_VSYNC_INTF_1,
@@ -91,17 +92,21 @@ static int mdss_mdp_intr2index(u32 intr_type, u32 intf_num)
 
 int mdss_mdp_set_intr_callback(u32 intr_type, u32 intf_num,
 			       void (*fnc_ptr)(void *), void *arg)
-{
-	unsigned long flags;
-	int index;
+=======
+#define PHY_ADDR_4G (1ULL<<32)
 
-	index = mdss_mdp_intr2index(intr_type, intf_num);
-	if (index < 0) {
-		pr_warn("invalid intr type=%u intf_num=%u\n",
-				intr_type, intf_num);
-		return -EINVAL;
+void mdss_mdp_format_flag_removal(u32 *table, u32 num, u32 remove_bits)
+>>>>>>> 0e91d2a... Nougat
+{
+	struct mdss_mdp_format_params *fmt = NULL;
+	int i, j;
+
+	if (table == NULL) {
+		pr_err("Null table provided\n");
+		return;
 	}
 
+<<<<<<< HEAD
 	spin_lock_irqsave(&mdss_mdp_intr_lock, flags);
 	WARN(mdp_intr_cb[index].func && fnc_ptr,
 		"replacing current intr callback for ndx=%d\n", index);
@@ -113,20 +118,37 @@ int mdss_mdp_set_intr_callback(u32 intr_type, u32 intf_num,
 }
 
 static inline void mdss_mdp_intr_done(int index)
-{
-	void (*fnc)(void *);
-	void *arg;
-
-	spin_lock(&mdss_mdp_intr_lock);
-	fnc = mdp_intr_cb[index].func;
-	arg = mdp_intr_cb[index].arg;
-	spin_unlock(&mdss_mdp_intr_lock);
-	if (fnc)
-		fnc(arg);
+=======
+	for (i = 0; i < num; i++) {
+		for (j = 0; j < ARRAY_SIZE(mdss_mdp_format_map); j++) {
+			fmt = &mdss_mdp_format_map[i];
+			if (table[i] == fmt->format) {
+				fmt->flag &= ~remove_bits;
+				break;
+			}
+		}
+	}
 }
 
-irqreturn_t mdss_mdp_isr(int irq, void *ptr)
+#define SET_BIT(value, bit_num) \
+	{ \
+		value[bit_num >> 3] |= (1 << (bit_num & 7)); \
+	}
+static inline void __set_pipes_supported_fmt(struct mdss_mdp_pipe *pipe_list,
+		int count, struct mdss_mdp_format_params *fmt)
+>>>>>>> 0e91d2a... Nougat
 {
+	struct mdss_mdp_pipe *pipe = pipe_list;
+	int i, j;
+
+	for (i = 0; i < count; i++, pipe += j)
+		for (j = 0; j < pipe->multirect.max_rects; j++)
+			SET_BIT(pipe[j].supported_formats, fmt->format);
+}
+
+void mdss_mdp_set_supported_formats(struct mdss_data_type *mdata)
+{
+<<<<<<< HEAD
 	struct mdss_data_type *mdata = ptr;
 	u32 isr, mask, hist_isr, hist_mask;
 
@@ -206,35 +228,57 @@ irqreturn_t mdss_mdp_isr(int irq, void *ptr)
 		mdss_mdp_intr_done(MDP_INTR_WB_0);
 		mdss_misr_crc_collect(mdata, DISPLAY_MISR_MDP);
 	}
+=======
+	struct mdss_mdp_writeback *wb = mdata->wb;
+	bool has_tile = mdata->highest_bank_bit && !mdata->has_ubwc;
+	bool has_ubwc = mdata->has_ubwc;
+	int i;
+	int j;
+>>>>>>> 0e91d2a... Nougat
 
-	if (isr & MDSS_MDP_INTR_WB_1_DONE) {
-		mdss_mdp_intr_done(MDP_INTR_WB_1);
-		mdss_misr_crc_collect(mdata, DISPLAY_MISR_MDP);
+	for (i = 0; i < ARRAY_SIZE(mdss_mdp_format_map); i++) {
+		struct mdss_mdp_format_params *fmt = &mdss_mdp_format_map[i];
+
+		if ((fmt->fetch_mode == MDSS_MDP_FETCH_TILE && has_tile) ||
+			(fmt->fetch_mode == MDSS_MDP_FETCH_LINEAR)) {
+			if (fmt->unpack_dx_format &&
+				!test_bit(MDSS_CAPS_10_BIT_SUPPORTED,
+				mdata->mdss_caps_map))
+				continue;
+
+			__set_pipes_supported_fmt(mdata->vig_pipes,
+					mdata->nvig_pipes, fmt);
+
+			if (fmt->flag & VALID_ROT_WB_FORMAT) {
+				for (j = 0; j < mdata->nwb; j++)
+					SET_BIT(wb[j].supported_input_formats,
+							fmt->format);
+			}
+			if (fmt->flag & VALID_MDP_WB_INTF_FORMAT) {
+				for (j = 0; j < mdata->nwb; j++)
+					SET_BIT(wb[j].supported_output_formats,
+							fmt->format);
+			}
+			if (fmt->flag & VALID_MDP_CURSOR_FORMAT &&
+					mdata->ncursor_pipes) {
+				__set_pipes_supported_fmt(mdata->cursor_pipes,
+						mdata->ncursor_pipes, fmt);
+			}
+
+			if (!fmt->is_yuv) {
+				__set_pipes_supported_fmt(mdata->rgb_pipes,
+						mdata->nrgb_pipes, fmt);
+				__set_pipes_supported_fmt(mdata->dma_pipes,
+						mdata->ndma_pipes, fmt);
+			}
+		}
 	}
 
-	if (isr & ((mdata->mdp_rev == MDSS_MDP_HW_REV_108) ?
-		MDSS_MDP_INTR_WB_2_DONE >> 2 : MDSS_MDP_INTR_WB_2_DONE)) {
-		mdss_mdp_intr_done(MDP_INTR_WB_2);
-		mdss_misr_crc_collect(mdata, DISPLAY_MISR_MDP);
-	}
+	for (i = 0; i < ARRAY_SIZE(mdss_mdp_format_ubwc_map) && has_ubwc; i++) {
+		struct mdss_mdp_format_params *fmt =
+			&mdss_mdp_format_ubwc_map[i].mdp_format;
 
-mdp_isr_done:
-	hist_isr = readl_relaxed(mdata->mdp_base +
-			MDSS_MDP_REG_HIST_INTR_STATUS);
-	if (hist_isr == 0)
-		goto hist_isr_done;
-	hist_mask = readl_relaxed(mdata->mdp_base +
-			MDSS_MDP_REG_HIST_INTR_EN);
-	writel_relaxed(hist_isr, mdata->mdp_base +
-		MDSS_MDP_REG_HIST_INTR_CLEAR);
-	hist_isr &= hist_mask;
-	if (hist_isr == 0)
-		goto hist_isr_done;
-	mdss_mdp_hist_intr_done(hist_isr);
-hist_isr_done:
-	return IRQ_HANDLED;
-}
-
+<<<<<<< HEAD
 struct mdss_mdp_format_params *mdss_mdp_get_format_params(u32 format)
 {
 	if (format < MDP_IMGTYPE_LIMIT) {
@@ -242,11 +286,115 @@ struct mdss_mdp_format_params *mdss_mdp_get_format_params(u32 format)
 		int i;
 		for (i = 0; i < ARRAY_SIZE(mdss_mdp_format_map); i++) {
 			fmt = &mdss_mdp_format_map[i];
+=======
+		if (fmt->unpack_dx_format &&
+			!test_bit(MDSS_CAPS_10_BIT_SUPPORTED,
+			mdata->mdss_caps_map))
+			continue;
+
+		__set_pipes_supported_fmt(mdata->vig_pipes,
+				mdata->nvig_pipes, fmt);
+
+		if (fmt->flag & VALID_ROT_WB_FORMAT) {
+			for (j = 0; j < mdata->nwb; j++)
+				SET_BIT(wb[j].supported_input_formats,
+						fmt->format);
+		}
+		if (fmt->flag & VALID_MDP_WB_INTF_FORMAT) {
+			for (j = 0; j < mdata->nwb; j++)
+				SET_BIT(wb[j].supported_output_formats,
+						fmt->format);
+		}
+		if (fmt->flag & VALID_MDP_CURSOR_FORMAT &&
+				mdata->ncursor_pipes) {
+			__set_pipes_supported_fmt(mdata->cursor_pipes,
+					mdata->ncursor_pipes, fmt);
+		}
+
+		if (!fmt->is_yuv) {
+			__set_pipes_supported_fmt(mdata->rgb_pipes,
+					mdata->nrgb_pipes, fmt);
+			__set_pipes_supported_fmt(mdata->dma_pipes,
+					mdata->ndma_pipes, fmt);
+		}
+	}
+}
+
+struct mdss_mdp_format_params *mdss_mdp_get_format_params(u32 format)
+{
+	struct mdss_mdp_format_params *fmt = NULL;
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+	int i;
+	bool fmt_found = false;
+
+	for (i = 0; i < ARRAY_SIZE(mdss_mdp_format_map); i++) {
+		fmt = &mdss_mdp_format_map[i];
+		if (format == fmt->format) {
+			fmt_found = true;
+			break;
+		}
+	}
+
+	if (!fmt_found) {
+		for (i = 0; i < ARRAY_SIZE(mdss_mdp_format_ubwc_map); i++) {
+			fmt = &mdss_mdp_format_ubwc_map[i].mdp_format;
+>>>>>>> 0e91d2a... Nougat
 			if (format == fmt->format)
 				return fmt;
 		}
 	}
+<<<<<<< HEAD
 	return NULL;
+=======
+
+	return (mdss_mdp_is_ubwc_format(fmt) &&
+		!mdss_mdp_is_ubwc_supported(mdata)) ? NULL : fmt;
+}
+
+int mdss_mdp_get_ubwc_micro_dim(u32 format, u16 *w, u16 *h)
+{
+	struct mdss_mdp_format_params_ubwc *fmt = NULL;
+	bool fmt_found = false;
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(mdss_mdp_format_ubwc_map); i++) {
+		fmt = &mdss_mdp_format_ubwc_map[i];
+		if (format == fmt->mdp_format.format) {
+			fmt_found = true;
+			break;
+		}
+	}
+
+	if (!fmt_found)
+		return -EINVAL;
+
+	*w = fmt->micro.tile_width;
+	*h = fmt->micro.tile_height;
+	return 0;
+}
+
+void mdss_mdp_get_v_h_subsample_rate(u8 chroma_sample,
+		u8 *v_sample, u8 *h_sample)
+{
+	switch (chroma_sample) {
+	case MDSS_MDP_CHROMA_H2V1:
+		*v_sample = 1;
+		*h_sample = 2;
+		break;
+	case MDSS_MDP_CHROMA_H1V2:
+		*v_sample = 2;
+		*h_sample = 1;
+		break;
+	case MDSS_MDP_CHROMA_420:
+		*v_sample = 2;
+		*h_sample = 2;
+		break;
+	default:
+		*v_sample = 1;
+		*h_sample = 1;
+		break;
+	}
+>>>>>>> 0e91d2a... Nougat
 }
 
 void mdss_mdp_intersect_rect(struct mdss_rect *res_rect,
@@ -429,7 +577,115 @@ int mdss_mdp_get_rau_strides(u32 w, u32 h,
 	return 0;
 }
 
+<<<<<<< HEAD
 int mdss_mdp_get_plane_sizes(u32 format, u32 w, u32 h,
+=======
+static int mdss_mdp_get_ubwc_plane_size(struct mdss_mdp_format_params *fmt,
+	u32 width, u32 height, struct mdss_mdp_plane_sizes *ps)
+{
+	int rc = 0;
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+	struct mdss_mdp_format_params_ubwc *fmt_ubwc =
+		(struct mdss_mdp_format_params_ubwc *)fmt;
+
+	if (!mdss_mdp_is_ubwc_supported(mdata)) {
+		pr_err("ubwc format is not supported for format: %d\n",
+			fmt->format);
+		return -EINVAL;
+	}
+
+	if (fmt->format == MDP_Y_CBCR_H2V2_UBWC ||
+		fmt->format == MDP_Y_CBCR_H2V2_TP10_UBWC) {
+		uint32_t y_stride_alignment, uv_stride_alignment;
+		uint32_t y_height_alignment, uv_height_alignment;
+		uint32_t y_tile_width = fmt_ubwc->micro.tile_width;
+		uint32_t y_tile_height = fmt_ubwc->micro.tile_height;
+		uint32_t uv_tile_width = y_tile_width / 2;
+		uint32_t uv_tile_height = y_tile_height;
+		uint32_t y_bpp_numer = 1, y_bpp_denom = 1;
+		uint32_t uv_bpp_numer = 1, uv_bpp_denom = 1;
+
+		ps->num_planes = 4;
+		if (fmt->format == MDP_Y_CBCR_H2V2_UBWC) {
+			y_stride_alignment = 128;
+			uv_stride_alignment = 64;
+			y_height_alignment = 32;
+			uv_height_alignment = 32;
+			y_bpp_numer = 1;
+			uv_bpp_numer = 2;
+			y_bpp_denom = 1;
+			uv_bpp_denom = 1;
+		} else if (fmt->format == MDP_Y_CBCR_H2V2_TP10_UBWC) {
+			y_stride_alignment = 192;
+			uv_stride_alignment = 96;
+			y_height_alignment = 16;
+			uv_height_alignment = 16;
+			y_bpp_numer = 4;
+			uv_bpp_numer = 8;
+			y_bpp_denom = 3;
+			uv_bpp_denom = 3;
+		}
+
+		/* Y bitstream stride and plane size */
+		ps->ystride[0] = ALIGN(width, y_stride_alignment);
+		ps->ystride[0] = (ps->ystride[0] * y_bpp_numer) / y_bpp_denom;
+		ps->plane_size[0] = ALIGN(ps->ystride[0] *
+			ALIGN(height, y_height_alignment), 4096);
+
+		/* CbCr bitstream stride and plane size */
+		ps->ystride[1] = ALIGN(width / 2, uv_stride_alignment);
+		ps->ystride[1] = (ps->ystride[1] * uv_bpp_numer) / uv_bpp_denom;
+		ps->plane_size[1] = ALIGN(ps->ystride[1] *
+			ALIGN(height / 2, uv_height_alignment), 4096);
+
+		/* Y meta data stride and plane size */
+		ps->ystride[2] = ALIGN(DIV_ROUND_UP(width, y_tile_width), 64);
+		ps->plane_size[2] = ALIGN(ps->ystride[2] *
+			ALIGN(DIV_ROUND_UP(height, y_tile_height), 16), 4096);
+
+		/* CbCr meta data stride and plane size */
+		ps->ystride[3] =
+			ALIGN(DIV_ROUND_UP(width / 2, uv_tile_width), 64);
+		ps->plane_size[3] = ALIGN(ps->ystride[3] * ALIGN(
+			DIV_ROUND_UP(height / 2, uv_tile_height), 16), 4096);
+	} else if (fmt->format == MDP_RGBA_8888_UBWC ||
+		fmt->format == MDP_RGBX_8888_UBWC ||
+		fmt->format == MDP_RGB_565_UBWC ||
+		fmt->format == MDP_RGBA_1010102_UBWC ||
+		fmt->format == MDP_RGBX_1010102_UBWC) {
+		uint32_t stride_alignment, bpp, aligned_bitstream_width;
+
+		if (fmt->format == MDP_RGB_565_UBWC) {
+			stride_alignment = 128;
+			bpp = 2;
+		} else {
+			stride_alignment = 64;
+			bpp = 4;
+		}
+		ps->num_planes = 2;
+
+		/* RGB bitstream stride and plane size */
+		aligned_bitstream_width = ALIGN(width, stride_alignment);
+		ps->ystride[0] = aligned_bitstream_width * bpp;
+		ps->plane_size[0] = ALIGN(bpp * aligned_bitstream_width *
+			ALIGN(height, 16), 4096);
+
+		/* RGB meta data stride and plane size */
+		ps->ystride[2] =
+			ALIGN(DIV_ROUND_UP(aligned_bitstream_width, 16), 64);
+		ps->plane_size[2] = ALIGN(ps->ystride[2] *
+			ALIGN(DIV_ROUND_UP(height, 4), 16), 4096);
+	} else {
+		pr_err("%s: UBWC format not supported for fmt:%d\n",
+			__func__, fmt->format);
+		rc = -EINVAL;
+	}
+
+	return rc;
+}
+
+int mdss_mdp_get_plane_sizes(struct mdss_mdp_format_params *fmt, u32 w, u32 h,
+>>>>>>> 0e91d2a... Nougat
 	struct mdss_mdp_plane_sizes *ps, u32 bwc_mode, bool rotation)
 {
 	struct mdss_mdp_format_params *fmt;
@@ -488,6 +744,7 @@ int mdss_mdp_get_plane_sizes(u32 format, u32 w, u32 h,
 
 			chroma_samp = fmt->chroma_sample;
 
+<<<<<<< HEAD
 			if (rotation) {
 				if (chroma_samp == MDSS_MDP_CHROMA_H2V1)
 					chroma_samp = MDSS_MDP_CHROMA_H1V2;
@@ -502,6 +759,10 @@ int mdss_mdp_get_plane_sizes(u32 format, u32 w, u32 h,
 			}
 			horiz = hmap[chroma_samp];
 			vert = vmap[chroma_samp];
+=======
+			mdss_mdp_get_v_h_subsample_rate(chroma_samp,
+				&v_subsample, &h_subsample);
+>>>>>>> 0e91d2a... Nougat
 
 			switch (format) {
 			case MDP_Y_CR_CB_GH2V2:
@@ -513,6 +774,8 @@ int mdss_mdp_get_plane_sizes(u32 format, u32 w, u32 h,
 				height_align = 1;
 				break;
 			}
+
+			w = w << fmt->unpack_dx_format;
 
 			ps->ystride[0] = ALIGN(w, stride_align);
 			ps->ystride[1] = ALIGN(w / horiz, stride_align);
@@ -534,6 +797,125 @@ int mdss_mdp_get_plane_sizes(u32 format, u32 w, u32 h,
 	for (i = 0; i < ps->num_planes; i++)
 		ps->total_size += ps->plane_size[i];
 
+<<<<<<< HEAD
+=======
+	return rc;
+}
+
+static int mdss_mdp_ubwc_data_check(struct mdss_mdp_data *data,
+			struct mdss_mdp_plane_sizes *ps,
+			struct mdss_mdp_format_params *fmt)
+{
+	int i, inc;
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+	unsigned long data_size = 0;
+	dma_addr_t base_addr;
+
+	if (!mdss_mdp_is_ubwc_supported(mdata)) {
+		pr_err("ubwc format is not supported for format: %d\n",
+			fmt->format);
+		return -ENOTSUPP;
+	}
+
+	if (data->p[0].len == ps->plane_size[0])
+		goto end;
+
+	/* From this point, assumption is plane 0 is to be divided */
+	data_size = data->p[0].len;
+	if (data_size < ps->total_size) {
+		pr_err("insufficient current mem len=%lu required mem len=%u\n",
+		       data_size, ps->total_size);
+		return -ENOMEM;
+	}
+
+	base_addr = data->p[0].addr;
+
+	if (fmt->format == MDP_Y_CBCR_H2V2_UBWC ||
+		fmt->format == MDP_Y_CBCR_H2V2_TP10_UBWC) {
+		/************************************************/
+		/*      UBWC            **                      */
+		/*      buffer          **      MDP PLANE       */
+		/*      format          **                      */
+		/************************************************/
+		/* -------------------  ** -------------------- */
+		/* |      Y meta     |  ** |    Y bitstream   | */
+		/* |       data      |  ** |       plane      | */
+		/* -------------------  ** -------------------- */
+		/* |    Y bitstream  |  ** |  CbCr bitstream  | */
+		/* |       data      |  ** |       plane      | */
+		/* -------------------  ** -------------------- */
+		/* |   Cbcr metadata |  ** |       Y meta     | */
+		/* |       data      |  ** |       plane      | */
+		/* -------------------  ** -------------------- */
+		/* |  CbCr bitstream |  ** |     CbCr meta    | */
+		/* |       data      |  ** |       plane      | */
+		/* -------------------  ** -------------------- */
+		/************************************************/
+
+		/* configure Y bitstream plane */
+		data->p[0].addr = base_addr + ps->plane_size[2];
+		data->p[0].len = ps->plane_size[0];
+
+		/* configure CbCr bitstream plane */
+		data->p[1].addr = base_addr + ps->plane_size[0]
+			+ ps->plane_size[2] + ps->plane_size[3];
+		data->p[1].len = ps->plane_size[1];
+
+		/* configure Y metadata plane */
+		data->p[2].addr = base_addr;
+		data->p[2].len = ps->plane_size[2];
+
+		/* configure CbCr metadata plane */
+		data->p[3].addr = base_addr + ps->plane_size[0]
+			+ ps->plane_size[2];
+		data->p[3].len = ps->plane_size[3];
+	} else {
+		/************************************************/
+		/*      UBWC            **                      */
+		/*      buffer          **      MDP PLANE       */
+		/*      format          **                      */
+		/************************************************/
+		/* -------------------  ** -------------------- */
+		/* |      RGB meta   |  ** |   RGB bitstream  | */
+		/* |       data      |  ** |       plane      | */
+		/* -------------------  ** -------------------- */
+		/* |  RGB bitstream  |  ** |       NONE       | */
+		/* |       data      |  ** |                  | */
+		/* -------------------  ** -------------------- */
+		/*                      ** |     RGB meta     | */
+		/*                      ** |       plane      | */
+		/*                      ** -------------------- */
+		/************************************************/
+
+		/* configure RGB bitstream plane */
+		data->p[0].addr = base_addr + ps->plane_size[2];
+		data->p[0].len = ps->plane_size[0];
+
+		/* configure RGB metadata plane */
+		data->p[2].addr = base_addr;
+		data->p[2].len = ps->plane_size[2];
+	}
+	data->num_planes = ps->num_planes;
+
+end:
+	if (data->num_planes != ps->num_planes) {
+		pr_err("num_planes don't match: fmt:%d, data:%d, ps:%d\n",
+				fmt->format, data->num_planes, ps->num_planes);
+		return -EINVAL;
+	}
+
+	inc = ((fmt->format == MDP_Y_CBCR_H2V2_UBWC ||
+		fmt->format == MDP_Y_CBCR_H2V2_TP10_UBWC) ? 1 : 2);
+	for (i = 0; i < MAX_PLANES; i += inc) {
+		if (data->p[i].len != ps->plane_size[i]) {
+			pr_err("plane:%d fmt:%d, len does not match: data:%lu, ps:%d\n",
+					i, fmt->format, data->p[i].len,
+					ps->plane_size[i]);
+			return -EINVAL;
+		}
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	return 0;
 }
 
@@ -576,6 +958,129 @@ int mdss_mdp_data_check(struct mdss_mdp_data *data,
 	return 0;
 }
 
+<<<<<<< HEAD
+=======
+int mdss_mdp_validate_offset_for_ubwc_format(
+	struct mdss_mdp_format_params *fmt, u16 x, u16 y)
+{
+	int ret;
+	u16 micro_w, micro_h;
+
+	ret = mdss_mdp_get_ubwc_micro_dim(fmt->format, &micro_w, &micro_h);
+	if (ret || !micro_w || !micro_h) {
+		pr_err("Could not get valid micro tile dimensions\n");
+		return -EINVAL;
+	}
+
+	if (x % (micro_w * UBWC_META_MACRO_W_H)) {
+		pr_err("x=%d does not align with meta width=%d\n", x,
+			micro_w * UBWC_META_MACRO_W_H);
+		return -EINVAL;
+	}
+
+	if (y % (micro_h * UBWC_META_MACRO_W_H)) {
+		pr_err("y=%d does not align with meta height=%d\n", y,
+			UBWC_META_MACRO_W_H);
+		return -EINVAL;
+	}
+	return ret;
+}
+
+/* x and y are assumednt to be valid, expected to line up with start of tiles */
+void mdss_mdp_ubwc_data_calc_offset(struct mdss_mdp_data *data, u16 x, u16 y,
+	struct mdss_mdp_plane_sizes *ps, struct mdss_mdp_format_params *fmt)
+{
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+	u16 macro_w, micro_w, micro_h;
+	u32 offset;
+	int ret;
+
+	if (!mdss_mdp_is_ubwc_supported(mdata)) {
+		pr_err("ubwc format is not supported for format: %d\n",
+			fmt->format);
+		return;
+	}
+
+	ret = mdss_mdp_get_ubwc_micro_dim(fmt->format, &micro_w, &micro_h);
+	if (ret || !micro_w || !micro_h) {
+		pr_err("Could not get valid micro tile dimensions\n");
+		return;
+	}
+	macro_w = 4 * micro_w;
+
+	if (fmt->format == MDP_Y_CBCR_H2V2_UBWC ||
+		fmt->format == MDP_Y_CBCR_H2V2_TP10_UBWC) {
+		u16 chroma_macro_w = macro_w / 2;
+		u16 chroma_micro_w = micro_w / 2;
+
+		/* plane 1 and 3 are chroma, with sub sample of 2 */
+		offset = y * ps->ystride[0] +
+			(x / macro_w) * 4096;
+		if (offset < data->p[0].len) {
+			data->p[0].addr += offset;
+		} else {
+			ret = 1;
+			goto done;
+		}
+
+		offset = y / 2 * ps->ystride[1] +
+			((x / 2) / chroma_macro_w) * 4096;
+		if (offset < data->p[1].len) {
+			data->p[1].addr += offset;
+		} else {
+			ret = 2;
+			goto done;
+		}
+
+		offset = (y / micro_h) * ps->ystride[2] +
+			((x / micro_w) / UBWC_META_MACRO_W_H) *
+			UBWC_META_BLOCK_SIZE;
+		if (offset < data->p[2].len) {
+			data->p[2].addr += offset;
+		} else {
+			ret = 3;
+			goto done;
+		}
+
+		offset = ((y / 2) / micro_h) * ps->ystride[3] +
+			(((x / 2) / chroma_micro_w) / UBWC_META_MACRO_W_H) *
+			UBWC_META_BLOCK_SIZE;
+		if (offset < data->p[3].len) {
+			data->p[3].addr += offset;
+		} else {
+			ret = 4;
+			goto done;
+		}
+
+	} else {
+		offset = y * ps->ystride[0] +
+			(x / macro_w) * 4096;
+		if (offset < data->p[0].len) {
+			data->p[0].addr += offset;
+		} else {
+			ret = 1;
+			goto done;
+		}
+
+		offset = DIV_ROUND_UP(y, micro_h) * ps->ystride[2] +
+			((x / micro_w) / UBWC_META_MACRO_W_H) *
+			UBWC_META_BLOCK_SIZE;
+		if (offset < data->p[2].len) {
+			data->p[2].addr += offset;
+		} else {
+			ret = 3;
+			goto done;
+		}
+	}
+
+done:
+	if (ret) {
+		WARN(1, "idx %d, offsets:%u too large for buflen%lu\n",
+			(ret - 1), offset, data->p[(ret - 1)].len);
+	}
+}
+
+>>>>>>> 0e91d2a... Nougat
 void mdss_mdp_data_calc_offset(struct mdss_mdp_data *data, u16 x, u16 y,
 	struct mdss_mdp_plane_sizes *ps, struct mdss_mdp_format_params *fmt)
 {
@@ -610,9 +1115,15 @@ static int mdss_mdp_put_img(struct mdss_mdp_img_data *data)
 		data->srcp_file = NULL;
 	} else if (data->srcp_file) {
 		pr_debug("pmem buf=0x%pa\n", &data->addr);
+<<<<<<< HEAD
 		data->srcp_file = NULL;
 	} else if (!IS_ERR_OR_NULL(data->srcp_ihdl)) {
 		pr_debug("ion hdl=%p buf=0x%pa\n", data->srcp_ihdl,
+=======
+		memset(&data->srcp_f, 0, sizeof(struct fd));
+	} else if (!IS_ERR_OR_NULL(data->srcp_dma_buf)) {
+		pr_debug("ion hdl=%pK buf=0x%pa\n", data->srcp_dma_buf,
+>>>>>>> 0e91d2a... Nougat
 							&data->addr);
 		if (!iclient) {
 			pr_err("invalid ion client\n");
@@ -632,7 +1143,20 @@ static int mdss_mdp_put_img(struct mdss_mdp_img_data *data)
 			ion_free(iclient, data->srcp_ihdl);
 			data->srcp_ihdl = NULL;
 		}
+<<<<<<< HEAD
 
+=======
+	} else if (data->flags & MDP_SECURE_DISPLAY_OVERLAY_SESSION) {
+		/*
+		 * skip memory unmapping - secure display uses physical
+		 * address which does not require buffer unmapping
+		 *
+		 * For LT targets in secure display usecase, srcp_dma_buf will
+		 * be filled due to map call which will be unmapped above.
+		 *
+		 */
+		pr_debug("skip memory unmapping for secure display content\n");
+>>>>>>> 0e91d2a... Nougat
 	} else {
 		return -ENOMEM;
 	}
@@ -649,6 +1173,7 @@ static int mdss_mdp_get_img(struct msmfb_data *img,
 	unsigned long *len;
 	dma_addr_t *start;
 	struct ion_client *iclient = mdss_get_ionclient();
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
 
 	start = &data->addr;
 	len = &data->len;
@@ -679,6 +1204,7 @@ static int mdss_mdp_get_img(struct msmfb_data *img,
 			ret = -1;
 		}
 	} else if (iclient) {
+<<<<<<< HEAD
 		data->srcp_ihdl = ion_import_dma_buf(iclient, img->memory_id);
 		if (IS_ERR_OR_NULL(data->srcp_ihdl)) {
 			pr_err("error on ion_import_fd\n");
@@ -692,8 +1218,86 @@ static int mdss_mdp_get_img(struct msmfb_data *img,
 		/* return early, mapping will be done later */
 
 		return 0;
-	}
+=======
+		if (mdss_mdp_is_map_needed(mdata, data)) {
+			data->srcp_dma_buf = dma_buf_get(img->memory_id);
+			if (IS_ERR_OR_NULL(data->srcp_dma_buf)) {
+				pr_err("error on ion_import_fd\n");
+				ret = PTR_ERR(data->srcp_dma_buf);
+				data->srcp_dma_buf = NULL;
+				return ret;
+			}
+			domain = mdss_smmu_get_domain_type(data->flags,
+							   rotator);
 
+			data->srcp_attachment =
+				mdss_smmu_dma_buf_attach(data->srcp_dma_buf,
+							 dev, domain);
+			if (IS_ERR(data->srcp_attachment)) {
+				ret = PTR_ERR(data->srcp_attachment);
+				goto err_put;
+			}
+
+			data->srcp_table =
+				dma_buf_map_attachment(data->srcp_attachment,
+				mdss_smmu_dma_data_direction(dir));
+			if (IS_ERR(data->srcp_table)) {
+				ret = PTR_ERR(data->srcp_table);
+				goto err_detach;
+			}
+
+			data->addr = 0;
+			data->len = 0;
+			data->mapped = false;
+			data->skip_detach = false;
+			/* return early, mapping will be done later */
+			ret = 0;
+			goto done;
+		} else {
+			struct ion_handle *ihandle = NULL;
+			struct sg_table *sg_ptr = NULL;
+
+			do {
+				ihandle = ion_import_dma_buf(iclient,
+							     img->memory_id);
+				if (IS_ERR_OR_NULL(ihandle)) {
+					ret = -EINVAL;
+					pr_err("ion import buffer failed\n");
+					break;
+				}
+
+				sg_ptr = ion_sg_table(iclient, ihandle);
+				if (sg_ptr == NULL) {
+					pr_err("ion sg table get failed\n");
+					ret = -EINVAL;
+					break;
+				}
+
+				if (sg_ptr->nents != 1) {
+					pr_err("ion buffer mapping failed\n");
+					ret = -EINVAL;
+					break;
+				}
+
+				if (((uint64_t)sg_dma_address(sg_ptr->sgl) >=
+					PHY_ADDR_4G - sg_ptr->sgl->length)) {
+					pr_err("ion buffer mapped size is invalid\n");
+					ret = -EINVAL;
+					break;
+				}
+
+				data->addr = sg_dma_address(sg_ptr->sgl);
+				data->len = sg_ptr->sgl->length;
+				data->mapped = true;
+				ret = 0;
+			} while (0);
+
+			if (!IS_ERR_OR_NULL(ihandle))
+				ion_free(iclient, ihandle);
+			return ret;
+		}
+>>>>>>> 0e91d2a... Nougat
+	}
 	if (!*start) {
 		pr_err("start address is zero!\n");
 		mdss_mdp_put_img(data);
@@ -704,24 +1308,48 @@ static int mdss_mdp_get_img(struct msmfb_data *img,
 		data->addr += data->offset;
 		data->len -= data->offset;
 
+<<<<<<< HEAD
 		pr_debug("mem=%d ihdl=%p buf=0x%pa len=0x%lx\n", img->memory_id,
 			 data->srcp_ihdl, &data->addr, data->len);
+=======
+		pr_debug("mem=%d ihdl=%pK buf=0x%pa len=0x%lx\n",
+			 img->memory_id, data->srcp_dma_buf, &data->addr,
+			 data->len);
+>>>>>>> 0e91d2a... Nougat
 	} else {
 		mdss_mdp_put_img(data);
 		return ret ? : -EOVERFLOW;
 	}
 
 	return ret;
+<<<<<<< HEAD
+=======
+err_detach:
+	dma_buf_detach(data->srcp_dma_buf, data->srcp_attachment);
+err_put:
+	dma_buf_put(data->srcp_dma_buf);
+done:
+	return ret;
+>>>>>>> 0e91d2a... Nougat
 }
 
 static int mdss_mdp_map_buffer(struct mdss_mdp_img_data *data)
 {
 	int ret = -EINVAL;
+<<<<<<< HEAD
 	struct ion_client *iclient = mdss_get_ionclient();
+=======
+	int domain;
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+	struct scatterlist *sg;
+	unsigned int i;
+	struct sg_table *table;
+>>>>>>> 0e91d2a... Nougat
 
 	if (data->addr && data->len)
 		return 0;
 
+<<<<<<< HEAD
 	if (!IS_ERR_OR_NULL(data->srcp_ihdl)) {
 		if (mdss_res->mdss_util->iommu_attached()) {
 			int domain;
@@ -745,6 +1373,31 @@ static int mdss_mdp_map_buffer(struct mdss_mdp_img_data *data)
 			ion_free(iclient, data->srcp_ihdl);
 			pr_err("failed to map ion handle (%d)\n", ret);
 			return ret;
+=======
+	if (!IS_ERR_OR_NULL(data->srcp_dma_buf)) {
+		if (mdss_res->mdss_util->iommu_attached() &&
+			(mdss_mdp_is_map_needed(mdata, data))) {
+			domain = mdss_smmu_get_domain_type(data->flags,
+					rotator);
+			data->dir = dir;
+			data->domain = domain;
+			ret = mdss_smmu_map_dma_buf(data->srcp_dma_buf,
+					data->srcp_table, domain,
+					&data->addr, &data->len, dir);
+			if (IS_ERR_VALUE(ret)) {
+				pr_err("smmu map dma buf failed: (%d)\n", ret);
+				goto err_unmap;
+			}
+			data->mapped = true;
+		} else {
+			data->addr = sg_phys(data->srcp_table->sgl);
+			data->len = 0;
+			table = data->srcp_table;
+			for_each_sg(table->sgl, sg, table->nents, i) {
+				data->len += sg->length;
+			}
+			ret = 0;
+>>>>>>> 0e91d2a... Nougat
 		}
 	}
 
@@ -758,8 +1411,13 @@ static int mdss_mdp_map_buffer(struct mdss_mdp_img_data *data)
 		data->addr += data->offset;
 		data->len -= data->offset;
 
+<<<<<<< HEAD
 		pr_debug("ihdl=%p buf=0x%pa len=0x%lx\n",
 			 data->srcp_ihdl, &data->addr, data->len);
+=======
+		pr_debug("ihdl=%pK buf=0x%pa len=0x%lx\n",
+			 data->srcp_dma_buf, &data->addr, data->len);
+>>>>>>> 0e91d2a... Nougat
 	} else {
 		mdss_mdp_put_img(data);
 		return ret ? : -EOVERFLOW;

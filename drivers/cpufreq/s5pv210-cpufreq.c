@@ -645,4 +645,14 @@ static int __init s5pv210_cpufreq_init(void)
 	return cpufreq_register_driver(&s5pv210_driver);
 }
 
+<<<<<<< HEAD
 late_initcall(s5pv210_cpufreq_init);
+=======
+static struct platform_driver s5pv210_cpufreq_platdrv = {
+	.driver = {
+		.name	= "s5pv210-cpufreq",
+	},
+	.probe = s5pv210_cpufreq_probe,
+};
+module_platform_driver(s5pv210_cpufreq_platdrv);
+>>>>>>> 0e91d2a... Nougat

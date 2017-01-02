@@ -229,6 +229,26 @@ static inline int plist_node_empty(const struct plist_node *node)
 #endif
 
 /**
+<<<<<<< HEAD
+=======
+ * plist_next - get the next entry in list
+ * @pos:	the type * to cursor
+ */
+#define plist_next(pos) \
+	list_next_entry(pos, node_list)
+
+#define plist_next_entry(pos, type, member)   \
+	container_of(plist_next(pos), type, member)
+
+/**
+ * plist_prev - get the prev entry in list
+ * @pos:	the type * to cursor
+ */
+#define plist_prev(pos) \
+	list_prev_entry(pos, node_list)
+
+/**
+>>>>>>> 0e91d2a... Nougat
  * plist_first - return the first node (and thus, highest priority)
  * @head:	the &struct plist_head pointer
  *

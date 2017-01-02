@@ -59,6 +59,13 @@ unsigned long arch_get_cpu_efficiency(int cpu)
 	return per_cpu(cpu_efficiency, cpu);
 }
 
+static DEFINE_PER_CPU(unsigned long, cpu_efficiency) = SCHED_CAPACITY_SCALE;
+
+unsigned long arch_get_cpu_efficiency(int cpu)
+{
+	return per_cpu(cpu_efficiency, cpu);
+}
+
 #ifdef CONFIG_OF
 struct cpu_efficiency {
 	const char *compatible;
@@ -113,16 +120,31 @@ static void __init parse_dt_topology(void)
 	while ((cn = of_find_node_by_type(cn, "cpu"))) {
 		const u32 *rate, *reg;
 		int len;
+		u32 efficiency;
 
 		if (cpu >= num_possible_cpus())
 			break;
 
-		for (cpu_eff = table_efficiency; cpu_eff->compatible; cpu_eff++)
-			if (of_device_is_compatible(cn, cpu_eff->compatible))
-				break;
+		/*
+		 * The CPU efficiency value passed from the device tree
+		 * overrides the value defined in the table_efficiency[]
+		 */
+		if (of_property_read_u32(cn, "efficiency", &efficiency) < 0) {
 
-		if (cpu_eff->compatible == NULL)
-			continue;
+			for (cpu_eff = table_efficiency;
+					cpu_eff->compatible; cpu_eff++)
+
+				if (of_device_is_compatible(cn,
+						cpu_eff->compatible))
+					break;
+
+			if (cpu_eff->compatible == NULL)
+				continue;
+
+			efficiency = cpu_eff->efficiency;
+		}
+
+		per_cpu(cpu_efficiency, cpu) = efficiency;
 
 		per_cpu(cpu_efficiency, cpu) = cpu_eff->efficiency;
 
@@ -133,6 +155,7 @@ static void __init parse_dt_topology(void)
 			continue;
 		}
 
+<<<<<<< HEAD
 		reg = of_get_property(cn, "reg", &len);
 		if (!reg || len != 4) {
 			pr_err("%s missing reg property\n", cn->full_name);
@@ -140,6 +163,9 @@ static void __init parse_dt_topology(void)
 		}
 
 		capacity = ((be32_to_cpup(rate)) >> 20) * cpu_eff->efficiency;
+=======
+		capacity = ((be32_to_cpup(rate)) >> 20) * efficiency;
+>>>>>>> 0e91d2a... Nougat
 
 		/* Save min capacity of the system */
 		if (capacity < min_capacity)

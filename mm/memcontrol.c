@@ -340,11 +340,6 @@ struct mem_cgroup {
 	 * percpu counter.
 	 */
 	struct mem_cgroup_stat_cpu __percpu *stat;
-	/*
-	 * used when a cpu is offlined or other synchronizations
-	 * See mem_cgroup_read_stat().
-	 */
-	struct mem_cgroup_stat_cpu nocpu_base;
 	spinlock_t pcp_counter_lock;
 
 	atomic_t	dead_count;
@@ -884,15 +879,8 @@ static long mem_cgroup_read_stat(struct mem_cgroup *memcg,
 	long val = 0;
 	int cpu;
 
-	get_online_cpus();
-	for_each_online_cpu(cpu)
+	for_each_possible_cpu(cpu)
 		val += per_cpu(memcg->stat->count[idx], cpu);
-#ifdef CONFIG_HOTPLUG_CPU
-	spin_lock(&memcg->pcp_counter_lock);
-	val += memcg->nocpu_base.count[idx];
-	spin_unlock(&memcg->pcp_counter_lock);
-#endif
-	put_online_cpus();
 	return val;
 }
 
@@ -909,6 +897,7 @@ static unsigned long mem_cgroup_read_events(struct mem_cgroup *memcg,
 	unsigned long val = 0;
 	int cpu;
 
+<<<<<<< HEAD
 	for_each_online_cpu(cpu)
 		val += per_cpu(memcg->stat->events[idx], cpu);
 #ifdef CONFIG_HOTPLUG_CPU
@@ -916,6 +905,10 @@ static unsigned long mem_cgroup_read_events(struct mem_cgroup *memcg,
 	val += memcg->nocpu_base.events[idx];
 	spin_unlock(&memcg->pcp_counter_lock);
 #endif
+=======
+	for_each_possible_cpu(cpu)
+		val += per_cpu(memcg->stat->events[idx], cpu);
+>>>>>>> 0e91d2a... Nougat
 	return val;
 }
 
@@ -2337,9 +2330,26 @@ again:
 	*locked = true;
 }
 
+<<<<<<< HEAD
 void __mem_cgroup_end_update_page_stat(struct page *page, unsigned long *flags)
 {
 	struct page_cgroup *pc = lookup_page_cgroup(page);
+=======
+	return memcg;
+}
+
+/**
+ * mem_cgroup_end_page_stat - finish a page state statistics transaction
+ * @memcg: the memcg that was accounted against
+ * @locked: value received from mem_cgroup_begin_page_stat()
+ * @flags: value received from mem_cgroup_begin_page_stat()
+ */
+void mem_cgroup_end_page_stat(struct mem_cgroup *memcg, bool *locked,
+			      unsigned long *flags)
+{
+	if (memcg && *locked)
+		move_unlock_mem_cgroup(memcg, flags);
+>>>>>>> 0e91d2a... Nougat
 
 	/*
 	 * It's guaranteed that pc->mem_cgroup never changes while
@@ -2541,6 +2551,7 @@ static void drain_all_stock_sync(struct mem_cgroup *root_memcg)
 	mutex_unlock(&percpu_charge_mutex);
 }
 
+<<<<<<< HEAD
 /*
  * This function drains percpu counter value from DEAD cpu and
  * move it to local cpu. Note that this function can be preempted.
@@ -2566,21 +2577,20 @@ static void mem_cgroup_drain_pcp_counter(struct mem_cgroup *memcg, int cpu)
 }
 
 static int __cpuinit memcg_cpu_hotplug_callback(struct notifier_block *nb,
+=======
+static int memcg_cpu_hotplug_callback(struct notifier_block *nb,
+>>>>>>> 0e91d2a... Nougat
 					unsigned long action,
 					void *hcpu)
 {
 	int cpu = (unsigned long)hcpu;
 	struct memcg_stock_pcp *stock;
-	struct mem_cgroup *iter;
 
 	if (action == CPU_ONLINE)
 		return NOTIFY_OK;
 
 	if (action != CPU_DEAD && action != CPU_DEAD_FROZEN)
 		return NOTIFY_OK;
-
-	for_each_mem_cgroup(iter)
-		mem_cgroup_drain_pcp_counter(iter, cpu);
 
 	stock = &per_cpu(memcg_stock, cpu);
 	drain_stock(stock);
@@ -5526,7 +5536,7 @@ static int mem_cgroup_swappiness_write(struct cgroup *cgrp, struct cftype *cft,
 	struct mem_cgroup *memcg = mem_cgroup_from_cont(cgrp);
 	struct mem_cgroup *parent;
 
-	if (val > 100)
+	if ((val > 200) || ((val > 100) && !css->parent))
 		return -EINVAL;
 
 	if (cgrp->parent == NULL)
@@ -5790,16 +5800,17 @@ static void mem_cgroup_usage_unregister_event(struct cgroup *cgrp,
 swap_buffers:
 	/* Swap primary and spare array */
 	thresholds->spare = thresholds->primary;
-	/* If all events are unregistered, free the spare array */
-	if (!new) {
-		kfree(thresholds->spare);
-		thresholds->spare = NULL;
-	}
 
 	rcu_assign_pointer(thresholds->primary, new);
 
 	/* To be sure that nobody uses thresholds */
 	synchronize_rcu();
+
+	/* If all events are unregistered, free the spare array */
+	if (!new) {
+		kfree(thresholds->spare);
+		thresholds->spare = NULL;
+	}
 unlock:
 	mutex_unlock(&memcg->thresholds_lock);
 }

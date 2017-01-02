@@ -1,6 +1,13 @@
 obj-$(CONFIG_ION) +=	ion.o ion_heap.o ion_page_pool.o ion_system_heap.o \
+<<<<<<< HEAD
 			ion_carveout_heap.o ion_chunk_heap.o
 obj-$(CONFIG_CMA) += ion_cma_heap.o ion_cma_secure_heap.o
+=======
+			ion_carveout_heap.o ion_chunk_heap.o ion_system_secure_heap.o
+ifeq ($(CONFIG_CMA),y)
+obj-$(CONFIG_ION) += ion_cma_heap.o ion_cma_secure_heap.o
+endif
+>>>>>>> 0e91d2a... Nougat
 obj-$(CONFIG_ION_TEST) += ion_test.o
 ifdef CONFIG_COMPAT
 obj-$(CONFIG_ION) += compat_ion.o

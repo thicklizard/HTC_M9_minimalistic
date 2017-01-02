@@ -49,7 +49,17 @@ AS		+= -EL
 LD		+= -EL
 endif
 
+<<<<<<< HEAD
 comma = ,
+=======
+#
+# The Scalar Replacement of Aggregates (SRA) optimization pass in GCC 4.9 and
+# later may result in code being generated that handles signed short and signed
+# char struct members incorrectly. So disable it.
+# (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65932)
+#
+KBUILD_CFLAGS	+= $(call cc-option,-fno-ipa-sra)
+>>>>>>> 0e91d2a... Nougat
 
 # This selects which instruction set is used.
 # Note that GCC does not numerically define an architecture version

@@ -1,13 +1,6 @@
 #ifndef _LINUX_IRQ_H
 #define _LINUX_IRQ_H
 
-/*
- * Please do not include this file in generic code.  There is currently
- * no requirement for any architecture to implement anything held
- * within this file.
- *
- * Thanks. --rmk
- */
 
 #include <linux/smp.h>
 #include <linux/linkage.h>
@@ -20,6 +13,7 @@
 #include <linux/errno.h>
 #include <linux/topology.h>
 #include <linux/wait.h>
+#include <linux/io.h>
 
 #include <asm/irq.h>
 #include <asm/ptrace.h>
@@ -33,6 +27,7 @@ typedef	void (*irq_flow_handler_t)(unsigned int irq,
 					    struct irq_desc *desc);
 typedef	void (*irq_preflow_handler_t)(struct irq_data *data);
 
+<<<<<<< HEAD
 /*
  * IRQ line status.
  *
@@ -71,6 +66,8 @@ typedef	void (*irq_preflow_handler_t)(struct irq_data *data);
  * IRQ_NESTED_TRHEAD		- Interrupt nests into another thread
  * IRQ_PER_CPU_DEVID		- Dev_id is a per-cpu variable
  */
+=======
+>>>>>>> 0e91d2a... Nougat
 enum {
 	IRQ_TYPE_NONE		= 0x00000000,
 	IRQ_TYPE_EDGE_RISING	= 0x00000001,
@@ -103,12 +100,15 @@ enum {
 
 #define IRQ_NO_BALANCING_MASK	(IRQ_PER_CPU | IRQ_NO_BALANCING)
 
+<<<<<<< HEAD
 /*
  * Return value for chip->irq_set_affinity()
  *
  * IRQ_SET_MASK_OK	- OK, core updates irq_data.affinity
  * IRQ_SET_MASK_NOCPY	- OK, chip did update irq_data.affinity
  */
+=======
+>>>>>>> 0e91d2a... Nougat
 enum {
 	IRQ_SET_MASK_OK = 0,
 	IRQ_SET_MASK_OK_NOCOPY,
@@ -117,6 +117,7 @@ enum {
 struct msi_desc;
 struct irq_domain;
 
+<<<<<<< HEAD
 /**
  * struct irq_data - per irq and irq chip data passed down to chip functions
  * @irq:		interrupt number
@@ -137,6 +138,8 @@ struct irq_domain;
  * cleaned up the direct references and switched everything over to
  * irq_data.
  */
+=======
+>>>>>>> 0e91d2a... Nougat
 struct irq_data {
 	unsigned int		irq;
 	unsigned long		hwirq;
@@ -150,6 +153,7 @@ struct irq_data {
 	cpumask_var_t		affinity;
 };
 
+<<<<<<< HEAD
 /*
  * Bit masks for irq_data.state
  *
@@ -167,6 +171,8 @@ struct irq_data {
  * IRQD_IRQ_MASKED		- Masked state of the interrupt
  * IRQD_IRQ_INPROGRESS		- In progress state of the interrupt
  */
+=======
+>>>>>>> 0e91d2a... Nougat
 enum {
 	IRQD_TRIGGER_MASK		= 0xf,
 	IRQD_SETAFFINITY_PENDING	= (1 <<  8),
@@ -211,9 +217,6 @@ static inline u32 irqd_get_trigger_type(struct irq_data *d)
 	return d->state_use_accessors & IRQD_TRIGGER_MASK;
 }
 
-/*
- * Must only be called inside irq_chip.irq_set_type() functions.
- */
 static inline void irqd_set_trigger_type(struct irq_data *d, u32 type)
 {
 	d->state_use_accessors &= ~IRQD_TRIGGER_MASK;
@@ -250,11 +253,20 @@ static inline bool irqd_irq_inprogress(struct irq_data *d)
 	return d->state_use_accessors & IRQD_IRQ_INPROGRESS;
 }
 
+<<<<<<< HEAD
 /*
  * Functions for chained handlers which can be enabled/disabled by the
  * standard disable_irq/enable_irq calls. Must be called with
  * irq_desc->lock held.
  */
+=======
+static inline bool irqd_is_wakeup_armed(struct irq_data *d)
+{
+	return d->state_use_accessors & IRQD_WAKEUP_ARMED;
+}
+
+
+>>>>>>> 0e91d2a... Nougat
 static inline void irqd_set_chained_irq_inprogress(struct irq_data *d)
 {
 	d->state_use_accessors |= IRQD_IRQ_INPROGRESS;
@@ -270,6 +282,7 @@ static inline irq_hw_number_t irqd_to_hwirq(struct irq_data *d)
 	return d->hwirq;
 }
 
+<<<<<<< HEAD
 /**
  * struct irq_chip - hardware interrupt chip descriptor
  *
@@ -298,6 +311,8 @@ static inline irq_hw_number_t irqd_to_hwirq(struct irq_data *d)
  * @irq_print_chip:	optional to print special chip info in show_interrupts
  * @flags:		chip specific flags
  */
+=======
+>>>>>>> 0e91d2a... Nougat
 struct irq_chip {
 	const char	*name;
 	unsigned int	(*irq_startup)(struct irq_data *data);
@@ -332,6 +347,7 @@ struct irq_chip {
 	unsigned long	flags;
 };
 
+<<<<<<< HEAD
 /*
  * irq_chip specific flags
  *
@@ -342,6 +358,8 @@ struct irq_chip {
  *				when irq enabled
  * IRQCHIP_SKIP_SET_WAKE:	Skip chip.irq_set_wake(), for this irq chip
  */
+=======
+>>>>>>> 0e91d2a... Nougat
 enum {
 	IRQCHIP_SET_TYPE_MASKED		= (1 <<  0),
 	IRQCHIP_EOI_IF_HANDLED		= (1 <<  1),
@@ -351,12 +369,8 @@ enum {
 	IRQCHIP_ONESHOT_SAFE		= (1 <<  5),
 };
 
-/* This include will go away once we isolated irq_desc usage to core code */
 #include <linux/irqdesc.h>
 
-/*
- * Pick up the arch-dependent methods:
- */
 #include <asm/hw_irq.h>
 
 #ifndef NR_IRQS_LEGACY
@@ -400,10 +414,6 @@ static inline int irq_set_parent(int irq, int parent_irq)
 }
 #endif
 
-/*
- * Built-in IRQ handlers for various IRQ types,
- * callable via desc->handle_irq()
- */
 extern void handle_level_irq(unsigned int irq, struct irq_desc *desc);
 extern void handle_fasteoi_irq(unsigned int irq, struct irq_desc *desc);
 extern void handle_edge_irq(unsigned int irq, struct irq_desc *desc);
@@ -414,20 +424,31 @@ extern void handle_percpu_devid_irq(unsigned int irq, struct irq_desc *desc);
 extern void handle_bad_irq(unsigned int irq, struct irq_desc *desc);
 extern void handle_nested_irq(unsigned int irq);
 
+<<<<<<< HEAD
 /* Handling of unhandled and spurious interrupts: */
+=======
+extern int irq_chip_compose_msi_msg(struct irq_data *data, struct msi_msg *msg);
+#ifdef	CONFIG_IRQ_DOMAIN_HIERARCHY
+extern void irq_chip_ack_parent(struct irq_data *data);
+extern int irq_chip_retrigger_hierarchy(struct irq_data *data);
+extern void irq_chip_mask_parent(struct irq_data *data);
+extern void irq_chip_unmask_parent(struct irq_data *data);
+extern void irq_chip_eoi_parent(struct irq_data *data);
+extern int irq_chip_set_affinity_parent(struct irq_data *data,
+					const struct cpumask *dest,
+					bool force);
+#endif
+
+>>>>>>> 0e91d2a... Nougat
 extern void note_interrupt(unsigned int irq, struct irq_desc *desc,
 			   irqreturn_t action_ret);
 
-/* Resending of interrupts :*/
 void check_irq_resend(struct irq_desc *desc, unsigned int irq);
 
-/* Enable/disable irq debugging output: */
 extern int noirqdebug_setup(char *str);
 
-/* Checks whether the interrupt can be requested by request_irq(): */
 extern int can_request_irq(unsigned int irq, unsigned long irqflags);
 
-/* Dummy irq-chip implementations: */
 extern struct irq_chip no_irq_chip;
 extern struct irq_chip dummy_irq_chip;
 
@@ -453,11 +474,6 @@ irq_set_handler(unsigned int irq, irq_flow_handler_t handle)
 	__irq_set_handler(irq, handle, 0, NULL);
 }
 
-/*
- * Set a highlevel chained flow handler for a given IRQ.
- * (a chained handler is automatically enabled and set to
- *  IRQ_NOREQUEST, IRQ_NOPROBE, and IRQ_NOTHREAD)
- */
 static inline void
 irq_set_chained_handler(unsigned int irq, irq_flow_handler_t handle)
 {
@@ -511,6 +527,7 @@ static inline void irq_set_percpu_devid_flags(unsigned int irq)
 			     IRQ_NOPROBE | IRQ_PER_CPU_DEVID);
 }
 
+<<<<<<< HEAD
 /* Handle dynamic irq creation and destruction */
 extern unsigned int create_irq_nr(unsigned int irq_want, int node);
 extern unsigned int __create_irqs(unsigned int from, unsigned int count,
@@ -530,6 +547,8 @@ static inline void dynamic_irq_init(unsigned int irq)
 }
 
 /* Set/get chip/data for an IRQ: */
+=======
+>>>>>>> 0e91d2a... Nougat
 extern int irq_set_chip(unsigned int irq, struct irq_chip *chip);
 extern int irq_set_handler_data(unsigned int irq, void *data);
 extern int irq_set_chip_data(unsigned int irq, void *data);
@@ -578,7 +597,7 @@ static inline struct msi_desc *irq_get_msi_desc(unsigned int irq)
 	return d ? d->msi_desc : NULL;
 }
 
-static inline struct msi_desc *irq_data_get_msi(struct irq_data *d)
+static inline struct msi_desc *irq_data_get_msi_desc(struct irq_data *d)
 {
 	return d->msi_desc;
 }
@@ -586,7 +605,6 @@ static inline struct msi_desc *irq_data_get_msi(struct irq_data *d)
 int __irq_alloc_descs(int irq, unsigned int from, unsigned int cnt, int node,
 		struct module *owner);
 
-/* use macros to avoid needing export.h for THIS_MODULE */
 #define irq_alloc_descs(irq, from, cnt, node)	\
 	__irq_alloc_descs(irq, from, cnt, node, THIS_MODULE)
 
@@ -615,23 +633,6 @@ static inline int irq_reserve_irq(unsigned int irq)
 	return irq_reserve_irqs(irq, 1);
 }
 
-#ifndef irq_reg_writel
-# define irq_reg_writel(val, addr)	writel(val, addr)
-#endif
-#ifndef irq_reg_readl
-# define irq_reg_readl(addr)		readl(addr)
-#endif
-
-/**
- * struct irq_chip_regs - register offsets for struct irq_gci
- * @enable:	Enable register offset to reg_base
- * @disable:	Disable register offset to reg_base
- * @mask:	Mask register offset to reg_base
- * @ack:	Ack register offset to reg_base
- * @eoi:	Eoi register offset to reg_base
- * @type:	Type configuration register offset to reg_base
- * @polarity:	Polarity configuration register offset to reg_base
- */
 struct irq_chip_regs {
 	unsigned long		enable;
 	unsigned long		disable;
@@ -642,6 +643,7 @@ struct irq_chip_regs {
 	unsigned long		polarity;
 };
 
+<<<<<<< HEAD
 /**
  * struct irq_chip_type - Generic interrupt chip instance for a flow type
  * @chip:		The real interrupt chip which provides the callbacks
@@ -653,6 +655,8 @@ struct irq_chip_regs {
  * it requires different functions and register offsets for different
  * flow types.
  */
+=======
+>>>>>>> 0e91d2a... Nougat
 struct irq_chip_type {
 	struct irq_chip		chip;
 	struct irq_chip_regs	regs;
@@ -660,6 +664,7 @@ struct irq_chip_type {
 	u32			type;
 };
 
+<<<<<<< HEAD
 /**
  * struct irq_chip_generic - Generic irq chip data structure
  * @lock:		Lock to protect register and cache data access
@@ -682,9 +687,13 @@ struct irq_chip_type {
  * state in an irq_chip_generic instance when we need to implement
  * different flow mechanisms (level/edge) for it.
  */
+=======
+>>>>>>> 0e91d2a... Nougat
 struct irq_chip_generic {
 	raw_spinlock_t		lock;
 	void __iomem		*reg_base;
+	u32			(*reg_readl)(void __iomem *addr);
+	void			(*reg_writel)(u32 val, void __iomem *addr);
 	unsigned int		irq_base;
 	unsigned int		irq_cnt;
 	u32			mask_cache;
@@ -698,6 +707,7 @@ struct irq_chip_generic {
 	struct irq_chip_type	chip_types[0];
 };
 
+<<<<<<< HEAD
 /**
  * enum irq_gc_flags - Initialization flags for generic irq chips
  * @IRQ_GC_INIT_MASK_CACHE:	Initialize the mask_cache by reading mask reg
@@ -708,9 +718,25 @@ struct irq_chip_generic {
 enum irq_gc_flags {
 	IRQ_GC_INIT_MASK_CACHE		= 1 << 0,
 	IRQ_GC_INIT_NESTED_LOCK		= 1 << 1,
+=======
+enum irq_gc_flags {
+	IRQ_GC_INIT_MASK_CACHE		= 1 << 0,
+	IRQ_GC_INIT_NESTED_LOCK		= 1 << 1,
+	IRQ_GC_MASK_CACHE_PER_TYPE	= 1 << 2,
+	IRQ_GC_NO_MASK			= 1 << 3,
+	IRQ_GC_BE_IO			= 1 << 4,
 };
 
-/* Generic chip callback functions */
+struct irq_domain_chip_generic {
+	unsigned int		irqs_per_chip;
+	unsigned int		num_chips;
+	unsigned int		irq_flags_to_clear;
+	unsigned int		irq_flags_to_set;
+	enum irq_gc_flags	gc_flags;
+	struct irq_chip_generic	*gc[0];
+>>>>>>> 0e91d2a... Nougat
+};
+
 void irq_gc_noop(struct irq_data *d);
 void irq_gc_mask_disable_reg(struct irq_data *d);
 void irq_gc_mask_set_bit(struct irq_data *d);
@@ -722,7 +748,12 @@ void irq_gc_mask_disable_reg_and_ack(struct irq_data *d);
 void irq_gc_eoi(struct irq_data *d);
 int irq_gc_set_wake(struct irq_data *d, unsigned int on);
 
+<<<<<<< HEAD
 /* Setup functions for irq_chip_generic */
+=======
+int irq_map_generic_chip(struct irq_domain *d, unsigned int virq,
+			 irq_hw_number_t hw_irq);
+>>>>>>> 0e91d2a... Nougat
 struct irq_chip_generic *
 irq_alloc_generic_chip(const char *name, int nr_ct, unsigned int irq_base,
 		       void __iomem *reg_base, irq_flow_handler_t handler);
@@ -754,7 +785,27 @@ static inline void irq_gc_unlock(struct irq_chip_generic *gc)
 static inline void irq_gc_lock(struct irq_chip_generic *gc) { }
 static inline void irq_gc_unlock(struct irq_chip_generic *gc) { }
 #endif
+
 #ifdef CONFIG_HTC_POWER_DEBUG
 void htc_show_interrupts(void);
 #endif
-#endif /* _LINUX_IRQ_H */
+
+static inline void irq_reg_writel(struct irq_chip_generic *gc,
+				  u32 val, int reg_offset)
+{
+	if (gc->reg_writel)
+		gc->reg_writel(val, gc->reg_base + reg_offset);
+	else
+		writel(val, gc->reg_base + reg_offset);
+}
+
+static inline u32 irq_reg_readl(struct irq_chip_generic *gc,
+				int reg_offset)
+{
+	if (gc->reg_readl)
+		return gc->reg_readl(gc->reg_base + reg_offset);
+	else
+		return readl(gc->reg_base + reg_offset);
+}
+
+#endif 

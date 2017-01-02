@@ -1391,6 +1391,12 @@ int radeon_modeset_init(struct radeon_device *rdev)
 	radeon_fbdev_init(rdev);
 	drm_kms_helper_poll_init(rdev->ddev);
 
+<<<<<<< HEAD
+=======
+	/* do pm late init */
+	ret = radeon_pm_late_init(rdev);
+
+>>>>>>> 0e91d2a... Nougat
 	return 0;
 }
 

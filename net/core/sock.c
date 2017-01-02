@@ -419,8 +419,6 @@ static void sock_warn_obsolete_bsdism(const char *name)
 	}
 }
 
-#define SK_FLAGS_TIMESTAMP ((1UL << SOCK_TIMESTAMP) | (1UL << SOCK_TIMESTAMPING_RX_SOFTWARE))
-
 static void sock_disable_timestamp(struct sock *sk, unsigned long flags)
 {
 	if (sk->sk_flags & flags) {
@@ -851,12 +849,29 @@ set_rcvbuf:
 			ret = -EINVAL;
 			break;
 		}
+<<<<<<< HEAD
 		sock_valbool_flag(sk, SOCK_TIMESTAMPING_TX_HARDWARE,
 				  val & SOF_TIMESTAMPING_TX_HARDWARE);
 		sock_valbool_flag(sk, SOCK_TIMESTAMPING_TX_SOFTWARE,
 				  val & SOF_TIMESTAMPING_TX_SOFTWARE);
 		sock_valbool_flag(sk, SOCK_TIMESTAMPING_RX_HARDWARE,
 				  val & SOF_TIMESTAMPING_RX_HARDWARE);
+=======
+		if (val & SOF_TIMESTAMPING_OPT_ID &&
+		    !(sk->sk_tsflags & SOF_TIMESTAMPING_OPT_ID)) {
+			if (sk->sk_protocol == IPPROTO_TCP &&
+			    sk->sk_type == SOCK_STREAM) {
+				if (sk->sk_state != TCP_ESTABLISHED) {
+					ret = -EINVAL;
+					break;
+				}
+				sk->sk_tskey = tcp_sk(sk)->snd_una;
+			} else {
+				sk->sk_tskey = 0;
+			}
+		}
+		sk->sk_tsflags = val;
+>>>>>>> 0e91d2a... Nougat
 		if (val & SOF_TIMESTAMPING_RX_SOFTWARE)
 			sock_enable_timestamp(sk,
 					      SOCK_TIMESTAMPING_RX_SOFTWARE);

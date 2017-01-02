@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -234,8 +234,13 @@ static void mdss_dump_debug_bus(u32 bus_dump_flag,
 
 		if (*dump_mem) {
 			dump_addr = *dump_mem;
+<<<<<<< HEAD
 			pr_info("bus dump_addr:%p size:%d\n",
 				dump_addr, list_size);
+=======
+			pr_info("%s: start_addr:0x%pK end_addr:0x%pK\n",
+				__func__, dump_addr, dump_addr + list_size);
+>>>>>>> 0e91d2a... Nougat
 		} else {
 			in_mem = false;
 			pr_err("dump_mem: allocation fails\n");
@@ -272,8 +277,95 @@ static void mdss_dump_debug_bus(u32 bus_dump_flag,
 
 }
 
+<<<<<<< HEAD
 static void mdss_dump_reg(u32 reg_dump_flag,
 	char *addr, int len, u32 **dump_mem)
+=======
+static void mdss_dump_vbif_debug_bus(u32 bus_dump_flag,
+	u32 **dump_mem, bool real_time)
+{
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+	bool in_log, in_mem;
+	u32 *dump_addr = NULL;
+	u32 value;
+	struct vbif_debug_bus *head;
+	phys_addr_t phys = 0;
+	int i, list_size = 0;
+	void __iomem *vbif_base;
+	struct vbif_debug_bus *dbg_bus;
+	u32 bus_size;
+
+	if (real_time) {
+		pr_info("======== VBIF Debug bus DUMP =========\n");
+		vbif_base = mdata->vbif_io.base;
+		dbg_bus = mdata->vbif_dbg_bus;
+		bus_size = mdata->vbif_dbg_bus_size;
+	} else {
+		pr_info("======== NRT VBIF Debug bus DUMP =========\n");
+		vbif_base = mdata->vbif_nrt_io.base;
+		dbg_bus = mdata->nrt_vbif_dbg_bus;
+		bus_size = mdata->nrt_vbif_dbg_bus_size;
+	}
+
+	if (!dbg_bus || !bus_size)
+		return;
+
+	
+	for (i = 0; i < bus_size; i++) {
+		head = dbg_bus + i;
+		list_size += (head->block_cnt * head->test_pnt_cnt);
+	}
+
+	
+	list_size *= 16;
+
+	in_log = (bus_dump_flag & MDSS_DBG_DUMP_IN_LOG);
+	in_mem = (bus_dump_flag & MDSS_DBG_DUMP_IN_MEM);
+
+	if (in_mem) {
+		if (!(*dump_mem))
+			*dump_mem = dma_alloc_coherent(&mdata->pdev->dev,
+				list_size, &phys, GFP_KERNEL);
+
+		if (*dump_mem) {
+			dump_addr = *dump_mem;
+			pr_info("%s: start_addr:0x%pK end_addr:0x%pK\n",
+				__func__, dump_addr, dump_addr + list_size);
+		} else {
+			in_mem = false;
+			pr_err("dump_mem: allocation fails\n");
+		}
+	}
+
+	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON);
+
+	value = readl_relaxed(vbif_base + MMSS_VBIF_CLKON);
+	writel_relaxed(value | BIT(1), vbif_base + MMSS_VBIF_CLKON);
+
+	
+	wmb();
+
+	for (i = 0; i < bus_size; i++) {
+		head = dbg_bus + i;
+
+		writel_relaxed(0, vbif_base + head->disable_bus_addr);
+		writel_relaxed(BIT(0), vbif_base + MMSS_VBIF_TEST_BUS_OUT_CTRL);
+		
+		wmb();
+
+		__vbif_debug_bus(head, vbif_base, dump_addr, in_log);
+		if (dump_addr)
+			dump_addr += (head->block_cnt * head->test_pnt_cnt * 4);
+	}
+
+	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF);
+
+	pr_info("========End VBIF Debug bus=========\n");
+}
+
+void mdss_dump_reg(const char *dump_name, u32 reg_dump_flag, char *addr,
+	int len, u32 **dump_mem, bool from_isr)
+>>>>>>> 0e91d2a... Nougat
 {
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
 	bool in_log, in_mem;
@@ -298,8 +390,13 @@ static void mdss_dump_reg(u32 reg_dump_flag,
 
 		if (*dump_mem) {
 			dump_addr = *dump_mem;
+<<<<<<< HEAD
 			pr_info("start_addr:%p end_addr:%p reg_addr=%p\n",
 				dump_addr, dump_addr + (u32)len * 16,
+=======
+			pr_info("%s: start_addr:0x%pK end_addr:0x%pK reg_addr=0x%pK\n",
+				dump_name, dump_addr, dump_addr + (u32)len * 16,
+>>>>>>> 0e91d2a... Nougat
 				addr);
 		} else {
 			in_mem = false;
@@ -307,7 +404,9 @@ static void mdss_dump_reg(u32 reg_dump_flag,
 		}
 	}
 
-	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON);
+	if (!from_isr)
+		mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON);
+
 	for (i = 0; i < len; i++) {
 		u32 x0, x4, x8, xc;
 
@@ -317,7 +416,7 @@ static void mdss_dump_reg(u32 reg_dump_flag,
 		xc = readl_relaxed(addr+0xc);
 
 		if (in_log)
-			pr_info("%p : %08x %08x %08x %08x\n", addr, x0, x4, x8,
+			pr_info("%pK : %08x %08x %08x %08x\n", addr, x0, x4, x8,
 				xc);
 
 		if (dump_addr && in_mem) {
@@ -329,7 +428,9 @@ static void mdss_dump_reg(u32 reg_dump_flag,
 
 		addr += 16;
 	}
-	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF);
+
+	if (!from_isr)
+		mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF);
 }
 
 static void mdss_dump_reg_by_ranges(struct mdss_debug_base *dbg,
@@ -353,20 +454,35 @@ static void mdss_dump_reg_by_ranges(struct mdss_debug_base *dbg,
 			len = get_dump_range(&xlog_node->offset,
 				dbg->max_offset);
 			addr = dbg->base + xlog_node->offset.start;
+<<<<<<< HEAD
 			pr_info("%s: range_base=0x%p start=0x%x end=0x%x\n",
 				xlog_node->range_name,
 				addr, xlog_node->offset.start,
 				xlog_node->offset.end);
 			mdss_dump_reg(reg_dump_flag, addr, len,
 				&xlog_node->reg_dump);
+=======
+			pr_debug("%s: range_base=0x%pK start=0x%x end=0x%x\n",
+				xlog_node->range_name,
+				addr, xlog_node->offset.start,
+				xlog_node->offset.end);
+			mdss_dump_reg((const char *)xlog_node->range_name,
+				reg_dump_flag, addr, len, &xlog_node->reg_dump,
+				false);
+>>>>>>> 0e91d2a... Nougat
 		}
 	} else {
 		
 		pr_info("Ranges not found, will dump full registers");
-		pr_info("base:0x%p len:0x%zu\n", dbg->base, dbg->max_offset);
+		pr_info("base:0x%pK len:0x%zu\n", dbg->base, dbg->max_offset);
 		addr = dbg->base;
 		len = dbg->max_offset;
+<<<<<<< HEAD
 		mdss_dump_reg(reg_dump_flag, addr, len, &dbg->reg_dump);
+=======
+		mdss_dump_reg((const char *)dbg->name, reg_dump_flag, addr,
+			len, &dbg->reg_dump, false);
+>>>>>>> 0e91d2a... Nougat
 	}
 }
 

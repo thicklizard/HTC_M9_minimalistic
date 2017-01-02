@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -435,9 +435,20 @@ static int connect_pipe(u8 idx, u32 *usb_pipe_idx)
 		if (pipe_connect->mem_type == OCI_MEM)
 			pr_debug("%s: USB BAM using oci memory\n", __func__);
 
+<<<<<<< HEAD
 		data_buf->phys_base =
 			pipe_connect->data_fifo_base_offset +
 				pdata->usb_bam_fifo_baseaddr;
+=======
+		if (data_buf->base) {
+			log_event_err("%s: Already allocated OCI Memory\n",
+								__func__);
+			break;
+		}
+
+		data_buf->phys_base = pipe_connect->data_fifo_base_offset +
+						pdata->usb_bam_fifo_baseaddr;
+>>>>>>> 0e91d2a... Nougat
 		data_buf->size = pipe_connect->data_fifo_size;
 		data_buf->base =
 			ioremap(data_buf->phys_base, data_buf->size);
@@ -464,7 +475,18 @@ static int connect_pipe(u8 idx, u32 *usb_pipe_idx)
 		memset_io(desc_buf->base, 0, desc_buf->size);
 		break;
 	case SYSTEM_MEM:
+<<<<<<< HEAD
 		pr_debug("%s: USB BAM using system memory\n", __func__);
+=======
+		log_event_dbg("%s: USB BAM using system memory\n", __func__);
+
+		if (data_buf->base) {
+			log_event_err("%s: Already allocated memory\n",
+								__func__);
+			break;
+		}
+
+>>>>>>> 0e91d2a... Nougat
 		/* BAM would use system memory, allocate FIFOs */
 		data_buf->size = pipe_connect->data_fifo_size;
 		data_buf->base =
@@ -498,9 +520,148 @@ static int connect_pipe(u8 idx, u32 *usb_pipe_idx)
 		memset(desc_buf->base, 0, pipe_connect->desc_fifo_size);
 		break;
 	default:
+<<<<<<< HEAD
 		pr_err("%s: invalid mem type\n", __func__);
 		goto free_sps_endpoint;
 	}
+=======
+		log_event_err("%s: invalid mem type\n", __func__);
+		ret = -EINVAL;
+	}
+
+	return ret;
+
+err_exit:
+	return ret;
+}
+
+int usb_bam_alloc_fifos(enum usb_ctrl cur_bam, u8 idx)
+{
+	int ret;
+	struct usb_bam_ctx_type *ctx = &msm_usb_bam[cur_bam];
+	struct usb_bam_pipe_connect *pipe_connect =
+					&ctx->usb_bam_connections[idx];
+
+	ret = usb_bam_alloc_buffer(pipe_connect);
+	if (ret) {
+		log_event_err("%s(): Error(%d) allocating buffer\n",
+				__func__, ret);
+		return ret;
+	}
+	return 0;
+}
+
+int usb_bam_free_fifos(enum usb_ctrl cur_bam, u8 idx)
+{
+	struct usb_bam_ctx_type *ctx = &msm_usb_bam[cur_bam];
+	struct usb_bam_pipe_connect *pipe_connect =
+				&ctx->usb_bam_connections[idx];
+	struct sps_connect *sps_connection =
+				&ctx->usb_bam_sps.sps_connections[idx];
+
+	pr_debug("%s(): data size:%x desc size:%x\n",
+			__func__, sps_connection->data.size,
+			sps_connection->desc.size);
+
+	switch (pipe_connect->mem_type) {
+	case SYSTEM_MEM:
+		log_event_dbg("%s: Freeing system memory used by PIPE\n",
+				__func__);
+		if (sps_connection->data.phys_base) {
+			if (cur_bam == CI_CTRL)
+				dma_free_coherent(&ctx->usb_bam_pdev->dev,
+					(sps_connection->data.size +
+						DATA_FIFO_EXTRA_MEM_ALLOC_SIZE),
+					sps_connection->data.base,
+					sps_connection->data.phys_base);
+			else
+				dma_free_coherent(&ctx->usb_bam_pdev->dev,
+					sps_connection->data.size,
+					sps_connection->data.base,
+					sps_connection->data.phys_base);
+			sps_connection->data.phys_base = 0;
+			pipe_connect->data_mem_buf.base = NULL;
+		}
+		if (sps_connection->desc.phys_base) {
+			dma_free_coherent(&ctx->usb_bam_pdev->dev,
+					sps_connection->desc.size,
+					sps_connection->desc.base,
+					sps_connection->desc.phys_base);
+			sps_connection->desc.phys_base = 0;
+			pipe_connect->desc_mem_buf.base = NULL;
+		}
+		break;
+	case OCI_MEM:
+		log_event_dbg("Freeing oci memory used by BAM PIPE\n");
+		if (sps_connection->data.base) {
+			iounmap(sps_connection->data.base);
+			sps_connection->data.base = NULL;
+			pipe_connect->data_mem_buf.base = NULL;
+		}
+		if (sps_connection->desc.base) {
+			iounmap(sps_connection->desc.base);
+			sps_connection->desc.base = NULL;
+			pipe_connect->desc_mem_buf.base = NULL;
+		}
+		break;
+	case SPS_PIPE_MEM:
+		log_event_dbg("%s: nothing to be be\n", __func__);
+		break;
+	}
+
+	return 0;
+}
+
+static int connect_pipe(enum usb_ctrl cur_bam, u8 idx, u32 *usb_pipe_idx)
+{
+	int ret;
+	struct usb_bam_ctx_type *ctx = &msm_usb_bam[cur_bam];
+	struct usb_bam_sps_type usb_bam_sps = ctx->usb_bam_sps;
+	struct sps_pipe **pipe = &(usb_bam_sps.sps_pipes[idx]);
+	struct sps_connect *sps_connection = &usb_bam_sps.sps_connections[idx];
+	struct usb_bam_pipe_connect *pipe_connect =
+					&ctx->usb_bam_connections[idx];
+	enum usb_bam_pipe_dir dir = pipe_connect->dir;
+	struct sps_mem_buffer *data_buf = &(pipe_connect->data_mem_buf);
+	struct sps_mem_buffer *desc_buf = &(pipe_connect->desc_mem_buf);
+
+	*pipe = sps_alloc_endpoint();
+	if (*pipe == NULL) {
+		log_event_err("%s: sps_alloc_endpoint failed\n", __func__);
+		return -ENOMEM;
+	}
+
+	ret = sps_get_config(*pipe, sps_connection);
+	if (ret) {
+		log_event_err("%s: tx get config failed %d\n", __func__, ret);
+		goto free_sps_endpoint;
+	}
+
+	ret = sps_phy2h(pipe_connect->src_phy_addr, &(sps_connection->source));
+	if (ret) {
+		log_event_err("%s: sps_phy2h failed (src BAM) %d\n",
+				__func__, ret);
+		goto free_sps_endpoint;
+	}
+
+	sps_connection->src_pipe_index = pipe_connect->src_pipe_index;
+	ret = sps_phy2h(pipe_connect->dst_phy_addr,
+		&(sps_connection->destination));
+	if (ret) {
+		log_event_err("%s: sps_phy2h failed (dst BAM) %d\n",
+				__func__, ret);
+		goto free_sps_endpoint;
+	}
+	sps_connection->dest_pipe_index = pipe_connect->dst_pipe_index;
+
+	if (dir == USB_TO_PEER_PERIPHERAL) {
+		sps_connection->mode = SPS_MODE_SRC;
+		*usb_pipe_idx = pipe_connect->src_pipe_index;
+	} else {
+		sps_connection->mode = SPS_MODE_DEST;
+		*usb_pipe_idx = pipe_connect->dst_pipe_index;
+	}
+>>>>>>> 0e91d2a... Nougat
 
 	sps_connection->data = *data_buf;
 	sps_connection->desc = *desc_buf;
@@ -644,6 +805,7 @@ static int connect_pipe_bam2bam_ipa(u8 idx,
 	ipa_in_params.skip_ep_cfg = ipa_params->skip_ep_cfg;
 	ipa_in_params.keep_ipa_awake = ipa_params->keep_ipa_awake;
 
+<<<<<<< HEAD
 	/* If BAM is using dedicated SPS pipe memory, get it */
 
 	if (pipe_connect->mem_type == SPS_PIPE_MEM) {
@@ -671,6 +833,10 @@ static int connect_pipe_bam2bam_ipa(u8 idx,
 		ipa_in_params.desc = pipe_connect->desc_mem_buf;
 		ipa_in_params.data = pipe_connect->data_mem_buf;
 	}
+=======
+	ipa_in_params.desc = pipe_connect->desc_mem_buf;
+	ipa_in_params.data = pipe_connect->data_mem_buf;
+>>>>>>> 0e91d2a... Nougat
 
 	memcpy(&ipa_in_params.ipa_ep_cfg, &ipa_params->ipa_ep_cfg,
 		   sizeof(struct ipa_ep_cfg));
@@ -756,14 +922,20 @@ disconnect_ipa:
 
 static int disconnect_pipe(u8 idx)
 {
+<<<<<<< HEAD
 	struct usb_bam_pipe_connect *pipe_connect =
 		&usb_bam_connections[idx];
 	struct sps_pipe *pipe = ctx.usb_bam_sps.sps_pipes[idx];
+=======
+	struct usb_bam_ctx_type *ctx = &msm_usb_bam[cur_bam];
+	struct sps_pipe *pipe = ctx->usb_bam_sps.sps_pipes[idx];
+>>>>>>> 0e91d2a... Nougat
 	struct sps_connect *sps_connection =
 		&ctx.usb_bam_sps.sps_connections[idx];
 
 	sps_disconnect(pipe);
 	sps_free_endpoint(pipe);
+<<<<<<< HEAD
 	ctx.usb_bam_sps.sps_pipes[idx] = NULL;
 
 	switch (pipe_connect->mem_type) {
@@ -797,7 +969,11 @@ static int disconnect_pipe(u8 idx)
 		break;
 	}
 
+=======
+	ctx->usb_bam_sps.sps_pipes[idx] = NULL;
+>>>>>>> 0e91d2a... Nougat
 	sps_connection->options &= ~SPS_O_AUTO_ENABLE;
+
 	return 0;
 }
 
@@ -2746,6 +2922,7 @@ int usb_bam_disconnect_pipe(u8 idx)
 	}
 
 	pipe_connect->enabled = 0;
+<<<<<<< HEAD
 	spin_lock(&usb_bam_lock);
 	if (ctx.pipes_enabled_per_bam[pipe_connect->bam_type] == 0)
 		pr_err("%s: wrong pipes enabled counter for bam_type=%d\n",
@@ -2755,6 +2932,43 @@ int usb_bam_disconnect_pipe(u8 idx)
 	spin_unlock(&usb_bam_lock);
 	pr_debug("%s: success disconnecting pipe %d\n",
 			 __func__, idx);
+=======
+	spin_lock(&ctx->usb_bam_lock);
+	if (!ctx->pipes_enabled_per_bam) {
+		log_event_err("%s: wrong pipes enabled counter for bam_type=%d\n",
+			__func__, bam_type);
+	} else {
+		ctx->pipes_enabled_per_bam -= 1;
+	}
+	spin_unlock(&ctx->usb_bam_lock);
+
+	log_event_dbg("%s: success disconnecting pipe %d\n", __func__, idx);
+
+	if (pdata->reset_on_disconnect && !ctx->pipes_enabled_per_bam) {
+		if (bam_type == CI_CTRL)
+			msm_hw_bam_disable(1);
+
+		sps_device_reset(ctx->h_bam);
+
+		if (bam_type == CI_CTRL)
+			msm_hw_bam_disable(0);
+	}
+	/* Enable usb irq here which is disabled in function drivers
+	 * during disconnect after BAM reset.
+	 */
+	if (!ctx->pipes_enabled_per_bam && (bam_type == CI_CTRL))
+		msm_usb_irq_disable(false);
+	/* This function is directly called by USB Transport drivers
+	 * to disconnect pipes. Drop runtime usage count here. For
+	 * IPA, caller takes care of it
+	 */
+	if (pipe_connect->peer_bam != IPA_P_BAM) {
+		log_event_dbg("%s: PM Runtime PUT %d, count: %d\n",
+			  __func__, idx, get_pm_runtime_counter(bam_dev));
+		pm_runtime_put_sync(bam_dev);
+	}
+
+>>>>>>> 0e91d2a... Nougat
 	return 0;
 }
 
@@ -3242,7 +3456,22 @@ static int usb_bam_init(int bam_type)
 	if (pdata->disable_clk_gating)
 		props.options |= SPS_BAM_NO_LOCAL_CLK_GATING;
 
+<<<<<<< HEAD
 	ret = sps_register_bam_device(&props, &(ctx.h_bam[bam_type]));
+=======
+	/*
+	 * HSUSB BAM is not NDP BAM and it must be enabled early before
+	 * starting peripheral controller to avoid switching USB core mode
+	 * from legacy to BAM with ongoing data transfers.
+	 */
+	if (pdata->enable_hsusb_bam_on_boot && bam_type == CI_CTRL) {
+		pr_debug("Register and enable HSUSB BAM\n");
+		props.options |= SPS_BAM_OPT_ENABLE_AT_BOOT;
+		props.options |= SPS_BAM_FORCE_RESET;
+	}
+	ret = sps_register_bam_device(&props, &ctx->h_bam);
+
+>>>>>>> 0e91d2a... Nougat
 	if (ret < 0) {
 		pr_err("%s: register bam error %d\n", __func__, ret);
 		ret = -EFAULT;
@@ -3488,8 +3717,14 @@ bool usb_bam_get_prod_granted(u8 idx)
 }
 EXPORT_SYMBOL(usb_bam_get_prod_granted);
 
+<<<<<<< HEAD
 
 void usb_bam_set_qdss_core(const char *qdss_core)
+=======
+int get_bam2bam_connection_info(enum usb_ctrl bam_type, u8 idx,
+	u32 *usb_bam_pipe_idx, struct sps_mem_buffer *desc_fifo,
+	struct sps_mem_buffer *data_fifo, enum usb_pipe_mem_type *mem_type)
+>>>>>>> 0e91d2a... Nougat
 {
 	strlcpy(ctx.qdss_core_name, qdss_core, USB_BAM_MAX_STR_LEN);
 }
@@ -3501,18 +3736,17 @@ int get_bam2bam_connection_info(u8 idx, unsigned long *usb_bam_handle,
 {
 	struct usb_bam_pipe_connect *pipe_connect = &usb_bam_connections[idx];
 	enum usb_bam_pipe_dir dir = pipe_connect->dir;
+<<<<<<< HEAD
 	struct sps_connect *sps_connection =
 		&ctx.usb_bam_sps.sps_connections[idx];
+=======
+>>>>>>> 0e91d2a... Nougat
 
-	if (dir == USB_TO_PEER_PERIPHERAL) {
-		*usb_bam_handle = sps_connection->source;
-		*usb_bam_pipe_idx = sps_connection->src_pipe_index;
-		*peer_pipe_idx = sps_connection->dest_pipe_index;
-	} else {
-		*usb_bam_handle = sps_connection->destination;
-		*usb_bam_pipe_idx = sps_connection->dest_pipe_index;
-		*peer_pipe_idx = sps_connection->src_pipe_index;
-	}
+	if (dir == USB_TO_PEER_PERIPHERAL)
+		*usb_bam_pipe_idx = pipe_connect->src_pipe_index;
+	else
+		*usb_bam_pipe_idx = pipe_connect->dst_pipe_index;
+
 	if (data_fifo)
 		memcpy(data_fifo, &pipe_connect->data_mem_buf,
 		sizeof(struct sps_mem_buffer));
@@ -3526,8 +3760,37 @@ int get_bam2bam_connection_info(u8 idx, unsigned long *usb_bam_handle,
 }
 EXPORT_SYMBOL(get_bam2bam_connection_info);
 
+<<<<<<< HEAD
 
 int usb_bam_get_connection_idx(const char *core_name, enum peer_bam client,
+=======
+int get_qdss_bam_connection_info(unsigned long *usb_bam_handle,
+	u32 *usb_bam_pipe_idx, u32 *peer_pipe_idx,
+	struct sps_mem_buffer *desc_fifo, struct sps_mem_buffer *data_fifo,
+	enum usb_pipe_mem_type *mem_type)
+{
+	u8 idx;
+	struct usb_bam_ctx_type *ctx = &msm_usb_bam[qdss_usb_bam_type];
+	struct sps_connect *sps_connection;
+
+	/* QDSS uses only one pipe */
+	idx = usb_bam_get_connection_idx(qdss_usb_bam_type, QDSS_P_BAM,
+		PEER_PERIPHERAL_TO_USB, USB_BAM_DEVICE, 0);
+
+	get_bam2bam_connection_info(qdss_usb_bam_type, idx, usb_bam_pipe_idx,
+						desc_fifo, data_fifo, mem_type);
+
+
+	sps_connection = &ctx->usb_bam_sps.sps_connections[idx];
+	*usb_bam_handle = sps_connection->destination;
+	*peer_pipe_idx = sps_connection->src_pipe_index;
+
+	return 0;
+}
+EXPORT_SYMBOL(get_qdss_bam_connection_info);
+
+int usb_bam_get_connection_idx(enum usb_ctrl bam_type, enum peer_bam client,
+>>>>>>> 0e91d2a... Nougat
 	enum usb_bam_pipe_dir dir, enum usb_bam_mode bam_mode, u32 num)
 {
 	u8 i;
@@ -3561,7 +3824,132 @@ int usb_bam_get_bam_type(int connection_idx)
 }
 EXPORT_SYMBOL(usb_bam_get_bam_type);
 
+<<<<<<< HEAD
 bool msm_bam_device_lpm_ok(enum usb_ctrl bam_type)
+=======
+/*
+ * This function makes sure ipa endpoints are disabled for both USB->IPA
+ * and IPA->USB pipes before USB bam reset. USB BAM reset is required to
+ * to avoid EP flush issues while disabling USB endpoints on disconnect.
+ */
+int msm_do_bam_disable_enable(enum usb_ctrl bam)
+{
+	struct usb_bam_ctx_type *ctx = &msm_usb_bam[bam];
+	struct sps_pipe *pipe;
+	u32 timeout = 10, pipe_empty;
+	int ret = 0, i;
+	struct sps_connect *sps_connection;
+	struct usb_bam_sps_type usb_bam_sps = ctx->usb_bam_sps;
+	struct usb_bam_pipe_connect *pipe_connect;
+	int qdss_idx;
+	struct msm_usb_bam_platform_data *pdata;
+
+	if (!ctx->usb_bam_pdev)
+		return 0;
+
+	pdata = ctx->usb_bam_pdev->dev.platform_data;
+	if ((bam != CI_CTRL) || !pdata->enable_hsusb_bam_on_boot)
+		return 0;
+
+	if (!ctx->pipes_enabled_per_bam || info[bam].pipes_suspended)
+		return 0;
+
+	if (in_interrupt()) {
+		pr_err("%s:API called in interrupt context\n", __func__);
+		return 0;
+	}
+
+	mutex_lock(&info[bam].suspend_resume_mutex);
+	log_event_dbg("%s: Perform USB BAM reset\n", __func__);
+	/* Get QDSS pipe index to avoid pipe reset */
+	qdss_idx = usb_bam_get_connection_idx(qdss_usb_bam_type, QDSS_P_BAM,
+		PEER_PERIPHERAL_TO_USB, USB_BAM_DEVICE, 0);
+
+	for (i = 0; i < ctx->max_connections; i++) {
+		pipe_connect = &ctx->usb_bam_connections[i];
+		if (pipe_connect->enabled &&
+				(pipe_connect->dir == PEER_PERIPHERAL_TO_USB) &&
+							(qdss_idx != i)) {
+			/* Call to disable IPA producer endpoint */
+			ipa_disable_endpoint(pipe_connect->ipa_clnt_hdl);
+			sps_pipe_reset(ctx->h_bam,
+						pipe_connect->dst_pipe_index);
+		}
+	}
+
+	for (i = 0; i < ctx->max_connections; i++) {
+		pipe_connect = &ctx->usb_bam_connections[i];
+		if (pipe_connect->enabled &&
+				(pipe_connect->dir == USB_TO_PEER_PERIPHERAL) &&
+							(qdss_idx != i)) {
+			pipe = ctx->usb_bam_sps.sps_pipes[i];
+			sps_connection = &usb_bam_sps.sps_connections[i];
+			timeout = 10;
+			/*
+			 * On some platforms, there is a chance that flow
+			 * control is disabled from IPA side, due to this IPA
+			 * core may not consume data from USB. Hence notify IPA
+			 * to enable flow control and then check sps pipe is
+			 * empty or not before processing USB->IPA disconnect.
+			 */
+			ipa_clear_endpoint_delay(pipe_connect->ipa_clnt_hdl);
+
+			/* Make sure pipes are empty before disconnecting it */
+			while (1) {
+				ret = sps_is_pipe_empty(pipe, &pipe_empty);
+				if (ret) {
+					log_event_err("%s: pipeempty fail %d\n",
+								__func__, ret);
+					goto err;
+				}
+				if (pipe_empty || !--timeout)
+					break;
+
+				/* Check again */
+				usleep_range(1000, 2000);
+			}
+			if (!pipe_empty) {
+				log_event_dbg("%s: Inject ZLT\n", __func__);
+				sps_pipe_inject_zlt(sps_connection->destination,
+					sps_connection->dest_pipe_index);
+
+				timeout = 0;
+				while (1) {
+					ret = sps_is_pipe_empty(pipe,
+								&pipe_empty);
+					if (ret)
+						goto err;
+
+					if (pipe_empty)
+						break;
+
+					timeout++;
+					/* Check again */
+					usleep_range(1000, 2000);
+				}
+			}
+			/* Call to disable IPA consumer endpoint */
+			ipa_disable_endpoint(pipe_connect->ipa_clnt_hdl);
+			sps_pipe_reset(ctx->h_bam,
+						pipe_connect->src_pipe_index);
+		}
+	}
+
+	/* Perform USB BAM reset */
+	msm_hw_bam_disable(1);
+	sps_device_reset(ctx->h_bam);
+	msm_hw_bam_disable(0);
+	log_event_dbg("%s: USB BAM reset done\n", __func__);
+	ret = 0;
+
+err:
+	mutex_unlock(&info[bam].suspend_resume_mutex);
+	return ret;
+}
+EXPORT_SYMBOL(msm_do_bam_disable_enable);
+
+bool msm_usb_bam_enable(enum usb_ctrl bam, bool bam_enable)
+>>>>>>> 0e91d2a... Nougat
 {
 	/*
 	 * There is the possibility of a race between the usb_bam_probe()

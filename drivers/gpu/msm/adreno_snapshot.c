@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -19,27 +19,48 @@
 #include "a3xx_reg.h"
 #include "adreno_cp_parser.h"
 
+<<<<<<< HEAD
 /* Number of dwords of ringbuffer history to record */
 #define NUM_DWORDS_OF_RINGBUFFER_HISTORY 100
 
 /* Maintain a list of the objects we see during parsing */
+=======
+#define VPC_MEMORY_BANKS 4
+
+>>>>>>> 0e91d2a... Nougat
 
 #define SNAPSHOT_OBJ_BUFSIZE 64
 
 #define SNAPSHOT_OBJ_TYPE_IB 0
 
-/* Used to print error message if an IB has too many objects in it */
 static int ib_max_objs;
 
+<<<<<<< HEAD
 /* Keep track of how many bytes are frozen after a snapshot and tell the user */
+=======
+struct snapshot_rb_params {
+	struct kgsl_snapshot *snapshot;
+	struct adreno_ringbuffer *rb;
+};
+
+>>>>>>> 0e91d2a... Nougat
 static size_t snapshot_frozen_objsize;
 
 static struct kgsl_snapshot_object objbuf[SNAPSHOT_OBJ_BUFSIZE];
 
-/* Pointer to the next open entry in the object list */
 static unsigned int objbufptr;
 
+<<<<<<< HEAD
 /* Push a new buffer object onto the list */
+=======
+static inline int adreno_rb_ctxtswitch(struct adreno_device *adreno_dev,
+				   unsigned int *cmd)
+{
+	return cmd[0] == cp_packet(adreno_dev, CP_NOP, 1) &&
+		cmd[1] == KGSL_CONTEXT_TO_MEM_IDENTIFIER;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static void push_object(int type,
 	struct kgsl_process_private *process,
 	uint32_t gpuaddr, int dwords)
@@ -50,12 +71,6 @@ static void push_object(int type,
 	if (process == NULL)
 		return;
 
-	/*
-	 * Sometimes IBs can be reused in the same dump.  Because we parse from
-	 * oldest to newest, if we come across an IB that has already been used,
-	 * assume that it has been reused and update the list with the newest
-	 * size.
-	 */
 
 	for (index = 0; index < objbufptr; index++) {
 		if (objbuf[index].gpuaddr == gpuaddr &&
@@ -79,17 +94,13 @@ static void push_object(int type,
 		return;
 	}
 
-	/* Put it on the list of things to parse */
+	
 	objbuf[objbufptr].type = type;
 	objbuf[objbufptr].gpuaddr = gpuaddr;
 	objbuf[objbufptr].size = dwords << 2;
 	objbuf[objbufptr++].entry = entry;
 }
 
-/*
- * Return a 1 if the specified object is already on the list of buffers
- * to be dumped
- */
 
 static int find_object(int type, unsigned int gpuaddr,
 		struct kgsl_process_private *process)
@@ -99,22 +110,11 @@ static int find_object(int type, unsigned int gpuaddr,
 	for (index = 0; index < objbufptr; index++) {
 		if (objbuf[index].gpuaddr == gpuaddr &&
 			objbuf[index].entry->priv == process)
-			return 1;
+			return index;
 	}
-
-	return 0;
+	return -ENOENT;
 }
 
-/*
- * snapshot_freeze_obj_list() - Take a list of ib objects and freeze their
- * memory for snapshot
- * @snapshot: The snapshot data.
- * @process: The process to which the IB belongs
- * @ib_obj_list: List of the IB objects
- * @ib2base: IB2 base address at time of the fault
- *
- * Returns 0 on success else error code
- */
 static int snapshot_freeze_obj_list(struct kgsl_snapshot *snapshot,
 		struct kgsl_process_private *process,
 		struct adreno_ib_object_list *ib_obj_list,
@@ -130,7 +130,7 @@ static int snapshot_freeze_obj_list(struct kgsl_snapshot *snapshot,
 		int freeze = 1;
 
 		ib_objs = &(ib_obj_list->obj_list[i]);
-		/* Make sure this object is not going to be saved statically */
+		
 		for (index = 0; index < objbufptr; index++) {
 			if ((objbuf[index].gpuaddr <= ib_objs->gpuaddr) &&
 				((objbuf[index].gpuaddr +
@@ -143,7 +143,7 @@ static int snapshot_freeze_obj_list(struct kgsl_snapshot *snapshot,
 		}
 
 		if (freeze) {
-			/* Save current IB2 statically */
+			
 			if (ib2base == ib_objs->gpuaddr) {
 				push_object(SNAPSHOT_OBJ_TYPE_IB,
 				process, ib_objs->gpuaddr, ib_objs->size >> 2);
@@ -164,17 +164,12 @@ static int snapshot_freeze_obj_list(struct kgsl_snapshot *snapshot,
 	return ret;
 }
 
-/*
- * We want to store the last executed IB1 and IB2 in the static region to ensure
- * that we get at least some information out of the snapshot even if we can't
- * access the dynamic data from the sysfs file.  Push all other IBs on the
- * dynamic list
- */
 static inline void parse_ib(struct kgsl_device *device,
 		struct kgsl_snapshot *snapshot,
 		struct kgsl_process_private *process,
 		unsigned int gpuaddr, unsigned int dwords)
 {
+<<<<<<< HEAD
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
 	unsigned int ib1base;
 	struct adreno_ib_object_list *ib_obj_list;
@@ -188,6 +183,11 @@ static inline void parse_ib(struct kgsl_device *device,
 	adreno_readreg(adreno_dev, ADRENO_REG_CP_IB1_BASE, &ib1base);
 
 	if (gpuaddr == ib1base) {
+=======
+	struct adreno_ib_object_list *ib_obj_list;
+
+	if (gpuaddr == snapshot->ib1base) {
+>>>>>>> 0e91d2a... Nougat
 		push_object(SNAPSHOT_OBJ_TYPE_IB, process,
 			gpuaddr, dwords);
 		return;
@@ -206,6 +206,7 @@ static inline void parse_ib(struct kgsl_device *device,
 
 }
 
+<<<<<<< HEAD
 /* Snapshot the ringbuffer memory */
 static size_t snapshot_rb(struct kgsl_device *device, u8 *buf,
 	size_t remain, void *priv)
@@ -215,13 +216,76 @@ static size_t snapshot_rb(struct kgsl_device *device, u8 *buf,
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
 	struct adreno_ringbuffer *rb = ADRENO_CURRENT_RINGBUFFER(adreno_dev);
 	unsigned int rptr, *rbptr, ibbase;
+=======
+static inline bool iommu_is_setstate_addr(struct kgsl_device *device,
+		uint64_t gpuaddr, uint64_t size)
+{
+	struct kgsl_iommu *iommu = KGSL_IOMMU_PRIV(device);
+
+	if (kgsl_mmu_get_mmutype(device) != KGSL_MMU_TYPE_IOMMU)
+		return false;
+
+	return kgsl_gpuaddr_in_memdesc(&iommu->setstate, gpuaddr,
+			size);
+}
+
+static void dump_all_ibs(struct kgsl_device *device,
+			struct adreno_ringbuffer *rb,
+			struct kgsl_snapshot *snapshot)
+{
+	int index = 0;
+	unsigned int *rbptr;
+	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
+
+	rbptr = rb->buffer_desc.hostptr;
+
+	for (index = 0; index < KGSL_RB_DWORDS;) {
+
+		if (adreno_cmd_is_ib(adreno_dev, rbptr[index])) {
+			uint64_t ibaddr;
+			uint64_t ibsize;
+
+			if (ADRENO_LEGACY_PM4(adreno_dev)) {
+				ibaddr = rbptr[index + 1];
+				ibsize = rbptr[index + 2];
+				index += 3;
+			} else {
+				ibaddr = rbptr[index + 2];
+				ibaddr = ibaddr << 32 | rbptr[index + 1];
+				ibsize = rbptr[index + 3];
+				index += 4;
+			}
+
+			
+			if (iommu_is_setstate_addr(device, ibaddr, ibsize))
+				continue;
+
+			if (kgsl_gpuaddr_in_memdesc(&adreno_dev->pwron_fixup,
+				ibaddr, ibsize))
+				continue;
+
+			parse_ib(device, snapshot, snapshot->process, ibaddr,
+				ibsize);
+		} else
+			index = index + 1;
+	}
+}
+
+static void snapshot_rb_ibs(struct kgsl_device *device,
+		struct adreno_ringbuffer *rb,
+		struct kgsl_snapshot *snapshot)
+{
+	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
+	unsigned int rptr, *rbptr;
+>>>>>>> 0e91d2a... Nougat
 	int index, i;
 	int parse_ibs = 0, ib_parse_start;
 	struct kgsl_snapshot *snapshot = priv;
 
-	/* Get the current read pointers for the RB */
+	
 	adreno_readreg(adreno_dev, ADRENO_REG_CP_RB_RPTR, &rptr);
 
+<<<<<<< HEAD
 	/* Address of the last processed IB */
 	adreno_readreg(adreno_dev, ADRENO_REG_CP_IB1_BASE, &ibbase);
 
@@ -230,6 +294,8 @@ static size_t snapshot_rb(struct kgsl_device *device, u8 *buf,
 	 * find where the last processed IB ws submitted.  Start walking back
 	 * from the rptr
 	 */
+=======
+>>>>>>> 0e91d2a... Nougat
 
 	index = rptr;
 	rbptr = rb->buffer_desc.hostptr;
@@ -238,25 +304,45 @@ static size_t snapshot_rb(struct kgsl_device *device, u8 *buf,
 		index--;
 
 		if (index < 0) {
-			index = KGSL_RB_DWORDS - 3;
+			if (ADRENO_LEGACY_PM4(adreno_dev))
+				index = KGSL_RB_DWORDS - 3;
+			else
+				index = KGSL_RB_DWORDS - 4;
 
-			/* We wrapped without finding what we wanted */
+			
 			if (index < rb->wptr) {
 				index = rb->wptr;
 				break;
 			}
 		}
 
+<<<<<<< HEAD
 		if (adreno_cmd_is_ib(rbptr[index]) &&
 			rbptr[index + 1] == ibbase)
 			break;
+=======
+		if (adreno_cmd_is_ib(adreno_dev, rbptr[index])) {
+			if (ADRENO_LEGACY_PM4(adreno_dev)) {
+				if (rbptr[index + 1] == snapshot->ib1base)
+					break;
+			} else {
+				uint64_t ibaddr;
+
+				ibaddr = rbptr[index + 2];
+				ibaddr = ibaddr << 32 | rbptr[index + 1];
+				if (ibaddr == snapshot->ib1base)
+					break;
+			}
+		}
+>>>>>>> 0e91d2a... Nougat
 	} while (index != rb->wptr);
 
-	/*
-	 * index points at the last submitted IB. We can only trust that the
-	 * memory between the context switch and the hanging IB is valid, so
-	 * the next step is to find the context switch before the submission
-	 */
+
+	if (index == rb->wptr) {
+		dump_all_ibs(device, rb, snapshot);
+		return;
+	}
+
 
 	while (index != rb->wptr) {
 		index--;
@@ -264,11 +350,6 @@ static size_t snapshot_rb(struct kgsl_device *device, u8 *buf,
 		if (index < 0) {
 			index = KGSL_RB_DWORDS - 2;
 
-			/*
-			 * Wrapped without finding the context switch. This is
-			 * harmless - we should still have enough data to dump a
-			 * valid state
-			 */
 
 			if (index < rb->wptr) {
 				index = rb->wptr;
@@ -276,19 +357,21 @@ static size_t snapshot_rb(struct kgsl_device *device, u8 *buf,
 			}
 		}
 
+<<<<<<< HEAD
 		/* Break if the current packet is a context switch identifier */
 		if ((rbptr[index] == cp_nop_packet(1)) &&
+=======
+		
+		if ((rbptr[index] == cp_packet(adreno_dev, CP_NOP, 1)) &&
+>>>>>>> 0e91d2a... Nougat
 			(rbptr[index + 1] == KGSL_CONTEXT_TO_MEM_IDENTIFIER))
 			break;
 	}
 
-	/*
-	 * Index represents the start of the window of interest.  We will try
-	 * to dump all buffers between here and the rptr
-	 */
 
 	ib_parse_start = index;
 
+<<<<<<< HEAD
 	/*
 	 * Dump the entire ringbuffer - the parser can choose how much of it to
 	 * process
@@ -315,15 +398,11 @@ static size_t snapshot_rb(struct kgsl_device *device, u8 *buf,
 	 * Loop through the RB, copying the data and looking for indirect
 	 * buffers and MMU pagetable changes
 	 */
+=======
+>>>>>>> 0e91d2a... Nougat
 
 	index = rb->wptr;
 	for (i = 0; i < KGSL_RB_DWORDS; i++) {
-		*data = rbptr[index];
-
-		/*
-		 * Only parse IBs between the start and the rptr or the next
-		 * context switch, whichever comes first
-		 */
 
 		if (parse_ibs == 0 && index == ib_parse_start)
 			parse_ibs = 1;
@@ -334,28 +413,96 @@ static size_t snapshot_rb(struct kgsl_device *device, u8 *buf,
 			unsigned int ibaddr = rbptr[index + 1];
 			unsigned int ibsize = rbptr[index + 2];
 
-			/*
-			 * Sometimes the kernel generates IBs in global
-			 * memory. We dump the interesting global buffers,
-			 * so there's no need to parse these IBs.
-			 */
-			if (!kgsl_search_global_pt_entries(ibaddr, ibsize))
-				parse_ib(device, snapshot, snapshot->process,
-					ibaddr, ibsize);
+			
+			if (iommu_is_setstate_addr(device, ibaddr, ibsize))
+				continue;
+
+			if (kgsl_gpuaddr_in_memdesc(&adreno_dev->pwron_fixup,
+				ibaddr, ibsize))
+				continue;
+
+			parse_ib(device, snapshot, snapshot->process,
+				ibaddr, ibsize);
 		}
 
-		index = index + 1;
-
-		if (index == KGSL_RB_DWORDS)
-			index = 0;
-
-		data++;
+		index = (index + 1) % KGSL_RB_DWORDS;
 	}
 
+<<<<<<< HEAD
 	/* Return the size of the section */
 	return KGSL_RB_SIZE + sizeof(*header);
 }
 
+=======
+}
+
+static size_t snapshot_rb(struct kgsl_device *device, u8 *buf,
+	size_t remain, void *priv)
+{
+	struct kgsl_snapshot_rb_v2 *header = (struct kgsl_snapshot_rb_v2 *)buf;
+	unsigned int *data = (unsigned int *)(buf + sizeof(*header));
+	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
+	struct snapshot_rb_params *snap_rb_params = priv;
+	struct kgsl_snapshot *snapshot = snap_rb_params->snapshot;
+	struct adreno_ringbuffer *rb = snap_rb_params->rb;
+
+
+	if (remain < KGSL_RB_SIZE + sizeof(*header)) {
+		KGSL_CORE_ERR("snapshot: Not enough memory for the rb section");
+		return 0;
+	}
+
+	
+	header->start = 0;
+	header->end = KGSL_RB_DWORDS;
+	header->wptr = rb->wptr;
+	header->rptr = adreno_get_rptr(rb);
+	header->rbsize = KGSL_RB_DWORDS;
+	header->count = KGSL_RB_DWORDS;
+	adreno_rb_readtimestamp(adreno_dev, rb, KGSL_TIMESTAMP_QUEUED,
+					&header->timestamp_queued);
+	adreno_rb_readtimestamp(adreno_dev, rb, KGSL_TIMESTAMP_RETIRED,
+					&header->timestamp_retired);
+	header->gpuaddr = rb->buffer_desc.gpuaddr;
+	header->id = rb->id;
+
+	if (rb == adreno_dev->cur_rb)
+		snapshot_rb_ibs(device, rb, snapshot);
+
+	
+	memcpy(data, rb->buffer_desc.hostptr, KGSL_RB_SIZE);
+
+	
+	return KGSL_RB_SIZE + sizeof(*header);
+}
+
+static int _count_mem_entries(int id, void *ptr, void *data)
+{
+	int *count = data;
+	*count = *count + 1;
+	return 0;
+}
+
+struct mem_entry {
+	uint64_t gpuaddr;
+	uint64_t size;
+	unsigned int type;
+} __packed;
+
+static int _save_mem_entries(int id, void *ptr, void *data)
+{
+	struct kgsl_mem_entry *entry = ptr;
+	struct mem_entry *m = (struct mem_entry *) data;
+	unsigned int index = id - 1;
+
+	m[index].gpuaddr = entry->memdesc.gpuaddr;
+	m[index].size = entry->memdesc.size;
+	m[index].type = kgsl_memdesc_get_memtype(&entry->memdesc);
+
+	return 0;
+}
+
+>>>>>>> 0e91d2a... Nougat
 static size_t snapshot_capture_mem_list(struct kgsl_device *device,
 		u8 *buf, size_t remain, void *priv)
 {
@@ -367,10 +514,11 @@ static size_t snapshot_capture_mem_list(struct kgsl_device *device,
 	unsigned int *data = (unsigned int *)(buf + sizeof(*header));
 	struct kgsl_process_private *process = priv;
 
-	/* we need a process to search! */
+	
 	if (process == NULL)
 		return 0;
 
+<<<<<<< HEAD
 	/* We need to know the number of memory objects that the process has */
 	spin_lock(&process->mem_lock);
 	for (node = rb_first(&process->mem_rb), num_mem = 0; node; ) {
@@ -378,6 +526,15 @@ static size_t snapshot_capture_mem_list(struct kgsl_device *device,
 		node = rb_next(&entry->node);
 		num_mem++;
 	}
+=======
+	spin_lock(&process->mem_lock);
+
+	
+	idr_for_each(&process->mem_idr, _count_mem_entries, &num_mem);
+
+	if (num_mem == 0)
+		goto out;
+>>>>>>> 0e91d2a... Nougat
 
 	if (remain < ((num_mem * 3 * sizeof(unsigned int)) +
 			sizeof(*header))) {
@@ -386,6 +543,7 @@ static size_t snapshot_capture_mem_list(struct kgsl_device *device,
 		return 0;
 	}
 	header->num_entries = num_mem;
+<<<<<<< HEAD
 	header->ptbase =
 	 (__u32)kgsl_mmu_pagetable_get_ptbase(process->pagetable);
 	/*
@@ -395,6 +553,9 @@ static size_t snapshot_capture_mem_list(struct kgsl_device *device,
 	for (node = rb_first(&process->mem_rb); node; ) {
 		entry = rb_entry(node, struct kgsl_mem_entry, node);
 		node = rb_next(&entry->node);
+=======
+	header->ptbase = kgsl_mmu_pagetable_get_ttbr0(process->pagetable);
+>>>>>>> 0e91d2a... Nougat
 
 		*data++ = entry->memdesc.gpuaddr;
 		*data++ = entry->memdesc.size;
@@ -414,7 +575,58 @@ struct snapshot_ib_meta {
 	unsigned int ib2size;
 };
 
-/* Snapshot the memory for an indirect buffer */
+void kgsl_snapshot_add_active_ib_obj_list(struct kgsl_device *device,
+		struct kgsl_snapshot *snapshot)
+{
+	struct adreno_ib_object_list *ib_obj_list;
+	int index = -ENOENT;
+
+	if (!snapshot->ib1dumped)
+		index = find_object(SNAPSHOT_OBJ_TYPE_IB, snapshot->ib1base,
+				snapshot->process);
+
+	
+	if ((index != -ENOENT) &&
+			(snapshot->ib1base == objbuf[index].gpuaddr)) {
+		if (-E2BIG == adreno_ib_create_object_list(device,
+					objbuf[index].entry->priv,
+					objbuf[index].gpuaddr,
+					objbuf[index].size >> 2,
+					&ib_obj_list))
+			ib_max_objs = 1;
+		if (ib_obj_list) {
+			
+			snapshot_freeze_obj_list(snapshot,
+					objbuf[index].entry->priv,
+					ib_obj_list, snapshot->ib2base);
+			adreno_ib_destroy_obj_list(ib_obj_list);
+		}
+	} else {
+		
+		index = find_object(SNAPSHOT_OBJ_TYPE_IB, snapshot->ib2base,
+				snapshot->process);
+
+		if (index != -ENOENT)
+			parse_ib(device, snapshot, snapshot->process,
+				snapshot->ib2base, objbuf[index].size >> 2);
+	}
+}
+
+static bool active_ib_is_parsed(uint64_t gpuaddr, uint64_t size,
+		struct kgsl_process_private *process)
+{
+	int  index;
+	
+	for (index = 0; index < objbufptr; index++) {
+		if ((objbuf[index].gpuaddr <= gpuaddr) &&
+				((objbuf[index].gpuaddr +
+				  (objbuf[index].size)) >=
+				 (gpuaddr + size)) &&
+				(objbuf[index].entry->priv == process))
+			return true;
+	}
+	return false;
+}
 static size_t snapshot_ib(struct kgsl_device *device, u8 *buf,
 	size_t remain, void *priv)
 {
@@ -441,20 +653,18 @@ static size_t snapshot_ib(struct kgsl_device *device, u8 *buf,
 		return 0;
 	}
 
-	if (remain < (obj->size + sizeof(*header))) {
-		KGSL_CORE_ERR("snapshot: Not enough memory for the ib\n");
-		return 0;
-	}
-
-	/* only do this for IB1 because the IB2's are part of IB1 objects */
+	
 	if (meta->ib1base == obj->gpuaddr) {
+
+		snapshot->ib1dumped = active_ib_is_parsed(obj->gpuaddr,
+					obj->size, obj->entry->priv);
 		if (-E2BIG == adreno_ib_create_object_list(device,
 				obj->entry->priv,
 				obj->gpuaddr, obj->size >> 2,
 				&ib_obj_list))
 			ib_max_objs = 1;
 		if (ib_obj_list) {
-			/* freeze the IB objects in the IB */
+			
 			snapshot_freeze_obj_list(snapshot,
 						obj->entry->priv,
 						ib_obj_list, meta->ib2base);
@@ -462,7 +672,12 @@ static size_t snapshot_ib(struct kgsl_device *device, u8 *buf,
 		}
 	}
 
-	/* Write the sub-header for the section */
+
+	if (meta->ib2base == obj->gpuaddr)
+		snapshot->ib2dumped = active_ib_is_parsed(obj->gpuaddr,
+					obj->size, obj->entry->priv);
+
+	
 	header->gpuaddr = obj->gpuaddr;
 	/*
 	 * This loses address bits, but we can't do better until the snapshot
@@ -472,18 +687,27 @@ static size_t snapshot_ib(struct kgsl_device *device, u8 *buf,
 	 (__u32)kgsl_mmu_pagetable_get_ptbase(obj->entry->priv->pagetable);
 	header->size = obj->size >> 2;
 
+<<<<<<< HEAD
 	/* Write the contents of the ib */
 	memcpy((void *)dst, (void *)src, obj->size);
 	/* Write the contents of the ib */
+=======
+	
+	memcpy((void *)dst, (void *)src, (size_t) obj->size);
+	
+>>>>>>> 0e91d2a... Nougat
 
 	return obj->size + sizeof(*header);
 }
 
-/* Dump another item on the current pending list */
 static void dump_object(struct kgsl_device *device, int obj,
+<<<<<<< HEAD
 		struct kgsl_snapshot *snapshot,
 		unsigned int ib1base, unsigned int ib1size,
 		unsigned int ib2base, unsigned int ib2size)
+=======
+		struct kgsl_snapshot *snapshot)
+>>>>>>> 0e91d2a... Nougat
 {
 	struct snapshot_ib_meta meta;
 
@@ -491,10 +715,10 @@ static void dump_object(struct kgsl_device *device, int obj,
 	case SNAPSHOT_OBJ_TYPE_IB:
 		meta.snapshot = snapshot;
 		meta.obj = &objbuf[obj];
-		meta.ib1base = ib1base;
-		meta.ib1size = ib1size;
-		meta.ib2base = ib2base;
-		meta.ib2size = ib2size;
+		meta.ib1base = snapshot->ib1base;
+		meta.ib1size = snapshot->ib1size;
+		meta.ib2base = snapshot->ib2base;
+		meta.ib2size = snapshot->ib2size;
 
 		kgsl_snapshot_add_section(device, KGSL_SNAPSHOT_SECTION_IB,
 			snapshot, snapshot_ib, &meta);
@@ -510,13 +734,6 @@ static void dump_object(struct kgsl_device *device, int obj,
 	}
 }
 
-/* setup_fault process - Find kgsl_process_private struct that caused the fault
- *
- * Find the faulting process based what the dispatcher thinks happened and
- * what the hardware is using for the current pagetable. The process struct
- * will be used to look up GPU addresses that are encountered while parsing
- * the GPU state.
- */
 static void setup_fault_process(struct kgsl_device *device,
 				struct kgsl_snapshot *snapshot,
 				struct kgsl_process_private *process)
@@ -526,13 +743,23 @@ static void setup_fault_process(struct kgsl_device *device,
 	if (process != NULL && !kgsl_process_private_get(process))
 		process = NULL;
 
+<<<<<<< HEAD
 	/* Get the physical address of the MMU pagetable */
 	hw_ptbase = kgsl_mmu_get_current_ptbase(&device->mmu);
+=======
+	
+	hw_ptbase = kgsl_mmu_get_current_ttbr0(&device->mmu);
+>>>>>>> 0e91d2a... Nougat
 
-	/* if we have an input process, make sure the ptbases match */
+	
 	if (process) {
+<<<<<<< HEAD
 		proc_ptbase = kgsl_mmu_pagetable_get_ptbase(process->pagetable);
 		/* agreement! No need to check further */
+=======
+		proc_ptbase = kgsl_mmu_pagetable_get_ttbr0(process->pagetable);
+		
+>>>>>>> 0e91d2a... Nougat
 		if (hw_ptbase == proc_ptbase)
 			goto done;
 
@@ -542,7 +769,7 @@ static void setup_fault_process(struct kgsl_device *device,
 				&hw_ptbase, &proc_ptbase);
 	}
 
-	/* try to find the right pagetable by walking the process list */
+	
 	if (kgsl_mmu_is_perprocess(&device->mmu)) {
 		struct kgsl_process_private *tmp_private;
 
@@ -563,7 +790,6 @@ done:
 	snapshot->process = process;
 }
 
-/* Snapshot a global memory buffer */
 static size_t snapshot_global(struct kgsl_device *device, u8 *buf,
 	size_t remain, void *priv)
 {
@@ -590,8 +816,12 @@ static size_t snapshot_global(struct kgsl_device *device, u8 *buf,
 
 	header->size = memdesc->size >> 2;
 	header->gpuaddr = memdesc->gpuaddr;
+<<<<<<< HEAD
 	header->ptbase =
 	 (__u32)kgsl_mmu_pagetable_get_ptbase(device->mmu.defaultpagetable);
+=======
+	header->ptbase = MMU_DEFAULT_TTBR0(device);
+>>>>>>> 0e91d2a... Nougat
 	header->type = SNAPSHOT_GPU_OBJECT_GLOBAL;
 
 	memcpy(ptr, memdesc->hostptr, memdesc->size);
@@ -599,6 +829,7 @@ static size_t snapshot_global(struct kgsl_device *device, u8 *buf,
 	return memdesc->size + sizeof(*header);
 }
 
+<<<<<<< HEAD
 /* adreno_snapshot - Snapshot the Adreno GPU state
  * @device - KGSL device to snapshot
  * @snapshot - Pointer to the snapshot instance
@@ -607,17 +838,52 @@ static size_t snapshot_global(struct kgsl_device *device, u8 *buf,
  * Adreno specific information for the GPU snapshot.  In turn, this function
  * calls the GPU specific snapshot function to get core specific information.
  */
+=======
+static void adreno_snapshot_iommu(struct kgsl_device *device,
+		struct kgsl_snapshot *snapshot)
+{
+	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
+	struct kgsl_iommu *iommu = KGSL_IOMMU_PRIV(device);
+
+	kgsl_snapshot_add_section(device, KGSL_SNAPSHOT_SECTION_GPU_OBJECT_V2,
+		snapshot, snapshot_global, &iommu->setstate);
+
+	if (ADRENO_FEATURE(adreno_dev, ADRENO_PREEMPTION))
+		kgsl_snapshot_add_section(device,
+			KGSL_SNAPSHOT_SECTION_GPU_OBJECT_V2,
+			snapshot, snapshot_global, &iommu->smmu_info);
+}
+
+static void adreno_snapshot_ringbuffer(struct kgsl_device *device,
+		struct kgsl_snapshot *snapshot, struct adreno_ringbuffer *rb)
+{
+	struct snapshot_rb_params params = {
+		.snapshot = snapshot,
+		.rb = rb,
+	};
+
+	if (rb == NULL)
+		return;
+
+	kgsl_snapshot_add_section(device, KGSL_SNAPSHOT_SECTION_RB_V2, snapshot,
+		snapshot_rb, &params);
+}
+
+>>>>>>> 0e91d2a... Nougat
 void adreno_snapshot(struct kgsl_device *device, struct kgsl_snapshot *snapshot,
 			struct kgsl_context *context)
 {
 	unsigned int i;
+<<<<<<< HEAD
 	uint32_t ib1base, ib1size;
 	uint32_t ib2base, ib2size;
+=======
+>>>>>>> 0e91d2a... Nougat
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
 	struct adreno_gpudev *gpudev = ADRENO_GPU_DEVICE(adreno_dev);
 
 	ib_max_objs = 0;
-	/* Reset the list of objects */
+	
 	objbufptr = 0;
 
 	snapshot_frozen_objsize = 0;
@@ -625,6 +891,7 @@ void adreno_snapshot(struct kgsl_device *device, struct kgsl_snapshot *snapshot,
 	setup_fault_process(device, snapshot,
 			context ? context->proc_priv : NULL);
 
+<<<<<<< HEAD
 	/* Dump the ringbuffer */
 	kgsl_snapshot_add_section(device, KGSL_SNAPSHOT_SECTION_RB, snapshot,
 			snapshot_rb, snapshot);
@@ -644,11 +911,43 @@ void adreno_snapshot(struct kgsl_device *device, struct kgsl_snapshot *snapshot,
 	kgsl_snapshot_add_section(device, KGSL_SNAPSHOT_SECTION_GPU_OBJECT,
 			snapshot, snapshot_global,
 			&adreno_dev->dev.mmu.setstate_memory);
+=======
+	adreno_readreg64(adreno_dev, ADRENO_REG_CP_IB1_BASE,
+			ADRENO_REG_CP_IB1_BASE_HI, &snapshot->ib1base);
+	adreno_readreg(adreno_dev, ADRENO_REG_CP_IB1_BUFSZ, &snapshot->ib1size);
+	adreno_readreg64(adreno_dev, ADRENO_REG_CP_IB2_BASE,
+			ADRENO_REG_CP_IB2_BASE_HI, &snapshot->ib2base);
+	adreno_readreg(adreno_dev, ADRENO_REG_CP_IB2_BUFSZ, &snapshot->ib2size);
+
+	snapshot->ib1dumped = false;
+	snapshot->ib2dumped = false;
+
+	adreno_snapshot_ringbuffer(device, snapshot, adreno_dev->cur_rb);
+
+	
+	if (adreno_dev->prev_rb != adreno_dev->cur_rb)
+		adreno_snapshot_ringbuffer(device, snapshot,
+			adreno_dev->prev_rb);
+
+	if ((adreno_dev->next_rb != adreno_dev->prev_rb) &&
+		 (adreno_dev->next_rb != adreno_dev->cur_rb))
+		adreno_snapshot_ringbuffer(device, snapshot,
+			adreno_dev->next_rb);
+
+	
+	if (gpudev->snapshot)
+		gpudev->snapshot(adreno_dev, snapshot);
+
+	
+	kgsl_snapshot_add_section(device, KGSL_SNAPSHOT_SECTION_GPU_OBJECT_V2,
+			snapshot, snapshot_global, &device->memstore);
+>>>>>>> 0e91d2a... Nougat
 
 	kgsl_snapshot_add_section(device, KGSL_SNAPSHOT_SECTION_GPU_OBJECT,
 			snapshot, snapshot_global,
 			&adreno_dev->pwron_fixup);
 
+<<<<<<< HEAD
 	/*
 	 * Add a section that lists (gpuaddr, size, memtype) tuples of the
 	 * hanging process
@@ -669,34 +968,45 @@ void adreno_snapshot(struct kgsl_device *device, struct kgsl_snapshot *snapshot,
 
 	if (!find_object(SNAPSHOT_OBJ_TYPE_IB, ib1base, snapshot->process)
 			&& ib1size) {
+=======
+	if (kgsl_mmu_get_mmutype(device) == KGSL_MMU_TYPE_IOMMU)
+		adreno_snapshot_iommu(device, snapshot);
+
+	kgsl_snapshot_add_section(device, KGSL_SNAPSHOT_SECTION_MEMLIST_V2,
+			snapshot, snapshot_capture_mem_list, snapshot->process);
+
+	if (-ENOENT == find_object(SNAPSHOT_OBJ_TYPE_IB, snapshot->ib1base,
+			snapshot->process) && snapshot->ib1size) {
+>>>>>>> 0e91d2a... Nougat
 		push_object(SNAPSHOT_OBJ_TYPE_IB, snapshot->process,
-			ib1base, ib1size);
+			snapshot->ib1base, snapshot->ib1size);
 		KGSL_CORE_ERR(
+<<<<<<< HEAD
 			"CP_IB1_BASE not found. Dumping %x dwords of the buffer.\n",
 			ib1size);
+=======
+		"CP_IB1_BASE not found in the ringbuffer.Dumping %x dwords of the buffer.\n",
+		snapshot->ib1size);
+>>>>>>> 0e91d2a... Nougat
 	}
 
-	/*
-	 * Add the last parsed IB2 to the list. The IB2 should be found as we
-	 * parse the objects below, but we try to add it to the list first, so
-	 * it too can be parsed.  Don't print an error message in this case - if
-	 * the IB2 is found during parsing, the list will be updated with the
-	 * correct size.
-	 */
 
+<<<<<<< HEAD
 	if (!find_object(SNAPSHOT_OBJ_TYPE_IB, ib2base, snapshot->process)
 			&& ib2size) {
+=======
+	if (-ENOENT == find_object(SNAPSHOT_OBJ_TYPE_IB, snapshot->ib2base,
+		snapshot->process)) {
+>>>>>>> 0e91d2a... Nougat
 		push_object(SNAPSHOT_OBJ_TYPE_IB, snapshot->process,
-			ib2base, ib2size);
+			snapshot->ib2base, snapshot->ib2size);
 	}
 
-	/*
-	 * Go through the list of found objects and dump each one.  As the IBs
-	 * are parsed, more objects might be found, and objbufptr will increase
-	 */
 	for (i = 0; i < objbufptr; i++)
-		dump_object(device, i, snapshot, ib1base, ib1size,
-			ib2base, ib2size);
+		dump_object(device, i, snapshot);
+
+	if (!snapshot->ib1dumped || !snapshot->ib2dumped)
+		kgsl_snapshot_add_active_ib_obj_list(device, snapshot);
 
 	if (ib_max_objs)
 		KGSL_CORE_ERR("Max objects found in IB\n");
@@ -705,3 +1015,220 @@ void adreno_snapshot(struct kgsl_device *device, struct kgsl_snapshot *snapshot,
 			snapshot_frozen_objsize / 1024);
 
 }
+<<<<<<< HEAD
+=======
+
+size_t adreno_snapshot_cp_merciu(struct kgsl_device *device, u8 *buf,
+		size_t remain, void *priv)
+{
+	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
+	struct kgsl_snapshot_debug *header = (struct kgsl_snapshot_debug *)buf;
+	unsigned int *data = (unsigned int *)(buf + sizeof(*header));
+	int i, size = *((int *)priv);
+
+	
+	size = size << 1;
+
+	if (remain < DEBUG_SECTION_SZ(size)) {
+		SNAPSHOT_ERR_NOMEM(device, "CP MERCIU DEBUG");
+		return 0;
+	}
+
+	header->type = SNAPSHOT_DEBUG_CP_MERCIU;
+	header->size = size;
+
+	adreno_writereg(adreno_dev, ADRENO_REG_CP_MERCIU_ADDR, 0x0);
+
+	for (i = 0; i < size; i++) {
+		adreno_readreg(adreno_dev, ADRENO_REG_CP_MERCIU_DATA,
+			&data[(i * 2)]);
+		adreno_readreg(adreno_dev, ADRENO_REG_CP_MERCIU_DATA2,
+			&data[(i * 2) + 1]);
+	}
+
+	return DEBUG_SECTION_SZ(size);
+}
+
+size_t adreno_snapshot_cp_roq(struct kgsl_device *device, u8 *buf,
+		size_t remain, void *priv)
+{
+	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
+	struct kgsl_snapshot_debug *header = (struct kgsl_snapshot_debug *)buf;
+	unsigned int *data = (unsigned int *)(buf + sizeof(*header));
+	int i, size = *((int *)priv);
+
+	if (remain < DEBUG_SECTION_SZ(size)) {
+		SNAPSHOT_ERR_NOMEM(device, "CP ROQ DEBUG");
+		return 0;
+	}
+
+	header->type = SNAPSHOT_DEBUG_CP_ROQ;
+	header->size = size;
+
+	adreno_writereg(adreno_dev, ADRENO_REG_CP_ROQ_ADDR, 0x0);
+	for (i = 0; i < size; i++)
+		adreno_readreg(adreno_dev, ADRENO_REG_CP_ROQ_DATA, &data[i]);
+
+	return DEBUG_SECTION_SZ(size);
+}
+
+size_t adreno_snapshot_cp_pm4_ram(struct kgsl_device *device, u8 *buf,
+		size_t remain, void *priv)
+{
+	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
+	struct kgsl_snapshot_debug *header = (struct kgsl_snapshot_debug *)buf;
+	unsigned int *data = (unsigned int *)(buf + sizeof(*header));
+	int i;
+	size_t size = adreno_dev->pm4_fw_size - 1;
+
+	if (remain < DEBUG_SECTION_SZ(size)) {
+		SNAPSHOT_ERR_NOMEM(device, "CP PM4 RAM DEBUG");
+		return 0;
+	}
+
+	header->type = SNAPSHOT_DEBUG_CP_PM4_RAM;
+	header->size = size;
+
+
+	adreno_writereg(adreno_dev, ADRENO_REG_CP_ME_RAM_RADDR, 0x0);
+	for (i = 0; i < size; i++)
+		adreno_readreg(adreno_dev, ADRENO_REG_CP_ME_RAM_DATA, &data[i]);
+
+	return DEBUG_SECTION_SZ(size);
+}
+
+size_t adreno_snapshot_cp_pfp_ram(struct kgsl_device *device, u8 *buf,
+		size_t remain, void *priv)
+{
+	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
+	struct kgsl_snapshot_debug *header = (struct kgsl_snapshot_debug *)buf;
+	unsigned int *data = (unsigned int *)(buf + sizeof(*header));
+	int i, size = adreno_dev->pfp_fw_size - 1;
+
+	if (remain < DEBUG_SECTION_SZ(size)) {
+		SNAPSHOT_ERR_NOMEM(device, "CP PFP RAM DEBUG");
+		return 0;
+	}
+
+	header->type = SNAPSHOT_DEBUG_CP_PFP_RAM;
+	header->size = size;
+
+	adreno_writereg(adreno_dev, ADRENO_REG_CP_PFP_UCODE_ADDR, 0x0);
+	for (i = 0; i < size; i++)
+		adreno_readreg(adreno_dev, ADRENO_REG_CP_PFP_UCODE_DATA,
+				&data[i]);
+
+	return DEBUG_SECTION_SZ(size);
+}
+
+size_t adreno_snapshot_vpc_memory(struct kgsl_device *device, u8 *buf,
+		size_t remain, void *priv)
+{
+	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
+	struct kgsl_snapshot_debug *header = (struct kgsl_snapshot_debug *)buf;
+	unsigned int *data = (unsigned int *)(buf + sizeof(*header));
+	int vpc_mem_size = *((int *)priv);
+	size_t size = VPC_MEMORY_BANKS * vpc_mem_size;
+	int bank, addr, i = 0;
+
+	if (remain < DEBUG_SECTION_SZ(size)) {
+		SNAPSHOT_ERR_NOMEM(device, "VPC MEMORY");
+		return 0;
+	}
+
+	header->type = SNAPSHOT_DEBUG_VPC_MEMORY;
+	header->size = size;
+
+	for (bank = 0; bank < VPC_MEMORY_BANKS; bank++) {
+		for (addr = 0; addr < vpc_mem_size; addr++) {
+			unsigned int val = bank | (addr << 4);
+			adreno_writereg(adreno_dev,
+				ADRENO_REG_VPC_DEBUG_RAM_SEL, val);
+			adreno_readreg(adreno_dev,
+				ADRENO_REG_VPC_DEBUG_RAM_READ, &data[i++]);
+		}
+	}
+
+	return DEBUG_SECTION_SZ(size);
+}
+
+size_t adreno_snapshot_cp_meq(struct kgsl_device *device, u8 *buf,
+		size_t remain, void *priv)
+{
+	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
+	struct kgsl_snapshot_debug *header = (struct kgsl_snapshot_debug *)buf;
+	unsigned int *data = (unsigned int *)(buf + sizeof(*header));
+	int i;
+	int cp_meq_sz = *((int *)priv);
+
+	if (remain < DEBUG_SECTION_SZ(cp_meq_sz)) {
+		SNAPSHOT_ERR_NOMEM(device, "CP MEQ DEBUG");
+		return 0;
+	}
+
+	header->type = SNAPSHOT_DEBUG_CP_MEQ;
+	header->size = cp_meq_sz;
+
+	adreno_writereg(adreno_dev, ADRENO_REG_CP_MEQ_ADDR, 0x0);
+	for (i = 0; i < cp_meq_sz; i++)
+		adreno_readreg(adreno_dev, ADRENO_REG_CP_MEQ_DATA, &data[i]);
+
+	return DEBUG_SECTION_SZ(cp_meq_sz);
+}
+
+static const struct adreno_vbif_snapshot_registers *vbif_registers(
+		struct adreno_device *adreno_dev,
+		const struct adreno_vbif_snapshot_registers *list,
+		unsigned int count)
+{
+	unsigned int version;
+	unsigned int i;
+
+	adreno_readreg(adreno_dev, ADRENO_REG_VBIF_VERSION, &version);
+
+	for (i = 0; i < count; i++) {
+		if ((list[i].version & list[i].mask) ==
+				(version & list[i].mask))
+			return &list[i];
+	}
+
+	KGSL_CORE_ERR(
+		"snapshot: Registers for VBIF version %X register were not dumped\n",
+		version);
+
+	return NULL;
+}
+
+void adreno_snapshot_registers(struct kgsl_device *device,
+		struct kgsl_snapshot *snapshot,
+		const unsigned int *regs, unsigned int count)
+{
+	struct kgsl_snapshot_registers r;
+
+	r.regs = regs;
+	r.count = count;
+
+	kgsl_snapshot_add_section(device, KGSL_SNAPSHOT_SECTION_REGS, snapshot,
+		kgsl_snapshot_dump_registers, &r);
+}
+
+void adreno_snapshot_vbif_registers(struct kgsl_device *device,
+		struct kgsl_snapshot *snapshot,
+		const struct adreno_vbif_snapshot_registers *list,
+		unsigned int count)
+{
+	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
+	struct kgsl_snapshot_registers regs;
+	const struct adreno_vbif_snapshot_registers *vbif;
+
+	vbif = vbif_registers(adreno_dev, list, count);
+
+	if (vbif != NULL) {
+		regs.regs = vbif->registers;
+		regs.count = vbif->count;
+
+		kgsl_snapshot_add_section(device, KGSL_SNAPSHOT_SECTION_REGS,
+			snapshot, kgsl_snapshot_dump_registers, &regs);
+	}
+}
+>>>>>>> 0e91d2a... Nougat

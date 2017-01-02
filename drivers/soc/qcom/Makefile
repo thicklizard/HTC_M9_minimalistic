@@ -3,13 +3,42 @@ CFLAGS_scm.o :=$(call as-instr,.arch_extension sec,-DREQUIRES_SEC=1)
 
 obj-y		+= qdsp6v2/
 
+<<<<<<< HEAD
 obj-$(CONFIG_MSM_BOOT_STATS) += boot_stats.o
+=======
+obj-$(CONFIG_MSM_INRUSH_CURRENT_MITIGATION) += inrush-current-mitigation.o
+obj-$(CONFIG_MSM_GLADIATOR_ERP) += gladiator_erp.o
+obj-$(CONFIG_MSM_GLADIATOR_ERP_V2) += gladiator_erp_v2.o
+obj-$(CONFIG_ARM64) += idle-v8.o cpu_ops.o
+>>>>>>> 0e91d2a... Nougat
 obj-$(CONFIG_MSM_RUN_QUEUE_STATS) += msm_rq_stats.o
 obj-$(CONFIG_DEBUG_FS) += nohlt.o
 obj-$(CONFIG_ARM64) += idle-v8.o cpu_ops.o
 obj-$(CONFIG_CPU_V7) += idle-v7.o
+<<<<<<< HEAD
 obj-$(CONFIG_MAXIMUM_CURRENT_THROTTLING) += mct.o
 obj-$(CONFIG_MSM_BAM_DMUX) += bam_dmux.o
+=======
+obj-$(CONFIG_QCOM_GSBI)	+=	qcom_gsbi.o
+obj-$(CONFIG_MSM_CPUSS_DUMP) += cpuss_dump.o
+obj-$(CONFIG_MSM_MEMORY_DUMP) += memory_dump.o
+obj-$(CONFIG_MSM_MEMORY_DUMP_V2) += memory_dump_v2.o
+obj-$(CONFIG_MSM_DDR_HEALTH) += ddr-health.o
+obj-$(CONFIG_MSM_DCC) += dcc.o
+obj-$(CONFIG_MSM_WATCHDOG_V2) += watchdog_v2.o
+obj-$(CONFIG_MSM_CORE_HANG_DETECT) += core_hang_detect.o
+obj-$(CONFIG_MSM_GLADIATOR_HANG_DETECT) += gladiator_hang_detect.o
+obj-$(CONFIG_MSM_COMMON_LOG) += common_log.o
+obj-$(CONFIG_MSM_HVC) += hvc.o
+obj-$(CONFIG_MSM_CPU_PWR_CTL) += cpu_pwr_ctl.o
+obj-$(CONFIG_MSM_CACHE_M4M_ERP64) += cache_m4m_erp64.o
+obj-$(CONFIG_SOC_BUS)  +=      socinfo.o
+obj-$(CONFIG_MSM_BOOT_STATS) += boot_stats.o
+obj-$(CONFIG_MSM_BOOT_TIME_MARKER) += boot_marker.o
+obj-$(CONFIG_MSM_HYP_DEBUG) += hyp-debug.o
+obj-$(CONFIG_ARCH_MSM8996) += kryo-l2-accessors.o
+obj-$(CONFIG_MSM_RPM_SMD) +=	rpm-smd.o
+>>>>>>> 0e91d2a... Nougat
 obj-$(CONFIG_MSM_EVENT_TIMER) += event_timer.o
 obj-$(CONFIG_MSM_GLINK) += glink.o glink_debugfs.o glink_ssr.o
 obj-$(CONFIG_MSM_GLINK_LOOPBACK_SERVER) += glink_loopback_server.o
@@ -30,7 +59,15 @@ ifdef CONFIG_DEBUG_FS
 obj-$(CONFIG_MSM_RPM_SMD) += rpm-smd-debug.o
 endif
 obj-$(CONFIG_MSM_RPM_RBCPR_STATS_V2_LOG) += rpm_rbcpr_stats_v2.o
+<<<<<<< HEAD
 obj-$(CONFIG_MSM_RPM_STATS_LOG) += rpm_stats.o rpm_master_stat.o
+=======
+obj-$(CONFIG_MEM_SHARE_QMI_SERVICE)		+= memshare/
+obj-$(CONFIG_CP_ACCESS64) += cpaccess64.o
+obj-$(CONFIG_MSM_RPM_STATS_LOG) += rpm_stats.o rpm_master_stat.o rpm_rail_stats.o system_stats.o
+obj-$(CONFIG_HW_PERF_EVENTS) += perf_event_kryo.o perf_event_l2.o
+obj-$(CONFIG_MSM_RPM_LOG) += rpm_log.o
+>>>>>>> 0e91d2a... Nougat
 obj-y += rpm_stats_ver.o
 obj-$(CONFIG_MSM_RPM_LOG) += rpm_log.o
 obj-$(CONFIG_QCOM_NPA_DUMP) += npa-dump.o
@@ -64,6 +101,7 @@ obj-$(CONFIG_MSM_HYP_DEBUG) += hyp-debug.o
 obj-$(CONFIG_MSM_PIL) += peripheral-loader.o
 obj-$(CONFIG_MSM_PIL_SSR_GENERIC) += subsys-pil-tz.o
 obj-$(CONFIG_MSM_PIL_MSS_QDSP6V5) += pil-q6v5.o pil-msa.o pil-q6v5-mss.o
+<<<<<<< HEAD
 obj-$(CONFIG_MSM_PIL_FEMTO) += pil-q6v5.o pil-msa.o pil-femto-modem.o
 
 obj-$(CONFIG_MSM_OCMEM) += ocmem.o ocmem_allocator.o ocmem_notifier.o
@@ -71,6 +109,14 @@ obj-$(CONFIG_MSM_OCMEM) += ocmem_sched.o ocmem_api.o ocmem_rdm.o ocmem_core.o
 
 obj-$(CONFIG_MSM_PERFORMANCE) += msm_performance.o
 obj-$(CONFIG_MSM_CORE_CTL_HELPER) += core_ctl_helper.o
+=======
+obj-$(CONFIG_MSM_SCM_ERRATA) += scm-errata.o
+obj-$(CONFIG_MSM_PFE_WA) += pfe-wa.o
+obj-$(CONFIG_MSM_PERFORMANCE) += msm_performance.o
+obj-$(CONFIG_ARCH_MSM8996) += msm_cpu_voltage.o
+obj-$(CONFIG_FPR_FPC)  += htc_smi.o
+obj-$(CONFIG_MSM_POWER) += msm_power.o
+>>>>>>> 0e91d2a... Nougat
 
 ifdef CONFIG_MSM_SUBSYSTEM_RESTART
        obj-y += subsystem_notif.o
@@ -91,8 +137,13 @@ obj-$(CONFIG_MSM_SHARED_HEAP_ACCESS) += shared_memory.o
 obj-$(CONFIG_MSM_SYSTEM_HEALTH_MONITOR) += system_health_monitor_v01.o
 obj-$(CONFIG_MSM_SYSTEM_HEALTH_MONITOR) += system_health_monitor.o
 obj-$(CONFIG_MSM_RTB) += msm_rtb-hotplug.o
+<<<<<<< HEAD
 obj-$(CONFIG_QCOM_EARLY_RANDOM)	+= early_random.o
 obj-$(CONFIG_MSM_PACMAN)        += msm_pacman.o
 
 # For HTC Implementation of Power Control of LCM power source
 obj-y += display/
+=======
+obj-$(CONFIG_MSM_REMOTEQDSS) += remoteqdss.o
+obj-$(CONFIG_QCOM_SMCINVOKE) += smcinvoke.o
+>>>>>>> 0e91d2a... Nougat

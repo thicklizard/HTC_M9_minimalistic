@@ -37,6 +37,7 @@ config ANDROID_LOGGER
 	  optimized writes. This optimization avoids logging having too
 	  much overhead in the system.
 
+<<<<<<< HEAD
 config LOGCAT_SIZE
 	int "Adjust android log buffer sizes"
 	default 256
@@ -45,6 +46,8 @@ config LOGCAT_SIZE
 	  Set logger buffer size. Enter a number greater than zero.
 	  Any value less than 256 is recommended. Reduce value to save kernel static memory size.
 
+=======
+>>>>>>> 0e91d2a... Nougat
 config ANDROID_TIMED_OUTPUT
 	bool "Timed output class driver"
 	default y

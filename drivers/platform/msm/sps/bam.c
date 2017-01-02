@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1309,7 +1313,21 @@ int bam_pipe_is_enabled(void *base, u32 pipe)
 void bam_pipe_set_irq(void *base, u32 pipe, enum bam_enable irq_en,
 		      u32 src_mask, u32 ee)
 {
+<<<<<<< HEAD
 	SPS_DBG2("sps:%s:bam=0x%p(va).pipe=%d.", __func__, base, pipe);
+=======
+	struct sps_bam *dev = to_sps_bam_dev(base);
+
+	if ((dev == NULL) || (&dev->base != base)) {
+		SPS_ERR(sps, "%s:Failed to get dev for base addr 0x%p\n",
+				__func__, base);
+		return;
+	}
+	SPS_DBG2(dev,
+		"sps:%s:bam=%pa 0x%p(va).pipe=%d; irq_en:%d; src_mask:0x%x; ee:%d.\n",
+			__func__, BAM_ID(dev), dev->base, pipe,
+			irq_en, src_mask, ee);
+>>>>>>> 0e91d2a... Nougat
 	if (src_mask & BAM_PIPE_IRQ_RST_ERROR) {
 		if (enhd_pipe)
 			bam_write_reg_field(base, IRQ_EN, 0,

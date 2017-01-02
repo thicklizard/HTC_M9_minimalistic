@@ -69,6 +69,24 @@ struct amdtp_out_stream {
 	unsigned int pcm_buffer_pointer;
 	unsigned int pcm_period_pointer;
 	bool pointer_flush;
+<<<<<<< HEAD
+=======
+	bool double_pcm_frames;
+
+	struct snd_rawmidi_substream *midi[AMDTP_MAX_CHANNELS_FOR_MIDI * 8];
+
+	/* quirk: fixed interval of dbc between previos/current packets. */
+	unsigned int tx_dbc_interval;
+	/* quirk: indicate the value of dbc field in a first packet. */
+	unsigned int tx_first_dbc;
+
+	/* quirk: the first count of data blocks in an rx packet for MIDI */
+	unsigned int rx_blocks_for_midi;
+
+	bool callbacked;
+	wait_queue_head_t callback_wait;
+	struct amdtp_stream *sync_slave;
+>>>>>>> 0e91d2a... Nougat
 };
 
 int amdtp_out_stream_init(struct amdtp_out_stream *s, struct fw_unit *unit,

@@ -144,9 +144,20 @@ struct batadv_orig_node {
 	uint8_t *bcast_own_sum;
 	unsigned long last_seen;
 	unsigned long bcast_seqno_reset;
+<<<<<<< HEAD
 	unsigned long batman_seqno_reset;
 	uint8_t gw_flags;
 	uint8_t flags;
+=======
+#ifdef CONFIG_BATMAN_ADV_MCAST
+	uint8_t mcast_flags;
+	struct hlist_node mcast_want_all_unsnoopables_node;
+	struct hlist_node mcast_want_all_ipv4_node;
+	struct hlist_node mcast_want_all_ipv6_node;
+#endif
+	unsigned long capabilities;
+	unsigned long capa_initialized;
+>>>>>>> 0e91d2a... Nougat
 	atomic_t last_ttvn;
 	uint16_t tt_crc;
 	unsigned char *tt_buff;
@@ -181,6 +192,28 @@ struct batadv_orig_node {
 	spinlock_t in_coding_list_lock; /* Protects in_coding_list */
 	spinlock_t out_coding_list_lock; /* Protects out_coding_list */
 #endif
+<<<<<<< HEAD
+=======
+	struct batadv_frag_table_entry fragments[BATADV_FRAG_BUFFER_COUNT];
+	struct list_head vlan_list;
+	spinlock_t vlan_list_lock; /* protects vlan_list */
+	struct batadv_orig_bat_iv bat_iv;
+};
+
+/**
+ * enum batadv_orig_capabilities - orig node capabilities
+ * @BATADV_ORIG_CAPA_HAS_DAT: orig node has distributed arp table enabled
+ * @BATADV_ORIG_CAPA_HAS_NC: orig node has network coding enabled
+ * @BATADV_ORIG_CAPA_HAS_TT: orig node has tt capability
+ * @BATADV_ORIG_CAPA_HAS_MCAST: orig node has some multicast capability
+ *  (= orig node announces a tvlv of type BATADV_TVLV_MCAST)
+ */
+enum batadv_orig_capabilities {
+	BATADV_ORIG_CAPA_HAS_DAT,
+	BATADV_ORIG_CAPA_HAS_NC,
+	BATADV_ORIG_CAPA_HAS_TT,
+	BATADV_ORIG_CAPA_HAS_MCAST = BIT(3),
+>>>>>>> 0e91d2a... Nougat
 };
 
 /**

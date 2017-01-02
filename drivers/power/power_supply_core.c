@@ -19,6 +19,9 @@
 #include <linux/power_supply.h>
 #include <linux/thermal.h>
 #include "power_supply.h"
+#ifdef CONFIG_HTC_BATT
+#include <linux/power/htc_battery.h>
+#endif
 
 struct class *power_supply_class;
 EXPORT_SYMBOL_GPL(power_supply_class);
@@ -195,7 +198,11 @@ int power_supply_set_low_power_state(struct power_supply *psy, int value)
 }
 EXPORT_SYMBOL(power_supply_set_low_power_state);
 
+<<<<<<< HEAD
 int power_supply_set_allow_detection(struct power_supply *psy, int value)
+=======
+int power_supply_set_dp_dm(struct power_supply *psy, int value)
+>>>>>>> 0e91d2a... Nougat
 {
 	const union power_supply_propval ret = {value, };
 
@@ -228,12 +235,17 @@ static void power_supply_changed_work(struct work_struct *work)
 	dev_dbg(psy->dev, "%s\n", __func__);
 
 	spin_lock_irqsave(&psy->changed_lock, flags);
+<<<<<<< HEAD
 	if (psy->changed) {
+=======
+	if (likely(psy->changed)) {
+>>>>>>> 0e91d2a... Nougat
 		psy->changed = false;
 		spin_unlock_irqrestore(&psy->changed_lock, flags);
 
 		class_for_each_device(power_supply_class, NULL, psy,
 				      __power_supply_changed_work);
+<<<<<<< HEAD
 
 		
 		
@@ -242,6 +254,19 @@ static void power_supply_changed_work(struct work_struct *work)
 		spin_lock_irqsave(&psy->changed_lock, flags);
 	}
 	if (!psy->changed)
+=======
+#ifdef CONFIG_HTC_BATT_PCN0012
+         
+		
+#endif 
+		atomic_notifier_call_chain(&power_supply_notifier,
+				PSY_EVENT_PROP_CHANGED, psy);
+		kobject_uevent(&psy->dev->kobj, KOBJ_CHANGE);
+		spin_lock_irqsave(&psy->changed_lock, flags);
+	}
+
+	if (likely(!psy->changed))
+>>>>>>> 0e91d2a... Nougat
 		pm_relax(psy->dev);
 	spin_unlock_irqrestore(&psy->changed_lock, flags);
 }
@@ -359,6 +384,13 @@ static int power_supply_check_supplies(struct power_supply *psy)
 	} while (np);
 
 	
+<<<<<<< HEAD
+=======
+	if (cnt == 1)
+		return 0;
+
+	
+>>>>>>> 0e91d2a... Nougat
 	psy->supplied_from = devm_kzalloc(psy->dev, sizeof(psy->supplied_from),
 					  GFP_KERNEL);
 	if (!psy->supplied_from) {
@@ -469,6 +501,35 @@ struct power_supply *power_supply_get_by_name(const char *name)
 }
 EXPORT_SYMBOL_GPL(power_supply_get_by_name);
 
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_OF
+static int power_supply_match_device_node(struct device *dev, const void *data)
+{
+	return dev->parent && dev->parent->of_node == data;
+}
+
+struct power_supply *power_supply_get_by_phandle(struct device_node *np,
+							const char *property)
+{
+	struct device_node *power_supply_np;
+	struct device *dev;
+
+	power_supply_np = of_parse_phandle(np, property, 0);
+	if (!power_supply_np)
+		return ERR_PTR(-ENODEV);
+
+	dev = class_find_device(power_supply_class, NULL, power_supply_np,
+						power_supply_match_device_node);
+
+	of_node_put(power_supply_np);
+
+	return dev ? dev_get_drvdata(dev) : NULL;
+}
+EXPORT_SYMBOL_GPL(power_supply_get_by_phandle);
+#endif 
+
+>>>>>>> 0e91d2a... Nougat
 int power_supply_powers(struct power_supply *psy, struct device *dev)
 {
 	return sysfs_create_link(&psy->dev->kobj, &dev->kobj, "powers");
@@ -508,6 +569,12 @@ static int psy_register_thermal(struct power_supply *psy)
 {
 	int i;
 
+<<<<<<< HEAD
+=======
+	if (psy->no_thermal)
+		return 0;
+
+>>>>>>> 0e91d2a... Nougat
 	
 	for (i = 0; i < psy->num_properties; i++) {
 		if (psy->properties[i] == POWER_SUPPLY_PROP_TEMP) {

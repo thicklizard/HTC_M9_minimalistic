@@ -246,11 +246,25 @@ int pm_qos_update_target(struct pm_qos_constraints *c,
 
 	spin_unlock_irqrestore(&pm_qos_lock, flags);
 
+<<<<<<< HEAD
 	if (prev_value != curr_value) {
 		blocking_notifier_call_chain(c->notifiers,
 					     (unsigned long)curr_value,
 					     &cpus);
 		return 1;
+=======
+	trace_pm_qos_update_target(action, prev_value, curr_value);
+	/*
+	 * if cpu mask bits are set, call the notifier call chain
+	 * to update the new qos restriction for the cores
+	 */
+	if (!cpumask_empty(&cpus)) {
+		ret = 1;
+		if (c->notifiers)
+			blocking_notifier_call_chain(c->notifiers,
+						     (unsigned long)curr_value,
+						     &cpus);
+>>>>>>> 0e91d2a... Nougat
 	} else {
 		return 0;
 	}
@@ -469,7 +483,6 @@ void pm_qos_add_request(struct pm_qos_request *req,
 #ifdef CONFIG_SMP
 	case PM_QOS_REQ_AFFINE_IRQ:
 		if (irq_can_set_affinity(req->irq)) {
-			int ret = 0;
 			struct irq_desc *desc = irq_to_desc(req->irq);
 			struct cpumask *mask = desc->irq_data.affinity;
 
@@ -479,13 +492,6 @@ void pm_qos_add_request(struct pm_qos_request *req,
 			req->irq_notify.notify = pm_qos_irq_notify;
 			req->irq_notify.release = pm_qos_irq_release;
 
-			ret = irq_set_affinity_notifier(req->irq,
-					&req->irq_notify);
-			if (ret) {
-				WARN(1, KERN_ERR "IRQ affinity notify set failed\n");
-				req->type = PM_QOS_REQ_ALL_CORES;
-				cpumask_setall(&req->cpus_affine);
-			}
 		} else {
 			req->type = PM_QOS_REQ_ALL_CORES;
 			cpumask_setall(&req->cpus_affine);
@@ -506,6 +512,24 @@ void pm_qos_add_request(struct pm_qos_request *req,
 	INIT_DELAYED_WORK(&req->work, pm_qos_work_fn);
 	pm_qos_update_target(pm_qos_array[pm_qos_class]->constraints,
 			     req, PM_QOS_ADD_REQ, value);
+
+#ifdef CONFIG_SMP
+	if (req->type == PM_QOS_REQ_AFFINE_IRQ &&
+			irq_can_set_affinity(req->irq)) {
+		int ret = 0;
+
+		ret = irq_set_affinity_notifier(req->irq,
+					&req->irq_notify);
+		if (ret) {
+			WARN(1, "IRQ affinity notify set failed\n");
+			req->type = PM_QOS_REQ_ALL_CORES;
+			cpumask_setall(&req->cpus_affine);
+			pm_qos_update_target(
+				pm_qos_array[pm_qos_class]->constraints,
+				req, PM_QOS_UPDATE_REQ, value);
+		}
+	}
+#endif
 }
 EXPORT_SYMBOL_GPL(pm_qos_add_request);
 
@@ -577,12 +601,26 @@ void pm_qos_remove_request(struct pm_qos_request *req)
 		/* silent return to keep pcm code cleaner */
 
 	if (!pm_qos_request_active(req)) {
-		WARN(1, KERN_ERR "pm_qos_remove_request() called for unknown object\n");
+		WARN(1, "pm_qos_remove_request() called for unknown object\n");
 		return;
 	}
 
 	cancel_delayed_work_sync(&req->work);
 
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_SMP
+	if (req->type == PM_QOS_REQ_AFFINE_IRQ) {
+		int ret = 0;
+		/* Get the current affinity */
+		ret = irq_set_affinity_notifier(req->irq, NULL);
+		if (ret)
+			WARN(1, "IRQ affinity notify set failed\n");
+	}
+#endif
+
+	trace_pm_qos_remove_request(req->pm_qos_class, PM_QOS_DEFAULT_VALUE);
+>>>>>>> 0e91d2a... Nougat
 	pm_qos_update_target(pm_qos_array[req->pm_qos_class]->constraints,
 			     req, PM_QOS_REMOVE_REQ,
 			     PM_QOS_DEFAULT_VALUE);

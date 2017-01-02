@@ -1962,7 +1962,67 @@ static int __init netback_init(void)
 
 		atomic_set(&netbk->netfront_count, 0);
 
+<<<<<<< HEAD
 		wake_up_process(netbk->task);
+=======
+		cond_resched();
+	}
+
+	/* Bin any remaining skbs */
+	xenvif_rx_queue_purge(queue);
+
+	return 0;
+}
+
+static bool xenvif_dealloc_kthread_should_stop(struct xenvif_queue *queue)
+{
+	/* Dealloc thread must remain running until all inflight
+	 * packets complete.
+	 */
+	return kthread_should_stop() &&
+		!atomic_read(&queue->inflight_packets);
+}
+
+int xenvif_dealloc_kthread(void *data)
+{
+	struct xenvif_queue *queue = data;
+
+	for (;;) {
+		wait_event_interruptible(queue->dealloc_wq,
+					 tx_dealloc_work_todo(queue) ||
+					 xenvif_dealloc_kthread_should_stop(queue));
+		if (xenvif_dealloc_kthread_should_stop(queue))
+			break;
+
+		xenvif_tx_dealloc_action(queue);
+		cond_resched();
+	}
+
+	/* Unmap anything remaining*/
+	if (tx_dealloc_work_todo(queue))
+		xenvif_tx_dealloc_action(queue);
+
+	return 0;
+}
+
+static int __init netback_init(void)
+{
+	int rc = 0;
+
+	if (!xen_domain())
+		return -ENODEV;
+
+	/* Allow as many queues as there are CPUs if user has not
+	 * specified a value.
+	 */
+	if (xenvif_max_queues == 0)
+		xenvif_max_queues = num_online_cpus();
+
+	if (fatal_skb_slots < XEN_NETBK_LEGACY_SLOTS_MAX) {
+		pr_info("fatal_skb_slots too small (%d), bump it to XEN_NETBK_LEGACY_SLOTS_MAX (%d)\n",
+			fatal_skb_slots, XEN_NETBK_LEGACY_SLOTS_MAX);
+		fatal_skb_slots = XEN_NETBK_LEGACY_SLOTS_MAX;
+>>>>>>> 0e91d2a... Nougat
 	}
 
 	rc = xenvif_xenbus_init();

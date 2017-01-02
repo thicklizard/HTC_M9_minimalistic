@@ -1,5 +1,9 @@
 /*
+<<<<<<< HEAD
  * Copyright (c) 2013-2014, Linux Foundation. All rights reserved.
+=======
+ * Copyright (c) 2013-2016, Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -70,6 +74,12 @@ struct wcd_cpe_lsm_lab {
 	struct completion thread_complete;
 };
 
+struct lsm_hw_params {
+	u32 sample_rate;
+	u16 num_chs;
+	u16 bit_width;
+};
+
 struct cpe_lsm_session {
 	/* sound model related */
 	void *snd_model_data;
@@ -97,7 +107,8 @@ struct cpe_lsm_session {
 
 struct wcd_cpe_afe_ops {
 	int (*afe_set_params) (void *core_handle,
-			       struct wcd_cpe_afe_port_cfg *cfg);
+			       struct wcd_cpe_afe_port_cfg *cfg,
+			       bool afe_mad_ctl);
 
 	int (*afe_port_start) (void *core_handle,
 			       struct wcd_cpe_afe_port_cfg *cfg);
@@ -170,6 +181,23 @@ struct wcd_cpe_lsm_ops {
 			struct cpe_lsm_session *session,
 			enum lsm_detection_mode detect_mode,
 			bool detect_failure);
+<<<<<<< HEAD
+=======
+	int (*lsm_set_fmt_cfg)(void *core_handle,
+			struct cpe_lsm_session *session);
+	int (*lsm_set_one_param)(void *core_handle,
+			struct cpe_lsm_session *session,
+			struct lsm_params_info *p_info,
+			void *data, enum LSM_PARAM_TYPE param_type);
+	void (*lsm_get_snd_model_offset)
+		(void *core_handle, struct cpe_lsm_session *,
+		 size_t *offset);
+	int (*lsm_set_media_fmt_params)(void *core_handle,
+				       struct cpe_lsm_session *session,
+				       struct lsm_hw_params *param);
+	int (*lsm_set_port)(void *core_handle,
+			    struct cpe_lsm_session *session, void *data);
+>>>>>>> 0e91d2a... Nougat
 };
 
 int wcd_cpe_get_lsm_ops(struct wcd_cpe_lsm_ops *);

@@ -705,6 +705,34 @@ static void synaptics_report_semi_mt_data(struct input_dev *dev,
 	}
 }
 
+<<<<<<< HEAD
+=======
+static void synaptics_report_ext_buttons(struct psmouse *psmouse,
+					 const struct synaptics_hw_state *hw)
+{
+	struct input_dev *dev = psmouse->dev;
+	struct synaptics_data *priv = psmouse->private;
+	int ext_bits = (SYN_CAP_MULTI_BUTTON_NO(priv->ext_cap) + 1) >> 1;
+	int i;
+
+	if (!SYN_CAP_MULTI_BUTTON_NO(priv->ext_cap))
+		return;
+
+	/* Bug in FW 8.1 & 8.2, buttons are reported only when ExtBit is 1 */
+	if ((SYN_ID_FULL(priv->identity) == 0x801 ||
+	     SYN_ID_FULL(priv->identity) == 0x802) &&
+	    !((psmouse->packet[0] ^ psmouse->packet[3]) & 0x02))
+		return;
+
+	for (i = 0; i < ext_bits; i++) {
+		input_report_key(dev, BTN_0 + 2 * i,
+			hw->ext_buttons & (1 << i));
+		input_report_key(dev, BTN_1 + 2 * i,
+			hw->ext_buttons & (1 << (i + ext_bits)));
+	}
+}
+
+>>>>>>> 0e91d2a... Nougat
 static void synaptics_report_buttons(struct psmouse *psmouse,
 				     const struct synaptics_hw_state *hw)
 {

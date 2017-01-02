@@ -2763,6 +2763,12 @@ static int sd_revalidate_disk(struct gendisk *disk)
 
 	blk_queue_flush(sdkp->disk->queue, flush);
 
+<<<<<<< HEAD
+=======
+	sdkp->disk->queue->limits.max_sectors =
+		min_not_zero(queue_max_hw_sectors(sdkp->disk->queue), max_xfer);
+
+>>>>>>> 0e91d2a... Nougat
 	set_capacity(disk, sdkp->capacity);
 	sd_config_write_same(sdkp);
 	kfree(buffer);
@@ -3126,8 +3132,8 @@ static int sd_suspend(struct device *dev)
 	struct scsi_disk *sdkp = scsi_disk_get_from_dev(dev);
 	int ret = 0;
 
-	if (!sdkp)
-		return 0;	/* this can happen */
+	if (!sdkp)	/* E.g.: runtime suspend following sd_remove() */
+		return 0;
 
 	if (sdkp->WCE) {
 		sd_printk(KERN_DEBUG, sdkp, "Synchronizing SCSI cache\n");

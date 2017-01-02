@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -43,11 +47,7 @@ struct ispif_intf_cmd {
 struct ispif_device {
 	struct platform_device *pdev;
 	struct msm_sd_subdev msm_sd;
-	struct resource *mem;
-	struct resource *clk_mux_mem;
 	struct resource *irq;
-	struct resource *io;
-	struct resource *clk_mux_io;
 	void __iomem *base;
 	void __iomem *clk_mux_base;
 	struct mutex mutex;
@@ -59,7 +59,14 @@ struct ispif_device {
 	struct ispif_intf_cmd applied_intf_cmd[VFE_MAX];
 	enum msm_ispif_state_t ispif_state;
 	struct msm_ispif_vfe_info vfe_info;
+<<<<<<< HEAD
 	struct clk *ahb_clk[ISPIF_CLK_INFO_MAX];
+=======
+	struct clk **ahb_clk;
+	struct msm_cam_clk_info *ahb_clk_info;
+	struct clk **clks;
+	struct msm_cam_clk_info *clk_info;
+>>>>>>> 0e91d2a... Nougat
 	struct completion reset_complete[VFE_MAX];
 	uint32_t hw_num_isps;
 	uint32_t num_ahb_clk;

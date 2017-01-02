@@ -2854,7 +2854,10 @@ ctnetlink_create_expect(struct net *net, u16 zone,
 			goto err_out;
 	}
 	err = nf_ct_expect_related_report(exp, portid, report);
+<<<<<<< HEAD
 err_out:
+=======
+>>>>>>> 0e91d2a... Nougat
 	nf_ct_expect_put(exp);
 out:
 	nf_ct_put(nf_ct_tuplehash_to_ctrack(h));

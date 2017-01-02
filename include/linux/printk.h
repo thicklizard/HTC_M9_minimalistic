@@ -33,6 +33,20 @@ static inline const char *printk_skip_level(const char *buffer)
 	return buffer;
 }
 
+<<<<<<< HEAD
+=======
+/* printk's without a loglevel use this.. */
+#define MESSAGE_LOGLEVEL_DEFAULT CONFIG_MESSAGE_LOGLEVEL_DEFAULT
+
+/* We show everything that is MORE important than this.. */
+#define CONSOLE_LOGLEVEL_SILENT  0 /* Mum's the word */
+#define CONSOLE_LOGLEVEL_MIN	 1 /* Minimum loglevel we let people use */
+#define CONSOLE_LOGLEVEL_QUIET	 4 /* Shhh ..., when booted with "quiet" */
+#define CONSOLE_LOGLEVEL_DEFAULT 7 /* anything MORE serious than KERN_DEBUG */
+#define CONSOLE_LOGLEVEL_DEBUG	10 /* issue debug messages */
+#define CONSOLE_LOGLEVEL_MOTORMOUTH 15	/* You can't shut this one up */
+
+>>>>>>> 0e91d2a... Nougat
 extern int console_printk[];
 
 #define console_loglevel (console_printk[0])
@@ -88,6 +102,16 @@ struct va_format {
 #define HW_ERR		"[Hardware Error]: "
 
 /*
+<<<<<<< HEAD
+=======
+ * DEPRECATED
+ * Add this to a message whenever you want to warn user space about the use
+ * of a deprecated aspect of an API so they can stop using it
+ */
+#define DEPRECATED	"[Deprecated]: "
+
+/*
+>>>>>>> 0e91d2a... Nougat
  * Dummy printk for disabled debugging statements to use whilst maintaining
  * gcc's format and side-effect checking.
  */
@@ -206,6 +230,12 @@ extern void dump_stack(void) __cold;
 #define pr_fmt(fmt) fmt
 #endif
 
+/*
+ * These can be used to print at the various log levels.
+ * All of these will print unconditionally, although note that pr_debug()
+ * and other debug macros are compiled out unless either DEBUG is defined
+ * or CONFIG_DYNAMIC_DEBUG is set.
+ */
 #define pr_emerg(fmt, ...) \
 	printk(KERN_EMERG pr_fmt(fmt), ##__VA_ARGS__)
 #define pr_alert(fmt, ...) \
@@ -233,6 +263,21 @@ extern void dump_stack(void) __cold;
 	no_printk(KERN_DEBUG pr_fmt(fmt), ##__VA_ARGS__)
 #endif
 
+<<<<<<< HEAD
+=======
+//HTC_AUD_START
+#define pr_aud_fmt(fmt) "[AUD] " KBUILD_MODNAME ": " fmt
+#define pr_aud_fmt1(fmt) "[AUD]" fmt
+#define pr_aud_err(fmt, ...) \
+			printk(KERN_ERR pr_aud_fmt(fmt), ##__VA_ARGS__)
+#define pr_aud_err1(fmt, ...) \
+			printk(KERN_ERR pr_aud_fmt1(fmt), ##__VA_ARGS__)
+#define pr_aud_info(fmt, ...) \
+			printk(KERN_INFO pr_aud_fmt(fmt), ##__VA_ARGS__)
+#define pr_aud_info1(fmt, ...) \
+			printk(KERN_INFO pr_aud_fmt1(fmt), ##__VA_ARGS__)
+
+>>>>>>> 0e91d2a... Nougat
 #if defined(CONFIG_DYNAMIC_DEBUG)
 #define pr_aud_debug(fmt, ...) \
 	dynamic_pr_debug(pr_aud_fmt(fmt), ##__VA_ARGS__)
@@ -243,7 +288,13 @@ extern void dump_stack(void) __cold;
 #define pr_aud_debug(fmt, ...) \
 	no_printk(KERN_DEBUG pr_aud_fmt(fmt), ##__VA_ARGS__)
 #endif
+//HTC_AUD_END
 
+<<<<<<< HEAD
+=======
+#include <linux/dynamic_debug.h>
+
+>>>>>>> 0e91d2a... Nougat
 /* If you are writing a driver, please use dev_dbg instead */
 #if defined(CONFIG_DYNAMIC_DEBUG)
 /* dynamic_pr_debug() uses pr_fmt() internally so we don't need it here */
@@ -354,7 +405,23 @@ extern void dump_stack(void) __cold;
 #endif
 
 /* If you are writing a driver, please use dev_dbg instead */
+<<<<<<< HEAD
 #if defined(DEBUG)
+=======
+#if defined(CONFIG_DYNAMIC_DEBUG)
+/* descriptor check is first to prevent flooding with "callbacks suppressed" */
+#define pr_debug_ratelimited(fmt, ...)					\
+do {									\
+	static DEFINE_RATELIMIT_STATE(_rs,				\
+				      DEFAULT_RATELIMIT_INTERVAL,	\
+				      DEFAULT_RATELIMIT_BURST);		\
+	DEFINE_DYNAMIC_DEBUG_METADATA(descriptor, fmt);			\
+	if (unlikely(descriptor.flags & _DPRINTK_FLAGS_PRINT) &&	\
+	    __ratelimit(&_rs))						\
+		__dynamic_pr_debug(&descriptor, fmt, ##__VA_ARGS__);	\
+} while (0)
+#elif defined(DEBUG)
+>>>>>>> 0e91d2a... Nougat
 #define pr_debug_ratelimited(fmt, ...)					\
 	printk_ratelimited(KERN_DEBUG pr_fmt(fmt), ##__VA_ARGS__)
 #else
@@ -420,6 +487,7 @@ static inline void print_hex_dump_bytes(const char *prefix_str, int prefix_type,
 	print_hex_dump(KERN_DEBUG, prefix_str, prefix_type, rowsize,	\
 		       groupsize, buf, len, ascii)
 #endif /* defined(CONFIG_DYNAMIC_DEBUG) */
+<<<<<<< HEAD
 
 #if defined(CONFIG_OOPS_LOG_BUFFER)
 extern void oops_printk_start(void);
@@ -428,5 +496,7 @@ static inline void oops_printk_start(void)
 {
 }
 #endif
+=======
+>>>>>>> 0e91d2a... Nougat
 
 #endif

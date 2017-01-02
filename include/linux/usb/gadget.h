@@ -191,6 +191,12 @@ struct usb_ep {
 	u8			address;
 	const struct usb_endpoint_descriptor	*desc;
 	const struct usb_ss_ep_comp_descriptor	*comp_desc;
+<<<<<<< HEAD
+=======
+	enum ep_type		ep_type;
+	u8			ep_num;
+	u8			ep_intr_num;
+>>>>>>> 0e91d2a... Nougat
 	bool			endless;
 };
 
@@ -578,6 +584,7 @@ struct usb_gadget {
 	unsigned			in_epnum;
 	bool				l1_supported;
 	u8				usb_core_id;
+<<<<<<< HEAD
 /*++ 2014/12/02, USB Team, PCN00052 ++*/
 	int             miMaxMtu;
 /*-- 2014/12/02, USB Team, PCN00052 --*/
@@ -585,6 +592,13 @@ struct usb_gadget {
 	bool				remote_wakeup;
 	void				*private;
 	u32				xfer_isr_count;
+=======
+	int				miMaxMtu;
+	bool				l1_supported;
+	bool				bam2bam_func_enabled;
+	u32				extra_buf_alloc;
+	int				interrupt_num;
+>>>>>>> 0e91d2a... Nougat
 };
 #define work_to_gadget(w)	(container_of((w), struct usb_gadget, work))
 
@@ -1079,5 +1093,8 @@ extern struct usb_ep *usb_ep_autoconfig_ss(struct usb_gadget *,
 			struct usb_ss_ep_comp_descriptor *);
 
 extern void usb_ep_autoconfig_reset(struct usb_gadget *);
+extern struct usb_ep *usb_ep_autoconfig_by_name(struct usb_gadget *,
+			struct usb_endpoint_descriptor *,
+			const char *ep_name);
 
 #endif /* __LINUX_USB_GADGET_H */

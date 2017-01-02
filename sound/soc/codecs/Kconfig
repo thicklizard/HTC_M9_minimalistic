@@ -355,21 +355,56 @@ config SND_SOC_UDA134X
 config SND_SOC_UDA1380
         tristate
 
+<<<<<<< HEAD
 config SND_SOC_WCD9310
 	tristate
+=======
+config SND_SOC_WCD9306
+        tristate
 
 config SND_SOC_WCD9320
         tristate
 
+config SND_SOC_WCD9330
+        tristate
+	depends on WCD9330_CODEC
+>>>>>>> 0e91d2a... Nougat
+
+config SND_SOC_WCD9320
+        tristate
+
+<<<<<<< HEAD
 config SND_SOC_WCD9306
         tristate
+=======
+config SND_SOC_WSA881X_SENSORS
+	tristate
+
+config SND_SOC_WSA881X
+        tristate
+	select REGMAP_SWR
+	select SND_SOC_WSA881X_SENSORS
+>>>>>>> 0e91d2a... Nougat
 
 config SND_SOC_WCD9330
         tristate
+<<<<<<< HEAD
 
 config SND_SOC_WCD9XXX
 	tristate
 	default y if SND_SOC_WCD9320=y || SND_SOC_WCD9306=y || SND_SOC_WCD9330=y
+=======
+	select REGMAP_I2C
+	select SND_SOC_WSA881X_SENSORS
+
+config SND_SOC_MSM8X16_WCD
+	tristate
+
+config SND_SOC_WCD9XXX
+	tristate
+	default y if SND_SOC_WCD9320=y || SND_SOC_WCD9330=y || SND_SOC_WCD9335=y
+	default y if SND_SOC_WCD9306=y
+>>>>>>> 0e91d2a... Nougat
 
 config SND_SOC_MSM8X10_WCD
 	tristate
@@ -559,3 +594,11 @@ config SND_SOC_MSM_HDMI_CODEC_RX
 	help
 	HDMI audio drivers should be built only if the platform
         supports hdmi panel.
+<<<<<<< HEAD
+=======
+
+config SND_SOC_MSM_HDMI_DBA_CODEC_RX
+	bool "HDMI DBA Audio Playback"
+	depends on MSM_DBA
+endmenu
+>>>>>>> 0e91d2a... Nougat

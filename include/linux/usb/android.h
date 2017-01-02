@@ -17,7 +17,11 @@
 #ifndef	__LINUX_USB_ANDROID_H
 #define	__LINUX_USB_ANDROID_H
 
+<<<<<<< HEAD
 #include <linux/usb/composite.h>
+=======
+#define FUNC_NAME_LEN 15
+>>>>>>> 0e91d2a... Nougat
 
 #define MAX_STREAMING_FUNCS 3
 #define FUNC_NAME_LEN 10
@@ -34,12 +38,15 @@ struct android_usb_platform_data {
 	int (*update_pid_and_serial_num)(uint32_t, const char *);
 	u32 pm_qos_latency[MAX_VOTES];
 	u8 usb_core_id;
+<<<<<<< HEAD
 	char streaming_func[MAX_STREAMING_FUNCS][FUNC_NAME_LEN];
 	int  streaming_func_count;
 /*++ 2014/09/23 USB Team, PCN00010 ++*/
 	/* For multiple serial function support
 	 * Ex: "tty:serial[,sdio:modem_mdm][,smd:modem]"
 	 */
+=======
+>>>>>>> 0e91d2a... Nougat
 	const char *fserial_init_string;
 /*-- 2014/09/23 USB Team, PCN00010 --*/
 /*++ 2014/10/21 USB Team, PCN00020 ++*/
@@ -50,6 +57,7 @@ struct android_usb_platform_data {
 	u8 uicc_nluns;
 /*++ 2014/10/29, USB Team, PCN00028 ++*/
 	u32 nluns;
+<<<<<<< HEAD
 /*-- 2014/10/29, USB Team, PCN00028 --*/
 	bool cdrom;
 
@@ -57,6 +65,8 @@ struct android_usb_platform_data {
 	char *product_name;
 	char *manufacturer_name;
 /*-- 2014/11/14, USB Team, PCN00043 --*/
+=======
+>>>>>>> 0e91d2a... Nougat
 };
 
 #ifndef CONFIG_TARGET_CORE

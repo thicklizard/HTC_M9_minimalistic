@@ -7,7 +7,11 @@ fmax tables, avs settings table, etc.
 
 Required properties:
 - compatible:		Must be one of "qcom,clock-cpu-8939" or
+<<<<<<< HEAD
 			"qcom,cpu-clock-tellurium"
+=======
+			"qcom,cpu-clock-8952", "qcom,cpu-clock-8917".
+>>>>>>> 0e91d2a... Nougat
 - reg:			Pairs of physical base addresses and region sizes of
 			memory mapped registers.
 - reg-names:		Names of the bases for the above registers. Expected

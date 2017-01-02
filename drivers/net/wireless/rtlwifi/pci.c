@@ -742,9 +742,35 @@ static void _rtl_pci_rx_interrupt(struct ieee80211_hw *hw)
 		struct rtl_rx_desc *pdesc = &rtlpci->rx_ring[rx_queue_idx].desc[
 				index];
 		/*rx pkt */
+<<<<<<< HEAD
 		struct sk_buff *skb = rtlpci->rx_ring[rx_queue_idx].rx_buf[
 				index];
 		struct sk_buff *new_skb = NULL;
+=======
+		struct sk_buff *skb = rtlpci->rx_ring[rxring_idx].rx_buf[
+				      rtlpci->rx_ring[rxring_idx].idx];
+		struct sk_buff *new_skb;
+
+		if (rtlpriv->use_new_trx_flow) {
+			rx_remained_cnt =
+				rtlpriv->cfg->ops->rx_desc_buff_remained_cnt(hw,
+								      hw_queue);
+			if (rx_remained_cnt == 0)
+				return;
+			buffer_desc = &rtlpci->rx_ring[rxring_idx].buffer_desc[
+				rtlpci->rx_ring[rxring_idx].idx];
+			pdesc = (struct rtl_rx_desc *)skb->data;
+		} else {	/* rx descriptor */
+			pdesc = &rtlpci->rx_ring[rxring_idx].desc[
+				rtlpci->rx_ring[rxring_idx].idx];
+
+			own = (u8)rtlpriv->cfg->ops->get_desc((u8 *)pdesc,
+							      false,
+							      HW_DESC_OWN);
+			if (own) /* wait data to be filled by hardware */
+				return;
+		}
+>>>>>>> 0e91d2a... Nougat
 
 		own = (u8) rtlpriv->cfg->ops->get_desc((u8 *) pdesc,
 						       false, HW_DESC_OWN);
@@ -753,6 +779,14 @@ static void _rtl_pci_rx_interrupt(struct ieee80211_hw *hw)
 		if (own)
 			break;
 
+<<<<<<< HEAD
+=======
+		/* get a new skb - if fail, old one will be reused */
+		new_skb = dev_alloc_skb(rtlpci->rxbuffersize);
+		if (unlikely(!new_skb))
+			goto no_new;
+		memset(&rx_status , 0 , sizeof(rx_status));
+>>>>>>> 0e91d2a... Nougat
 		rtlpriv->cfg->ops->query_rx_desc(hw, &stats,
 						 &rx_status,
 						 (u8 *) pdesc, skb);

@@ -32,6 +32,18 @@ Optional properties:
 			should be named as "core_root_clk".
  - reg-names:		Names of the bases for the above "reg" registers.
 			Ex. "base", "domain_addr".
+<<<<<<< HEAD
+=======
+ - qcom,no-status-check-on-disable: Do not poll the status bit when GDSC
+			is disabled.
+ - qcom,disallow-clear: Presence denotes the periph & core memory will not be
+			cleared, unless the required subsystem does not invoke
+			the api which will allow clearing the bits.
+ - qcom,gds-timeout:	Maximum time (in usecs) that might be taken by a GDSC
+			to enable.
+ - qcom,reset-aon-logic: If present, the GPU DEMET cells need to be reset while
+			 enabling the GX GDSC.
+>>>>>>> 0e91d2a... Nougat
 
 Example:
 	gdsc_oxili_gx: qcom,gdsc@fd8c4024 {

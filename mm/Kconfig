@@ -529,6 +529,95 @@ config ZSWAP
 	  they have not be fully explored on the large set of potential
 	  configurations and workloads that exist.
 
+<<<<<<< HEAD
+=======
+config ZPOOL
+	tristate "Common API for compressed memory storage"
+	default n
+	help
+	  Compressed memory storage API.  This allows using either zbud or
+	  zsmalloc.
+
+config ZBUD
+	tristate "Low density storage for compressed pages"
+	default n
+	help
+	  A special purpose allocator for storing compressed pages.
+	  It is designed to store up to two compressed pages per physical
+	  page.  While this design limits storage density, it has simple and
+	  deterministic reclaim properties that make it preferable to a higher
+	  density approach when reclaim will be used.
+
+config ZSMALLOC
+	tristate "Memory allocator for compressed pages"
+	depends on MMU
+	default n
+	help
+	  zsmalloc is a slab-based memory allocator designed to store
+	  compressed RAM pages.  zsmalloc uses virtual memory mapping
+	  in order to reduce fragmentation.  However, this results in a
+	  non-standard allocator interface where a handle, not a pointer, is
+	  returned by an alloc().  This handle must be mapped in order to
+	  access the allocated space.
+
+config PGTABLE_MAPPING
+	bool "Use page table mapping to access object in zsmalloc"
+	depends on ZSMALLOC
+	help
+	  By default, zsmalloc uses a copy-based object mapping method to
+	  access allocations that span two pages. However, if a particular
+	  architecture (ex, ARM) performs VM mapping faster than copying,
+	  then you should select this. This causes zsmalloc to use page table
+	  mapping rather than copying for object mapping.
+
+	  You can check speed with zsmalloc benchmark:
+	  https://github.com/spartacus06/zsmapbench
+
+config ZSMALLOC_STAT
+	bool "Export zsmalloc statistics"
+	depends on ZSMALLOC
+	select DEBUG_FS
+	help
+	  This option enables code in the zsmalloc to collect various
+	  statistics about whats happening in zsmalloc and exports that
+	  information to userspace via debugfs.
+	  If unsure, say N.
+
+config GENERIC_EARLY_IOREMAP
+	bool
+
+config MAX_STACK_SIZE_MB
+	int "Maximum user stack size for 32-bit processes (MB)"
+	default 80
+	range 8 256 if METAG
+	range 8 2048
+	depends on STACK_GROWSUP && (!64BIT || COMPAT)
+	help
+	  This is the maximum stack size in Megabytes in the VM layout of 32-bit
+	  user processes when the stack grows upwards (currently only on parisc
+	  and metag arch). The stack will be located at the highest memory
+	  address minus the given value, unless the RLIMIT_STACK hard limit is
+	  changed to a smaller value in which case that is used.
+
+	  A sane initial value is 80 MB.
+
+config ZCACHE
+       bool "Compressed cache for file pages (EXPERIMENTAL)"
+       depends on CRYPTO && CLEANCACHE
+       select CRYPTO_LZO
+       select ZBUD
+       default n
+       help
+         A compressed cache for file pages.
+         It takes active file pages that are in the process of being reclaimed
+         and attempts to compress them into a dynamically allocated RAM-based
+         memory pool.
+
+         If this process is successful, when those file pages needed again, the
+         I/O reading operation was avoided. This results in a significant performance
+         gains under memory pressure for systems full with file pages.
+
+>>>>>>> 0e91d2a... Nougat
 config BALANCE_ANON_FILE_RECLAIM
 	bool "During reclaim treat anon and file backed pages equally"
 	depends on SWAP

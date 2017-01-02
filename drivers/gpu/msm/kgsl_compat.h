@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -91,16 +95,6 @@ struct kgsl_ringbuffer_issueibcmds_compat {
 
 #define IOCTL_KGSL_RINGBUFFER_ISSUEIBCMDS_COMPAT \
 	_IOWR(KGSL_IOC_TYPE, 0x10, struct kgsl_ringbuffer_issueibcmds_compat)
-
-struct kgsl_cmdstream_freememontimestamp_compat {
-	compat_ulong_t gpuaddr;
-	unsigned int type;
-	unsigned int timestamp;
-};
-
-#define IOCTL_KGSL_CMDSTREAM_FREEMEMONTIMESTAMP_COMPAT \
-	_IOW(KGSL_IOC_TYPE, 0x12, \
-	struct kgsl_cmdstream_freememontimestamp_compat)
 
 struct kgsl_cmdstream_freememontimestamp_ctxtid_compat {
 	unsigned int context_id;

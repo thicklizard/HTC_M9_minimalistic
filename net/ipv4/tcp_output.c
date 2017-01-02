@@ -2649,8 +2649,13 @@ void tcp_send_active_reset(struct sock *sk, gfp_t priority)
 	skb_reserve(skb, MAX_TCP_HEADER);
 	tcp_init_nondata_skb(skb, tcp_acceptable_seq(sk),
 			     TCPHDR_ACK | TCPHDR_RST);
+<<<<<<< HEAD
 	/* Send it off. */
 	TCP_SKB_CB(skb)->when = tcp_time_stamp;
+=======
+	skb_mstamp_get(&skb->skb_mstamp);
+	
+>>>>>>> 0e91d2a... Nougat
 	if (tcp_transmit_skb(sk, skb, 0, priority))
 		NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPABORTFAILED);
 

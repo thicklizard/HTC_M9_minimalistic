@@ -129,6 +129,15 @@
 #include <linux/inetdevice.h>
 #include <linux/cpu_rmap.h>
 #include <linux/static_key.h>
+<<<<<<< HEAD
+=======
+#include <linux/hashtable.h>
+#include <linux/vmalloc.h>
+#include <linux/if_macvlan.h>
+#include <linux/errqueue.h>
+#include <linux/tcp.h>
+#include <net/tcp.h>
+>>>>>>> 0e91d2a... Nougat
 
 #include "net-sysfs.h"
 
@@ -2019,6 +2028,7 @@ gso:
 		skb->next = nskb->next;
 		nskb->next = NULL;
 
+<<<<<<< HEAD
 		if (!list_empty(&ptype_all))
 			dev_queue_xmit_nit(nskb, dev);
 
@@ -2031,6 +2041,34 @@ gso:
 			nskb->next = skb->next;
 			skb->next = nskb;
 			return rc;
+=======
+		__be16 src_port = tcp_hdr(skb)->source;
+		__be16 dest_port = tcp_hdr(skb)->dest;
+
+		trace_print_skb_gso(skb, src_port, dest_port);
+		segs = skb_gso_segment(skb, features);
+		if (IS_ERR(segs)) {
+			goto out_kfree_skb;
+		} else if (segs) {
+			consume_skb(skb);
+			skb = segs;
+		}
+	} else {
+		if (skb_needs_linearize(skb, features) &&
+		    __skb_linearize(skb))
+			goto out_kfree_skb;
+
+		if (skb->ip_summed == CHECKSUM_PARTIAL) {
+			if (skb->encapsulation)
+				skb_set_inner_transport_header(skb,
+							       skb_checksum_start_offset(skb));
+			else
+				skb_set_transport_header(skb,
+							 skb_checksum_start_offset(skb));
+			if (!(features & NETIF_F_ALL_CSUM) &&
+			    skb_checksum_help(skb))
+				goto out_kfree_skb;
+>>>>>>> 0e91d2a... Nougat
 		}
 		txq_trans_update(txq);
 		if (unlikely(netif_xmit_stopped(txq) && skb->next))
@@ -2439,7 +2477,14 @@ static int enqueue_to_backlog(struct sk_buff *skb, int cpu,
 	local_irq_save(flags);
 
 	rps_lock(sd);
+<<<<<<< HEAD
 	if (skb_queue_len(&sd->input_pkt_queue) <= netdev_max_backlog) {
+=======
+	if (!netif_running(skb->dev))
+		goto drop;
+	qlen = skb_queue_len(&sd->input_pkt_queue);
+	if (qlen <= netdev_max_backlog && !skb_flow_limit(skb, qlen)) {
+>>>>>>> 0e91d2a... Nougat
 		if (skb_queue_len(&sd->input_pkt_queue)) {
 enqueue:
 			__skb_queue_tail(&sd->input_pkt_queue, skb);
@@ -2456,6 +2501,7 @@ enqueue:
 		goto enqueue;
 	}
 
+drop:
 	sd->dropped++;
 	rps_unlock(sd);
 
@@ -2471,14 +2517,20 @@ int netif_rx(struct sk_buff *skb)
 {
 	int ret;
 
+<<<<<<< HEAD
 	
 	if (netpoll_rx(skb))
 		return NET_RX_DROP;
 
+=======
+>>>>>>> 0e91d2a... Nougat
 	net_timestamp_check(netdev_tstamp_prequeue, skb);
 
 	trace_netif_rx(skb);
 #ifdef CONFIG_RPS
+	WARN_ONCE(skb_cloned(skb), "Cloned packet from dev %s\n",
+		  skb->dev->name);
+
 	if (static_key_false(&rps_needed)) {
 		struct rps_dev_flow voidflow, *rflow = &voidflow;
 		int cpu;
@@ -2707,8 +2759,6 @@ static int __netif_receive_skb_core(struct sk_buff *skb, bool pfmemalloc)
 
 	pt_prev = NULL;
 
-	rcu_read_lock();
-
 another_round:
 	skb->skb_iif = skb->dev->ifindex;
 
@@ -2718,7 +2768,7 @@ another_round:
 	    skb->protocol == cpu_to_be16(ETH_P_8021AD)) {
 		skb = vlan_untag(skb);
 		if (unlikely(!skb))
-			goto unlock;
+			goto out;
 	}
 
 #ifdef CONFIG_NET_CLS_ACT
@@ -2740,10 +2790,25 @@ another_round:
 	}
 
 skip_taps:
+<<<<<<< HEAD
+=======
+	fast_recv = rcu_dereference(athrs_fast_nat_recv);
+	if (fast_recv) {
+		if (fast_recv(skb)) {
+			ret = NET_RX_SUCCESS;
+			goto out;
+		}
+	}
+
+	embms_recv = rcu_dereference(embms_tm_multicast_recv);
+	if (embms_recv)
+		embms_recv(skb);
+
+>>>>>>> 0e91d2a... Nougat
 #ifdef CONFIG_NET_CLS_ACT
 	skb = handle_ing(skb, &pt_prev, &ret, orig_dev);
 	if (!skb)
-		goto unlock;
+		goto out;
 ncls:
 #endif
 
@@ -2758,7 +2823,7 @@ ncls:
 		if (vlan_do_receive(&skb))
 			goto another_round;
 		else if (unlikely(!skb))
-			goto unlock;
+			goto out;
 	}
 
 	rx_handler = rcu_dereference(skb->dev->rx_handler);
@@ -2770,7 +2835,7 @@ ncls:
 		switch (rx_handler(&skb)) {
 		case RX_HANDLER_CONSUMED:
 			ret = NET_RX_SUCCESS;
-			goto unlock;
+			goto out;
 		case RX_HANDLER_ANOTHER:
 			goto another_round;
 		case RX_HANDLER_EXACT:
@@ -2815,8 +2880,11 @@ drop:
 		ret = NET_RX_DROP;
 	}
 
+<<<<<<< HEAD
 unlock:
 	rcu_read_unlock();
+=======
+>>>>>>> 0e91d2a... Nougat
 out:
 	return ret;
 }
@@ -2839,29 +2907,30 @@ static int __netif_receive_skb(struct sk_buff *skb)
 
 int netif_receive_skb(struct sk_buff *skb)
 {
+	int ret;
+
 	net_timestamp_check(netdev_tstamp_prequeue, skb);
 
 	if (skb_defer_rx_timestamp(skb))
 		return NET_RX_SUCCESS;
 
+	rcu_read_lock();
+
 #ifdef CONFIG_RPS
 	if (static_key_false(&rps_needed)) {
 		struct rps_dev_flow voidflow, *rflow = &voidflow;
-		int cpu, ret;
-
-		rcu_read_lock();
-
-		cpu = get_rps_cpu(skb->dev, skb, &rflow);
+		int cpu = get_rps_cpu(skb->dev, skb, &rflow);
 
 		if (cpu >= 0) {
 			ret = enqueue_to_backlog(skb, cpu, &rflow->last_qtail);
 			rcu_read_unlock();
 			return ret;
 		}
-		rcu_read_unlock();
 	}
 #endif
-	return __netif_receive_skb(skb);
+	ret = __netif_receive_skb(skb);
+	rcu_read_unlock();
+	return ret;
 }
 EXPORT_SYMBOL(netif_receive_skb);
 
@@ -2957,6 +3026,17 @@ static void gro_list_prepare(struct napi_struct *napi, struct sk_buff *skb)
 	for (p = napi->gro_list; p; p = p->next) {
 		unsigned long diffs;
 
+<<<<<<< HEAD
+=======
+		NAPI_GRO_CB(p)->flush = 0;
+		NAPI_GRO_CB(p)->flush_id = 0;
+
+		if (hash != skb_get_hash_raw(p)) {
+			NAPI_GRO_CB(p)->same_flow = 0;
+			continue;
+		}
+
+>>>>>>> 0e91d2a... Nougat
 		diffs = (unsigned long)p->dev ^ (unsigned long)skb->dev;
 		diffs |= p->vlan_tci ^ skb->vlan_tci;
 		if (maclen == ETH_HLEN)
@@ -3225,9 +3305,21 @@ static void net_rps_action_and_irq_enable(struct softnet_data *sd)
 		while (remsd) {
 			struct softnet_data *next = remsd->rps_ipi_next;
 
+<<<<<<< HEAD
 			if (cpu_online(remsd->cpu))
 				__smp_call_function_single(remsd->cpu,
 							   &remsd->csd, 0);
+=======
+			if (cpu_online(remsd->cpu)) {
+				smp_call_function_single_async(remsd->cpu,
+							   &remsd->csd);
+			} else {
+				pr_err("%s() cpu offline\n", __func__);
+				rps_lock(remsd);
+				remsd->backlog.state = 0;
+				rps_unlock(remsd);
+			}
+>>>>>>> 0e91d2a... Nougat
 			remsd = next;
 		}
 	} else
@@ -3253,13 +3345,14 @@ static int process_backlog(struct napi_struct *napi, int quota)
 		unsigned int qlen;
 
 		while ((skb = __skb_dequeue(&sd->process_queue))) {
+			rcu_read_lock();
 			local_irq_enable();
 			__netif_receive_skb(skb);
+			rcu_read_unlock();
 			local_irq_disable();
 			input_queue_head_incr(sd);
 			if (++work >= quota) {
-				local_irq_enable();
-				return work;
+				goto state_changed;
 			}
 		}
 
@@ -3273,11 +3366,18 @@ static int process_backlog(struct napi_struct *napi, int quota)
 			list_del(&napi->poll_list);
 			napi->state = 0;
 
+<<<<<<< HEAD
 			quota = work + qlen;
+=======
+			goto state_changed;
+>>>>>>> 0e91d2a... Nougat
 		}
 		rps_unlock(sd);
 	}
+state_changed:
 	local_irq_enable();
+	napi_gro_flush(napi, false);
+	sd->current_napi = NULL;
 
 	return work;
 }
@@ -3294,11 +3394,14 @@ EXPORT_SYMBOL(__napi_schedule);
 
 void __napi_complete(struct napi_struct *n)
 {
+	struct softnet_data *sd = &__get_cpu_var(softnet_data);
+
 	BUG_ON(!test_bit(NAPI_STATE_SCHED, &n->state));
 	BUG_ON(n->gro_list);
 
 	list_del(&n->poll_list);
 	smp_mb__before_atomic();
+	sd->current_napi = NULL;
 	clear_bit(NAPI_STATE_SCHED, &n->state);
 }
 EXPORT_SYMBOL(__napi_complete);
@@ -3357,6 +3460,14 @@ void netif_napi_del(struct napi_struct *napi)
 }
 EXPORT_SYMBOL(netif_napi_del);
 
+struct napi_struct *get_current_napi_context(void)
+{
+	struct softnet_data *sd = &__get_cpu_var(softnet_data);
+
+	return sd->current_napi;
+}
+EXPORT_SYMBOL(get_current_napi_context);
+
 static void net_rx_action(struct softirq_action *h)
 {
 	struct softnet_data *sd = &__get_cpu_var(softnet_data);
@@ -3383,6 +3494,7 @@ static void net_rx_action(struct softirq_action *h)
 
 		work = 0;
 		if (test_bit(NAPI_STATE_SCHED, &n->state)) {
+			sd->current_napi = n;
 			work = n->poll(n, weight);
 			trace_napi_poll(n);
 		}
@@ -3933,6 +4045,7 @@ static void rollback_registered_many(struct list_head *head)
 		unlist_netdevice(dev);
 
 		dev->reg_state = NETREG_UNREGISTERING;
+		on_each_cpu(flush_backlog, dev, 1);
 	}
 
 	synchronize_net();
@@ -4148,11 +4261,16 @@ static int netif_alloc_netdev_queues(struct net_device *dev)
 	unsigned int count = dev->num_tx_queues;
 	struct netdev_queue *tx;
 
+<<<<<<< HEAD
 	BUG_ON(count < 1);
 
 	tx = kcalloc(count, sizeof(struct netdev_queue), GFP_KERNEL);
 	if (!tx)
 		return -ENOMEM;
+=======
+	if (count < 1 || count > 0xffff)
+		return -EINVAL;
+>>>>>>> 0e91d2a... Nougat
 
 	dev->_tx = tx;
 
@@ -4392,8 +4510,6 @@ void netdev_run_todo(void)
 		}
 
 		dev->reg_state = NETREG_UNREGISTERED;
-
-		on_each_cpu(flush_backlog, dev, 1);
 
 		netdev_wait_allrefs(dev);
 

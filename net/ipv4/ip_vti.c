@@ -127,11 +127,15 @@ static struct ip_tunnel __rcu **__vti_bucket(struct vti_net *ipn,
 	return &ipn->tunnels[prio][h];
 }
 
+<<<<<<< HEAD
 static inline struct ip_tunnel __rcu **vti_bucket(struct vti_net *ipn,
 						  struct ip_tunnel *t)
 {
 	return __vti_bucket(ipn, &t->parms);
 }
+=======
+		XFRM_TUNNEL_SKB_CB(skb)->tunnel.ip4 = tunnel;
+>>>>>>> 0e91d2a... Nougat
 
 static void vti_tunnel_unlink(struct vti_net *ipn, struct ip_tunnel *t)
 {
@@ -165,6 +169,7 @@ static struct ip_tunnel *vti_tunnel_locate(struct net *net,
 	struct ip_tunnel *t, *nt;
 	struct ip_tunnel __rcu **tp;
 	struct net_device *dev;
+<<<<<<< HEAD
 	char name[IFNAMSIZ];
 	struct vti_net *ipn = net_generic(net, vti_net_id);
 
@@ -176,6 +181,13 @@ static struct ip_tunnel *vti_tunnel_locate(struct net *net,
 	}
 	if (!create)
 		return NULL;
+=======
+	struct pcpu_sw_netstats *tstats;
+	struct xfrm_state *x;
+	struct ip_tunnel *tunnel = XFRM_TUNNEL_SKB_CB(skb)->tunnel.ip4;
+	u32 orig_mark = skb->mark;
+	int ret;
+>>>>>>> 0e91d2a... Nougat
 
 	if (parms->name[0])
 		strlcpy(name, parms->name, IFNAMSIZ);
@@ -194,8 +206,17 @@ static struct ip_tunnel *vti_tunnel_locate(struct net *net,
 
 	vti_tunnel_bind_dev(dev);
 
+<<<<<<< HEAD
 	if (register_netdevice(dev) < 0)
 		goto failed_free;
+=======
+	skb->mark = be32_to_cpu(tunnel->parms.i_key);
+	ret = xfrm_policy_check(NULL, XFRM_POLICY_IN, skb, family);
+	skb->mark = orig_mark;
+
+	if (!ret)
+		return -EPERM;
+>>>>>>> 0e91d2a... Nougat
 
 	dev_hold(dev);
 	vti_tunnel_link(ipn, nt);
@@ -388,7 +409,42 @@ tx_error:
 	return NETDEV_TX_OK;
 }
 
+<<<<<<< HEAD
 static int vti_tunnel_bind_dev(struct net_device *dev)
+=======
+/* This function assumes it is being called from dev_queue_xmit()
+ * and that skb is filled properly by that function.
+ */
+static netdev_tx_t vti_tunnel_xmit(struct sk_buff *skb, struct net_device *dev)
+{
+	struct ip_tunnel *tunnel = netdev_priv(dev);
+	struct flowi fl;
+
+	memset(&fl, 0, sizeof(fl));
+
+	switch (skb->protocol) {
+	case htons(ETH_P_IP):
+		xfrm_decode_session(skb, &fl, AF_INET);
+		memset(IPCB(skb), 0, sizeof(*IPCB(skb)));
+		break;
+	case htons(ETH_P_IPV6):
+		xfrm_decode_session(skb, &fl, AF_INET6);
+		memset(IP6CB(skb), 0, sizeof(*IP6CB(skb)));
+		break;
+	default:
+		dev->stats.tx_errors++;
+		dev_kfree_skb(skb);
+		return NETDEV_TX_OK;
+	}
+
+	/* override mark with tunnel output key */
+	fl.flowi_mark = be32_to_cpu(tunnel->parms.o_key);
+
+	return vti_xmit(skb, dev, &fl);
+}
+
+static int vti4_err(struct sk_buff *skb, u32 info)
+>>>>>>> 0e91d2a... Nougat
 {
 	struct net_device *tdev = NULL;
 	struct ip_tunnel *tunnel;

@@ -146,12 +146,48 @@ static int qxl_execbuffer_ioctl(struct drm_device *dev, void *data,
 	uint32_t reloc_dst_offset;
 	INIT_LIST_HEAD(&reloc_list.bos);
 
+<<<<<<< HEAD
 	for (cmd_num = 0; cmd_num < execbuffer->commands_num; ++cmd_num) {
 		struct qxl_release *release;
 		struct qxl_bo *cmd_bo;
 		int release_type;
 		struct drm_qxl_command *commands =
 			(struct drm_qxl_command *)(uintptr_t)execbuffer->commands;
+=======
+	switch (cmd->type) {
+	case QXL_CMD_DRAW:
+		release_type = QXL_RELEASE_DRAWABLE;
+		break;
+	case QXL_CMD_SURFACE:
+	case QXL_CMD_CURSOR:
+	default:
+		DRM_DEBUG("Only draw commands in execbuffers\n");
+		return -EINVAL;
+		break;
+	}
+
+	if (cmd->command_size > PAGE_SIZE - sizeof(union qxl_release_info))
+		return -EINVAL;
+
+	if (!access_ok(VERIFY_READ,
+		       (void *)(unsigned long)cmd->command,
+		       cmd->command_size))
+		return -EFAULT;
+
+	reloc_info = kmalloc_array(cmd->relocs_num,
+				   sizeof(struct qxl_reloc_info), GFP_KERNEL);
+	if (!reloc_info)
+		return -ENOMEM;
+
+	ret = qxl_alloc_release_reserved(qdev,
+					 sizeof(union qxl_release_info) +
+					 cmd->command_size,
+					 release_type,
+					 &release,
+					 &cmd_bo);
+	if (ret)
+		goto out_free_reloc;
+>>>>>>> 0e91d2a... Nougat
 
 		if (DRM_COPY_FROM_USER(&user_cmd, &commands[cmd_num],
 				       sizeof(user_cmd)))

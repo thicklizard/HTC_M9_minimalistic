@@ -150,6 +150,8 @@ void snd_ctl_notify(struct snd_card *card, unsigned int mask,
 	
 	if (snd_BUG_ON(!card || !id))
 		return;
+	if (card->shutdown)
+		return;
 	read_lock(&card->ctl_files_rwlock);
 #if defined(CONFIG_SND_MIXER_OSS) || defined(CONFIG_SND_MIXER_OSS_MODULE)
 	card->mixer_oss_change_count++;
@@ -848,6 +850,13 @@ static int snd_ctl_elem_read(struct snd_card *card,
 	down_read(&card->controls_rwsem);
 	kctl = snd_ctl_find_id(card, &control->id);
 	if (kctl == NULL) {
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_HTC_DEBUG_DSP
+		if (snd_BUG_ON(&control->id))
+			pr_aud_err("%s: kctl not find: %d\n", __func__, control->id.numid);
+#endif
+>>>>>>> 0e91d2a... Nougat
 		result = -ENOENT;
 	} else {
 		index_offset = snd_ctl_get_ioff(kctl, &control->id);
@@ -896,6 +905,13 @@ static int snd_ctl_elem_write(struct snd_card *card, struct snd_ctl_file *file,
 	down_read(&card->controls_rwsem);
 	kctl = snd_ctl_find_id(card, &control->id);
 	if (kctl == NULL) {
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_HTC_DEBUG_DSP
+		if (snd_BUG_ON(&control->id))
+			pr_aud_err("%s: kctl not find: %d\n", __func__, control->id.numid);
+#endif
+>>>>>>> 0e91d2a... Nougat
 		result = -ENOENT;
 	} else {
 		index_offset = snd_ctl_get_ioff(kctl, &control->id);
@@ -904,6 +920,12 @@ static int snd_ctl_elem_write(struct snd_card *card, struct snd_ctl_file *file,
 		    kctl->put == NULL ||
 		    (file && vd->owner && vd->owner != file)) {
 			result = -EPERM;
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_HTC_DEBUG_DSP
+			pr_aud_err("%s: kctl invalid: %d\n", __func__, control->id.numid);
+#endif
+>>>>>>> 0e91d2a... Nougat
 		} else {
 			snd_ctl_build_ioff(&control->id, kctl, index_offset);
 			result = kctl->put(kctl, control);

@@ -372,6 +372,7 @@ void inet_twsk_schedule(struct inet_timewait_sock *tw,
 
 	spin_lock(&twdr->death_lock);
 
+<<<<<<< HEAD
 	/* Unlink it, if it was scheduled */
 	if (inet_twsk_del_dead_node(tw))
 		twdr->tw_count--;
@@ -414,6 +415,13 @@ void inet_twsk_schedule(struct inet_timewait_sock *tw,
 	if (twdr->tw_count++ == 0)
 		mod_timer(&twdr->tw_timer, jiffies + twdr->period);
 	spin_unlock(&twdr->death_lock);
+=======
+	tw->tw_kill = timeo <= 4*HZ;
+	if (!mod_timer_pinned(&tw->tw_timer, jiffies + timeo)) {
+		atomic_inc(&tw->tw_refcnt);
+		atomic_inc(&tw->tw_dr->tw_count);
+	}
+>>>>>>> 0e91d2a... Nougat
 }
 EXPORT_SYMBOL_GPL(inet_twsk_schedule);
 

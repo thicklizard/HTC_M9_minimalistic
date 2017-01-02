@@ -251,6 +251,135 @@ static void free_persistent_gnts(struct rb_root *root, unsigned int num)
 	BUG_ON(num != 0);
 }
 
+<<<<<<< HEAD
+=======
+void xen_blkbk_unmap_purged_grants(struct work_struct *work)
+{
+	struct gnttab_unmap_grant_ref unmap[BLKIF_MAX_SEGMENTS_PER_REQUEST];
+	struct page *pages[BLKIF_MAX_SEGMENTS_PER_REQUEST];
+	struct persistent_gnt *persistent_gnt;
+	int ret, segs_to_unmap = 0;
+	struct xen_blkif *blkif = container_of(work, typeof(*blkif), persistent_purge_work);
+
+	while(!list_empty(&blkif->persistent_purge_list)) {
+		persistent_gnt = list_first_entry(&blkif->persistent_purge_list,
+		                                  struct persistent_gnt,
+		                                  remove_node);
+		list_del(&persistent_gnt->remove_node);
+
+		gnttab_set_unmap_op(&unmap[segs_to_unmap],
+			vaddr(persistent_gnt->page),
+			GNTMAP_host_map,
+			persistent_gnt->handle);
+
+		pages[segs_to_unmap] = persistent_gnt->page;
+
+		if (++segs_to_unmap == BLKIF_MAX_SEGMENTS_PER_REQUEST) {
+			ret = gnttab_unmap_refs(unmap, NULL, pages,
+				segs_to_unmap);
+			BUG_ON(ret);
+			put_free_pages(blkif, pages, segs_to_unmap);
+			segs_to_unmap = 0;
+		}
+		kfree(persistent_gnt);
+	}
+	if (segs_to_unmap > 0) {
+		ret = gnttab_unmap_refs(unmap, NULL, pages, segs_to_unmap);
+		BUG_ON(ret);
+		put_free_pages(blkif, pages, segs_to_unmap);
+	}
+}
+
+static void purge_persistent_gnt(struct xen_blkif *blkif)
+{
+	struct persistent_gnt *persistent_gnt;
+	struct rb_node *n;
+	unsigned int num_clean, total;
+	bool scan_used = false, clean_used = false;
+	struct rb_root *root;
+
+	if (blkif->persistent_gnt_c < xen_blkif_max_pgrants ||
+	    (blkif->persistent_gnt_c == xen_blkif_max_pgrants &&
+	    !blkif->vbd.overflow_max_grants)) {
+		return;
+	}
+
+	if (work_busy(&blkif->persistent_purge_work)) {
+		pr_alert_ratelimited(DRV_PFX "Scheduled work from previous purge is still pending, cannot purge list\n");
+		return;
+	}
+
+	num_clean = (xen_blkif_max_pgrants / 100) * LRU_PERCENT_CLEAN;
+	num_clean = blkif->persistent_gnt_c - xen_blkif_max_pgrants + num_clean;
+	num_clean = min(blkif->persistent_gnt_c, num_clean);
+	if ((num_clean == 0) ||
+	    (num_clean > (blkif->persistent_gnt_c - atomic_read(&blkif->persistent_gnt_in_use))))
+		return;
+
+	/*
+	 * At this point, we can assure that there will be no calls
+         * to get_persistent_grant (because we are executing this code from
+         * xen_blkif_schedule), there can only be calls to put_persistent_gnt,
+         * which means that the number of currently used grants will go down,
+         * but never up, so we will always be able to remove the requested
+         * number of grants.
+	 */
+
+	total = num_clean;
+
+	pr_debug(DRV_PFX "Going to purge %u persistent grants\n", num_clean);
+
+	BUG_ON(!list_empty(&blkif->persistent_purge_list));
+	root = &blkif->persistent_gnts;
+purge_list:
+	foreach_grant_safe(persistent_gnt, n, root, node) {
+		BUG_ON(persistent_gnt->handle ==
+			BLKBACK_INVALID_HANDLE);
+
+		if (clean_used) {
+			clear_bit(PERSISTENT_GNT_WAS_ACTIVE, persistent_gnt->flags);
+			continue;
+		}
+
+		if (test_bit(PERSISTENT_GNT_ACTIVE, persistent_gnt->flags))
+			continue;
+		if (!scan_used &&
+		    (test_bit(PERSISTENT_GNT_WAS_ACTIVE, persistent_gnt->flags)))
+			continue;
+
+		rb_erase(&persistent_gnt->node, root);
+		list_add(&persistent_gnt->remove_node,
+		         &blkif->persistent_purge_list);
+		if (--num_clean == 0)
+			goto finished;
+	}
+	/*
+	 * If we get here it means we also need to start cleaning
+	 * grants that were used since last purge in order to cope
+	 * with the requested num
+	 */
+	if (!scan_used && !clean_used) {
+		pr_debug(DRV_PFX "Still missing %u purged frames\n", num_clean);
+		scan_used = true;
+		goto purge_list;
+	}
+finished:
+	if (!clean_used) {
+		pr_debug(DRV_PFX "Finished scanning for grants to clean, removing used flag\n");
+		clean_used = true;
+		goto purge_list;
+	}
+
+	blkif->persistent_gnt_c -= (total - num_clean);
+	blkif->vbd.overflow_max_grants = 0;
+
+	/* We can defer this work */
+	schedule_work(&blkif->persistent_purge_work);
+	pr_debug(DRV_PFX "Purged %u/%u\n", (total - num_clean), total);
+	return;
+}
+
+>>>>>>> 0e91d2a... Nougat
 /*
  * Retrieve from the 'pending_reqs' a free pending_req structure to be used.
  */

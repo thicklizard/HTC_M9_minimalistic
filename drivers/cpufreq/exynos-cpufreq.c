@@ -329,4 +329,15 @@ err_vdd_arm:
 	pr_debug("%s: failed initialization\n", __func__);
 	return -EINVAL;
 }
+<<<<<<< HEAD
 late_initcall(exynos_cpufreq_init);
+=======
+
+static struct platform_driver exynos_cpufreq_platdrv = {
+	.driver = {
+		.name	= "exynos-cpufreq",
+	},
+	.probe = exynos_cpufreq_probe,
+};
+module_platform_driver(exynos_cpufreq_platdrv);
+>>>>>>> 0e91d2a... Nougat

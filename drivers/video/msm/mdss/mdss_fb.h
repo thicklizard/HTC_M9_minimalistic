@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2008-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -123,9 +123,9 @@ enum mdp_split_mode {
  */
 enum dyn_mode_switch_state {
 	MDSS_MDP_NO_UPDATE_REQUESTED,
-	MDSS_MDP_WAIT_FOR_PREP,
-	MDSS_MDP_WAIT_FOR_SYNC,
+	MDSS_MDP_WAIT_FOR_VALIDATE,
 	MDSS_MDP_WAIT_FOR_COMMIT,
+	MDSS_MDP_WAIT_FOR_KICKOFF,
 };
 
 /* enum mdp_mmap_type - Lists the possible mmap type in the device
@@ -197,6 +197,15 @@ struct msm_mdp_interface {
 					u32 mode);
 	int (*kickoff_fnc)(struct msm_fb_data_type *mfd,
 					struct mdp_display_commit *data);
+<<<<<<< HEAD
+=======
+	int (*atomic_validate)(struct msm_fb_data_type *mfd, struct file *file,
+				struct mdp_layer_commit_v1 *commit);
+	bool (*is_config_same)(struct msm_fb_data_type *mfd,
+				struct mdp_output_layer *layer);
+	int (*pre_commit)(struct msm_fb_data_type *mfd, struct file *file,
+				struct mdp_layer_commit_v1 *commit);
+>>>>>>> 0e91d2a... Nougat
 	int (*pre_commit_fnc)(struct msm_fb_data_type *mfd);
 	int (*ioctl_handler)(struct msm_fb_data_type *mfd, u32 cmd, void *arg);
 	void (*dma_fnc)(struct msm_fb_data_type *mfd);
@@ -211,9 +220,8 @@ struct msm_mdp_interface {
 	int (*ad_shutdown_cleanup)(struct msm_fb_data_type *mfd);
 	int (*panel_register_done)(struct mdss_panel_data *pdata);
 	u32 (*fb_stride)(u32 fb_index, u32 xres, int bpp);
+	struct mdss_mdp_format_params *(*get_format_params)(u32 format);
 	int (*splash_init_fnc)(struct msm_fb_data_type *mfd);
-	struct msm_sync_pt_data *(*get_sync_fnc)(struct msm_fb_data_type *mfd,
-				const struct mdp_buf_sync *buf_sync);
 	void (*check_dsi_status)(struct work_struct *work, uint32_t interval);
 	int (*configure_panel)(struct msm_fb_data_type *mfd, int mode,
 				int dest_ctrl);
@@ -262,6 +270,11 @@ struct msm_fb_data_type {
 	int idle_time;
 	struct delayed_work idle_notify_work;
 
+<<<<<<< HEAD
+=======
+	bool atomic_commit_pending;
+
+>>>>>>> 0e91d2a... Nougat
 	int op_enable;
 	u32 fb_imgType;
 	int panel_reconfig;
@@ -290,6 +303,7 @@ struct msm_fb_data_type {
 	u32 bl_updated;
 	u32 bl_level_scaled;
 	struct mutex bl_lock;
+	bool ipc_resume;
 
 	struct platform_device *pdev;
 

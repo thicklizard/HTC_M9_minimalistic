@@ -161,9 +161,17 @@ Optional properties:
    control in device mode. The reg-names property is required if the
    reg property is specified.
  - qcom,emulation: Indicates that we are running on emulation platform.
+<<<<<<< HEAD
  - qcom,qusb-tune: Used to pass QUSB PHY tuning parameters. The 4 tuning parameters
    are passed in as 4 bytes packed into a single 32-bit value. The parameters control
    On-chip Rout Term, TX Output Level, RX Sensitivity and TX Pre-emphasis respectively.
+=======
+ - qcom,hold-reset: Indicates that hold QUSB PHY into reset state.
+ - qcom,enable-dpdm-pulsing: enables dp and dm pulsing for PMIC driver to
+   perform charger detection.
+ - qcom,tune2-efuse-correction: The value to be adjusted from the higher nibble of TUNE2
+   for improved rise/fall times.
+>>>>>>> 0e91d2a... Nougat
 
 Example:
 	qusb_phy: qusb@f9b39000 {

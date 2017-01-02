@@ -141,8 +141,13 @@ static inline struct sk_buff *ip_finish_skb(struct sock *sk, struct flowi4 *fl4)
 }
 
 /* datagram.c */
+<<<<<<< HEAD
 extern int		ip4_datagram_connect(struct sock *sk, 
 					     struct sockaddr *uaddr, int addr_len);
+=======
+int __ip4_datagram_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len);
+int ip4_datagram_connect(struct sock *sk, struct sockaddr *uaddr, int addr_len);
+>>>>>>> 0e91d2a... Nougat
 
 extern void ip4_datagram_release_cb(struct sock *sk);
 

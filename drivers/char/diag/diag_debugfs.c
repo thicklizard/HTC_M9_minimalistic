@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
+=======
+/* Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+>>>>>>> 0e91d2a... Nougat
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -723,7 +727,7 @@ static ssize_t diag_dbgfs_read_usbinfo(struct file *file, char __user *ubuf,
 		bytes_written = scnprintf(buf+bytes_in_buffer, bytes_remaining,
 			"id: %d\n"
 			"name: %s\n"
-			"hdl: %p\n"
+			"hdl: %pK\n"
 			"connected: %d\n"
 			"enabled: %d\n"
 			"mempool: %s\n"
@@ -763,6 +767,252 @@ static ssize_t diag_dbgfs_read_usbinfo(struct file *file, char __user *ubuf,
 	return ret;
 }
 
+<<<<<<< HEAD
+=======
+static ssize_t diag_dbgfs_read_smdinfo(struct file *file, char __user *ubuf,
+				       size_t count, loff_t *ppos)
+{
+	char *buf = NULL;
+	int ret = 0;
+	int i = 0;
+	int j = 0;
+	unsigned int buf_size;
+	unsigned int bytes_remaining = 0;
+	unsigned int bytes_written = 0;
+	unsigned int bytes_in_buffer = 0;
+	struct diag_smd_info *smd_info = NULL;
+	struct diagfwd_info *fwd_ctxt = NULL;
+
+	if (diag_dbgfs_smdinfo_index >= NUM_PERIPHERALS) {
+		/* Done. Reset to prepare for future requests */
+		diag_dbgfs_smdinfo_index = 0;
+		return 0;
+	}
+
+	buf = kzalloc(sizeof(char) * DEBUG_BUF_SIZE, GFP_KERNEL);
+	if (ZERO_OR_NULL_PTR(buf)) {
+		pr_err("diag: %s, Error allocating memory\n", __func__);
+		return -ENOMEM;
+	}
+
+	buf_size = ksize(buf);
+	bytes_remaining = buf_size;
+	for (i = 0; i < NUM_TYPES; i++) {
+		for (j = 0; j < NUM_PERIPHERALS; j++) {
+			switch (i) {
+			case TYPE_DATA:
+				smd_info = &smd_data[j];
+				break;
+			case TYPE_CNTL:
+				smd_info = &smd_cntl[j];
+				break;
+			case TYPE_DCI:
+				smd_info = &smd_dci[j];
+				break;
+			case TYPE_CMD:
+				smd_info = &smd_cmd[j];
+				break;
+			case TYPE_DCI_CMD:
+				smd_info = &smd_dci_cmd[j];
+				break;
+			default:
+				return -EINVAL;
+			}
+
+			fwd_ctxt = (struct diagfwd_info *)(smd_info->fwd_ctxt);
+
+			bytes_written = scnprintf(buf+bytes_in_buffer,
+				bytes_remaining,
+				"name\t\t:\t%s\n"
+				"hdl\t\t:\t%pK\n"
+				"inited\t\t:\t%d\n"
+				"opened\t\t:\t%d\n"
+				"diag_state\t:\t%d\n"
+				"fifo size\t:\t%d\n"
+				"open pending\t:\t%d\n"
+				"close pending\t:\t%d\n"
+				"read pending\t:\t%d\n"
+				"buf_1 busy\t:\t%d\n"
+				"buf_2 busy\t:\t%d\n"
+				"bytes read\t:\t%lu\n"
+				"bytes written\t:\t%lu\n"
+				"fwd inited\t:\t%d\n"
+				"fwd opened\t:\t%d\n"
+				"fwd ch_open\t:\t%d\n\n",
+				smd_info->name,
+				smd_info->hdl,
+				smd_info->inited,
+				atomic_read(&smd_info->opened),
+				atomic_read(&smd_info->diag_state),
+				smd_info->fifo_size,
+				work_pending(&smd_info->open_work),
+				work_pending(&smd_info->close_work),
+				work_pending(&smd_info->read_work),
+				(fwd_ctxt && fwd_ctxt->buf_1) ?
+				atomic_read(&fwd_ctxt->buf_1->in_busy) : -1,
+				(fwd_ctxt && fwd_ctxt->buf_2) ?
+				atomic_read(&fwd_ctxt->buf_2->in_busy) : -1,
+				(fwd_ctxt) ? fwd_ctxt->read_bytes : 0,
+				(fwd_ctxt) ? fwd_ctxt->write_bytes : 0,
+				(fwd_ctxt) ? fwd_ctxt->inited : -1,
+				(fwd_ctxt) ?
+				atomic_read(&fwd_ctxt->opened) : -1,
+				(fwd_ctxt) ? fwd_ctxt->ch_open : -1);
+			bytes_in_buffer += bytes_written;
+
+			/* Check if there is room to add another table entry */
+			bytes_remaining = buf_size - bytes_in_buffer;
+
+			if (bytes_remaining < bytes_written)
+				break;
+		}
+	}
+	diag_dbgfs_smdinfo_index = i+1;
+	*ppos = 0;
+	ret = simple_read_from_buffer(ubuf, count, ppos, buf, bytes_in_buffer);
+
+	kfree(buf);
+	return ret;
+}
+
+static ssize_t diag_dbgfs_read_socketinfo(struct file *file, char __user *ubuf,
+					  size_t count, loff_t *ppos)
+{
+	char *buf = NULL;
+	int ret = 0;
+	int i = 0;
+	int j = 0;
+	unsigned int buf_size;
+	unsigned int bytes_remaining = 0;
+	unsigned int bytes_written = 0;
+	unsigned int bytes_in_buffer = 0;
+	struct diag_socket_info *info = NULL;
+	struct diagfwd_info *fwd_ctxt = NULL;
+
+	if (diag_dbgfs_socketinfo_index >= NUM_PERIPHERALS) {
+		/* Done. Reset to prepare for future requests */
+		diag_dbgfs_socketinfo_index = 0;
+		return 0;
+	}
+
+	buf = kzalloc(sizeof(char) * DEBUG_BUF_SIZE, GFP_KERNEL);
+	if (ZERO_OR_NULL_PTR(buf)) {
+		pr_err("diag: %s, Error allocating memory\n", __func__);
+		return -ENOMEM;
+	}
+
+	buf_size = ksize(buf);
+	bytes_remaining = buf_size;
+	for (i = 0; i < NUM_TYPES; i++) {
+		for (j = 0; j < NUM_PERIPHERALS; j++) {
+			switch (i) {
+			case TYPE_DATA:
+				info = &socket_data[j];
+				break;
+			case TYPE_CNTL:
+				info = &socket_cntl[j];
+				break;
+			case TYPE_DCI:
+				info = &socket_dci[j];
+				break;
+			case TYPE_CMD:
+				info = &socket_cmd[j];
+				break;
+			case TYPE_DCI_CMD:
+				info = &socket_dci_cmd[j];
+				break;
+			default:
+				return -EINVAL;
+			}
+
+			fwd_ctxt = (struct diagfwd_info *)(info->fwd_ctxt);
+
+			bytes_written = scnprintf(buf+bytes_in_buffer,
+				bytes_remaining,
+				"name\t\t:\t%s\n"
+				"hdl\t\t:\t%pK\n"
+				"inited\t\t:\t%d\n"
+				"opened\t\t:\t%d\n"
+				"diag_state\t:\t%d\n"
+				"buf_1 busy\t:\t%d\n"
+				"buf_2 busy\t:\t%d\n"
+				"flow ctrl count\t:\t%d\n"
+				"data_ready\t:\t%d\n"
+				"init pending\t:\t%d\n"
+				"read pending\t:\t%d\n"
+				"bytes read\t:\t%lu\n"
+				"bytes written\t:\t%lu\n"
+				"fwd inited\t:\t%d\n"
+				"fwd opened\t:\t%d\n"
+				"fwd ch_open\t:\t%d\n\n",
+				info->name,
+				info->hdl,
+				info->inited,
+				atomic_read(&info->opened),
+				atomic_read(&info->diag_state),
+				(fwd_ctxt && fwd_ctxt->buf_1) ?
+				atomic_read(&fwd_ctxt->buf_1->in_busy) : -1,
+				(fwd_ctxt && fwd_ctxt->buf_2) ?
+				atomic_read(&fwd_ctxt->buf_2->in_busy) : -1,
+				atomic_read(&info->flow_cnt),
+				info->data_ready,
+				work_pending(&info->init_work),
+				work_pending(&info->read_work),
+				(fwd_ctxt) ? fwd_ctxt->read_bytes : 0,
+				(fwd_ctxt) ? fwd_ctxt->write_bytes : 0,
+				(fwd_ctxt) ? fwd_ctxt->inited : -1,
+				(fwd_ctxt) ?
+				atomic_read(&fwd_ctxt->opened) : -1,
+				(fwd_ctxt) ? fwd_ctxt->ch_open : -1);
+			bytes_in_buffer += bytes_written;
+
+			/* Check if there is room to add another table entry */
+			bytes_remaining = buf_size - bytes_in_buffer;
+
+			if (bytes_remaining < bytes_written)
+				break;
+		}
+	}
+	diag_dbgfs_socketinfo_index = i+1;
+	*ppos = 0;
+	ret = simple_read_from_buffer(ubuf, count, ppos, buf, bytes_in_buffer);
+
+	kfree(buf);
+	return ret;
+}
+
+static ssize_t diag_dbgfs_write_debug(struct file *fp, const char __user *buf,
+				      size_t count, loff_t *ppos)
+{
+	const int size = 10;
+	unsigned char cmd[size];
+	long value = 0;
+	int len = 0;
+
+	if (count < 1)
+		return -EINVAL;
+
+	len = (count < (size - 1)) ? count : size - 1;
+	if (copy_from_user(cmd, buf, len))
+		return -EFAULT;
+
+	cmd[len] = 0;
+	if (cmd[len-1] == '\n') {
+		cmd[len-1] = 0;
+		len--;
+	}
+
+	if (kstrtol(cmd, 10, &value))
+		return -EINVAL;
+
+	if (value < 0)
+		return -EINVAL;
+
+	diag_debug_mask = (uint16_t)value;
+	return count;
+}
+
+>>>>>>> 0e91d2a... Nougat
 #ifdef CONFIG_DIAGFWD_BRIDGE_CODE
 static ssize_t diag_dbgfs_read_hsicinfo(struct file *file, char __user *ubuf,
 					size_t count, loff_t *ppos)
@@ -865,9 +1115,9 @@ static ssize_t diag_dbgfs_read_mhiinfo(struct file *file, char __user *ubuf,
 			"bridge index: %s\n"
 			"mempool: %s\n"
 			"read ch opened: %d\n"
-			"read ch hdl: %p\n"
+			"read ch hdl: %pK\n"
 			"write ch opened: %d\n"
-			"write ch hdl: %p\n"
+			"write ch hdl: %pK\n"
 			"read work pending: %d\n"
 			"read done work pending: %d\n"
 			"open work pending: %d\n"
@@ -936,9 +1186,9 @@ static ssize_t diag_dbgfs_read_bridge(struct file *file, char __user *ubuf,
 			"type: %d\n"
 			"inited: %d\n"
 			"ctxt: %d\n"
-			"dev_ops: %p\n"
-			"dci_read_buf: %p\n"
-			"dci_read_ptr: %p\n"
+			"dev_ops: %pK\n"
+			"dci_read_buf: %pK\n"
+			"dci_read_ptr: %pK\n"
 			"dci_read_len: %d\n\n",
 			info->id,
 			info->name,

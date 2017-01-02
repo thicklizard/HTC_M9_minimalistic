@@ -644,9 +644,12 @@ static struct pmu perf_breakpoint = {
 	.start		= hw_breakpoint_start,
 	.stop		= hw_breakpoint_stop,
 	.read		= hw_breakpoint_pmu_read,
+<<<<<<< HEAD
 
 	.event_idx	= hw_breakpoint_event_idx,
 	.events_across_hotplug = 1,
+=======
+>>>>>>> 0e91d2a... Nougat
 };
 
 int __init init_hw_breakpoint(void)
