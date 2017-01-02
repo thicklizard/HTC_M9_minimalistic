@@ -4021,7 +4021,9 @@ static int tomtom_codec_enable_interpolator(struct snd_soc_dapm_widget *w,
 				  snd_soc_read(codec,
 				  rx_digital_gain_reg[w->shift])
 				  );
-		
+				  snd_soc_write(codec, rx_digital_gain_reg[0], 5);
+				  snd_soc_write(codec, rx_digital_gain_reg[1], 5);
+	
 		if (w->shift == 0 || w->shift == 1)
 			tomtom_update_uhqa_mode(codec, (1 << w->shift));
 
